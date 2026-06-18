@@ -42,6 +42,19 @@ services:
       # Required — supplied from the environment / .env, NEVER committed. Compose refuses to start if it is
       # unset, and the app fail-fasts on a weak/short (<32-byte) secret outside the 'local' profile.
       DMIS_AUTH_JWT_SECRET: ${DMIS_AUTH_JWT_SECRET:?set a real >=32-byte JWT secret in .env (never commit it)}
+      # Gateways — OPTIONAL. Set them in .env to send real SMS (M-Gov) and email (SMTP); left blank, the
+      # app degrades gracefully and logs sends as 'pending' (no crash). Values stay in .env (git-ignored).
+      MGOV_API_KEY: ${MGOV_API_KEY:-}
+      MGOV_SYSTEM_ID: ${MGOV_SYSTEM_ID:-}
+      MGOV_SMS_URL: ${MGOV_SMS_URL:-}
+      MGOV_MOBILE_SERVICE_ID: ${MGOV_MOBILE_SERVICE_ID:-}
+      MGOV_SENDER_ID: ${MGOV_SENDER_ID:-}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-e-MAAFA}
     ports:
       - "8080:8080"
 
