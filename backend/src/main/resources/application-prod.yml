@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      minimum-idle: ${DB_POOL_MIN:5}
+
+server:
+  # DMIS terminates TLS at a reverse proxy (nginx/load balancer) in production. Honour the
+  # X-Forwarded-* headers so request.isSecure() is true behind the proxy — this is what makes the
+  # HSTS header (set in SecurityHardeningConfig) actually emit, and keeps redirect/scheme correct.
+  # The proxy MUST set X-Forwarded-Proto and strip any client-supplied X-Forwarded-* first.
+  forward-headers-strategy: framework
+
+logging:
+  level:
+    root: WARN
+    tz.go.pmo.dmis: INFO

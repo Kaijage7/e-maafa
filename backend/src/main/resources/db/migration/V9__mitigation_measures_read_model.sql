@@ -1,0 +1,55 @@
+-- The existing mitigation_measures table (create_mitigation_strategies 2025_06_03 + add_columns
+-- 2025_09_17 + rename/SRS 2025_09_21 + update_prevention_mitigation_tables 2025_09_23), mirrored for
+-- the local database, INCLUDING the duplicate column pairs (implementing_institution vs
+-- implementing_institution_name, type_of_mitigation vs mitigation_type) and the enum CHECK
+-- constraints Laravel's enum() generates — they are load-bearing for the source's store behavior.
+-- IF NOT EXISTS keeps production untouched.
+CREATE TABLE IF NOT EXISTS public.mitigation_measures (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    project_programme_name VARCHAR(255),
+    implementing_entity VARCHAR(255) CHECK (implementing_entity IN ('Government', 'Non-Government')),
+    implementing_institution VARCHAR(255),
+    description TEXT,
+    narrative_description TEXT,
+    hazard_id BIGINT REFERENCES public.hazards(id) ON DELETE SET NULL,
+    hazard_type VARCHAR(255),
+    hazard_risk_addressed VARCHAR(255),
+    implementation_period_start DATE,
+    implementation_period_end DATE,
+    category VARCHAR(255),
+    type_of_mitigation VARCHAR(255) CHECK (type_of_mitigation IN ('Structure', 'Non-structure')),
+    document_path VARCHAR(255),
+    attachment_documents JSON,
+    status VARCHAR(255) NOT NULL DEFAULT 'Proposed',
+    project_status VARCHAR(255) CHECK (project_status IN ('Ongoing', 'Not started', 'Completed', 'Design')),
+    publication_date DATE,
+    author VARCHAR(255),
+    tags JSON,
+    district_council VARCHAR(255),
+    coverage_area VARCHAR(255),
+    project_coverage JSON,
+    project_beneficiaries TEXT,
+    project_activities TEXT,
+    expected_outcome TEXT,
+    associated_partners JSON,
+    affected_people INTEGER,
+    budget NUMERIC(15,2),
+    resources_allocated JSON,
+    additional_support_required TEXT,
+    challenges_barriers_needs TEXT,
+    priority VARCHAR(255) CHECK (priority IN ('Low', 'Medium', 'High')),
+    approval_status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+    approved_by BIGINT,
+    approval_date TIMESTAMPTZ,
+    visibility_level VARCHAR(255) NOT NULL DEFAULT 'public' CHECK (visibility_level IN ('public', 'restricted', 'private')),
+    -- 2025_09_23 update migration additions
+    mitigation_measure_id VARCHAR(255) UNIQUE,
+    implementing_institution_name VARCHAR(255),
+    mitigation_type VARCHAR(255),
+    beneficiaries TEXT,
+    activities_measures TEXT,
+    attachment_path VARCHAR(255),
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
+);

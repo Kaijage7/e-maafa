@@ -1,0 +1,114 @@
+spring:
+  application:
+    name: dmis-platform
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  servlet:
+    # Content uploads (news/gallery images) keep their own 5 MB controller check; the container limit is
+    # 10 MB so scanned EOCC bulletin PDFs (often 6-8 MB with map imagery) reach the upload controller,
+    # which then enforces its own 10 MB cap with a precise message. [auditor A11 GAP-2; EW upload hardening]
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+  # SMTP for real email (stakeholder/dissemination notifications). Secrets from the environment.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 10000
+          timeout: 15000
+
+  jpa:
+    # Flyway owns the schema (DDL); Hibernate only validates the mapping against it.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Africa/Dar_es_Salaam
+
+  flyway:
+    enabled: true
+    # `platform` holds shared infrastructure (the event outbox); each bounded context
+    # gets its own schema (`registry` is the first). The Flyway history table lives in
+    # `platform`. The legacy Laravel `public` tables are never touched.
+    schemas: platform,registry,incident,ew,dissemination,notification
+    default-schema: platform
+    create-schemas: true
+    # The shared database already exists (strangler migration); baseline so Flyway
+    # only manages the new platform schemas, never the legacy Laravel `public` tables.
+    baseline-on-migrate: true
+    baseline-version: 0
+    # Two agents develop in parallel with RESERVED version blocks (ops V22-V30, public V31+),
+    # so a lower-numbered migration can legitimately arrive after a higher one has applied.
+    out-of-order: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Documented alternative identity path. The platform mints/validates its own HS256 token
+          # (dmis.auth.jwt below); the JwtDecoder bean in JwtSecurityConfig OVERRIDES this issuer, so
+          # no Keycloak instance is contacted unless you remove that bean and front the app with one.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/dmis}
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  error:
+    # Surface @Valid field-validation errors so the create forms tell the user WHICH field failed
+    # (the auditor's A5 flag: forms fell back to a generic "Could not create…"). Stack traces stay
+    # hidden; ResponseStatusException reasons already surface via the ProblemDetail `detail` field.
+    include-message: never
+    include-binding-errors: always
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+dmis:
+  security:
+    # Keycloak realm roles live under this JWT claim path.
+    roles-claim-path: realm_access.roles
+  # Self-issued bearer token (login mints, resource server validates — see JwtSecurityConfig).
+  auth:
+    jwt:
+      # dmis.auth.jwt.secret is intentionally NOT set here. In a non-local profile it MUST be
+      # provided via env DMIS_AUTH_JWT_SECRET (>= 32 bytes) or startup fails fast; under the local
+      # profile a bundled dev default is used. (Relaxed binding maps DMIS_AUTH_JWT_SECRET -> this key.)
+      issuer: ${DMIS_AUTH_JWT_ISSUER:dmis}
+      ttl-minutes: ${DMIS_AUTH_JWT_TTL_MINUTES:720}
+  # M-Gov SMS gateway (the proven national delivery path). Secrets come from the environment.
+  mgov:
+    url: ${MGOV_SMS_URL:https://mgov.gov.go.tz/gateway/sms/v2/send-sms}
+    api-key: ${MGOV_API_KEY:}
+    system-id: ${MGOV_SYSTEM_ID:}
+    mobile-service-id: ${MGOV_MOBILE_SERVICE_ID:}
+    # Must be a sender ID registered/whitelisted with M-Gov. 15200 is registered; alphanumeric
+    # "e-MAAFA" needs PMO ICT to register it with M-Gov first (else 48231 SENDER NOT REGISTERED).
+    sender-id: ${MGOV_SENDER_ID:15200}
+  # Email sender identity (Gmail SMTP). From-address falls back to spring.mail.username.
+  mail:
+    from-name: ${MAIL_FROM_NAME:e-MAAFA DMIS}

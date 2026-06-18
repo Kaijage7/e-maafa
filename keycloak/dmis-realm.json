@@ -1,0 +1,91 @@
+{
+  "realm": "dmis",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 3600,
+  "roles": {
+    "realm": [
+      { "name": "Super Admin" },
+      { "name": "Secretary" },
+      { "name": "Director" },
+      { "name": "Asst. Director" },
+      { "name": "EOCC" },
+      { "name": "Comms Officer" },
+      { "name": "ICT Admin" },
+      { "name": "MDA Focal" },
+      { "name": "RAS" },
+      { "name": "Reg DC" },
+      { "name": "DAS" },
+      { "name": "Dist DC" },
+      { "name": "Partners" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "dmis-web",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:4200/*", "http://127.0.0.1:4200/*"],
+      "webOrigins": ["http://localhost:4200", "http://127.0.0.1:4200", "+"],
+      "protocol": "openid-connect",
+      "attributes": { "post.logout.redirect.uris": "http://localhost:4200/*" }
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@example.com",
+      "firstName": "System",
+      "lastName": "Administrator",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "admin", "temporary": false }],
+      "realmRoles": ["Super Admin"]
+    },
+    {
+      "username": "eocc",
+      "email": "eocc@pmo.go.tz",
+      "firstName": "EOCC",
+      "lastName": "Officer",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "eocc", "temporary": false }],
+      "realmRoles": ["EOCC"]
+    },
+    {
+      "username": "director",
+      "email": "director@pmo.go.tz",
+      "firstName": "PMO",
+      "lastName": "Director",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "director", "temporary": false }],
+      "realmRoles": ["Director"]
+    },
+    {
+      "username": "dc",
+      "email": "dc@test.com",
+      "firstName": "District",
+      "lastName": "Coordinator",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "dc", "temporary": false }],
+      "realmRoles": ["Dist DC"]
+    },
+    {
+      "username": "mda",
+      "email": "tma@meteo.go.tz",
+      "firstName": "TMA",
+      "lastName": "Focal",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "mda", "temporary": false }],
+      "realmRoles": ["MDA Focal"]
+    }
+  ]
+}

@@ -1,0 +1,1208 @@
+{
+ "source": "OWM-SBUU / DMD — TAARIFA MBALIMBALI ZA MAAFA (Julai 2025 – Aprili 2026), 23.04.2026",
+ "note": "Seeded from official Jedwali Na.1; totals seeded, Sendai sex/age/PwD & sector boxes left as entry points. Roads count vs km kept separate; crops unit per event.",
+ "events": [
+  {
+   "code": "DE-2025-0101",
+   "name": "Mvua na Upepo Mkali — Chamwino (Dodoma)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-23",
+   "end": "2025-12-23",
+   "region": "Dodoma",
+   "district": "Chamwino",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "vifo: wanawake 3, mwanamume 1",
+   "effects": {
+    "deathsTotal": 4,
+    "injuredTotal": 17,
+    "directlyAffected": 17,
+    "householdsAffected": 17,
+    "religiousFacilitiesDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2025-0102",
+   "name": "Mafuriko — Dodoma Jiji (Dodoma)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2025-12-25",
+   "end": "2025-12-26",
+   "region": "Dodoma",
+   "district": "Dodoma Jiji",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Dodoma Jiji, Dodoma. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 435,
+    "householdsAffected": 87,
+    "housesDamaged": 87
+   }
+  },
+  {
+   "code": "DE-2025-0103",
+   "name": "Mafuriko — Dodoma DC (Dodoma)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2025-12-24",
+   "end": "2025-12-24",
+   "region": "Dodoma",
+   "district": "Dodoma DC",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Dodoma DC, Dodoma. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "bridgesDamaged": 1,
+    "roadsDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2025-0104",
+   "name": "Mvua na Upepo Mkali — Chemba (Dodoma)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-25",
+   "end": "2025-12-28",
+   "region": "Dodoma",
+   "district": "Chemba",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Chemba, Dodoma. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 2,
+    "injuredTotal": 3,
+    "directlyAffected": 15,
+    "householdsAffected": 3,
+    "housesDamaged": 3
+   }
+  },
+  {
+   "code": "DE-2026-0101",
+   "name": "Mafuriko — Bahi (Dodoma)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-09",
+   "end": "2026-03-15",
+   "region": "Dodoma",
+   "district": "Bahi",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Bahi, Dodoma. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 7,
+    "injuredTotal": 49,
+    "directlyAffected": 1347,
+    "householdsAffected": 321,
+    "housesDamaged": 80,
+    "housesDestroyed": 143,
+    "livestockLost": 305
+   }
+  },
+  {
+   "code": "DE-2025-0105",
+   "name": "Mvua na Upepo Mkali — Sumbawanga (Rukwa)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-25",
+   "end": "2025-12-25",
+   "region": "Rukwa",
+   "district": "Sumbawanga",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Sumbawanga, Rukwa. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "injuredTotal": 5,
+    "directlyAffected": 280,
+    "householdsAffected": 56,
+    "housesDamaged": 56,
+    "schoolsDamaged": 1,
+    "classroomsDamaged": 3
+   }
+  },
+  {
+   "code": "DE-2026-0102",
+   "name": "Mvua na Upepo Mkali — Sumbawanga (Rukwa)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2026-03-16",
+   "end": "2026-03-25",
+   "region": "Rukwa",
+   "district": "Sumbawanga",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Sumbawanga, Rukwa. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 1,
+    "injuredTotal": 2,
+    "directlyAffected": 826,
+    "householdsAffected": 136,
+    "housesDamaged": 67,
+    "housesDestroyed": 69,
+    "cropsDestroyedHa": 160,
+    "cropsUnit": "ekari"
+   }
+  },
+  {
+   "code": "DE-2025-0106",
+   "name": "Mvua na Upepo Mkali — Tabora Manispaa (Tabora)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-25",
+   "end": "2025-12-25",
+   "region": "Tabora",
+   "district": "Tabora Manispaa",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Tabora Manispaa, Tabora. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 3,
+    "injuredTotal": 3,
+    "directlyAffected": 740,
+    "householdsAffected": 148,
+    "housesDamaged": 148,
+    "roadsDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2025-0107",
+   "name": "Radi — Nzega (Tabora)",
+   "hazard": "Lightning",
+   "hazardLabel": "Radi (Lightning)",
+   "start": "2025-12-27",
+   "end": "2025-12-27",
+   "region": "Tabora",
+   "district": "Nzega",
+   "scope": "District",
+   "trigger": "Radi (Lightning)",
+   "desc": "Radi (Lightning) — Nzega, Tabora. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "livestockLost": 8
+   }
+  },
+  {
+   "code": "DE-2025-0108",
+   "name": "Mvua na Upepo Mkali — Handeni Mji (Tanga)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-21",
+   "end": "2025-12-31",
+   "region": "Tanga",
+   "district": "Handeni Mji",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Handeni Mji, Tanga. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 1,
+    "directlyAffected": 553,
+    "householdsAffected": 109,
+    "housesDamaged": 15,
+    "classroomsDamaged": 1,
+    "healthFacilitiesDamaged": 1,
+    "religiousFacilitiesDamaged": 2,
+    "livestockLost": 1800
+   }
+  },
+  {
+   "code": "DE-2026-0103",
+   "name": "Mvua na Upepo Mkali — Handeni DC (Tanga)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2026-02-21",
+   "end": "2026-02-21",
+   "region": "Tanga",
+   "district": "Handeni DC",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Handeni DC, Tanga. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 552,
+    "householdsAffected": 150,
+    "housesDamaged": 150,
+    "schoolsDamaged": 1,
+    "healthFacilitiesDamaged": 1,
+    "bridgesDamaged": 3,
+    "roadsDamaged": 3,
+    "religiousFacilitiesDamaged": 4
+   }
+  },
+  {
+   "code": "DE-2026-0104",
+   "name": "Mafuriko — Momba MC (Songwe)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-01-08",
+   "end": "2026-01-08",
+   "region": "Songwe",
+   "district": "Momba MC",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Momba MC, Songwe. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 4020,
+    "householdsAffected": 804,
+    "roadsDamaged": 1,
+    "livestockLost": 115
+   }
+  },
+  {
+   "code": "DE-2025-0109",
+   "name": "Mafuriko — Kilosa (Morogoro)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2025-12-26",
+   "end": "2025-12-28",
+   "region": "Morogoro",
+   "district": "Kilosa",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Kilosa, Morogoro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "injuredTotal": 4,
+    "directlyAffected": 2189,
+    "householdsAffected": 758,
+    "housesDamaged": 261,
+    "bridgesDamaged": 4,
+    "roadsDamaged": 2
+   }
+  },
+  {
+   "code": "DE-2026-0105",
+   "name": "Mafuriko — Kilosa (Morogoro)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-08",
+   "end": "2026-03-09",
+   "region": "Morogoro",
+   "district": "Kilosa",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Kilosa, Morogoro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 2377,
+    "householdsAffected": 603,
+    "housesDamaged": 383
+   }
+  },
+  {
+   "code": "DE-2025-0110",
+   "name": "Mvua na Upepo Mkali — Gairo (Morogoro)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-28",
+   "end": "2025-12-28",
+   "region": "Morogoro",
+   "district": "Gairo",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Gairo, Morogoro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 208,
+    "householdsAffected": 59,
+    "housesDamaged": 59
+   }
+  },
+  {
+   "code": "DE-2025-0111",
+   "name": "Mvua na Upepo Mkali — Morogoro DC (Morogoro)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-27",
+   "end": "2025-12-29",
+   "region": "Morogoro",
+   "district": "Morogoro DC",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Morogoro DC, Morogoro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 5,
+    "householdsAffected": 1,
+    "housesDamaged": 1,
+    "bridgesDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2025-0112",
+   "name": "Mafuriko — Morogoro MC (Morogoro)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2025-12-27",
+   "end": "2025-12-28",
+   "region": "Morogoro",
+   "district": "Morogoro MC",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Morogoro MC, Morogoro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "injuredTotal": 1,
+    "householdsAffected": 221,
+    "housesDamaged": 221,
+    "roadsDamaged": 6
+   }
+  },
+  {
+   "code": "DE-2026-0106",
+   "name": "Mafuriko — Malinyi (Morogoro)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-13",
+   "end": "2026-03-25",
+   "region": "Morogoro",
+   "district": "Malinyi",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Malinyi, Morogoro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 4,
+    "injuredTotal": 4,
+    "directlyAffected": 2783,
+    "householdsAffected": 459,
+    "housesDamaged": 255,
+    "housesDestroyed": 28,
+    "schoolsDamaged": 4,
+    "classroomsDamaged": 2,
+    "bridgesDamaged": 1,
+    "roadsDamaged": 3,
+    "cropsDestroyedHa": 851.16,
+    "cropsUnit": "hekta"
+   }
+  },
+  {
+   "code": "DE-2026-0107",
+   "name": "Mafuriko — Mlimba (Morogoro)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-21",
+   "end": "2026-03-21",
+   "region": "Morogoro",
+   "district": "Mlimba",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Mlimba, Morogoro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 1,
+    "directlyAffected": 1918,
+    "housesDamaged": 134,
+    "housesDestroyed": 16,
+    "schoolsDamaged": 2,
+    "healthFacilitiesDamaged": 1,
+    "bridgesDamaged": 8,
+    "roadsDamaged": 40
+   }
+  },
+  {
+   "code": "DE-2026-0108",
+   "name": "Mafuriko — Ifakara (Kilombero) (Morogoro)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-24",
+   "end": "2026-03-24",
+   "region": "Morogoro",
+   "district": "Ifakara (Kilombero)",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Ifakara (Kilombero), Morogoro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 850,
+    "housesDamaged": 26,
+    "housesDestroyed": 10,
+    "schoolsDamaged": 2,
+    "healthFacilitiesDamaged": 1,
+    "roadsDamaged": 1,
+    "livestockLost": 619,
+    "cropsDestroyedHa": 350,
+    "cropsUnit": "ekari"
+   }
+  },
+  {
+   "code": "DE-2026-0109",
+   "name": "Mafuriko — Mvomero (Morogoro)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-02-26",
+   "end": "2026-03-09",
+   "region": "Morogoro",
+   "district": "Mvomero",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Mvomero, Morogoro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 6650,
+    "householdsAffected": 2104
+   }
+  },
+  {
+   "code": "DE-2025-0113",
+   "name": "Mvua na Upepo Mkali — Hanang' (Manyara)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-27",
+   "end": "2025-12-27",
+   "region": "Manyara",
+   "district": "Hanang'",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Hanang', Manyara. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 80,
+    "householdsAffected": 16
+   }
+  },
+  {
+   "code": "DE-2025-0114",
+   "name": "Mvua na Upepo Mkali — Kiteto (Manyara)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-26",
+   "end": "2025-12-26",
+   "region": "Manyara",
+   "district": "Kiteto",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Kiteto, Manyara. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "livestockLost": 194
+   }
+  },
+  {
+   "code": "DE-2025-0115",
+   "name": "Mafuriko — Simanjiro (Manyara)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2025-12-24",
+   "end": "2025-12-24",
+   "region": "Manyara",
+   "district": "Simanjiro",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Simanjiro, Manyara. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "livestockLost": 1059
+   }
+  },
+  {
+   "code": "DE-2026-0110",
+   "name": "Mafuriko — Simanjiro (Manyara)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-08",
+   "end": "2026-03-09",
+   "region": "Manyara",
+   "district": "Simanjiro",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Simanjiro, Manyara. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 228,
+    "housesDamaged": 273,
+    "housesDestroyed": 17,
+    "bridgesDamaged": 3,
+    "roadsKmDamaged": 2.02,
+    "livestockLost": 163,
+    "cropsDestroyedHa": 989,
+    "cropsUnit": "ekari"
+   }
+  },
+  {
+   "code": "DE-2025-0116",
+   "name": "Mvua na Upepo Mkali — Songea Manispaa (Ruvuma)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-24",
+   "end": "2025-12-31",
+   "region": "Ruvuma",
+   "district": "Songea Manispaa",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Songea Manispaa, Ruvuma. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "injuredTotal": 6,
+    "directlyAffected": 430,
+    "householdsAffected": 127,
+    "housesDamaged": 6,
+    "housesDestroyed": 4,
+    "religiousFacilitiesDamaged": 3
+   }
+  },
+  {
+   "code": "DE-2026-0111",
+   "name": "Mafuriko — Nyasa (Ruvuma)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-02-02",
+   "end": "2026-02-02",
+   "region": "Ruvuma",
+   "district": "Nyasa",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Nyasa, Ruvuma. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 1,
+    "injuredTotal": 5
+   }
+  },
+  {
+   "code": "DE-2026-0112",
+   "name": "Mafuriko — Nyasa (Ruvuma)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-15",
+   "end": "2026-03-15",
+   "region": "Ruvuma",
+   "district": "Nyasa",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Nyasa, Ruvuma. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 75,
+    "householdsAffected": 15
+   }
+  },
+  {
+   "code": "DE-2026-0113",
+   "name": "Mafuriko — Iringa DC (Iringa)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-07",
+   "end": "2026-03-07",
+   "region": "Iringa",
+   "district": "Iringa DC",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Iringa DC, Iringa. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 180,
+    "householdsAffected": 36,
+    "housesDamaged": 28,
+    "housesDestroyed": 8,
+    "roadsDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2026-0114",
+   "name": "Mafuriko — Iringa DC (Iringa)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-08",
+   "end": "2026-03-09",
+   "region": "Iringa",
+   "district": "Iringa DC",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Iringa DC, Iringa. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "injuredTotal": 1,
+    "directlyAffected": 1190,
+    "householdsAffected": 238,
+    "housesDamaged": 185,
+    "housesDestroyed": 53,
+    "roadsKmDamaged": 78,
+    "livestockLost": 769,
+    "cropsDestroyedHa": 8.25,
+    "cropsUnit": "hekta"
+   }
+  },
+  {
+   "code": "DE-2026-0115",
+   "name": "Mvua na Maporomoko ya Udongo — Rungwe (Mbeya)",
+   "hazard": "Landslide",
+   "hazardLabel": "Mvua na Maporomoko ya Udongo (Rain & Landslide)",
+   "start": "2026-03-25",
+   "end": "2026-03-25",
+   "region": "Mbeya",
+   "district": "Rungwe",
+   "scope": "District",
+   "trigger": "Mvua na Maporomoko ya Udongo (Rain & Landslide)",
+   "desc": "Mvua na Maporomoko ya Udongo (Rain & Landslide) — Rungwe, Mbeya. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 21,
+    "injuredTotal": 9,
+    "directlyAffected": 194,
+    "householdsAffected": 79,
+    "housesDamaged": 54,
+    "housesDestroyed": 25,
+    "schoolsDamaged": 1,
+    "classroomsDamaged": 2,
+    "bridgesDamaged": 1,
+    "roadsKmDamaged": 53.4,
+    "livestockLost": 4,
+    "cropsDestroyedHa": 10,
+    "cropsUnit": "ekari"
+   }
+  },
+  {
+   "code": "DE-2026-0116",
+   "name": "Mvua na Upepo Mkali — Mbeya MC (Mbeya)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2026-02-13",
+   "end": "2026-02-15",
+   "region": "Mbeya",
+   "district": "Mbeya MC",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Mbeya MC, Mbeya. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 830,
+    "householdsAffected": 166
+   }
+  },
+  {
+   "code": "DE-2025-0117",
+   "name": "Mvua na Upepo Mkali — Kishapu (Shinyanga)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-26",
+   "end": "2025-12-26",
+   "region": "Shinyanga",
+   "district": "Kishapu",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Kishapu, Shinyanga. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "injuredTotal": 3,
+    "directlyAffected": 903,
+    "householdsAffected": 181,
+    "housesDamaged": 130,
+    "schoolsDamaged": 1,
+    "classroomsDamaged": 2,
+    "livestockLost": 680
+   }
+  },
+  {
+   "code": "DE-2025-0118",
+   "name": "Mvua na Upepo Mkali — Shinyanga DC (Shinyanga)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-26",
+   "end": "2025-12-26",
+   "region": "Shinyanga",
+   "district": "Shinyanga DC",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Shinyanga DC, Shinyanga. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "injuredTotal": 14,
+    "directlyAffected": 2420,
+    "householdsAffected": 484,
+    "housesDamaged": 469,
+    "housesDestroyed": 15,
+    "schoolsDamaged": 1,
+    "classroomsDamaged": 4,
+    "religiousFacilitiesDamaged": 3
+   }
+  },
+  {
+   "code": "DE-2025-0119",
+   "name": "Mvua na Upepo Mkali — Msalala (Shinyanga)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-26",
+   "end": "2025-12-26",
+   "region": "Shinyanga",
+   "district": "Msalala",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Msalala, Shinyanga. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 1125,
+    "householdsAffected": 225,
+    "schoolsDamaged": 1,
+    "classroomsDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2026-0117",
+   "name": "Maporomoko ya Mgodi — Kahama (Shinyanga)",
+   "hazard": "Landslide",
+   "hazardLabel": "Maporomoko ya Mgodi (Mine Collapse)",
+   "start": "2026-03-15",
+   "end": "2026-03-15",
+   "region": "Shinyanga",
+   "district": "Kahama",
+   "scope": "District",
+   "trigger": "Maporomoko ya Mgodi (Mine Collapse)",
+   "desc": "Maporomoko ya Mgodi (Mine Collapse) — Kahama, Shinyanga. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 1,
+    "injuredTotal": 3,
+    "directlyAffected": 7
+   }
+  },
+  {
+   "code": "DE-2025-0120",
+   "name": "Maporomoko ya Mgodi — Shinyanga MC (Shinyanga)",
+   "hazard": "Landslide",
+   "hazardLabel": "Maporomoko ya Mgodi (Mine Collapse)",
+   "start": "2025-09-24",
+   "end": "2025-09-24",
+   "region": "Shinyanga",
+   "district": "Shinyanga MC",
+   "scope": "District",
+   "trigger": "Maporomoko ya Mgodi (Mine Collapse)",
+   "desc": "Maporomoko ya Mgodi (Mine Collapse) — Shinyanga MC, Shinyanga. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 21,
+    "injuredTotal": 3,
+    "directlyAffected": 24
+   }
+  },
+  {
+   "code": "DE-2026-0118",
+   "name": "Mvua na Upepo Mkali — Buchosa (Mwanza)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2026-02-26",
+   "end": "2026-02-26",
+   "region": "Mwanza",
+   "district": "Buchosa",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Buchosa, Mwanza. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 45,
+    "householdsAffected": 9,
+    "housesDamaged": 6,
+    "housesDestroyed": 3,
+    "schoolsDamaged": 1,
+    "classroomsDamaged": 5
+   }
+  },
+  {
+   "code": "DE-2026-0119",
+   "name": "Mvua na Upepo Mkali — Ilemela (Mwanza)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2026-02-25",
+   "end": "2026-02-25",
+   "region": "Mwanza",
+   "district": "Ilemela",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Ilemela, Mwanza. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "injuredTotal": 2,
+    "directlyAffected": 114,
+    "householdsAffected": 17
+   }
+  },
+  {
+   "code": "DE-2026-0120",
+   "name": "Mafuriko — Nyamagana (Mwanza)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-10",
+   "end": "2026-03-10",
+   "region": "Mwanza",
+   "district": "Nyamagana",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Nyamagana, Mwanza. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 1,
+    "injuredTotal": 1,
+    "housesDamaged": 113,
+    "healthFacilitiesDamaged": 2,
+    "bridgesDamaged": 2,
+    "roadsDamaged": 15
+   }
+  },
+  {
+   "code": "DE-2026-0121",
+   "name": "Mafuriko — Kwimba (Mwanza)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-23",
+   "end": "2026-03-23",
+   "region": "Mwanza",
+   "district": "Kwimba",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Kwimba, Mwanza. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 749,
+    "householdsAffected": 107,
+    "housesDamaged": 41,
+    "housesDestroyed": 37
+   }
+  },
+  {
+   "code": "DE-2026-0122",
+   "name": "Mvua na Upepo Mkali — Kwimba (Mwanza)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2026-04-17",
+   "end": "2026-04-17",
+   "region": "Mwanza",
+   "district": "Kwimba",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Kwimba, Mwanza. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "injuredTotal": 1,
+    "directlyAffected": 1,
+    "householdsAffected": 1,
+    "housesDamaged": 11,
+    "cropsDestroyedHa": 230,
+    "cropsUnit": "ekari"
+   }
+  },
+  {
+   "code": "DE-2025-0121",
+   "name": "Mvua na Upepo Mkali — Mkalama (Singida)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-27",
+   "end": "2025-12-27",
+   "region": "Singida",
+   "district": "Mkalama",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Mkalama, Singida. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 10,
+    "householdsAffected": 2,
+    "housesDestroyed": 2
+   }
+  },
+  {
+   "code": "DE-2025-0122",
+   "name": "Mvua na Upepo Mkali — Manyoni (Singida)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-27",
+   "end": "2025-12-27",
+   "region": "Singida",
+   "district": "Manyoni",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Manyoni, Singida. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "schoolsDamaged": 1,
+    "classroomsDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2025-0123",
+   "name": "Mvua na Upepo Mkali — Ikungi (Singida)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-28",
+   "end": "2025-12-28",
+   "region": "Singida",
+   "district": "Ikungi",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Ikungi, Singida. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "roadsDamaged": 3
+   }
+  },
+  {
+   "code": "DE-2025-0124",
+   "name": "Mvua na Upepo Mkali — Itilima (Simiyu)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-28",
+   "end": "2025-12-28",
+   "region": "Simiyu",
+   "district": "Itilima",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Itilima, Simiyu. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "schoolsDamaged": 3,
+    "classroomsDamaged": 4
+   }
+  },
+  {
+   "code": "DE-2025-0125",
+   "name": "Mvua na Upepo Mkali — Meatu (Simiyu)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2025-12-24",
+   "end": "2025-12-24",
+   "region": "Simiyu",
+   "district": "Meatu",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Meatu, Simiyu. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "schoolsDamaged": 1,
+    "classroomsDamaged": 1,
+    "healthFacilitiesDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2026-0123",
+   "name": "Mvua na Upepo Mkali — Rufiji (Pwani)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2026-02-02",
+   "end": "2026-02-02",
+   "region": "Pwani",
+   "district": "Rufiji",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Rufiji, Pwani. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "injuredTotal": 5,
+    "directlyAffected": 1130,
+    "housesDamaged": 226,
+    "schoolsDamaged": 1,
+    "classroomsDamaged": 10
+   }
+  },
+  {
+   "code": "DE-2026-0124",
+   "name": "Mvua na Upepo Mkali — Mtama (Lindi)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2026-02-23",
+   "end": "2026-02-23",
+   "region": "Lindi",
+   "district": "Mtama",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "Mvua na Upepo Mkali (Rain & Strong Winds) — Mtama, Lindi. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 105,
+    "housesDamaged": 21
+   }
+  },
+  {
+   "code": "DE-2026-0125",
+   "name": "Mafuriko — Mtama (Lindi)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-13",
+   "end": "2026-03-13",
+   "region": "Lindi",
+   "district": "Mtama",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Mtama, Lindi. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 194,
+    "householdsAffected": 60
+   }
+  },
+  {
+   "code": "DE-2026-0126",
+   "name": "Maporomoko ya Mgodi — Nyang'hwale (Geita)",
+   "hazard": "Landslide",
+   "hazardLabel": "Maporomoko ya Mgodi (Mine Collapse)",
+   "start": "2026-03-23",
+   "end": "2026-03-23",
+   "region": "Geita",
+   "district": "Nyang'hwale",
+   "scope": "District",
+   "trigger": "Maporomoko ya Mgodi (Mine Collapse)",
+   "desc": "Maporomoko ya Mgodi (Mine Collapse) — Nyang'hwale, Geita. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 4,
+    "injuredTotal": 9,
+    "directlyAffected": 13
+   }
+  },
+  {
+   "code": "DE-2026-0127",
+   "name": "Mafuriko — Hai (Kilimanjaro)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-02-27",
+   "end": "2026-02-27",
+   "region": "Kilimanjaro",
+   "district": "Hai",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Hai, Kilimanjaro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 47,
+    "housesDamaged": 25,
+    "bridgesDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2025-0126",
+   "name": "Mpasuko wa Ardhi — Same (Kilimanjaro)",
+   "hazardLabel": "Mpasuko wa Ardhi (Ground Fissure)",
+   "start": "2025-03-01",
+   "end": "2026-03-31",
+   "region": "Kilimanjaro",
+   "district": "Same",
+   "scope": "District",
+   "trigger": "Mpasuko wa Ardhi (Ground Fissure)",
+   "desc": "Mpasuko wa Ardhi (Ground Fissure) — Same, Kilimanjaro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 53,
+    "householdsAffected": 10,
+    "housesDamaged": 5,
+    "housesDestroyed": 5,
+    "religiousFacilitiesDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2026-0128",
+   "name": "Mafuriko — Hai (Kilimanjaro)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-04-12",
+   "end": "2026-04-12",
+   "region": "Kilimanjaro",
+   "district": "Hai",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Hai, Kilimanjaro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 270,
+    "householdsAffected": 54,
+    "cropsDestroyedHa": 52,
+    "cropsUnit": "ekari"
+   }
+  },
+  {
+   "code": "DE-2026-0129",
+   "name": "Mafuriko — Siha (Kilimanjaro)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-04-10",
+   "end": "2026-04-10",
+   "region": "Kilimanjaro",
+   "district": "Siha",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Siha, Kilimanjaro. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 8,
+    "householdsAffected": 4
+   }
+  },
+  {
+   "code": "DE-2026-0130",
+   "name": "Mafuriko — Arusha Jiji (Arusha)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-02-28",
+   "end": "2026-02-28",
+   "region": "Arusha",
+   "district": "Arusha Jiji",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Arusha Jiji, Arusha. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 1,
+    "bridgesDamaged": 1,
+    "roadsDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2026-0131",
+   "name": "Mafuriko — Monduli (Arusha)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-09",
+   "end": "2026-03-09",
+   "region": "Arusha",
+   "district": "Monduli",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Monduli, Arusha. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 250,
+    "schoolsDamaged": 1
+   }
+  },
+  {
+   "code": "DE-2026-0132",
+   "name": "Ajali ya Boti — Kigoma DC (Kigoma)",
+   "hazardLabel": "Ajali ya Boti (Boat Accident)",
+   "start": "2026-03-13",
+   "end": "2026-03-13",
+   "region": "Kigoma",
+   "district": "Kigoma DC",
+   "scope": "District",
+   "trigger": "Ajali ya Boti (Boat Accident)",
+   "desc": "Ajali ya Boti (Boat Accident) — Kigoma DC, Kigoma. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 9,
+    "injuredTotal": 5,
+    "directlyAffected": 14
+   }
+  },
+  {
+   "code": "DE-2026-0133",
+   "name": "Mafuriko — Kigoma Ujiji MC (Kigoma)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-03-09",
+   "end": "2026-04-05",
+   "region": "Kigoma",
+   "district": "Kigoma Ujiji MC",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Kigoma Ujiji MC, Kigoma. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "directlyAffected": 825,
+    "householdsAffected": 165,
+    "housesDamaged": 137,
+    "housesDestroyed": 28,
+    "schoolsDamaged": 1,
+    "bridgesDamaged": 1,
+    "roadsDamaged": 6
+   }
+  },
+  {
+   "code": "DE-2026-0134",
+   "name": "Maporomoko ya Mgodi — Musoma Vijijini (Mara)",
+   "hazard": "Landslide",
+   "hazardLabel": "Maporomoko ya Mgodi (Mine Collapse)",
+   "start": "2026-04-04",
+   "end": "2026-04-04",
+   "region": "Mara",
+   "district": "Musoma Vijijini",
+   "scope": "District",
+   "trigger": "Maporomoko ya Mgodi (Mine Collapse)",
+   "desc": "Maporomoko ya Mgodi (Mine Collapse) — Musoma Vijijini, Mara. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 3
+   }
+  },
+  {
+   "code": "DE-2026-0135",
+   "name": "Mvua na Upepo Mkali — Ubungo/Kinondoni/Temeke/Ilala/Kigamboni (Dar es Salaam)",
+   "hazard": "Heavy rainfall",
+   "hazardLabel": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "start": "2026-03-01",
+   "end": "2026-03-01",
+   "region": "Dar es Salaam",
+   "district": "Ubungo/Kinondoni/Temeke/Ilala/Kigamboni",
+   "scope": "District",
+   "trigger": "Mvua na Upepo Mkali (Rain & Strong Winds)",
+   "desc": "tarehe haijabainishwa kwenye taarifa; mikoa 5 ya Jiji",
+   "effects": {
+    "injuredTotal": 3,
+    "directlyAffected": 10,
+    "householdsAffected": 2,
+    "housesDestroyed": 2,
+    "livestockLost": 1220
+   }
+  },
+  {
+   "code": "DE-2026-0136",
+   "name": "Mafuriko — Bukoba (Kagera)",
+   "hazard": "Floods",
+   "hazardLabel": "Mafuriko (Floods)",
+   "start": "2026-04-17",
+   "end": "2026-04-17",
+   "region": "Kagera",
+   "district": "Bukoba",
+   "scope": "District",
+   "trigger": "Mafuriko (Floods)",
+   "desc": "Mafuriko (Floods) — Bukoba, Kagera. Chanzo: TAARIFA YA MAAFA OWM-SBUU/DMD (Julai 2025–Aprili 2026).",
+   "effects": {
+    "deathsTotal": 4
+   }
+  }
+ ]
+}

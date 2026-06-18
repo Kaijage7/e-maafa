@@ -1,0 +1,471 @@
+[
+ {
+  "name": "Rescue Rope (50m)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Heavy-duty nylon rescue rope for water rescue, cliff rescue, and building collapse operations.",
+  "low_stock_threshold": 20
+ },
+ {
+  "name": "Life Jacket (Adult)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Adult-sized life jacket for flood rescue operations and water safety.",
+  "low_stock_threshold": 100
+ },
+ {
+  "name": "Life Jacket (Child)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Child-sized life jacket for flood rescue operations.",
+  "low_stock_threshold": 50
+ },
+ {
+  "name": "Inflatable Rescue Boat",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Inflatable rubber boat for flood rescue and water evacuation operations.",
+  "low_stock_threshold": 5
+ },
+ {
+  "name": "Outboard Motor (15HP)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Outboard motor for rescue boats during flood operations.",
+  "low_stock_threshold": 3
+ },
+ {
+  "name": "Hydraulic Rescue Cutter",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Hydraulic cutting tool for vehicle extrication and structural rescue.",
+  "low_stock_threshold": 2
+ },
+ {
+  "name": "Hydraulic Rescue Spreader",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Hydraulic spreading tool for vehicle extrication and rescue operations.",
+  "low_stock_threshold": 2
+ },
+ {
+  "name": "Stretcher (Folding)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Lightweight folding stretcher for casualty evacuation.",
+  "low_stock_threshold": 30
+ },
+ {
+  "name": "Spine Board",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Rigid spine board for immobilizing patients with suspected spinal injuries.",
+  "low_stock_threshold": 20
+ },
+ {
+  "name": "Search Camera (Snake Camera)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Flexible camera for searching victims in collapsed structures.",
+  "low_stock_threshold": 3
+ },
+ {
+  "name": "Listening Device (Acoustic)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Acoustic listening device for detecting trapped survivors in rubble.",
+  "low_stock_threshold": 2
+ },
+ {
+  "name": "Rescue Helmet with Light",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Safety helmet with built-in LED headlamp for rescue operations.",
+  "low_stock_threshold": 50
+ },
+ {
+  "name": "Chainsaw",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Petrol-powered chainsaw for clearing debris and fallen trees.",
+  "low_stock_threshold": 5
+ },
+ {
+  "name": "Portable Generator (5kVA)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Portable petrol generator for emergency power supply during rescue operations.",
+  "low_stock_threshold": 5
+ },
+ {
+  "name": "Floodlight (Portable)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "High-powered portable floodlight for night rescue operations.",
+  "low_stock_threshold": 10
+ },
+ {
+  "name": "Two-Way Radio (Handheld)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "UHF/VHF handheld radio for communication during rescue operations.",
+  "low_stock_threshold": 30
+ },
+ {
+  "name": "First Aid Kit (Comprehensive)",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "kit",
+  "description": "Comprehensive first aid kit for emergency medical response.",
+  "low_stock_threshold": 50
+ },
+ {
+  "name": "Thermal Imaging Camera",
+  "category": "Search and Rescue Equipment",
+  "unit_of_measure": "piece",
+  "description": "Thermal camera for locating survivors in smoke, darkness, or debris.",
+  "low_stock_threshold": 2
+ },
+ {
+  "name": "Family Tent (4-Person)",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "piece",
+  "description": "Waterproof family tent for temporary shelter during displacement.",
+  "low_stock_threshold": 100
+ },
+ {
+  "name": "Emergency Tent (Large - 20 Person)",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "piece",
+  "description": "Large emergency tent for evacuation centers and relief camps.",
+  "low_stock_threshold": 20
+ },
+ {
+  "name": "Tarpaulin Sheet (4x5m)",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "piece",
+  "description": "Heavy-duty tarpaulin for temporary roofing and shelter construction.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "Tarpaulin Sheet (6x8m)",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "piece",
+  "description": "Large tarpaulin for community shelter and storage protection.",
+  "low_stock_threshold": 200
+ },
+ {
+  "name": "Plastic Sheeting Roll",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "roll",
+  "description": "Roll of plastic sheeting for emergency shelter construction.",
+  "low_stock_threshold": 100
+ },
+ {
+  "name": "Sleeping Mat (Foam)",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "piece",
+  "description": "Foam sleeping mat for displaced persons in evacuation centers.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "Blanket (Fleece)",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "piece",
+  "description": "Warm fleece blanket for displaced families.",
+  "low_stock_threshold": 1000
+ },
+ {
+  "name": "Emergency Blanket (Thermal)",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "piece",
+  "description": "Lightweight thermal emergency blanket for hypothermia prevention.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "Mosquito Net (Treated)",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "piece",
+  "description": "Long-lasting insecticide-treated mosquito net for malaria prevention.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "Shelter Tool Kit",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "kit",
+  "description": "Basic tool kit for emergency shelter construction and repairs.",
+  "low_stock_threshold": 100
+ },
+ {
+  "name": "Rope (Nylon 10mm)",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "roll",
+  "description": "Strong nylon rope for shelter construction and securing tarpaulins.",
+  "low_stock_threshold": 50
+ },
+ {
+  "name": "Bamboo Poles (3m)",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "piece",
+  "description": "Bamboo poles for temporary shelter frame construction.",
+  "low_stock_threshold": 200
+ },
+ {
+  "name": "Corrugated Iron Sheets",
+  "category": "Emergency Shelter",
+  "unit_of_measure": "piece",
+  "description": "Corrugated galvanized iron sheets for semi-permanent shelter roofing.",
+  "low_stock_threshold": 200
+ },
+ {
+  "name": "Rice",
+  "category": "Food Items",
+  "unit_of_measure": "kg",
+  "description": "Long grain white rice for emergency food distribution.",
+  "low_stock_threshold": 5000
+ },
+ {
+  "name": "Maize Flour (Sembe)",
+  "category": "Food Items",
+  "unit_of_measure": "kg",
+  "description": "Maize flour for preparing ugali, a staple food in Tanzania.",
+  "low_stock_threshold": 5000
+ },
+ {
+  "name": "Beans (Dried)",
+  "category": "Food Items",
+  "unit_of_measure": "kg",
+  "description": "Dried beans as protein source for emergency food rations.",
+  "low_stock_threshold": 3000
+ },
+ {
+  "name": "Cooking Oil",
+  "category": "Food Items",
+  "unit_of_measure": "liter",
+  "description": "Vegetable cooking oil for food preparation.",
+  "low_stock_threshold": 1000
+ },
+ {
+  "name": "Sugar",
+  "category": "Food Items",
+  "unit_of_measure": "kg",
+  "description": "White granulated sugar for emergency food supplies.",
+  "low_stock_threshold": 2000
+ },
+ {
+  "name": "Salt (Iodized)",
+  "category": "Food Items",
+  "unit_of_measure": "kg",
+  "description": "Iodized table salt for cooking and preservation.",
+  "low_stock_threshold": 1000
+ },
+ {
+  "name": "Canned Fish (Sardines)",
+  "category": "Food Items",
+  "unit_of_measure": "can",
+  "description": "Canned sardines in oil as ready-to-eat protein source.",
+  "low_stock_threshold": 5000
+ },
+ {
+  "name": "Canned Beans",
+  "category": "Food Items",
+  "unit_of_measure": "can",
+  "description": "Ready-to-eat canned beans for immediate consumption.",
+  "low_stock_threshold": 3000
+ },
+ {
+  "name": "High Energy Biscuits (HEB)",
+  "category": "Food Items",
+  "unit_of_measure": "packet",
+  "description": "High energy biscuits fortified with vitamins and minerals.",
+  "low_stock_threshold": 5000
+ },
+ {
+  "name": "Ready-to-Use Therapeutic Food (RUTF)",
+  "category": "Food Items",
+  "unit_of_measure": "sachet",
+  "description": "Therapeutic food for treating severe acute malnutrition in children.",
+  "low_stock_threshold": 2000
+ },
+ {
+  "name": "Infant Formula",
+  "category": "Food Items",
+  "unit_of_measure": "tin",
+  "description": "Infant formula milk for babies who cannot be breastfed.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "Corn Soy Blend (CSB+)",
+  "category": "Food Items",
+  "unit_of_measure": "kg",
+  "description": "Fortified blended food for supplementary feeding programs.",
+  "low_stock_threshold": 2000
+ },
+ {
+  "name": "Drinking Water (Bottled)",
+  "category": "Food Items",
+  "unit_of_measure": "liter",
+  "description": "Safe bottled drinking water for emergency distribution.",
+  "low_stock_threshold": 10000
+ },
+ {
+  "name": "Tea Leaves",
+  "category": "Food Items",
+  "unit_of_measure": "kg",
+  "description": "Black tea leaves for preparation of chai.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "Powdered Milk",
+  "category": "Food Items",
+  "unit_of_measure": "kg",
+  "description": "Full cream powdered milk for emergency nutrition.",
+  "low_stock_threshold": 1000
+ },
+ {
+  "name": "Jerry Can (20L)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "piece",
+  "description": "Collapsible water container for safe water storage and transport.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "Water Bucket (15L)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "piece",
+  "description": "Plastic bucket with lid for water collection and storage.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "Cooking Pot Set",
+  "category": "Non-Food Items",
+  "unit_of_measure": "set",
+  "description": "Aluminum cooking pot set for family meal preparation.",
+  "low_stock_threshold": 200
+ },
+ {
+  "name": "Kitchen Utensil Set",
+  "category": "Non-Food Items",
+  "unit_of_measure": "set",
+  "description": "Basic kitchen utensils for food preparation and serving.",
+  "low_stock_threshold": 200
+ },
+ {
+  "name": "Portable Stove (Charcoal)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "piece",
+  "description": "Improved charcoal stove for efficient cooking.",
+  "low_stock_threshold": 100
+ },
+ {
+  "name": "Solar Lantern",
+  "category": "Non-Food Items",
+  "unit_of_measure": "piece",
+  "description": "Solar-powered LED lantern for lighting in evacuation centers.",
+  "low_stock_threshold": 200
+ },
+ {
+  "name": "Hygiene Kit (Family)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "kit",
+  "description": "Family hygiene kit containing essential sanitation items.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "Soap (Laundry Bar)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "piece",
+  "description": "Multi-purpose laundry and bathing soap.",
+  "low_stock_threshold": 2000
+ },
+ {
+  "name": "Sanitary Pads (Pack)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "pack",
+  "description": "Disposable sanitary pads for women and girls.",
+  "low_stock_threshold": 1000
+ },
+ {
+  "name": "Dignity Kit (Women)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "kit",
+  "description": "Dignity kit for women containing personal care items.",
+  "low_stock_threshold": 300
+ },
+ {
+  "name": "Baby Kit",
+  "category": "Non-Food Items",
+  "unit_of_measure": "kit",
+  "description": "Essential items kit for infants and toddlers.",
+  "low_stock_threshold": 200
+ },
+ {
+  "name": "Clothing Set (Adult Male)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "set",
+  "description": "Basic clothing set for adult men.",
+  "low_stock_threshold": 300
+ },
+ {
+  "name": "Clothing Set (Adult Female)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "set",
+  "description": "Basic clothing set for adult women.",
+  "low_stock_threshold": 300
+ },
+ {
+  "name": "Clothing Set (Child)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "set",
+  "description": "Basic clothing set for children.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "Water Purification Tablets",
+  "category": "Non-Food Items",
+  "unit_of_measure": "tablet",
+  "description": "Chlorine tablets for water purification in emergencies.",
+  "low_stock_threshold": 10000
+ },
+ {
+  "name": "Water Filter (Household)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "piece",
+  "description": "Ceramic water filter for household water treatment.",
+  "low_stock_threshold": 100
+ },
+ {
+  "name": "Portable Latrine Kit",
+  "category": "Non-Food Items",
+  "unit_of_measure": "kit",
+  "description": "Materials for constructing emergency pit latrines.",
+  "low_stock_threshold": 50
+ },
+ {
+  "name": "Hand Washing Station",
+  "category": "Non-Food Items",
+  "unit_of_measure": "piece",
+  "description": "Portable hand washing station for hygiene promotion.",
+  "low_stock_threshold": 50
+ },
+ {
+  "name": "Chlorine Solution (HTH)",
+  "category": "Non-Food Items",
+  "unit_of_measure": "kg",
+  "description": "High-test hypochlorite for water treatment and disinfection.",
+  "low_stock_threshold": 500
+ },
+ {
+  "name": "ORS Sachets",
+  "category": "Non-Food Items",
+  "unit_of_measure": "sachet",
+  "description": "Oral Rehydration Salts for treating dehydration.",
+  "low_stock_threshold": 5000
+ },
+ {
+  "name": "Body Bags",
+  "category": "Non-Food Items",
+  "unit_of_measure": "piece",
+  "description": "Leak-proof body bags for dignified handling of deceased.",
+  "low_stock_threshold": 100
+ }
+]

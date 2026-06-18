@@ -1,0 +1,56 @@
+# DMIS / e-MAAFA — reproducible local/staging stack: Postgres + Spring backend + Angular/nginx frontend.
+#   1. Copy .env.example to .env and set a strong secret:  DMIS_AUTH_JWT_SECRET=<>=32 random bytes>
+#   2. docker compose up --build
+#
+# The backend runs the PRODUCTION security chain (real role-gated @PreAuthorize — NO X-Local-Roles persona)
+# and applies ALL Flyway migrations on boot, including the area-specific schema (V92–V94: users / incidents /
+# stakeholders region_id+district_id and jurisdiction scoping) and the NDMF fund ledger (V89) — nothing to
+# configure for those, they apply automatically.
+#
+# NOT bundled here: the Early-Warning engine (Streamlit :8501 + generate API :8600) runs as SEPARATE
+# services. To serve EW from this stack, add those services and the frontend nginx /ew-engine (ws) and
+# /ew-api proxy routes — see frontend/nginx.conf.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: dmis
+      POSTGRES_USER: dmis_app
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dmis_pass}
+    volumes:
+      - dmis_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5440:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dmis_app -d dmis"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: dmis
+      DB_USERNAME: dmis_app
+      DB_PASSWORD: ${DB_PASSWORD:-dmis_pass}
+      # Required — supplied from the environment / .env, NEVER committed. Compose refuses to start if it is
+      # unset, and the app fail-fasts on a weak/short (<32-byte) secret outside the 'local' profile.
+      DMIS_AUTH_JWT_SECRET: ${DMIS_AUTH_JWT_SECRET:?set a real >=32-byte JWT secret in .env (never commit it)}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+
+volumes:
+  dmis_pgdata:

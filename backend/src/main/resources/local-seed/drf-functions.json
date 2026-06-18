@@ -1,0 +1,722 @@
+[
+ {
+  "number": 1,
+  "name": "Coordination",
+  "lead_agency_name": "PMO-DMD",
+  "description": "Overall coordination of disaster response operations including activation of EOCC and deployment of DRRT.",
+  "icon": "fa-sitemap",
+  "color": "#dc2626",
+  "tasks": [
+   {
+    "title": "Activate Emergency Operations Command Center (EOCC)",
+    "is_72hr_critical": true,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Establish Disaster Rapid Response Team (DRRT)",
+    "is_72hr_critical": true,
+    "default_priority": "Critical",
+    "sort_order": 2
+   },
+   {
+    "title": "Convene first coordination meeting with all DRF leads",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Establish coordination structure at regional/district level",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 4
+   },
+   {
+    "title": "Assign DRF leads and confirm agency mandates",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 5
+   },
+   {
+    "title": "Develop response action plan with timelines",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 6
+   },
+   {
+    "title": "Schedule regular progress review meetings",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 7
+   }
+  ]
+ },
+ {
+  "number": 2,
+  "name": "Information Management",
+  "lead_agency_name": "PMO-DMD / ICT Unit",
+  "description": "Collection, analysis and dissemination of disaster-related information.",
+  "icon": "fa-database",
+  "color": "#2563eb",
+  "tasks": [
+   {
+    "title": "Gather and circulate initial disaster information",
+    "is_72hr_critical": true,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Establish information sharing protocols",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Set up situation reporting template (SitRep)",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Produce first situation report",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 4
+   },
+   {
+    "title": "Maintain incident tracking dashboard",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Archive all response documents and data",
+    "is_72hr_critical": false,
+    "default_priority": "Low",
+    "sort_order": 6
+   }
+  ]
+ },
+ {
+  "number": 3,
+  "name": "Logistics & Supply Chain",
+  "lead_agency_name": "PMO-DMD / TPDF",
+  "description": "Management of relief supplies, warehousing, transport and distribution pipelines.",
+  "icon": "fa-truck",
+  "color": "#d97706",
+  "tasks": [
+   {
+    "title": "Assess immediate relief supply requirements",
+    "is_72hr_critical": false,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Deploy pre-positioned stocks from nearest warehouse",
+    "is_72hr_critical": false,
+    "default_priority": "Critical",
+    "sort_order": 2
+   },
+   {
+    "title": "Establish distribution points in affected areas",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Coordinate transport and delivery logistics",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 4
+   },
+   {
+    "title": "Track inventory and stock movements",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Request additional supplies if shortfall identified",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 6
+   },
+   {
+    "title": "Produce logistics pipeline report",
+    "is_72hr_critical": false,
+    "default_priority": "Low",
+    "sort_order": 7
+   }
+  ]
+ },
+ {
+  "number": 4,
+  "name": "Emergency Shelter & NFIs",
+  "lead_agency_name": "UNHCR / Red Cross",
+  "description": "Provision of emergency shelter, non-food items and camp coordination.",
+  "icon": "fa-campground",
+  "color": "#059669",
+  "tasks": [
+   {
+    "title": "Assess shelter needs of displaced populations",
+    "is_72hr_critical": false,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Identify and prepare temporary shelter sites",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Distribute emergency shelter materials and NFIs",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Register displaced persons at shelter sites",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 4
+   },
+   {
+    "title": "Establish camp management committees",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Monitor shelter conditions and protection concerns",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 6
+   }
+  ]
+ },
+ {
+  "number": 5,
+  "name": "Security & Public Order",
+  "lead_agency_name": "Tanzania Police Force",
+  "description": "Maintaining security, managing evacuations and ensuring public order in affected areas.",
+  "icon": "fa-shield-alt",
+  "color": "#1e3a5f",
+  "tasks": [
+   {
+    "title": "Establish security perimeter in affected area",
+    "is_72hr_critical": true,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Deploy police to maintain public order",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Coordinate evacuation routes and traffic management",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Protect relief supply distribution points",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 4
+   },
+   {
+    "title": "Monitor and report security incidents",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Coordinate with military for additional security if needed",
+    "is_72hr_critical": false,
+    "default_priority": "Low",
+    "sort_order": 6
+   }
+  ]
+ },
+ {
+  "number": 6,
+  "name": "Health & Medical Services",
+  "lead_agency_name": "Ministry of Health",
+  "description": "Emergency medical care, disease surveillance and public health response.",
+  "icon": "fa-heartbeat",
+  "color": "#e11d48",
+  "tasks": [
+   {
+    "title": "Deploy medical teams to affected areas",
+    "is_72hr_critical": false,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Establish field treatment facilities",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Activate disease surveillance and outbreak monitoring",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Coordinate medical supply distribution",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 4
+   },
+   {
+    "title": "Manage dead bodies and mortuary services",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Provide psychosocial support services",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 6
+   },
+   {
+    "title": "Produce health sector situation report",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 7
+   }
+  ]
+ },
+ {
+  "number": 7,
+  "name": "Search & Rescue",
+  "lead_agency_name": "Fire & Rescue Force",
+  "description": "Search, rescue and evacuation operations for trapped and affected persons.",
+  "icon": "fa-life-ring",
+  "color": "#ea580c",
+  "tasks": [
+   {
+    "title": "Deploy search and rescue teams",
+    "is_72hr_critical": true,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Identify priority search zones",
+    "is_72hr_critical": false,
+    "default_priority": "Critical",
+    "sort_order": 2
+   },
+   {
+    "title": "Coordinate with military and volunteer teams",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Establish casualty collection points",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 4
+   },
+   {
+    "title": "Manage evacuation of survivors",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 5
+   },
+   {
+    "title": "Document and report rescue operations",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 6
+   }
+  ]
+ },
+ {
+  "number": 8,
+  "name": "Food Security & Nutrition",
+  "lead_agency_name": "TAFDA / WFP",
+  "description": "Emergency food distribution and nutritional support for affected populations.",
+  "icon": "fa-utensils",
+  "color": "#65a30d",
+  "tasks": [
+   {
+    "title": "Conduct rapid food security assessment",
+    "is_72hr_critical": false,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Mobilize and distribute emergency food rations",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Set up communal feeding stations if needed",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Identify and support nutritionally vulnerable groups",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 4
+   },
+   {
+    "title": "Monitor food distribution equity and coverage",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Coordinate food pipeline with logistics DRF",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 6
+   }
+  ]
+ },
+ {
+  "number": 9,
+  "name": "Communications",
+  "lead_agency_name": "TCRA / PMO Comms",
+  "description": "Emergency telecommunications and public communication management.",
+  "icon": "fa-broadcast-tower",
+  "color": "#7c3aed",
+  "tasks": [
+   {
+    "title": "Process information through government channels",
+    "is_72hr_critical": true,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Establish emergency communication links in affected area",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Activate public alert and warning systems",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Deploy mobile communication units if networks down",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 4
+   },
+   {
+    "title": "Manage media relations and press statements",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Counter misinformation and rumours",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 6
+   },
+   {
+    "title": "Set up community information hotline",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 7
+   }
+  ]
+ },
+ {
+  "number": 10,
+  "name": "Damage & Needs Assessment",
+  "lead_agency_name": "PMO-DMD / DRRT",
+  "description": "Rapid and detailed assessment of damage and humanitarian needs.",
+  "icon": "fa-clipboard-check",
+  "color": "#0891b2",
+  "tasks": [
+   {
+    "title": "DRRT field assessment of affected area",
+    "is_72hr_critical": true,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Collect initial damage data (deaths, injuries, infrastructure)",
+    "is_72hr_critical": false,
+    "default_priority": "Critical",
+    "sort_order": 2
+   },
+   {
+    "title": "Produce rapid needs assessment report",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Coordinate with sector leads for detailed assessments",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 4
+   },
+   {
+    "title": "Estimate economic losses and reconstruction costs",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Identify priority areas for immediate intervention",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 6
+   }
+  ]
+ },
+ {
+  "number": 11,
+  "name": "WASH (Water, Sanitation & Hygiene)",
+  "lead_agency_name": "Ministry of Water / UNICEF",
+  "description": "Emergency water supply, sanitation facilities and hygiene promotion.",
+  "icon": "fa-tint",
+  "color": "#0284c7",
+  "tasks": [
+   {
+    "title": "Assess water supply and sanitation damage",
+    "is_72hr_critical": false,
+    "default_priority": "Critical",
+    "sort_order": 1
+   },
+   {
+    "title": "Deploy emergency water treatment and supply",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Establish emergency latrines at shelter sites",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Distribute hygiene kits and water purification tablets",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 4
+   },
+   {
+    "title": "Conduct hygiene promotion awareness campaigns",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Monitor water quality at distribution points",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 6
+   }
+  ]
+ },
+ {
+  "number": 12,
+  "name": "Protection",
+  "lead_agency_name": "Ministry of Community Development",
+  "description": "Protection of vulnerable groups including children, women, elderly and persons with disabilities.",
+  "icon": "fa-hands-helping",
+  "color": "#db2777",
+  "tasks": [
+   {
+    "title": "Identify and register vulnerable groups",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 1
+   },
+   {
+    "title": "Establish child-friendly spaces and protection mechanisms",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Prevent and respond to gender-based violence",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 3
+   },
+   {
+    "title": "Ensure accessibility of services for persons with disabilities",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 4
+   },
+   {
+    "title": "Coordinate family tracing and reunification",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Monitor protection concerns and report violations",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 6
+   }
+  ]
+ },
+ {
+  "number": 13,
+  "name": "Education in Emergencies",
+  "lead_agency_name": "Ministry of Education / UNICEF",
+  "description": "Continuation of education services and use of schools as temporary shelters.",
+  "icon": "fa-graduation-cap",
+  "color": "#4f46e5",
+  "tasks": [
+   {
+    "title": "Assess damage to educational facilities",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 1
+   },
+   {
+    "title": "Establish temporary learning spaces",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Provide emergency education materials",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 3
+   },
+   {
+    "title": "Deploy emergency education teachers",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 4
+   },
+   {
+    "title": "Coordinate school-as-shelter protocols",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Plan for school reopening and recovery",
+    "is_72hr_critical": false,
+    "default_priority": "Low",
+    "sort_order": 6
+   }
+  ]
+ },
+ {
+  "number": 14,
+  "name": "Environment",
+  "lead_agency_name": "VP Office (Environment) / NEMC",
+  "description": "Environmental impact assessment and management of environmental hazards.",
+  "icon": "fa-leaf",
+  "color": "#16a34a",
+  "tasks": [
+   {
+    "title": "Assess environmental impact of disaster",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 1
+   },
+   {
+    "title": "Monitor hazardous material spills or contamination",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Coordinate waste management in affected areas",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 3
+   },
+   {
+    "title": "Prevent secondary environmental hazards",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 4
+   },
+   {
+    "title": "Assess impact on ecosystems and natural resources",
+    "is_72hr_critical": false,
+    "default_priority": "Low",
+    "sort_order": 5
+   },
+   {
+    "title": "Produce environmental impact report",
+    "is_72hr_critical": false,
+    "default_priority": "Low",
+    "sort_order": 6
+   }
+  ]
+ },
+ {
+  "number": 15,
+  "name": "Early Recovery",
+  "lead_agency_name": "PMO-DMD / UNDP",
+  "description": "Transition from response to recovery including livelihoods restoration and infrastructure rehabilitation.",
+  "icon": "fa-tools",
+  "color": "#78716c",
+  "tasks": [
+   {
+    "title": "Develop early recovery framework and priorities",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 1
+   },
+   {
+    "title": "Assess livelihood impacts and recovery needs",
+    "is_72hr_critical": false,
+    "default_priority": "High",
+    "sort_order": 2
+   },
+   {
+    "title": "Initiate emergency employment and cash-for-work",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 3
+   },
+   {
+    "title": "Begin critical infrastructure rehabilitation",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 4
+   },
+   {
+    "title": "Support restoration of government services",
+    "is_72hr_critical": false,
+    "default_priority": "Medium",
+    "sort_order": 5
+   },
+   {
+    "title": "Document lessons learned for future preparedness",
+    "is_72hr_critical": false,
+    "default_priority": "Low",
+    "sort_order": 6
+   },
+   {
+    "title": "Coordinate transition to long-term recovery programs",
+    "is_72hr_critical": false,
+    "default_priority": "Low",
+    "sort_order": 7
+   }
+  ]
+ }
+]

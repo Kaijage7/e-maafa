@@ -1,0 +1,416 @@
+<!-- Intro splash (once per session, skippable) -->
+@if (introVisible()) {
+  <div style="position:fixed;inset:0;background:#0a1228;z-index:5000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;">
+    <img src="/images/emblem.png" alt="Emblem" style="width:110px;height:110px;object-fit:contain;animation:pulse 1.6s ease infinite;">
+    <div style="color:#fff;font-weight:800;font-size:1.5rem;letter-spacing:1px;">e-MAAFA</div>
+    <div style="color:rgba(255,255,255,0.55);font-size:0.9rem;">{{ L.t('lbl_disaster_management') }} {{ L.t('lbl_information_system') }}</div>
+    <button (click)="dismissIntro()" style="margin-top:1rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:20px;padding:0.4rem 1.2rem;font-size:0.8rem;cursor:pointer;">Skip <i class="fas fa-forward" style="font-size:0.6rem;"></i></button>
+  </div>
+}
+
+<!-- ===================== HERO ===================== -->
+<section class="hero-section" id="heroSection">
+
+  <!-- Crossfading background images (same two Rufiji aerials as the source) -->
+  <div class="hero-bg-slide" [class.active]="bgIdx() === 0" style="background-image: url('/images/events/rufiji_aerial_destruction.jpg')"></div>
+  <div class="hero-bg-slide" [class.active]="bgIdx() === 1" style="background-image: url('/images/events/rufiji_village_submerged.jpg')"></div>
+  <div class="hero-gradient-overlay"></div>
+
+  <!-- LEFT: brand + slider + CTAs -->
+  <div class="hero-left" id="heroLeft">
+    <div class="hero-brand">
+      <div class="hero-seal"><img src="/images/emblem.png" alt="Coat of Arms" style="width:100%;height:100%;object-fit:contain;"></div>
+      <div class="hero-brand-labels">
+        <div class="hero-org">{{ L.t('lbl_united_republic_of_tanzania') }}</div>
+        <div class="hero-office">{{ L.t('lbl_prime_ministers_office') }}</div>
+      </div>
+      <div class="hero-brand-divider"></div>
+    </div>
+
+    <h1 class="hero-title">{{ L.t('lbl_disaster_management') }}<br><span>{{ L.t('lbl_information_system') }}</span></h1>
+
+    <!-- Slider: About / Hazards / Alerts (driven by portal_slides toggles) -->
+    <div class="hero-slider" id="heroSlider">
+
+      <!-- Slide 0: About e-MAAFA + the four stat tiles from portal_settings -->
+      <div class="hero-slide" [class.active]="slideIdx() === 0">
+        <div class="slide-alert-item" style="flex-direction:column;gap:6px;">
+          <div style="font-size:0.92rem;font-weight:700;color:var(--hero-card-text);">{{ L.t('lbl_about_emaafa_title') }}</div>
+          <div style="font-size:0.85rem;color:var(--hero-card-text-muted);line-height:1.6;">{{ L.t('lbl_about_emaafa_hero') }}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          @for (si of [0,1,2,3]; track si) {
+            <div class="slide-alert-item" style="align-items:center;gap:8px;padding:10px 14px;">
+              <i class="fas {{ setting('stats.item_' + si + '_icon', ['fa-building','fa-map','fa-users','fa-clock'][si]) }}" style="color:var(--blue-deep);font-size:0.85rem;"></i>
+              <div>
+                <div style="font-weight:800;font-size:0.92rem;color:var(--hero-card-text);">{{ setting('stats.item_' + si + '_value', ['6','31','61M+','24/7'][si]) }}</div>
+                <div style="font-size:0.7rem;color:var(--hero-card-text-muted);">{{ L.t(['lbl_stat_agencies','lbl_stat_regions','lbl_stat_protected','lbl_stat_response'][si]) }}</div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Slide 1: Know Your Hazards grid (live hazards from the registry) -->
+      <div class="hero-slide" [class.active]="slideIdx() === 1">
+        <div style="font-size:0.85rem;font-weight:700;color:var(--hero-card-text);margin-bottom:10px;">
+          <i class="fas fa-shield-alt" style="color:var(--blue-deep);margin-right:6px;"></i>{{ L.t('lbl_know_your_hazards') }}
+        </div>
+        <div class="hazard-grid">
+          @for (h of (data()?.hazards ?? []).slice(0, 8); track h.id) {
+            <div class="hazard-card" [title]="L.t(hazardMeta(h.name)[2])">
+              <div class="hazard-icon" [style.background]="rgba(hazardMeta(h.name)[1], 0.1)" [style.color]="hazardMeta(h.name)[1]">
+                <i class="fas {{ hazardMeta(h.name)[0] }}"></i>
+              </div>
+              <div class="hazard-name">{{ h.name }}</div>
+              <div class="hazard-desc">{{ L.t(hazardMeta(h.name)[2]).slice(0, 50) }}</div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Slide 2: Active alerts (live warnings; friendly all-clear when none) -->
+      <div class="hero-slide" [class.active]="slideIdx() === 2">
+        @for (ai of alertItems(); track ai.msg) {
+          <div class="slide-alert-item">
+            <div class="slide-alert-icon" [style.background]="ai.bg" [style.color]="ai.color"><i class="fas {{ ai.icon }}"></i></div>
+            <div>
+              <div class="slide-alert-tag" [style.color]="ai.color">{{ ai.tag }}</div>
+              <div class="slide-alert-msg">{{ ai.msg }}</div>
+            </div>
+          </div>
+        } @empty {
+          <div class="slide-alert-item">
+            <div class="slide-alert-icon" style="background:rgba(74,222,128,0.12);color:#4ade80;"><i class="fas fa-check-circle"></i></div>
+            <div>
+              <div class="slide-alert-tag" style="color:#4ade80;">STATUS</div>
+              <div class="slide-alert-msg">{{ L.t('lbl_no_active_alerts') }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Slider dots + current-slide label -->
+    <div class="slider-nav">
+      @for (lbl of slideLabels(); track $index) {
+        <button class="slider-dot" [class.active]="slideIdx() === $index" (click)="goSlide($index)"></button>
+      }
+      <span class="slider-label">{{ slideLabels()[slideIdx()] }}</span>
+    </div>
+
+    <!-- CTAs: Report Hazard (wizard modal) + Subscribe (public subscription page) -->
+    <div class="hero-cta-row" style="margin-top:auto;">
+      <button class="btn-gold" (click)="reportOpen.set(true)"><i class="fas fa-flag"></i> {{ L.t('lbl_report_hazard') }}</button>
+      <a class="btn-outline-gold" routerLink="/subscribe"><i class="fas fa-bell"></i> {{ L.t('lbl_subscribe_to_alerts') }}</a>
+    </div>
+  </div>
+
+  <!-- RIGHT: live Tanzania map + floating status panel -->
+  <div class="hero-right">
+    <div #heroMap id="hero-map"></div>
+    @if (drilled()) {
+      <button (click)="resetMap()" style="position:absolute;top:14px;left:14px;z-index:600;background:rgba(255,255,255,0.92);border:1px solid rgba(0,51,102,0.2);color:#003366;border-radius:18px;padding:0.35rem 0.9rem;font-size:0.76rem;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.12);">
+        <i class="fas fa-arrow-left me-1"></i> Tanzania
+      </button>
+    }
+    <!-- THREATS strip — national threats under DMD watch (click → full threat page) -->
+    @if (threats().length) {
+      <div style="position:absolute;top:14px;right:14px;z-index:600;display:flex;flex-direction:column;gap:6px;max-width:250px;">
+        @for (th of threats(); track th.id) {
+          <a [routerLink]="['/threats', th.id]"
+             style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.94);border:1px solid rgba(0,51,102,0.15);border-radius:12px;padding:0.45rem 0.7rem;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+            <span [style.background]="threatColor(th.severity)" style="width:9px;height:9px;border-radius:50%;flex-shrink:0;animation:pulse 1.6s ease infinite;"></span>
+            <span style="min-width:0;">
+              <span style="display:block;font-size:0.76rem;font-weight:800;color:#2C3E50;">{{ th.name }}</span>
+              <span style="display:block;font-size:0.62rem;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ th.sourceAgency }} · {{ th.trendLabel }}</span>
+            </span>
+            <i class="fas fa-chevron-right" style="margin-left:auto;font-size:0.55rem;color:#94a3b8;"></i>
+          </a>
+        }
+      </div>
+    }
+
+    <div class="map-status-panel" id="mapStatusPanel">
+      <div class="map-live-badge" style="cursor:pointer;" (click)="clearFilter()" [title]="L.t('lbl_live_monitoring')">
+        <div class="live-dot">{{ L.t('lbl_live_monitoring') }}</div>
+      </div>
+      <div class="map-stat-divider"></div>
+      <div class="map-stat" style="cursor:pointer;" [style.opacity]="statOpacity('Emergency')" (click)="setFilter('Emergency')" [title]="L.t('lbl_emergency')">
+        <div class="map-stat-num" style="color:#ef4444;">{{ data()?.stats?.emergencyCount ?? 0 }}</div><div class="map-stat-lbl">{{ L.t('lbl_emergency') }}</div></div>
+      <div class="map-stat-divider"></div>
+      <div class="map-stat" style="cursor:pointer;" [style.opacity]="statOpacity('Warning')" (click)="setFilter('Warning')" [title]="L.t('lbl_warning')">
+        <div class="map-stat-num" style="color:#fb923c;">{{ data()?.stats?.warningCount ?? 0 }}</div><div class="map-stat-lbl">{{ L.t('lbl_warning') }}</div></div>
+      <div class="map-stat-divider"></div>
+      <div class="map-stat" style="cursor:pointer;" [style.opacity]="statOpacity('Watch')" (click)="setFilter('Watch')" [title]="L.t('lbl_watch')">
+        <div class="map-stat-num" style="color:#f59e0b;">{{ data()?.stats?.watchCount ?? 0 }}</div><div class="map-stat-lbl">{{ L.t('lbl_watch') }}</div></div>
+      <div class="map-stat-divider"></div>
+      <div class="map-stat" style="cursor:pointer;" [style.opacity]="statOpacity('Incidents')" (click)="setFilter('Incidents')" [title]="L.t('lbl_incidents')">
+        <div class="map-stat-num" style="color:#7c3aed;">{{ data()?.incidents?.length ?? 0 }}</div><div class="map-stat-lbl">{{ L.t('lbl_incidents') }}</div></div>
+    </div>
+
+    <!-- Live summary: total active + people at risk; the chip clears any active filter. -->
+    <div style="position:absolute;bottom:14px;left:14px;z-index:600;display:flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.94);border:1px solid rgba(0,51,102,0.15);border-radius:14px;padding:0.4rem 0.8rem;box-shadow:0 2px 10px rgba(0,0,0,0.1);font-size:0.74rem;color:#2C3E50;">
+      <span><strong style="color:#dc2626;">{{ liveTotal() }}</strong> {{ L.t('lbl_active_warnings') }}</span>
+      <span style="color:#94a3b8;">·</span>
+      <span><strong>{{ (data()?.stats?.peopleAtRisk ?? 0) | number }}</strong> {{ L.t('lbl_people_at_risk') }}</span>
+      @if (sevFilter() !== 'all') {
+        <span style="color:#94a3b8;">·</span>
+        <a style="cursor:pointer;color:#1d4ed8;font-weight:700;" (click)="clearFilter()">{{ L.t('lbl_show_all') }}</a>
+      }
+    </div>
+  </div>
+
+  <div class="scroll-hint">{{ L.t('lbl_explore_more') }}<br><i class="fas fa-chevron-down"></i></div>
+</section>
+
+<!-- ===================== BELOW THE FOLD ===================== -->
+<div class="content-section">
+
+  <!-- News & Events -->
+  @if ((data()?.latestNews ?? []).length) {
+    <section class="section-dark" style="position:relative;overflow:hidden;">
+      <div class="container">
+        <h2 class="section-title" fxReveal>{{ L.t('lbl_latest_news') }}</h2>
+        <div class="row g-4">
+          @for (news of (data()?.latestNews ?? []).slice(0, 3); track news.slug) {
+            <div class="col-md-6 col-lg-4">
+              <a [routerLink]="['/news', news.slug]" class="action-card" style="display:flex;flex-direction:column;gap:0;padding:0;overflow:hidden;text-decoration:none;color:inherit;cursor:pointer;">
+                @if (news.image) {
+                  <div style="position:relative;height:160px;overflow:hidden;">
+                    <img [src]="news.image" [alt]="news.title" style="width:100%;height:100%;object-fit:cover;">
+                    <div style="position:absolute;inset:0;background:linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.05) 60%);"></div>
+                    <div style="position:absolute;top:10px;left:10px;">
+                      <span [style.background]="news.category === 'event' ? '#f59e0b' : '#3b82f6'" style="color:#fff;font-size:0.65rem;font-weight:700;padding:3px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;">{{ news.category }}</span>
+                    </div>
+                  </div>
+                }
+                <div style="padding:1rem 1.1rem;flex:1;display:flex;flex-direction:column;gap:8px;">
+                  <div style="font-size:0.72rem;color:var(--text-secondary);opacity:0.7;"><i class="fas fa-clock me-1"></i>{{ news.publishedAt }}</div>
+                  <h3 style="font-size:0.95rem;font-weight:700;color:var(--text-primary);margin:0;line-height:1.35;">{{ news.title.slice(0, 60) }}</h3>
+                  @if (news.excerpt) { <p style="font-size:0.82rem;color:var(--text-secondary);margin:0;line-height:1.5;flex:1;">{{ news.excerpt.slice(0, 100) }}</p> }
+                  <span style="font-size:0.78rem;font-weight:600;color:#60a5fa;margin-top:auto;">{{ L.t('lbl_read_more') }} <i class="fas fa-arrow-right" style="font-size:0.65rem;"></i></span>
+                </div>
+              </a>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="ambient-orb orb-2" style="top:20%;right:-5%;"></div>
+    </section>
+  }
+
+  <!-- Photo gallery marquee: row 1 scrolls left, row 2 right; sets duplicated for a seamless loop -->
+  <div class="marquee-section">
+    <div class="marquee-header"><h2 class="section-title" fxReveal>{{ L.t('lbl_photo_gallery') }}</h2></div>
+    <div class="marquee-row">
+      <div class="marquee-track">
+        @for (dup of [0, 1]; track dup) {
+          @for (g of galleryRow(1); track $index) {
+            <div class="mq-card" (click)="openGallery((data()?.gallery ?? []).indexOf(g))"><img [src]="g.imagePath" [alt]="g.altText" loading="lazy"><div class="mq-overlay">{{ g.caption }}</div></div>
+          }
+        }
+      </div>
+    </div>
+    <div class="marquee-row reverse">
+      <div class="marquee-track">
+        @for (dup of [0, 1]; track dup) {
+          @for (g of galleryRow(2); track $index) {
+            <div class="mq-card" (click)="openGallery((data()?.gallery ?? []).indexOf(g))"><img [src]="g.imagePath" [alt]="g.altText" loading="lazy"><div class="mq-overlay">{{ g.caption }}</div></div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Latest publications (frameworks) -->
+  <section class="section-dark" style="position:relative;overflow:hidden;">
+    <div class="container">
+      <h2 class="section-title" fxReveal>{{ L.t('lbl_latest_publications') }}</h2>
+      <div class="row g-4">
+        @for (pub of (data()?.latestPublications ?? []).slice(0, 4); track pub.id; let idx = $index) {
+          <div class="col-md-6 col-lg-3">
+            <a [routerLink]="['/publications', pub.documentType]" class="action-card" style="cursor:pointer;display:flex;flex-direction:column;gap:0;padding:0;overflow:hidden;text-decoration:none;color:inherit;">
+              <div style="position:relative;height:140px;overflow:hidden;">
+                <img [src]="pubThumb(idx)" [alt]="pub.documentName" style="width:100%;height:100%;object-fit:cover;">
+                <div style="position:absolute;inset:0;background:linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.02) 100%);"></div>
+                <div style="position:absolute;bottom:0;left:0;right:0;padding:0.8rem 1rem;">
+                  <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.7);margin-bottom:3px;">{{ pub.documentType }}</div>
+                  <div style="font-size:0.92rem;font-weight:700;color:#fff;line-height:1.3;text-shadow:0 1px 3px rgba(0,0,0,0.5);">{{ pub.documentName.slice(0, 45) }}</div>
+                </div>
+              </div>
+              <div style="padding:0.85rem 1rem;flex:1;display:flex;flex-direction:column;gap:6px;">
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;line-height:1.5;">{{ (pub.narrativeDescription || '').slice(0, 70) }}</p>
+                <div class="d-flex gap-2 mt-auto pt-2" style="border-top:1px solid var(--card-border);">
+                  <span style="font-size:0.8rem;color:#60a5fa;font-weight:600;"><i class="fas fa-eye me-1"></i>{{ L.t('lbl_view_details') }}</span>
+                  @if (pub.attachmentPath) { <span style="font-size:0.8rem;color:#4ade80;font-weight:600;margin-left:auto;"><i class="fas fa-download me-1"></i>{{ L.t('lbl_pdf') }}</span> }
+                </div>
+              </div>
+            </a>
+          </div>
+        } @empty {
+          <div class="col-12 text-center" style="color:var(--text-secondary);padding:2rem;">
+            <i class="fas fa-book-open" style="font-size:2rem;opacity:0.3;margin-bottom:0.5rem;"></i>
+            <p>{{ L.t('lbl_no_publications_yet') }}</p>
+          </div>
+        }
+      </div>
+      <div class="text-center mt-4">
+        <a routerLink="/publications/Policy" style="color:#60a5fa;font-weight:600;font-size:0.9rem;text-decoration:none;">{{ L.t('lbl_view_all_publications') }} <i class="fas fa-arrow-right ms-1"></i></a>
+      </div>
+    </div>
+    <div class="ambient-orb orb-3"></div>
+  </section>
+
+  <!-- Know Your Hazards — 12-card education grid -->
+  <section class="section-dark" style="position:relative;overflow:hidden;">
+    <div class="container">
+      <h2 class="section-title" fxReveal>{{ L.t('lbl_know_your_hazards') }}</h2>
+      <p class="section-subtitle">{{ L.t('lbl_hazards_education_subtitle') }}</p>
+      <div class="row g-3">
+        @for (hc of hazardCards(); track hc.name) {
+          <div class="col-6 col-md-4 col-lg-3">
+            <a [routerLink]="hc.link || '/education'" style="display:flex;gap:12px;align-items:flex-start;padding:1.1rem;border-radius:14px;background:var(--card-bg);border:1px solid var(--card-border);transition:all 0.3s;height:100%;text-decoration:none;cursor:pointer;">
+              <div style="flex-shrink:0;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;" [style.background]="rgba(hc.color, 0.1)" [style.color]="hc.color">
+                <i class="fas {{ hc.icon }}"></i>
+              </div>
+              <div style="min-width:0;">
+                <div style="font-size:0.88rem;font-weight:700;color:var(--text-primary);margin-bottom:3px;">{{ hc.name }}</div>
+                <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5;">{{ cardDesc(hc).slice(0, 90) }}</div>
+                <div style="font-size:0.7rem;font-weight:600;color:#60a5fa;margin-top:5px;">{{ L.t('lbl_read_more') }} <i class="fas fa-arrow-right" style="font-size:0.58rem;"></i></div>
+              </div>
+            </a>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Core system features (capabilities) -->
+  <section class="section-dark" style="position:relative;overflow:hidden;">
+    <div class="container">
+      <h2 class="section-title" fxReveal>{{ L.t('lbl_core_features') }}</h2>
+      <div class="row g-3">
+        @for (feat of capabilities(); track feat.title) {
+          <div class="col-md-6 col-lg-4">
+            <a (click)="openCapability(feat)" style="display:flex;gap:14px;align-items:flex-start;padding:1.2rem;border-radius:14px;background:var(--card-bg);border:1px solid var(--card-border);transition:all 0.3s;text-decoration:none;cursor:pointer;">
+              <div style="flex-shrink:0;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1rem;" [style.background]="rgba(feat.color, 0.12)" [style.color]="feat.color">
+                <i class="fas {{ feat.icon }}"></i>
+              </div>
+              <div>
+                <div style="font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:3px;">{{ feat.title }}</div>
+                <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.55;">{{ feat.description }}</div>
+                <div style="font-size:0.7rem;font-weight:600;color:#60a5fa;margin-top:5px;">
+                  @if (feat.link) { Open <i class="fas fa-arrow-right" style="font-size:0.58rem;"></i> }
+                  @else { How it works <i class="fas fa-info-circle" style="font-size:0.62rem;"></i> }
+                </div>
+              </div>
+            </a>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats counters (hotline / EOCC / stakeholders) -->
+  <section class="stats-counter-section">
+    <div class="container">
+      <div class="row g-4 justify-content-center">
+        <div class="col-6 col-lg-4">
+          <div class="stat-counter-card">
+            <i class="fas fa-phone-alt stat-bg-icon"></i>
+            <div class="stat-icon-top" style="background:#ef44441f;color:#ef4444;"><i class="fas fa-phone-alt"></i></div>
+            <div class="stat-number" [fxCountUp]="setting('stats.counter_0_value', '190')">0</div>
+            <div class="stat-label">{{ L.t('lbl_emergency_hotline') }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-4">
+          <div class="stat-counter-card">
+            <i class="fas fa-headset stat-bg-icon"></i>
+            <div class="stat-icon-top" style="background:#3b82f61f;color:#3b82f6;"><i class="fas fa-headset"></i></div>
+            <div class="stat-number" [fxCountUp]="setting('stats.counter_1_value', '24')" [fxSuffix]="setting('stats.counter_1_suffix', '/7')">0</div>
+            <div class="stat-label">{{ L.t('lbl_eocc_operations') }}</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-4">
+          <div class="stat-counter-card">
+            <i class="fas fa-users stat-bg-icon"></i>
+            <div class="stat-icon-top" style="background:rgba(167,139,250,0.12);color:#a78bfa;"><i class="fas fa-users"></i></div>
+            <div class="stat-number" [fxCountUp]="data()?.stakeholderCount ?? 0" fxSuffix="+">0</div>
+            <div class="stat-label">{{ L.t('lbl_stakeholders_registered') }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+  </section>
+</div>
+
+<!-- ===================== GALLERY VIEWER (fullscreen) ===================== -->
+@if (galleryOpen()) {
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <button (click)="galleryOpen.set(false)" style="position:absolute;top:20px;right:20px;background:none;border:none;color:#fff;font-size:1.6rem;cursor:pointer;opacity:0.8;"><i class="fas fa-times"></i></button>
+    <button (click)="galleryNav(-1)" style="position:absolute;left:20px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;width:50px;height:50px;border-radius:50%;font-size:1.2rem;cursor:pointer;"><i class="fas fa-chevron-left"></i></button>
+    @if ((data()?.gallery ?? [])[galleryIdx()]; as g) {
+      <img [src]="g.imagePath" [alt]="g.altText" style="max-width:90%;max-height:80vh;object-fit:contain;border-radius:8px;">
+      <div style="color:#fff;font-size:1rem;margin-top:1rem;text-align:center;font-weight:500;">{{ g.caption }}</div>
+    }
+    <button (click)="galleryNav(1)" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;width:50px;height:50px;border-radius:50%;font-size:1.2rem;cursor:pointer;"><i class="fas fa-chevron-right"></i></button>
+  </div>
+}
+
+<!-- ===================== REPORT HAZARD MODAL ===================== -->
+@if (reportOpen()) {
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="closeReport()">
+    <div style="background:var(--card-bg, #fff);border-radius:18px;max-width:560px;width:100%;padding:1.4rem 1.5rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);" (click)="$event.stopPropagation()">
+      @if (!reportDone()) {
+        <h5 style="font-weight:800;color:var(--text-primary);margin-bottom:1rem;"><i class="fas fa-flag me-2" style="color:#ef4444;"></i>{{ L.t('lbl_report_hazard') }}</h5>
+        <div style="display:grid;gap:0.8rem;">
+          <select [value]="rType()" (change)="rType.set($any($event.target).value)" class="form-control">
+            <option value="">Select hazard type…</option>
+            @for (h of hazardCards(); track h.name) { <option [value]="h.name">{{ h.name }}</option> }
+          </select>
+          <textarea rows="3" class="form-control" placeholder="Describe what you are seeing…" [value]="rDesc()" (input)="rDesc.set($any($event.target).value)"></textarea>
+          <input class="form-control" placeholder="Location (street / village / landmark)" [value]="rLocation()" (input)="rLocation.set($any($event.target).value)">
+          <select [value]="rUrgency()" (change)="rUrgency.set($any($event.target).value)" class="form-control">
+            <option value="Low">Low urgency</option><option value="Medium">Medium urgency</option><option value="High">High urgency</option>
+          </select>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+            <input class="form-control" placeholder="Your name (optional)" [value]="rName()" (input)="rName.set($any($event.target).value)">
+            <input class="form-control" placeholder="Phone (optional)" [value]="rPhone()" (input)="rPhone.set($any($event.target).value)">
+          </div>
+          <button class="btn-gold" style="justify-content:center;" [disabled]="!rType() || !rDesc().trim() || reportSaving()" (click)="submitReport()">
+            <i class="fas" [class.fa-paper-plane]="!reportSaving()" [class.fa-spinner]="reportSaving()" [class.fa-spin]="reportSaving()"></i>
+            {{ reportSaving() ? 'Submitting…' : 'Submit Report' }}
+          </button>
+        </div>
+      } @else {
+        <div style="text-align:center;padding:1.5rem 0.5rem;">
+          <i class="fas fa-check-circle" style="font-size:3rem;color:#4ade80;"></i>
+          <h5 style="font-weight:800;color:var(--text-primary);margin:1rem 0 0.4rem;">Report received</h5>
+          <p style="color:var(--text-secondary);margin-bottom:0.4rem;">Your reference code:</p>
+          <div style="font-weight:800;font-size:1.2rem;color:#60a5fa;letter-spacing:1px;">{{ reportDone() }}</div>
+          <button class="btn-outline-gold" style="margin-top:1.2rem;" (click)="closeReport()">Close</button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+
+<!-- ===================== CAPABILITY "HOW IT WORKS" MODAL ===================== -->
+@if (capabilityDetail(); as cap) {
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="capabilityDetail.set(null)">
+    <div style="background:var(--card-bg, #fff);border-radius:18px;max-width:600px;width:100%;padding:1.5rem 1.6rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);" (click)="$event.stopPropagation()">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:0.9rem;">
+        <div style="width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;" [style.background]="rgba(cap.color, 0.12)" [style.color]="cap.color">
+          <i class="fas {{ cap.icon }}"></i>
+        </div>
+        <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0;">{{ cap.title }}</h5>
+        <button (click)="capabilityDetail.set(null)" style="margin-left:auto;background:none;border:none;color:var(--text-secondary, #64748b);font-size:1.2rem;cursor:pointer;"><i class="fas fa-times"></i></button>
+      </div>
+      <p style="font-size:0.9rem;color:var(--text-secondary, #475569);line-height:1.8;margin:0;">{{ cap.detail || cap.description }}</p>
+    </div>
+  </div>
+}

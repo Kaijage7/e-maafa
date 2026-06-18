@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# DMIS local stack — one command. Forward ONLY port 4200 in VSCode; it proxies the rest.
+set -u
+ROOT=/home/kaijage/model/maafa
+VENV=$ROOT/ew-venv          # PERSISTENT venv (not /tmp, which is wiped)
+EW=$ROOT/extracted/maafa.pmo.go.tz/ew
+export JAVA_HOME=/home/kaijage/tools/jdk
+export PATH="$JAVA_HOME/bin:/home/kaijage/tools/maven/bin:$PATH"
+
+echo "[1/5] Postgres…"; docker start dmis-pg >/dev/null 2>&1 || echo "  (ensure dmis-pg container exists)"
+
+echo "[2/5] Backend :8080…"; fuser -k 8080/tcp >/dev/null 2>&1; sleep 2
+( cd "$ROOT/dmis-platform/backend" && SPRING_PROFILES_ACTIVE=local nohup mvn -q spring-boot:run >/tmp/dmis-backend.log 2>&1 & )
+
+# [3/5] RETIRED: the Streamlit authoring engine (:8501) is replaced by the native Angular EW consoles.
+#   ( cd "$EW" && DMIS_URL=http://localhost:8080 nohup "$VENV/bin/streamlit" run dashboard.py … )  # removed
+
+echo "[4/5] EW generate service :8600 (kind-routed, localhost-only)…"; fuser -k 8600/tcp >/dev/null 2>&1; sleep 1
+( cd "$EW" && EWS_PDF_PORT=8600 nohup "$VENV/bin/python" pdf_service.py >/tmp/ew-genapi.log 2>&1 & )
+
+echo "[5/5] Frontend :4200 (proxies /api + /ew-engine + /ew-api)…"; fuser -k 4200/tcp >/dev/null 2>&1; sleep 2
+( cd "$ROOT/dmis-platform/frontend" && nohup npm exec ng serve -- --host 0.0.0.0 --port 4200 --proxy-config proxy.conf.json >/tmp/dmis-ngserve.log 2>&1 & )
+
+echo "Open http://localhost:4200  (login admin@example.com / admin). Wait ~30s for first compile."

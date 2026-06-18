@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5432}/${DB_NAME:dmis}
+    username: ${DB_USERNAME:dmis_app}
+    password: ${DB_PASSWORD:}
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    tz.go.pmo.dmis: DEBUG
+    org.flywaydb: INFO
