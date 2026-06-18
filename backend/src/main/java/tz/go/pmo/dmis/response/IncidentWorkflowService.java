@@ -3,6 +3,8 @@ package tz.go.pmo.dmis.response;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,6 +15,7 @@ import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
+import tz.go.pmo.dmis.notification.NotificationService;
 
 /**
  * The incident approval chain, ported from the Incident model's workflow methods
@@ -40,10 +43,14 @@ import tz.go.pmo.dmis.common.security.SecurityUtils;
 @Service
 public class IncidentWorkflowService {
 
-    private final JdbcTemplate jdbc;
+    private static final Logger log = LoggerFactory.getLogger(IncidentWorkflowService.class);
 
-    public IncidentWorkflowService(JdbcTemplate jdbc) {
+    private final JdbcTemplate jdbc;
+    private final NotificationService notifications;
+
+    public IncidentWorkflowService(JdbcTemplate jdbc, NotificationService notifications) {
         this.jdbc = jdbc;
+        this.notifications = notifications;
     }
 
     /** Approver role that OWNS each review stage — only this role may approve/roll back at that stage. */
@@ -137,6 +144,7 @@ public class IncidentWorkflowService {
                 where id = ?
                 """, to, actingUserId(), incidentId);
         logHistory(incidentId, "submitted", from, to, comments);
+        notifyStage(incident, to);
         return to;
     }
 
@@ -156,12 +164,14 @@ public class IncidentWorkflowService {
                 transition(incidentId, "waiting_ras_approval",
                         "das_reviewed_by_user_id", "das_reviewed_at", "das_comments", userId, comments);
                 logHistory(incidentId, "approved", from, "waiting_ras_approval", comments);
+                notifyStage(incident, "waiting_ras_approval");
                 return "waiting_ras_approval";
             }
             case "waiting_ras_approval" -> {
                 transition(incidentId, "waiting_assistant_director_approval",
                         "ras_reviewed_by_user_id", "ras_reviewed_at", "ras_comments", userId, comments);
                 logHistory(incidentId, "approved", from, "waiting_assistant_director_approval", comments);
+                notifyStage(incident, "waiting_assistant_director_approval");
                 return "waiting_assistant_director_approval";
             }
             case "waiting_assistant_director_approval" -> {
@@ -172,6 +182,7 @@ public class IncidentWorkflowService {
                         where id = ?
                         """, userId, comments, recommendation, incidentId);
                 logHistory(incidentId, "approved", from, "waiting_director_approval", comments);
+                notifyStage(incident, "waiting_director_approval");
                 return "waiting_director_approval";
             }
             case "waiting_director_approval" -> {
@@ -182,6 +193,7 @@ public class IncidentWorkflowService {
                         where id = ?
                         """, userId, comments, recommendation, incidentId);
                 logHistory(incidentId, "approved", from, "waiting_ps_approval", comments);
+                notifyStage(incident, "waiting_ps_approval");
                 return "waiting_ps_approval";
             }
             case "waiting_ps_approval" -> {   // PS (Permanent Secretary) gives final national sign-off
@@ -192,6 +204,7 @@ public class IncidentWorkflowService {
                         where id = ?
                         """, userId, comments, incidentId);
                 logHistory(incidentId, "approved", from, "approved", comments);
+                notifyStage(incident, "approved");
                 return "approved";
             }
             case "waiting_national_approval" -> { // legacy NC stage kept for parity
@@ -202,6 +215,7 @@ public class IncidentWorkflowService {
                         where id = ?
                         """, userId, comments, incidentId);
                 logHistory(incidentId, "approved", from, "approved", comments);
+                notifyStage(incident, "approved");
                 return "approved";
             }
             default -> throw new BusinessRuleException("This incident is not at an approvable stage.");
@@ -246,6 +260,7 @@ public class IncidentWorkflowService {
                 """, to, role, role, incidentId);
         stampReviewer(incidentId, from, comments);
         logHistory(incidentId, "rolled_back", from, to, comments);
+        notifyStage(incident, to);
         return to;
     }
 
@@ -278,6 +293,7 @@ public class IncidentWorkflowService {
         stampReviewer(incidentId, from, null);
         logHistory(incidentId, "edited", from, to,
                 "Forwarded to " + toRole + ". Recommendation: " + (recommendation == null ? "" : recommendation));
+        notifyStage(incident, to);   // ping the reviewer it was forwarded to (Director / Asst.Director)
         return to;
     }
 
@@ -294,6 +310,7 @@ public class IncidentWorkflowService {
         };
         jdbc.update("update public.incidents set workflow_status = ?, updated_at = now() where id = ?", to, incidentId);
         logHistory(incidentId, "resubmitted", from, to, comments);
+        notifyStage(incident, to);   // the corrected incident now waits for the next approver — ping them
         return to;
     }
 
@@ -376,5 +393,91 @@ public class IncidentWorkflowService {
         }
         return jdbc.query("select id from public.users where email = 'admin@example.com'",
                 rs -> rs.next() ? rs.getLong(1) : null);
+    }
+
+    // ─── Stage notifications: ping the officers who now own the incident (in-app + email, never SMS) ───
+
+    /**
+     * After a transition, notify the officers who now own the incident's new stage — area-scoped (the DED
+     * of its district, the RAS of its region) or national (Asst.Director/Director/PS), plus the reporter on
+     * final approval. In-app + email only; SMS stays silent by design. Never fails the workflow transaction.
+     */
+    private void notifyStage(Map<String, Object> incident, String stage) {
+        try {
+            List<Long> recipients = resolveStageRecipients(stage, incident);
+            if (recipients.isEmpty()) {
+                return;
+            }
+            long incidentId = ((Number) incident.get("id")).longValue();
+            String title = str(incident.get("title"));
+            String area = str(incident.get("district_name"));
+            String region = str(incident.get("region_name"));
+            String where = area == null ? region : (region == null ? area : area + ", " + region);
+            String stageLabel = IncidentOptions.workflowStatusLabel(stage);
+            boolean approved = "approved".equals(stage);
+            String noticeTitle = approved ? "Incident approved: " + title
+                    : "Incident needs your action: " + stageLabel;
+            String message = approved
+                    ? "Incident '" + title + "' (" + where + ") has completed the approval chain and is now APPROVED."
+                    : "Incident '" + title + "' (" + where + ") has reached the '" + stageLabel
+                      + "' stage and is pending your review.";
+            String severity = "Critical".equalsIgnoreCase(str(incident.get("severity_level")))
+                    ? "critical" : "warning";
+            NotificationService.Notice notice = new NotificationService.Notice(
+                    "incident_workflow", noticeTitle, message,
+                    "/m/response/incidents/" + incidentId, "incident", incidentId, severity,
+                    false, true);   // sms=false (silent) · email=true · in-app always delivered
+            notifications.notifyUsers(recipients, notice);
+        } catch (Exception notifyFailureMustNotBreakWorkflow) {
+            log.warn("Incident stage-notify failed (workflow continues): {}",
+                    notifyFailureMustNotBreakWorkflow.toString());
+        }
+    }
+
+    /** Officers who own the given stage: district→DED of its district, region→RAS of its region,
+     *  national→all Asst.Director/Director/PS, and the reporter on final approval. */
+    private List<Long> resolveStageRecipients(String stage, Map<String, Object> incident) {
+        Long regionId = asLong(incident.get("region_id"));
+        Long districtId = asLong(incident.get("district_id"));
+        return switch (stage) {
+            case "waiting_das_approval", "rolled_back_to_das" ->
+                    usersByRoleInArea(Authz.DED, "district_id", districtId);   // at/back-to the DISTRICT → DED acts
+            case "waiting_ras_approval", "rolled_back_to_regional" ->
+                    usersByRoleInArea(Authz.RAS, "region_id", regionId);       // at/back-to the REGION → RAS acts
+            case "waiting_assistant_director_approval", "rolled_back_to_national" ->
+                    usersByRole(Authz.ASST_DIRECTOR);
+            case "waiting_director_approval" -> usersByRole(Authz.DIRECTOR);
+            case "waiting_ps_approval" -> usersByRole(Authz.SECRETARY);
+            // back below the district (to the original reporter to correct) — or finished: ping the reporter
+            case "rolled_back_to_district", "approved" -> {
+                Long reporter = asLong(incident.get("submitted_by_user_id"));
+                yield reporter != null ? List.of(reporter) : List.of();
+            }
+            default -> List.of();
+        };
+    }
+
+    private List<Long> usersByRoleInArea(String role, String areaColumn, Long areaId) {
+        if (areaId == null) {
+            return List.of();
+        }
+        return jdbc.queryForList(
+                "select u.id from public.users u "
+                + "join public.model_has_roles mhr on mhr.model_id = u.id "
+                + "join public.roles r on r.id = mhr.role_id "
+                + "where r.name = ? and u." + areaColumn + " = ?",
+                Long.class, role, areaId);
+    }
+
+    private List<Long> usersByRole(String role) {
+        return jdbc.queryForList(
+                "select u.id from public.users u "
+                + "join public.model_has_roles mhr on mhr.model_id = u.id "
+                + "join public.roles r on r.id = mhr.role_id where r.name = ?",
+                Long.class, role);
+    }
+
+    private static String str(Object o) {
+        return o == null ? null : o.toString();
     }
 }
