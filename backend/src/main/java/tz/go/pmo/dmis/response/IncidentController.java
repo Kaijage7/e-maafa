@@ -30,6 +30,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
@@ -53,14 +55,16 @@ public class IncidentController {
     private final ObjectMapper objectMapper;
     private final Path storageRoot;
     private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
 
     public IncidentController(JdbcTemplate jdbc, IncidentWorkflowService workflow, ObjectMapper objectMapper,
-                              JurisdictionScope jurisdiction,
+                              JurisdictionScope jurisdiction, AreaGuard areaGuard,
                               @Value("${dmis.storage.public-root:./storage}") String publicRoot) {
         this.jdbc = jdbc;
         this.workflow = workflow;
         this.objectMapper = objectMapper;
         this.jurisdiction = jurisdiction;
+        this.areaGuard = areaGuard;
         this.storageRoot = Path.of(publicRoot);
     }
 
@@ -182,7 +186,7 @@ public class IncidentController {
 
     // ─── Store / Update ───
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_CREATE)
     @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE})
     @Transactional
     public ResponseEntity<Map<String, Object>> store(@RequestParam Map<String, String> form,
@@ -243,7 +247,7 @@ public class IncidentController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Incident logged successfully.", "id", id));
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
     @PutMapping(value = "/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE})
     @Transactional
     public ResponseEntity<Map<String, Object>> update(@PathVariable long id,
@@ -254,6 +258,7 @@ public class IncidentController {
             @RequestPart(name = "photos", required = false) List<MultipartFile> photos,
             @RequestPart(name = "video", required = false) MultipartFile video) {
         Map<String, Object> incident = workflow.findOr404(id);
+        areaGuard.assertOwn("public.incidents", id);   // an area officer may edit only an incident in their own area
         Map<String, List<String>> errors = validate(form, infrastructureDamage, emergencyNeeds, photos, video);
         if (!errors.isEmpty()) {
             return ResponseEntity.unprocessableEntity()
@@ -319,7 +324,14 @@ public class IncidentController {
     @GetMapping("/{id}")
     public Map<String, Object> show(@PathVariable long id) {
         workflow.findOr404(id);
-        Map<String, Object> incident = jdbc.queryForMap("""
+        // Jurisdiction visibility: an area officer may open ONLY an incident in their own district/region
+        // (or a shared/national one); national tier sees all. Mirrors the list scope so two districts never
+        // see each other's incidents. Out of area → 404 (indistinguishable from "not found").
+        StringBuilder where = new StringBuilder("i.id = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(id);
+        appendAreaScope(where, params);
+        List<Map<String, Object>> found = jdbc.queryForList("""
                 select i.*, h.name as hazard_name, it.name as incident_type_name,
                     au.name as assigned_to_name, su.name as submitted_by_name,
                     du.name as das_reviewed_by_name, ru.name as ras_reviewed_by_name,
@@ -335,8 +347,11 @@ public class IncidentController {
                 left join public.users nu on nu.id = i.national_reviewed_by_user_id
                 left join public.users adu on adu.id = i.assistant_director_reviewed_by_user_id
                 left join public.users dru on dru.id = i.director_reviewed_by_user_id
-                where i.id = ?
-                """, id);
+                """ + " where " + where, params.toArray());
+        if (found.isEmpty()) {
+            throw new ResourceNotFoundException("Incident not found.");
+        }
+        Map<String, Object> incident = found.get(0);
         decorate(incident);
 
         Map<String, Object> out = new LinkedHashMap<>();
@@ -367,11 +382,12 @@ public class IncidentController {
 
     // ─── Situation updates ───
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
     @PostMapping("/{id}/updates")
     @Transactional
     public ResponseEntity<Map<String, Object>> storeUpdate(@PathVariable long id, @RequestBody Map<String, Object> body) {
         workflow.findOr404(id);
+        areaGuard.assertOwn("public.incidents", id);   // only an in-area officer may log updates on this incident
         String details = strOf(body.get("update_details"));
         String type = strOf(body.get("update_type"));
         Map<String, List<String>> errors = new LinkedHashMap<>();
@@ -396,14 +412,14 @@ public class IncidentController {
 
     // ─── Workflow actions ───
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_CREATE)
     @PostMapping("/{id}/submit")
     public Map<String, Object> submit(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         String to = workflow.submit(id, comment(body));
         return Map.of("success", true, "message", "Incident submitted for approval.", "workflow_status", to);
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
     @PostMapping("/{id}/approve")
     public Map<String, Object> approve(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> b = body == null ? Map.of() : body;
@@ -413,21 +429,21 @@ public class IncidentController {
                 "workflow_status", to);
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
     @PostMapping("/{id}/rollback")
     public Map<String, Object> rollback(@PathVariable long id, @RequestBody Map<String, Object> body) {
         String to = workflow.rollback(id, strOf(body.get("comments")), strOf(body.get("by_role")));
         return Map.of("success", true, "message", "Incident rolled back for corrections.", "workflow_status", to);
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
     @PostMapping("/{id}/forward")
     public Map<String, Object> forward(@PathVariable long id, @RequestBody Map<String, Object> body) {
         String to = workflow.forward(id, strOf(body.get("to_role")), strOf(body.get("recommendation")));
         return Map.of("success", true, "message", "Incident forwarded.", "workflow_status", to);
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
     @PostMapping("/{id}/resubmit")
     public Map<String, Object> resubmit(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         String to = workflow.resubmit(id, comment(body));
@@ -436,32 +452,51 @@ public class IncidentController {
 
     // Operational actions bound by routes/response.php to methods missing in the source
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
     @PostMapping("/{id}/escalate")
     public Map<String, Object> escalate(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        areaGuard.assertOwn("public.incidents", id);   // only an in-area officer may escalate this incident
         workflow.setOperationalStatus(id, "Escalated", comment(body));
         return Map.of("success", true, "message", "Incident escalated.");
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
     @PostMapping("/{id}/verify")
     public Map<String, Object> verify(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        areaGuard.assertOwn("public.incidents", id);   // only an in-area officer may verify this incident
         workflow.setOperationalStatus(id, "Verified", comment(body));
         return Map.of("success", true, "message", "Incident verified.");
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_CLOSE)
     @PostMapping("/{id}/close")
     public Map<String, Object> close(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        areaGuard.assertOwn("public.incidents", id);   // only an in-area officer may close this incident
         workflow.setOperationalStatus(id, "Closed", comment(body));
         return Map.of("success", true, "message", "Incident closed.");
+    }
+
+    /** DDMC gatekeeper: close an entry-stage incident as a rumour/normal case and inform DED + DAS. */
+    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
+    @PostMapping("/{id}/close-rumor")
+    public Map<String, Object> closeRumor(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        workflow.closeAsRumor(id, comment(body));
+        return Map.of("success", true, "message", "Closed as rumour / normal case; district leadership (DED, DAS) informed.");
+    }
+
+    /** DED (district) / RAS (region) resolve the incident locally when resources sufficed — instead of escalating. */
+    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
+    @PostMapping("/{id}/resolve")
+    public Map<String, Object> resolve(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        String to = workflow.resolve(id, comment(body));
+        return Map.of("success", true, "message", "Incident resolved locally; the levels above were informed.", "workflow_status", to);
     }
 
     // ─── Public surfaces: publish/unpublish the incident to the citizen portal (live map + news/event) ───
 
     /** Pin (or unpin, {@code value:false}) the incident on the public portal map. The map marker opens the
      *  live snapshot at {@code GET /v1/portal/incidents/{id}} (situation + response + resources). */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('incidents.publish')")
     @PostMapping("/{id}/push-map")
     @Transactional
     public Map<String, Object> pushMap(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
@@ -475,7 +510,7 @@ public class IncidentController {
 
     /** Publish (or re-publish) the incident as a portal News & Events item linking to its live snapshot.
      *  Idempotent: re-pushing updates the same article rather than creating a duplicate. */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('incidents.publish')")
     @PostMapping("/{id}/push-news")
     @Transactional
     public Map<String, Object> pushNews(@PathVariable long id) {
@@ -518,7 +553,7 @@ public class IncidentController {
     }
 
     /** Remove the incident's News & Events item (deactivates the article + clears the link). */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('incidents.publish')")
     @PostMapping("/{id}/remove-news")
     @Transactional
     public Map<String, Object> removeNews(@PathVariable long id) {
@@ -548,11 +583,12 @@ public class IncidentController {
 
     // ─── History reports (periodic situation figures) ───
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_VIEW)
     @PostMapping("/{id}/history-reports")
     @Transactional
     public ResponseEntity<Map<String, Object>> storeHistoryReport(@PathVariable long id, @RequestBody Map<String, Object> body) {
         workflow.findOr404(id);
+        areaGuard.assertOwn("public.incidents", id);   // only an in-area officer may write a situation report on this incident
         jdbc.update("""
                 insert into public.incident_history_reports(incident_id, user_id,
                     deaths_male, deaths_female, deaths_total, injured_male, injured_female, injured_total,

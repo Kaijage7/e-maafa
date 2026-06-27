@@ -26,6 +26,8 @@ import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Port of Response\DamageAssessmentController — Disaster Needs Assessments:
@@ -70,14 +72,19 @@ public class AssessmentController {
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService users;
     private final ApprovalWorkflowEngine approvals;
+    private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
     private final Path storageRoot;
 
     public AssessmentController(JdbcTemplate jdbc, IncidentWorkflowService users,
-                                ApprovalWorkflowEngine approvals,
+                                ApprovalWorkflowEngine approvals, JurisdictionScope jurisdiction,
+                                AreaGuard areaGuard,
                                 @Value("${dmis.storage.public-root:./storage}") String publicRoot) {
         this.jdbc = jdbc;
         this.users = users;
         this.approvals = approvals;
+        this.jurisdiction = jurisdiction;
+        this.areaGuard = areaGuard;
         this.storageRoot = Path.of(publicRoot);
     }
 
@@ -97,7 +104,9 @@ public class AssessmentController {
             params.add(incident_id);
         }
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("assessments", jdbc.queryForList("""
+        // Area officers see only assessments on incidents in their own district/region (or shared/unlinked);
+        // national + non-area roles keep the full view. Scope rides on the incident the assessment surveys.
+        StringBuilder sql = new StringBuilder("""
                 select da.id, da.assessment_type, da.assessment_date, da.location, da.district,
                        da.damage_level, da.estimated_loss, da.status, da.created_at,
                        i.title as incident_title, u.name as assessor_name,
@@ -106,8 +115,11 @@ public class AssessmentController {
                 from public.damage_assessments da
                 left join public.incidents i on i.id = da.incident_id
                 left join public.users u on u.id = da.assessor_id
-                where %s order by da.created_at desc limit 200
-                """.formatted(where), params.toArray()));
+                where """);
+        sql.append(' ').append(where);
+        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        sql.append(" order by da.created_at desc limit 200");
+        out.put("assessments", jdbc.queryForList(sql.toString(), params.toArray()));
         out.put("stats", jdbc.queryForMap("""
                 select count(*) as total,
                        count(*) filter (where status = 'Draft') as draft,
@@ -154,13 +166,16 @@ public class AssessmentController {
      * as JSON strings + photo files. Categories are itemised rows; resource requests
      * become allocated_resources on the V24 chain; status starts at 'Draft'.
      */
-    @PreAuthorize(Authz.RESPONSE_ASSESS_WRITE)
+    @PreAuthorize("hasAuthority('damage_assessment.create')")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional
     public Map<String, Object> store(
             @RequestParam Map<String, String> form,
             @RequestPart(name = "photos", required = false) List<MultipartFile> photos) throws Exception {
         long incidentId = requireLong(form, "incident_id");
+        // An area officer may file an assessment only against an incident in their own area; a body-supplied
+        // foreign incident_id 404s (mirrors findOr404/IncidentController.show). National tier sees all.
+        areaGuard.assertOwn("public.incidents", incidentId);
         String assessmentType = requireIn(form, "assessment_type", ASSESSMENT_TYPES);
         String damageLevel = requireIn(form, "overall_damage_level", DAMAGE_LEVELS);
         String location = requireText(form, "location");
@@ -240,7 +255,7 @@ public class AssessmentController {
     }
 
     /** Update (multipart, same shape as store); completed assessments are immutable. */
-    @PreAuthorize(Authz.RESPONSE_ASSESS_WRITE)
+    @PreAuthorize("hasAuthority('damage_assessment.create')")
     @PostMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional
     public Map<String, Object> update(
@@ -275,7 +290,7 @@ public class AssessmentController {
 
     // ─── Workflow ───
 
-    @PreAuthorize(Authz.RESPONSE_ASSESS_WRITE)
+    @PreAuthorize("hasAuthority('damage_assessment.create')")
     @PostMapping("/{id}/submit")
     @Transactional
     public Map<String, Object> submit(@PathVariable long id) {
@@ -290,7 +305,7 @@ public class AssessmentController {
         return Map.of("success", true, "message", "Assessment submitted for verification.");
     }
 
-    @PreAuthorize(Authz.RESPONSE_ASSESS_VERIFY)
+    @PreAuthorize("hasAuthority('damage_assessment.verify')")
     @PostMapping("/{id}/verify")
     @Transactional
     public Map<String, Object> verify(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
@@ -306,7 +321,7 @@ public class AssessmentController {
         return Map.of("success", true, "message", "Assessment verified and completed.");
     }
 
-    @PreAuthorize(Authz.RESPONSE_ASSESS_WRITE)
+    @PreAuthorize("hasAuthority('damage_assessment.create')")
     @DeleteMapping("/{id}/photos/{photoId}")
     @Transactional
     public Map<String, Object> deletePhoto(@PathVariable long id, @PathVariable long photoId) {
@@ -422,7 +437,16 @@ public class AssessmentController {
     }
 
     private Map<String, Object> findOr404(long id) {
-        List<Map<String, Object>> rows = jdbc.queryForList("select * from public.damage_assessments where id = ?", id);
+        // Jurisdiction visibility: an area officer may load (read OR mutate) only an assessment on an incident
+        // in their own district/region (or a shared/null-area one); national tier sees all. Out of area → 404,
+        // mirroring the list scope + IncidentController.show so two districts never see each other's assessments.
+        StringBuilder where = new StringBuilder("da.id = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(id);
+        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "select da.* from public.damage_assessments da left join public.incidents i on i.id = da.incident_id where " + where,
+                params.toArray());
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Assessment not found.");
         }

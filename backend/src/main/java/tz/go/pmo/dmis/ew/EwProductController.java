@@ -78,7 +78,7 @@ public class EwProductController {
     // Was completely ungated (any unauthenticated client could store arbitrary bulletin PDFs). Storing into
     // the national EW product registry is trusted-operator only (EW_INGEST); the read endpoints now require
     // the broader EW dissemination tier via the class-level gate above.
-    @PreAuthorize(Authz.EW_INGEST)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> store(@RequestParam("pdf") MultipartFile pdf,
                                      @RequestParam("payload") String payloadJson) throws Exception {
         if (pdf == null || pdf.isEmpty()) {
@@ -138,7 +138,7 @@ public class EwProductController {
      */
     @PostMapping("/upload")
     @Transactional
-    @PreAuthorize(Authz.PREPAREDNESS_MANAGE)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> upload(@RequestParam("pdf") MultipartFile pdf,
                                       @RequestParam(required = false) String title,
                                       @RequestParam(required = false) String description) throws Exception {
@@ -177,7 +177,7 @@ public class EwProductController {
      */
     @PatchMapping("/{id}/publish")
     @Transactional
-    @PreAuthorize(Authz.PREPAREDNESS_MANAGE)
+    @PreAuthorize("hasAuthority('early_warning.disseminate')")
     public Map<String, Object> setPublished(@PathVariable long id,
                                             @RequestBody(required = false) Map<String, Object> body) {
         boolean toPublications = body != null && Boolean.TRUE.equals(body.get("publications"));
@@ -239,7 +239,7 @@ public class EwProductController {
      * recipients may be added. Gated by COMMS_DISSEMINATE — the same tier as the Communication Center.
      */
     @PostMapping("/{id}/disseminate")
-    @PreAuthorize(Authz.COMMS_DISSEMINATE)
+    @PreAuthorize("hasAuthority('early_warning.disseminate')")
     public Map<String, Object> disseminate(@PathVariable long id,
                                            @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> b = body == null ? Map.of() : body;

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.notification.MailService;
 
 /**
@@ -36,26 +37,35 @@ public class EwBoundaryController {
     private final JdbcTemplate jdbc;
     private final MgovSmsService mgov;
     private final MailService mail;   // real SMTP (the email branch was fabricating 'sent' without a send)
+    private final JurisdictionScope jurisdiction;
 
-    public EwBoundaryController(JdbcTemplate jdbc, MgovSmsService mgov, MailService mail) {
+    public EwBoundaryController(JdbcTemplate jdbc, MgovSmsService mgov, MailService mail,
+                               JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
         this.mgov = mgov;
         this.mail = mail;
+        this.jurisdiction = jurisdiction;
     }
 
     // ── GET /ew/stakeholders — active stakeholders with contact info (EwDisseminationController@stakeholders)
     @GetMapping("/stakeholders")
     public Map<String, Object> stakeholders() {
+        // Area-scope the directory exactly like /v1/stakeholders: shared-or-own (NULL area = national/shared).
+        // National tier sees all; in-area officers see their own + shared; cross-area rows are hidden.
+        StringBuilder where = new StringBuilder(" where s.is_active = true");
+        List<Object> params = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("s", where, params);
         List<Map<String, Object>> rows = jdbc.queryForList(
-            "select id, coalesce(organization, name) as organization, name, type, email, phone, " +
-            "contact_person_name as contact_person, contact_person_phone, contact_person_email " +
-            "from public.stakeholders where is_active = true order by organization");
+            "select s.id, coalesce(s.organization, s.name) as organization, s.name, s.type, s.email, s.phone, " +
+            "s.contact_person_name as contact_person, s.contact_person_phone, s.contact_person_email " +
+            "from public.stakeholders s" + where + " order by organization",
+            params.toArray());
         return Map.of("success", true, "count", rows.size(), "stakeholders", rows);
     }
 
     // ── POST /ew/disseminate — dual SMS (public vs leaders) + email (EwDisseminationController@disseminate)
     @PostMapping("/disseminate")
-    @PreAuthorize(Authz.EW_DISSEMINATE)
+    @PreAuthorize("hasAuthority('early_warning.disseminate')")
     @SuppressWarnings("unchecked")
     public Map<String, Object> disseminate(@RequestBody Map<String, Object> body) {
         String bulletinNum = str(body.get("bulletin_number"));
@@ -121,7 +131,7 @@ public class EwBoundaryController {
 
     // ── POST /ew/sms-test — M-Gov gateway test (EwDisseminationController@testSms)
     @PostMapping("/sms-test")
-    @PreAuthorize(Authz.CHANNEL_TEST_WRITE)
+    @PreAuthorize("hasAuthority('early_warning.disseminate')")
     public Map<String, Object> smsTest(@RequestBody Map<String, Object> body) {
         String phone = str(body.get("phone"));
         if (phone == null || phone.isBlank()) throw new BusinessRuleException("phone is required.");
@@ -146,7 +156,7 @@ public class EwBoundaryController {
     // ── POST /ew/monitoring/reports — store one (EwMonitoringController@store)
     @PostMapping("/monitoring/reports")
     @Transactional
-    @PreAuthorize(Authz.EW_REPORT)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> storeReport(@RequestBody Map<String, Object> r) {
         Long id = insertReport(r);
         return Map.of("success", true, "message", "Report saved successfully.", "id", id);
@@ -155,7 +165,7 @@ public class EwBoundaryController {
     // ── POST /ew/monitoring/reports/batch — store many (EwMonitoringController@storeBatch)
     @PostMapping("/monitoring/reports/batch")
     @Transactional
-    @PreAuthorize(Authz.EW_REPORT)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     @SuppressWarnings("unchecked")
     public Map<String, Object> storeBatch(@RequestBody Map<String, Object> body) {
         List<Object> reports = body.get("reports") instanceof List ? (List<Object>) body.get("reports") : List.of();
@@ -167,7 +177,7 @@ public class EwBoundaryController {
 
     // ── POST /ew/monitoring/request-update — SMS to focal points (EwMonitoringController@requestUpdate)
     @PostMapping("/monitoring/request-update")
-    @PreAuthorize(Authz.EW_INGEST)
+    @PreAuthorize("hasAuthority('early_warning.disseminate')")
     @SuppressWarnings("unchecked")
     public Map<String, Object> requestUpdate(@RequestBody Map<String, Object> body) {
         String message = str(body.get("message"));

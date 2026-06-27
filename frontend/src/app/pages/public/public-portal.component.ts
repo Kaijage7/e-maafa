@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { addTanzaniaGisBase, addAdminDrilldown, addMapNav, RegionFill, DistrictFill } from '../../core/tz-map';
 import { PortalLabels } from './portal-i18n';
 import { incidentLifecycle } from './incident-lifecycle';
+import { PublicInformExplorerComponent } from './inform-explorer.component';
 
 declare const L: any;
 
@@ -37,37 +38,50 @@ interface PortalBulletin {
 @Component({
   selector: 'public-live-portal',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, PublicInformExplorerComponent],
   template: `
     <div class="v2-page-content" style="max-width: 1280px; margin: 0 auto; padding: 6.5rem 1.5rem 3rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;margin-bottom:1rem;">
         <div>
           <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0;">{{ L.t('lbl_portal') }}</h1>
-          <p style="color:var(--text-secondary, #64748b);margin:0.2rem 0 0;">{{ L.t('lbl_live_monitoring') }} — {{ warnings().length }} {{ L.t('lbl_active_warnings') }}</p>
+          <p style="color:var(--text-secondary, #64748b);margin:0.2rem 0 0;">{{ L.t('lbl_live_monitoring') }} — {{ warnings().length + bulletins().length }} {{ L.t('lbl_active_warnings') }}</p>
         </div>
         <div style="display:flex;gap:0.6rem;align-items:center;">
+          @if (view() === 'live') {
           <div style="display:flex;border:1px solid rgba(0,51,102,0.25);border-radius:20px;overflow:hidden;">
             <button type="button" (click)="setLayer('warnings')" [style.background]="layer() === 'warnings' ? '#003366' : 'transparent'" [style.color]="layer() === 'warnings' ? '#fff' : '#475569'"
                     style="border:none;padding:0.45rem 1rem;font-size:0.8rem;font-weight:600;cursor:pointer;"><i class="fas fa-exclamation-triangle me-1"></i>{{ L.t('lbl_alerts') }}</button>
             <button type="button" (click)="setLayer('shelters')" [style.background]="layer() === 'shelters' ? '#059669' : 'transparent'" [style.color]="layer() === 'shelters' ? '#fff' : '#475569'"
-                    style="border:none;padding:0.45rem 1rem;font-size:0.8rem;font-weight:600;cursor:pointer;"><i class="fas fa-house-user me-1"></i>Evacuation Centers</button>
+                    style="border:none;padding:0.45rem 1rem;font-size:0.8rem;font-weight:600;cursor:pointer;"><i class="fas fa-house-user me-1"></i>{{ L.t('pp_evacuation_centers') }}</button>
           </div>
+          }
           <a routerLink="/" fragment="report" class="btn-gold" style="text-decoration:none;"><i class="fas fa-flag"></i> {{ L.t('lbl_report_hazard') }}</a>
-          <button class="btn-outline-gold" type="button" (click)="openRegister()"><i class="fas fa-handshake"></i> Register as Stakeholder</button>
+          <button class="btn-outline-gold" type="button" (click)="openRegister()"><i class="fas fa-handshake"></i> {{ L.t('pp_register_as_stakeholder') }}</button>
         </div>
       </div>
 
+      <!-- Portal sub-view switch: live monitoring vs the INFORM subnational risk index (embedded in the portal, per request) -->
+      <div style="display:flex;gap:0.3rem;border-bottom:2px solid rgba(0,0,0,0.08);margin-bottom:1.1rem;">
+        <button type="button" (click)="view.set('live')" [style.color]="view()==='live' ? '#003366' : '#64748b'" [style.borderBottomColor]="view()==='live' ? '#003366' : 'transparent'"
+                style="background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;padding:0.6rem 1.15rem;font-size:0.86rem;font-weight:700;cursor:pointer;"><i class="fas fa-satellite-dish me-1"></i>{{ L.t('pp_view_live') }}</button>
+        <button type="button" (click)="view.set('inform')" [style.color]="view()==='inform' ? '#003366' : '#64748b'" [style.borderBottomColor]="view()==='inform' ? '#003366' : 'transparent'"
+                style="background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;padding:0.6rem 1.15rem;font-size:0.86rem;font-weight:700;cursor:pointer;"><i class="fas fa-layer-group me-1"></i>{{ L.t('pp_view_inform') }}</button>
+      </div>
+
+      @if (view() === 'inform') {
+        <public-inform-explorer [embedded]="true" />
+      } @else {
       <div style="display:grid;grid-template-columns:1fr 440px;gap:1.2rem;align-items:start;">
         <!-- Live map -->
         <div style="position:relative;">
           <div #portalMap style="height:calc(100vh - 240px);min-height:480px;border-radius:16px;border:1px solid rgba(0,0,0,0.08);background:#d7e8f5;z-index:1;"></div>
           <div style="position:absolute;bottom:14px;right:14px;z-index:600;background:rgba(255,255,255,0.92);border:1px solid rgba(0,51,102,0.12);border-radius:10px;padding:0.5rem 0.7rem;box-shadow:0 2px 10px rgba(0,0,0,0.08);">
-            <div style="font-size:0.58rem;font-weight:700;color:#2C3E50;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">Alert Level</div>
+            <div style="font-size:0.58rem;font-weight:700;color:#2C3E50;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">{{ L.t('pp_alert_level') }}</div>
             <div style="display:flex;flex-direction:column;gap:2px;font-size:0.66rem;font-weight:600;color:#475569;">
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#ef4444;margin-right:5px;"></span>Emergency</span>
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f59e0b;margin-right:5px;"></span>Warning</span>
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#3b82f6;margin-right:5px;"></span>Watch</span>
-              <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#eef2f5;border:1px solid #c2ccd6;margin-right:5px;"></span>No alerts</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#ef4444;margin-right:5px;"></span>{{ L.t('pp_emergency') }}</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f59e0b;margin-right:5px;"></span>{{ L.t('pp_warning') }}</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#3b82f6;margin-right:5px;"></span>{{ L.t('pp_watch') }}</span>
+              <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#eef2f5;border:1px solid #c2ccd6;margin-right:5px;"></span>{{ L.t('pp_no_alerts') }}</span>
             </div>
           </div>
           @if (drilled()) {
@@ -83,16 +97,29 @@ interface PortalBulletin {
             @for (sh of shelters(); track sh.name) {
               <div style="border:1px solid rgba(0,0,0,0.08);border-radius:14px;background:var(--card-bg, #fff);padding:0.9rem 1rem;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="background:#059669;color:#fff;font-size:0.62rem;font-weight:800;padding:2px 9px;border-radius:9px;">CENTER</span>
+                  <span style="background:#059669;color:#fff;font-size:0.62rem;font-weight:800;padding:2px 9px;border-radius:9px;">{{ L.t('pp_center') }}</span>
                   <span style="font-size:0.7rem;color:#94a3b8;">{{ sh.status }}</span>
                 </div>
                 <div style="font-size:0.9rem;font-weight:700;color:var(--text-primary, #2C3E50);margin:0.4rem 0 0.2rem;">{{ sh.name }}</div>
-                <div style="font-size:0.78rem;color:var(--text-secondary, #64748b);">{{ sh.region }}{{ sh.district ? ' · ' + sh.district : '' }} — capacity {{ sh.capacity ?? 'N/A' }}</div>
+                <div style="font-size:0.78rem;color:var(--text-secondary, #64748b);">{{ sh.region }}{{ sh.district ? ' · ' + sh.district : '' }} — {{ L.t('pp_capacity') }} {{ sh.capacity ?? 'N/A' }}</div>
                 <a target="_blank" [href]="'https://www.google.com/maps/dir/?api=1&destination=' + sh.latitude + ',' + sh.longitude"
-                   style="font-size:0.74rem;color:#059669;font-weight:700;text-decoration:none;"><i class="fas fa-directions me-1"></i>Directions</a>
+                   style="font-size:0.74rem;color:#059669;font-weight:700;text-decoration:none;"><i class="fas fa-directions me-1"></i>{{ L.t('pp_directions') }}</a>
               </div>
             }
           } @else {
+          @for (b of bulletins(); track b.id) {
+            <div style="border:1px solid rgba(0,0,0,0.08);border-radius:14px;background:var(--card-bg, #fff);padding:1.1rem 1.25rem;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span [style.background]="sevColor(bulletinSev(b.severity))" style="color:#fff;font-size:0.72rem;font-weight:800;padding:3px 11px;border-radius:9px;text-transform:uppercase;">{{ bulletinSev(b.severity) }}</span>
+                <span style="font-size:0.8rem;color:#64748b;font-weight:600;">{{ L.t('pp_pmo_dmd_bulletin') }}</span>
+              </div>
+              <div style="font-size:1.05rem;font-weight:700;color:var(--text-primary, #111827);margin:0.5rem 0 0.25rem;">{{ b.title }}</div>
+              <div style="font-size:0.8rem;color:#64748b;margin-top:0.5rem;"><i class="fas fa-map-marker-alt me-1"></i>{{ bulletinAreas(b) }}</div>
+              @if (b.pdfUrl) {
+                <a [href]="b.pdfUrl" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-top:0.6rem;font-size:0.82rem;font-weight:700;color:#1d4ed8;text-decoration:none;"><i class="fas fa-file-pdf"></i> {{ L.t('pp_view_bulletin_pdf') }}</a>
+              }
+            </div>
+          }
           @for (w of warnings(); track w.id) {
             <div style="border:1px solid rgba(0,0,0,0.08);border-radius:14px;background:var(--card-bg, #fff);padding:1.1rem 1.25rem;">
               <div style="display:flex;align-items:center;gap:8px;">
@@ -106,10 +133,11 @@ interface PortalBulletin {
                 <div style="font-size:0.88rem;color:var(--text-secondary, #475569);line-height:1.65;margin-top:0.5rem;border-left:3px solid #cbd5e1;padding-left:10px;">{{ w.bulletinDescription }}</div>
               }
               @if (w.bulletinUrl) {
-                <a [href]="w.bulletinUrl" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-top:0.6rem;font-size:0.82rem;font-weight:700;color:#1d4ed8;text-decoration:none;"><i class="fas fa-file-pdf"></i> View bulletin (PDF)</a>
+                <a [href]="w.bulletinUrl" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-top:0.6rem;font-size:0.82rem;font-weight:700;color:#1d4ed8;text-decoration:none;"><i class="fas fa-file-pdf"></i> {{ L.t('pp_view_bulletin_pdf') }}</a>
               }
             </div>
-          } @empty {
+          }
+          @if (!warnings().length && !bulletins().length) {
             <div style="text-align:center;color:var(--text-secondary, #64748b);padding:2rem;border:1px dashed rgba(0,0,0,0.12);border-radius:14px;">
               <i class="fas fa-check-circle" style="font-size:1.8rem;color:#4ade80;"></i>
               <p style="margin:0.6rem 0 0;font-size:0.85rem;">{{ L.t('lbl_no_active_alerts') }}</p>
@@ -118,6 +146,7 @@ interface PortalBulletin {
           }
         </div>
       </div>
+      }
     </div>
 
     <!-- Register as Stakeholder modal (the landing/portal public registration) -->
@@ -125,48 +154,48 @@ interface PortalBulletin {
       <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="registerOpen.set(false)">
         <div style="background:var(--card-bg, #fff);border-radius:18px;max-width:560px;width:100%;padding:1.4rem 1.5rem;" (click)="$event.stopPropagation()">
           @if (!regDone()) {
-            <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin-bottom:1rem;"><i class="fas fa-handshake me-2" style="color:#003366;"></i>Register as Stakeholder</h5>
+            <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin-bottom:1rem;"><i class="fas fa-handshake me-2" style="color:#003366;"></i>{{ L.t('pp_register_as_stakeholder') }}</h5>
             <div style="display:grid;gap:0.8rem;">
-              <input class="form-control" placeholder="Organization *" [value]="rOrg()" (input)="rOrg.set($any($event.target).value)">
-              <input class="form-control" placeholder="Contact person *" [value]="rName()" (input)="rName.set($any($event.target).value)">
+              <input class="form-control" [placeholder]="L.t('pp_organization_required')" [value]="rOrg()" (input)="rOrg.set($any($event.target).value)">
+              <input class="form-control" [placeholder]="L.t('pp_contact_person_required')" [value]="rName()" (input)="rName.set($any($event.target).value)">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
                 <select class="form-control" [value]="rType()" (change)="rType.set($any($event.target).value)">
-                  <option>Government</option><option>NGO</option><option>Private</option><option>International</option><option>Community</option>
+                  <option value="Government">{{ L.t('pp_government') }}</option><option value="NGO">{{ L.t('pp_ngo') }}</option><option value="Private">{{ L.t('pp_private') }}</option><option value="International">{{ L.t('pp_international') }}</option><option value="Community">{{ L.t('pp_community') }}</option>
                 </select>
                 <select class="form-control" [value]="rCountry()" (change)="onCountry($any($event.target).value)">
-                  <option>Tanzania</option><option>Other</option>
+                  <option value="Tanzania">{{ L.t('pp_tanzania') }}</option><option value="Other">{{ L.t('pp_other') }}</option>
                 </select>
               </div>
               @if (rCountry() === 'Tanzania') {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
                   <select class="form-control" [value]="rRegion()" (change)="onRegion($any($event.target).value)">
-                    <option value="">Select region…</option>
+                    <option value="">{{ L.t('pp_select_region') }}</option>
                     @for (rg of regions(); track rg.id) { <option [value]="rg.name">{{ rg.name }}</option> }
                   </select>
                   <select class="form-control" [value]="rDistrict()" (change)="rDistrict.set($any($event.target).value)" [disabled]="!districts().length">
-                    <option value="">Select district…</option>
+                    <option value="">{{ L.t('pp_select_district') }}</option>
                     @for (ds of districts(); track ds.id) { <option [value]="ds.name">{{ ds.name }}</option> }
                   </select>
                 </div>
               } @else {
-                <input class="form-control" placeholder="Region / State / Province" [value]="rRegion()" (input)="rRegion.set($any($event.target).value)">
+                <input class="form-control" [placeholder]="L.t('pp_region_state_province')" [value]="rRegion()" (input)="rRegion.set($any($event.target).value)">
               }
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-                <input class="form-control" placeholder="Email" [value]="rEmail()" (input)="rEmail.set($any($event.target).value)">
-                <input class="form-control" placeholder="Phone" [value]="rPhone()" (input)="rPhone.set($any($event.target).value)">
+                <input class="form-control" [placeholder]="L.t('pp_email')" [value]="rEmail()" (input)="rEmail.set($any($event.target).value)">
+                <input class="form-control" [placeholder]="L.t('pp_phone')" [value]="rPhone()" (input)="rPhone.set($any($event.target).value)">
               </div>
               @if (regError()) { <div style="color:#dc2626;font-size:0.82rem;">{{ regError() }}</div> }
               <button class="btn-gold" style="justify-content:center;" [disabled]="!rOrg().trim() || !rName().trim() || regSaving()" (click)="register()">
                 <i class="fas" [class.fa-paper-plane]="!regSaving()" [class.fa-spinner]="regSaving()" [class.fa-spin]="regSaving()"></i>
-                {{ regSaving() ? 'Submitting…' : 'Submit Registration' }}
+                {{ regSaving() ? L.t('pp_submitting') : L.t('pp_submit_registration') }}
               </button>
             </div>
           } @else {
             <div style="text-align:center;padding:1.5rem 0.5rem;">
               <i class="fas fa-check-circle" style="font-size:3rem;color:#4ade80;"></i>
-              <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:1rem 0 0.4rem;">Registration received</h5>
-              <p style="color:var(--text-secondary, #64748b);">Your organization is pending verification by PMO.</p>
-              <button class="btn-outline-gold" style="margin-top:1rem;" (click)="registerOpen.set(false)">Close</button>
+              <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:1rem 0 0.4rem;">{{ L.t('pp_registration_received') }}</h5>
+              <p style="color:var(--text-secondary, #64748b);">{{ L.t('pp_pending_verification_pmo') }}</p>
+              <button class="btn-outline-gold" style="margin-top:1rem;" (click)="registerOpen.set(false)">{{ L.t('pp_close') }}</button>
             </div>
           }
         </div>
@@ -185,6 +214,7 @@ export class PublicLivePortalComponent {
   shelters = signal<Shelter[]>([]);
   /** Map layer: live warnings or the evacuation-center finder (FEMA shelter-finder pattern). */
   layer = signal<'warnings' | 'shelters'>('warnings');
+  view = signal<'live' | 'inform'>('live');   // portal sub-view: live monitoring vs the embedded INFORM risk explorer
   private shelterMarkers: any[] = [];
   private warningMarkers: any[] = [];
   registerOpen = signal(false);
@@ -215,6 +245,16 @@ export class PublicLivePortalComponent {
     return sev === 'Emergency' ? '#ef4444' : sev === 'Warning' ? '#f59e0b' : '#3b82f6';
   }
 
+  /** Map a PMO-DMD bulletin's engine level (MAJOR_WARNING/WARNING/ADVISORY) to the public alert vocabulary. */
+  bulletinSev(level: string): string {
+    return level === 'MAJOR_WARNING' ? 'Emergency' : level === 'WARNING' ? 'Warning' : 'Watch';
+  }
+  /** The distinct affected districts a bulletin covers, for its side-list card. */
+  bulletinAreas(b: PortalBulletin): string {
+    const names = [...new Set((b.areaPoints ?? []).map(a => a.name).filter(Boolean))];
+    return names.slice(0, 6).join(', ') + (names.length > 6 ? ` +${names.length - 6}` : '');
+  }
+
   /** Escape operator-authored bulletin text before injecting it into a Leaflet popup's innerHTML. */
   private escHtml(s: string | null | undefined): string {
     return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -229,7 +269,7 @@ export class PublicLivePortalComponent {
       district: this.rDistrict() || null, email: this.rEmail() || null, phone: this.rPhone() || null,
     }).subscribe({
       next: () => { this.regSaving.set(false); this.regDone.set(true); },
-      error: e => { this.regSaving.set(false); this.regError.set(e?.error?.message || 'Could not register.'); },
+      error: e => { this.regSaving.set(false); this.regError.set(e?.error?.message || this.L.t('pp_could_not_register')); },
     });
   }
 
@@ -305,8 +345,8 @@ export class PublicLivePortalComponent {
         const marker = L.circleMarker([sh.latitude, sh.longitude],
           { radius: 9, fillColor: '#059669', color: '#fff', weight: 2, fillOpacity: 0.9 })
           .bindPopup(`<strong>${this.escHtml(sh.name)}</strong><br>${this.escHtml(sh.region ?? '')} ${sh.district ? '· ' + this.escHtml(sh.district) : ''}`
-            + `<br>Capacity: ${sh.capacity ?? 'N/A'} · ${sh.status ?? ''}`
-            + `<br><a target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${sh.latitude},${sh.longitude}">Directions</a>`);
+            + `<br>${this.L.t('pp_capacity_label')} ${sh.capacity ?? 'N/A'} · ${sh.status ?? ''}`
+            + `<br><a target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${sh.latitude},${sh.longitude}">${this.L.t('pp_directions')}</a>`);
         this.shelterMarkers.push(marker);
       }
     }
@@ -344,7 +384,7 @@ export class PublicLivePortalComponent {
         .addTo(this.map)
         .bindPopup(`<strong>${this.escHtml(w.severityLevel)}: ${this.escHtml(w.hazardType)}</strong><br>${this.escHtml(w.alertMessage ?? '')}<br><small>${this.escHtml(w.affectedRegions ?? '')}</small>`
           + (w.bulletinDescription ? `<div style="margin-top:6px;font-size:0.82rem;color:#334155;">${this.escHtml(w.bulletinDescription)}</div>` : '')
-          + (w.bulletinUrl ? `<br><a href="${w.bulletinUrl}" target="_blank" rel="noopener">View bulletin (PDF)</a>` : ''));
+          + (w.bulletinUrl ? `<br><a href="${w.bulletinUrl}" target="_blank" rel="noopener">${this.L.t('pp_view_bulletin_pdf')}</a>` : ''));
       this.warningMarkers.push(marker);
     }
     // Incidents pushed to the portal map (Response → push-map) — purple dashed rings, distinct from warning
@@ -355,11 +395,11 @@ export class PublicLivePortalComponent {
       const im = L.circleMarker([inc.latitude, inc.longitude],
           { radius: 7, fillColor: '#7c3aed', color: '#fff', weight: 2, fillOpacity: 0.85, dashArray: '3' })
         .addTo(this.map)
-        .bindPopup(`<strong>INCIDENT: ${this.escHtml(inc.title)}</strong>`
+        .bindPopup(`<strong>${this.L.t('pp_incident_label')} ${this.escHtml(inc.title)}</strong>`
           + `<br>${this.escHtml(inc.severityLevel ?? '')} · <span style="color:${lc.color};font-weight:700;">${lc.label}</span>`
           + `<br><small>${this.escHtml(inc.regionName ?? '')}</small>`
           // the detailed public snapshot exists only for incidents an operator explicitly pushed to the map
-          + (inc.pinnedToMap ? `<br><a href="/incident/${inc.id}">View live status, response &amp; resources →</a>` : ''));
+          + (inc.pinnedToMap ? `<br><a href="/incident/${inc.id}">${this.L.t('pp_view_live_status')} →</a>` : ''));
       this.warningMarkers.push(im);
     }
     // Published bulletins (EOCC Bulletin → Publish → Map): BLINK each PMO-selected district (hotline
@@ -379,7 +419,7 @@ export class PublicLivePortalComponent {
           .addTo(this.map)
           .bindPopup(`<strong>${this.escHtml(b.title)}</strong>`
             + `<br><small>${this.escHtml(a.name)} · ${this.escHtml((a.level ?? '').replace('_', ' '))}</small>`
-            + `<br><a href="${b.pdfUrl}" target="_blank" rel="noopener">View bulletin (PDF)</a>`);
+            + `<br><a href="${b.pdfUrl}" target="_blank" rel="noopener">${this.L.t('pp_view_bulletin_pdf')}</a>`);
         this.warningMarkers.push(pm);
       }
       if (b.centroidLat == null || b.centroidLng == null) { continue; }
@@ -393,7 +433,7 @@ export class PublicLivePortalComponent {
       const marker = L.marker([b.centroidLat, b.centroidLng], { icon })
         .addTo(this.map)
         .bindPopup(`<strong>${this.escHtml(b.title)}</strong>`
-          + `<br><a href="${b.pdfUrl}" target="_blank" rel="noopener">View bulletin (PDF)</a>`);
+          + `<br><a href="${b.pdfUrl}" target="_blank" rel="noopener">${this.L.t('pp_view_bulletin_pdf')}</a>`);
       this.warningMarkers.push(marker);
     }
   }

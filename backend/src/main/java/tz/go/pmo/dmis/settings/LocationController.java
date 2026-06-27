@@ -37,7 +37,7 @@ import tz.go.pmo.dmis.common.security.Authz;
 @RequiredArgsConstructor
 public class LocationController {
 
-    private static final String CAN_WRITE = Authz.LOCATION_WRITE;
+    private static final String CAN_WRITE = "hasAuthority('location_management.manage')";
 
     private final JdbcTemplate jdbc;
 

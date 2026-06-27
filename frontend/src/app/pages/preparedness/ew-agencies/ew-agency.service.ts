@@ -27,6 +27,10 @@ export class EwAgencyService {
   submit(agency: string, payload: any): Observable<any> {
     return this.http.post(`${this.base}/agency/${agency}/submission`, payload);
   }
+  /** Clear (withdraw) this entity's currently-issued warning so it leaves the cross-agency map + DMD at once. */
+  withdraw(agency: string): Observable<any> {
+    return this.http.delete(`${this.base}/agency/${agency}/latest`);
+  }
   latest(agency: string): Observable<AgencyEnvelope> {
     return this.http.get<AgencyEnvelope>(`${this.base}/agency/${agency}/latest`);
   }

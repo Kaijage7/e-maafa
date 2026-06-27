@@ -36,7 +36,8 @@ public class EducationalContentAdminController {
 
     public record EduWriteRequest(String title, String contentType, String summary, String fullContent,
                                   String author, String publicationDate, String targetAudience,
-                                  String keywords, Boolean isPublished) {
+                                  String keywords, Boolean isPublished,
+                                  String titleSw, String summarySw, String fullContentSw) {
     }
 
     @GetMapping
@@ -44,8 +45,10 @@ public class EducationalContentAdminController {
     @PreAuthorize("isAuthenticated()")
     public Map<String, Object> index() {
         List<Map<String, Object>> items = jdbc.queryForList(
-                "select id, title, content_type as \"contentType\", summary, author,"
+                "select id, title, content_type as \"contentType\", summary, full_content as \"fullContent\", author,"
                         + " target_audience as \"targetAudience\", is_published as \"isPublished\","
+                        + " title_sw as \"titleSw\", summary_sw as \"summarySw\", full_content_sw as \"fullContentSw\","
+                        + " to_char(publication_date, 'YYYY-MM-DD') as \"publicationDateIso\","
                         + " to_char(publication_date, 'DD Mon YYYY') as \"publicationDate\""
                         + " from public.educational_contents order by publication_date desc nulls last, id desc");
         long published = items.stream().filter(i -> Boolean.TRUE.equals(i.get("isPublished"))).count();
@@ -56,32 +59,38 @@ public class EducationalContentAdminController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create educational content")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> create(@RequestBody EduWriteRequest req) {
         requireTitle(req);
         Long id = jdbc.queryForObject(
                 "insert into public.educational_contents(title,content_type,summary,full_content,author,"
-                        + "publication_date,target_audience,keywords,is_published,created_at,updated_at)"
-                        + " values (?,?,?,?,?,?::date,?,?,?,now(),now()) returning id", Long.class,
+                        + "publication_date,target_audience,keywords,is_published,title_sw,summary_sw,full_content_sw,"
+                        + "created_at,updated_at)"
+                        + " values (?,?,?,?,?,?::date,?,?,?,?,?,?,now(),now()) returning id", Long.class,
                 req.title().trim(), nz(req.contentType(), "Article"), req.summary(), req.fullContent(),
                 req.author(), blank(req.publicationDate()), req.targetAudience(), req.keywords(),
-                req.isPublished() != null && req.isPublished());
+                req.isPublished() != null && req.isPublished(),
+                blank(req.titleSw()), blank(req.summarySw()), blank(req.fullContentSw()));
         return Map.of("id", id, "message", "Created");
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update educational content")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> update(@PathVariable long id, @RequestBody EduWriteRequest req) {
         requireTitle(req);
         int n = jdbc.update("update public.educational_contents set title=?, content_type=?, summary=?,"
                         + " full_content=coalesce(?, full_content), author=?, publication_date=?::date,"
-                        + " target_audience=?, keywords=?, is_published=?, updated_at=now() where id=?",
+                        + " target_audience=?, keywords=?, is_published=?,"
+                        + " title_sw=coalesce(?, title_sw), summary_sw=coalesce(?, summary_sw),"
+                        + " full_content_sw=coalesce(?, full_content_sw),"
+                        + " updated_at=now() where id=?",
                 req.title().trim(), nz(req.contentType(), "Article"), req.summary(), req.fullContent(),
                 req.author(), blank(req.publicationDate()), req.targetAudience(), req.keywords(),
-                req.isPublished() != null && req.isPublished(), id);
+                req.isPublished() != null && req.isPublished(),
+                blank(req.titleSw()), blank(req.summarySw()), blank(req.fullContentSw()), id);
         if (n == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Content not found");
         }
@@ -90,7 +99,7 @@ public class EducationalContentAdminController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete educational content")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> delete(@PathVariable long id) {
         jdbc.update("delete from public.educational_contents where id=?", id);

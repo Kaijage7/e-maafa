@@ -41,8 +41,8 @@ public class EducationMaterialAdminController {
     private final JdbcTemplate jdbc;
 
     public record MaterialWrite(String hazard, String audience, String materialType, String title,
-                                String body, String videoUrl, String filePath, Integer sortOrder,
-                                Boolean isActive, String phase) {
+                                String body, String titleSw, String bodySw, String videoUrl,
+                                String filePath, Integer sortOrder, Boolean isActive, String phase) {
     }
 
     @GetMapping
@@ -51,6 +51,7 @@ public class EducationMaterialAdminController {
     public Map<String, Object> index() {
         List<Map<String, Object>> items = jdbc.queryForList(
                 "select id, hazard, audience, material_type as \"materialType\", title, body,"
+                        + " title_sw as \"titleSw\", body_sw as \"bodySw\","
                         + " video_url as \"videoUrl\", file_path as \"filePath\", sort_order as \"sortOrder\", phase,"
                         + " is_active as \"isActive\" from public.education_materials"
                         + " order by hazard, audience, sort_order, id");
@@ -62,16 +63,17 @@ public class EducationMaterialAdminController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Add a material to a hazard's repository")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> create(@RequestBody MaterialWrite req) {
         validate(req);
         Long id = jdbc.queryForObject(
-                "insert into public.education_materials(hazard,audience,material_type,title,body,video_url,"
-                        + "file_path,sort_order,is_active,phase,created_at,updated_at)"
-                        + " values (?,?,?,?,?,?,?,?,?,?,now(),now()) returning id", Long.class,
+                "insert into public.education_materials(hazard,audience,material_type,title,body,title_sw,body_sw,"
+                        + "video_url,file_path,sort_order,is_active,phase,created_at,updated_at)"
+                        + " values (?,?,?,?,?,?,?,?,?,?,?,?,now(),now()) returning id", Long.class,
                 req.hazard().trim(), req.audience(), req.materialType(), req.title().trim(),
-                req.body(), req.videoUrl(), req.filePath(),
+                req.body(), blankToNull(req.titleSw()), blankToNull(req.bodySw()),
+                req.videoUrl(), req.filePath(),
                 req.sortOrder() == null ? 0 : req.sortOrder(), req.isActive() == null || req.isActive(),
                 PHASES.contains(req.phase()) ? req.phase() : "any");
         return Map.of("id", id, "message", "Material added");
@@ -79,15 +81,17 @@ public class EducationMaterialAdminController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a material")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> update(@PathVariable long id, @RequestBody MaterialWrite req) {
         validate(req);
         int n = jdbc.update("update public.education_materials set hazard=?, audience=?, material_type=?,"
-                        + " title=?, body=?, video_url=?, file_path=?, sort_order=coalesce(?, sort_order),"
+                        + " title=?, body=?, title_sw=?, body_sw=?, video_url=?, file_path=?,"
+                        + " sort_order=coalesce(?, sort_order),"
                         + " is_active=coalesce(?, is_active), phase=?, updated_at=now() where id=?",
                 req.hazard().trim(), req.audience(), req.materialType(), req.title().trim(),
-                req.body(), req.videoUrl(), req.filePath(), req.sortOrder(), req.isActive(),
+                req.body(), blankToNull(req.titleSw()), blankToNull(req.bodySw()),
+                req.videoUrl(), req.filePath(), req.sortOrder(), req.isActive(),
                 PHASES.contains(req.phase()) ? req.phase() : "any", id);
         if (n == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Material not found");
@@ -97,11 +101,16 @@ public class EducationMaterialAdminController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a material")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> delete(@PathVariable long id) {
         jdbc.update("delete from public.education_materials where id=?", id);
         return Map.of("id", id, "message", "Deleted");
+    }
+
+    /** Empty/blank Swahili fields are stored as NULL so the public side falls back to English. */
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
     }
 
     private static void validate(MaterialWrite req) {

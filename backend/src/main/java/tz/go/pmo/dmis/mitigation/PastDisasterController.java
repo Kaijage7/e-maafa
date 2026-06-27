@@ -45,14 +45,14 @@ public class PastDisasterController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create a disaster record (multipart, optional report document)")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
     public PastDisasterResponses.Detail store(@Valid @ModelAttribute PastDisasterWriteRequest request) {
         return pastDisasterService.store(request);
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Update a disaster record (multipart; new file replaces, remove flag clears)")
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
     public PastDisasterResponses.Detail update(@PathVariable Long id,
                                                @Valid @ModelAttribute PastDisasterWriteRequest request) {
         return pastDisasterService.update(id, request);
@@ -61,7 +61,7 @@ public class PastDisasterController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a disaster record (and its stored report document)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
     public void destroy(@PathVariable Long id) {
         pastDisasterService.destroy(id);
     }

@@ -39,7 +39,7 @@ import tz.go.pmo.dmis.common.security.Authz;
 @RequiredArgsConstructor
 public class RolePermissionController {
 
-    private static final String CAN_WRITE = Authz.SYS_ADMIN;
+    private static final String CAN_WRITE = "hasAuthority('roles_and_permissions.manage')";
 
     private final JdbcTemplate jdbc;
 
@@ -135,7 +135,16 @@ public class RolePermissionController {
             jdbc.update("insert into public.role_has_permissions(permission_id, role_id) values (?,?)"
                     + " on conflict do nothing", Long.valueOf(String.valueOf(pid)), id);
         }
-        return Map.of("message", "Permissions updated", "count", ids.size());
+        // Invariant: granting any action in a module implies its .view — the ModuleGuardFilter requires
+        // <module>.view to enter the module, so an action without view is a dead (unreachable) grant. Auto-add
+        // the matching .view for every module this role now holds a permission in, so the matrix can't lie.
+        jdbc.update("insert into public.role_has_permissions(permission_id, role_id)"
+                + " select vp.id, ? from public.role_has_permissions rhp"
+                + " join public.permissions p on p.id = rhp.permission_id"
+                + " join public.permissions vp on vp.name = split_part(p.name,'.',1) || '.view'"
+                + " where rhp.role_id = ? on conflict do nothing", id, id);
+        Long count = jdbc.queryForObject("select count(*) from public.role_has_permissions where role_id = ?", Long.class, id);
+        return Map.of("message", "Permissions updated", "count", count == null ? ids.size() : count);
     }
 
     @DeleteMapping("/{id}")

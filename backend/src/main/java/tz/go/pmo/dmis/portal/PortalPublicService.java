@@ -70,20 +70,18 @@ public class PortalPublicService {
         stats.put("peopleAtRisk", warnings.stream()
                 .mapToLong(w -> w.get("peopleAtRisk") == null ? 0 : ((Number) w.get("peopleAtRisk")).longValue()).sum());
 
-        // Active incidents for the public map — READ-ONLY consumption of the Response module's
-        // table (portal/public map reads only).
-        // PUBLIC-SAFE columns only (no casualty/reporter fields), with welcomeV2's visibility
-        // windows: Active/Active Response within 90 days, or workflow-approved within 30 days.
+        // Incidents on the public map — READ-ONLY consumption of the Response module's table.
+        // PUBLIC-SAFE columns only (no casualty/reporter fields). Like the EW warnings, the public map
+        // shows ONLY incidents an operator EXPLICITLY pinned (show_on_portal_map = true) — no auto-show by
+        // status/approval — and only while still active: Closed/Resolved incidents drop off the public map.
         List<Map<String, Object>> incidents = safeList(
                 "select id, title, severity_level as \"severityLevel\", status,"
                         + " latitude, longitude, region_name as \"regionName\","
                         + " show_on_portal_map as \"pinnedToMap\""
                         + " from public.incidents"
-                        + " where latitude is not null and ("
-                        + "   show_on_portal_map = true"   // operator explicitly pushed this incident to the public map
-                        + "   or (status in ('Active','Active Response') and reported_at >= now() - interval '90 days')"
-                        + "   or (workflow_status = 'approved' and status not in ('Active','Active Response')"
-                        + "       and reported_at >= now() - interval '30 days'))"
+                        + " where latitude is not null"
+                        + "   and show_on_portal_map = true"             // operator explicitly pinned it
+                        + "   and status not in ('Closed', 'Resolved')"  // and the situation is still active
                         + "   and coalesce(is_simulation, false) = false"
                         + " order by reported_at desc");
 
@@ -122,6 +120,7 @@ public class PortalPublicService {
                 + " order by marquee_row, sort_order"), "imagePath"));
         payload.put("settings", settingsMap());
         payload.put("latestNews", resolveImages(safeList("select title, slug, excerpt, image, category,"
+                + " title_sw as \"title_sw\", excerpt_sw as \"excerpt_sw\","
                 + " to_char(published_at, 'Mon DD, YYYY') as \"publishedAt\""
                 + " from public.portal_news where is_active = true and published_at <= now()"
                 + " order by published_at desc limit 6"), "image"));
@@ -157,13 +156,16 @@ public class PortalPublicService {
     public Map<String, Object> newsArticle(String slug) {
         List<Map<String, Object>> found = jdbc.queryForList(
                 "select title, slug, excerpt, body, image, category,"
+                        + " title_sw as \"title_sw\", excerpt_sw as \"excerpt_sw\", body_sw as \"body_sw\","
                         + " to_char(published_at, 'Mon DD, YYYY') as \"publishedAt\""
                         + " from public.portal_news where slug = ? and is_active = true and published_at <= now()", slug);
         if (found.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Article not found");
         }
         List<Map<String, Object>> related = jdbc.queryForList(
-                "select title, slug, excerpt, image, category, to_char(published_at, 'Mon DD, YYYY') as \"publishedAt\""
+                "select title, slug, excerpt, image, category,"
+                        + " title_sw as \"title_sw\", excerpt_sw as \"excerpt_sw\","
+                        + " to_char(published_at, 'Mon DD, YYYY') as \"publishedAt\""
                         + " from public.portal_news where slug <> ? and is_active = true and published_at <= now()"
                         + " order by published_at desc limit 3", slug);
         return Map.of("article", resolveImages(found, "image").get(0), "related", resolveImages(related, "image"));
@@ -226,7 +228,10 @@ public class PortalPublicService {
 
     // ---------------------------------------------------- citizen interactions
 
-    /** Citizen "Report Hazard" wizard → public_hazard_reports (auto report code PHR-YYYY-NNNNN). */
+    /** Citizen "Report Hazard" wizard → public_hazard_reports (auto report code PHR-YYYY-NNNNN). A member of
+     *  the public follows the normal triage flow. An INSTITUTION / SECTOR / MINISTRY is a trusted official
+     *  source: the report is auto-converted to an incident routed STRAIGHT to the EOCC stage
+     *  (workflow_status='waiting_eocc'), skipping the district + region verification a public report climbs. */
     @Transactional
     public Map<String, Object> submitHazardReport(Map<String, Object> req) {
         String hazardType = str(req.get("hazardType"));
@@ -234,16 +239,64 @@ public class PortalPublicService {
         if (hazardType == null || description == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Hazard type and description are required");
         }
+        String reporterType = normReporterType(str(req.get("reporterType")));
+        boolean official = !"public".equals(reporterType);
+        String reporterOrg = official ? str(req.get("reporterOrg")) : null;
+
         Long n = jdbc.queryForObject("select count(*) from public.public_hazard_reports", Long.class);
         String code = String.format("PHR-%d-%05d", Year.now().getValue(), (n == null ? 0 : n) + 1);
-        jdbc.update("insert into public.public_hazard_reports(report_code,hazard_type,description,"
-                        + "location_description,latitude,longitude,urgency_level,reporter_name,reporter_phone,"
-                        + "created_at,updated_at) values (?,?,?,?,?,?,?,?,?,now(),now())",
+        Long reportId = jdbc.queryForObject("insert into public.public_hazard_reports(report_code,hazard_type,"
+                        + "description,location_description,latitude,longitude,urgency_level,reporter_name,"
+                        + "reporter_phone,reporter_type,reporter_org,created_at,updated_at)"
+                        + " values (?,?,?,?,?,?,?,?,?,?,?,now(),now()) returning id", Long.class,
                 code, hazardType, description, str(req.get("location")),
                 num(req.get("latitude")), num(req.get("longitude")),
                 str(req.get("urgency")) == null ? "Medium" : str(req.get("urgency")),
-                str(req.get("reporterName")), str(req.get("reporterPhone")));
-        return Map.of("reportCode", code, "message", "Report submitted — thank you for keeping your community safe");
+                str(req.get("reporterName")), str(req.get("reporterPhone")), reporterType, reporterOrg);
+
+        if (!official) {
+            return Map.of("reportCode", code,
+                    "message", "Report submitted — thank you for keeping your community safe");
+        }
+
+        // Trusted official source → straight to EOCC: a waiting_eocc incident (skips the district + region steps).
+        Long incidentTypeId = jdbc.query(
+                "select id from public.incident_types where name ilike ? or ? ilike '%' || name || '%' limit 1",
+                rs -> rs.next() ? rs.getLong(1) : null, "%" + hazardType + "%", hazardType);
+        String src = capitalize(reporterType)
+                + (reporterOrg == null || reporterOrg.isBlank() ? "" : " — " + reporterOrg)
+                + " (official report via public portal)";
+        Long incidentId = jdbc.queryForObject(
+                "insert into public.incidents(title, description, incident_type_id, severity_level, status, "
+                + "workflow_status, origin_level, location_description, latitude, longitude, reported_at, "
+                + "reported_by_name, reported_by_contact, source_of_report, submitted_at, created_at, updated_at) "
+                + "values (?,?,?,?, 'Reported', 'waiting_eocc', 'national', ?,?,?, now(), ?,?,?, now(), now(), now()) "
+                + "returning id", Long.class,
+                "Official report: " + hazardType + (str(req.get("location")) == null ? "" : " — " + str(req.get("location"))),
+                description, incidentTypeId, urgencyToSeverity(str(req.get("urgency"))),
+                str(req.get("location")), num(req.get("latitude")), num(req.get("longitude")),
+                str(req.get("reporterName")), str(req.get("reporterPhone")), src);
+        // (No incident_workflow_histories row: that table requires a user_id and a portal report has no acting
+        // user. The incident's origin is fully captured in source_of_report + the linked PHR report below.)
+        jdbc.update("update public.public_hazard_reports set status='converted', linked_incident_id=?, "
+                + "updated_at=now() where id=?", incidentId, reportId);
+        return Map.of("reportCode", code, "incidentId", incidentId,
+                "message", "Official report received — routed straight to the EOCC as incident #" + incidentId + ".");
+    }
+
+    /** Normalise the wizard's "reported by" to one of: public | institution | sector | ministry. */
+    private static String normReporterType(String t) {
+        if (t == null) return "public";
+        String s = t.trim().toLowerCase();
+        return ("institution".equals(s) || "sector".equals(s) || "ministry".equals(s)) ? s : "public";
+    }
+    private static String urgencyToSeverity(String urgency) {
+        if (urgency == null) return "Moderate";
+        String u = urgency.trim().toLowerCase();
+        return "high".equals(u) ? "Major" : "low".equals(u) ? "Minor" : "Moderate";
+    }
+    private static String capitalize(String s) {
+        return (s == null || s.isEmpty()) ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     /** Public alert subscription (the /subscribe page) → alert_subscriptions, consent required. */
@@ -437,6 +490,7 @@ public class PortalPublicService {
     @Transactional(readOnly = true)
     public Map<String, Object> education() {
         return Map.of("contents", safeList("select id, title, content_type as \"contentType\", summary, author,"
+                + " title_sw as \"titleSw\", summary_sw as \"summarySw\","
                 + " target_audience as \"targetAudience\", to_char(publication_date, 'DD Mon YYYY') as \"publicationDate\""
                 + " from public.educational_contents where is_published = true order by publication_date desc nulls last"));
     }
@@ -464,7 +518,8 @@ public class PortalPublicService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Unknown hazard");
         }
         List<Map<String, Object>> materials = jdbc.queryForList(
-                "select audience, material_type as \"materialType\", title, body, video_url as \"videoUrl\", phase,"
+                "select audience, material_type as \"materialType\", title, body,"
+                        + " title_sw as \"titleSw\", body_sw as \"bodySw\", video_url as \"videoUrl\", phase,"
                         + " case when file_path is null then null"
                         + "      when file_path like 'images/%' then '/' || file_path"
                         + "      else '/api/storage/' || file_path end as \"fileUrl\""
@@ -474,7 +529,9 @@ public class PortalPublicService {
         List<Map<String, Object>> related;
         try {
             related = jdbc.queryForList(
-                    "select id, title, content_type as \"contentType\", summary from public.educational_contents"
+                    "select id, title, content_type as \"contentType\", summary,"
+                            + " title_sw as \"titleSw\", summary_sw as \"summarySw\""
+                            + " from public.educational_contents"
                             + " where is_published = true and (lower(title) like ? or lower(keywords) like ?)"
                             + " order by publication_date desc limit 4", pattern, pattern);
         } catch (Exception e) {
@@ -488,6 +545,7 @@ public class PortalPublicService {
     public Map<String, Object> educationItem(long id) {
         List<Map<String, Object>> found = jdbc.queryForList(
                 "select id, title, content_type as \"contentType\", summary, full_content as \"fullContent\","
+                        + " title_sw as \"titleSw\", summary_sw as \"summarySw\", full_content_sw as \"fullContentSw\","
                         + " author, keywords, target_audience as \"targetAudience\","
                         + " to_char(publication_date, 'DD Mon YYYY') as \"publicationDate\""
                         + " from public.educational_contents where id=? and is_published=true", id);

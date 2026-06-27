@@ -38,7 +38,7 @@ import tz.go.pmo.dmis.common.security.Authz;
 @RequiredArgsConstructor
 public class ApprovalWorkflowConfigController {
 
-    private static final String CAN_WRITE = Authz.APPROVAL_CONFIG_WRITE;
+    private static final String CAN_WRITE = "hasAuthority('approval_workflows.manage')";
 
     private final JdbcTemplate jdbc;
 

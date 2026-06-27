@@ -45,21 +45,21 @@ public class HazardController {
     @PostMapping
     @Operation(summary = "Register a new hazard")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('hazards.manage')")
     public HazardDetailResponse store(@Valid @RequestBody HazardWriteRequest request) {
         return hazardService.store(request);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a hazard")
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('hazards.manage')")
     public HazardDetailResponse update(@PathVariable Long id, @Valid @RequestBody HazardWriteRequest request) {
         return hazardService.update(id, request);
     }
 
     @PostMapping("/{id}/status")
     @Operation(summary = "Toggle hazard active status")
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('hazards.manage')")
     public void updateStatus(@PathVariable Long id, @Valid @RequestBody StatusRequest request) {
         hazardService.updateStatus(id, request.isActive());
     }
@@ -67,7 +67,7 @@ public class HazardController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a hazard (blocked while early warnings / plans reference it)")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('hazards.manage')")
     public void destroy(@PathVariable Long id) {
         hazardService.destroy(id);
     }

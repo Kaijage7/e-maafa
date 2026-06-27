@@ -5,8 +5,9 @@ import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 
 interface NewsItem {
-  id: number; title: string; slug: string; excerpt: string; image: string;
+  id: number; title: string; slug: string; excerpt: string; body?: string; image: string;
   category: string; isActive: boolean; publishedAt: string | null;
+  title_sw?: string | null; excerpt_sw?: string | null; body_sw?: string | null;
 }
 
 /**
@@ -96,6 +97,17 @@ interface NewsItem {
             </div>
             <textarea class="form-control" rows="2" placeholder="Excerpt (short summary, shown on cards)" [value]="fExcerpt()" (input)="fExcerpt.set($any($event.target).value)"></textarea>
             <textarea class="form-control" rows="6" placeholder="Body" [value]="fBody()" (input)="fBody.set($any($event.target).value)"></textarea>
+
+            <!-- Optional Swahili translation: the public portal shows it for Swahili visitors, else falls back to English -->
+            <div style="border:1px solid var(--border);border-radius:10px;padding:0.85rem 0.9rem;display:grid;gap:0.75rem;background:#fafafa;">
+              <div style="font-weight:700;font-size:0.85rem;color:var(--text-mid);display:flex;align-items:center;gap:0.4rem;">
+                <i class="fas fa-language"></i> Kiswahili (Swahili) <span style="font-weight:500;font-size:0.75rem;opacity:0.7;">— optional, falls back to English</span>
+              </div>
+              <input class="form-control" placeholder="Kichwa cha habari (Title)" [value]="fTitleSw()" (input)="fTitleSw.set($any($event.target).value)">
+              <textarea class="form-control" rows="2" placeholder="Muhtasari (Excerpt)" [value]="fExcerptSw()" (input)="fExcerptSw.set($any($event.target).value)"></textarea>
+              <textarea class="form-control" rows="6" placeholder="Maudhui (Body)" [value]="fBodySw()" (input)="fBodySw.set($any($event.target).value)"></textarea>
+            </div>
+
             <label style="display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;color:var(--text-mid);">
               <input type="checkbox" [checked]="fActive()" (change)="fActive.set($any($event.target).checked)"> Published (visible on the public portal)
             </label>
@@ -126,6 +138,8 @@ export class PortalNewsComponent {
   editId = signal<number | null>(null);
   fTitle = signal(''); fCategory = signal('news'); fImage = signal('');
   fExcerpt = signal(''); fBody = signal(''); fActive = signal(true);
+  // Optional Swahili authoring (public portal falls back to English when empty)
+  fTitleSw = signal(''); fExcerptSw = signal(''); fBodySw = signal('');
   saving = signal(false);
   uploading = signal(false);
   error = signal('');
@@ -150,6 +164,7 @@ export class PortalNewsComponent {
     this.editId.set(null);
     this.fTitle.set(''); this.fCategory.set('news'); this.fImage.set('');
     this.fExcerpt.set(''); this.fBody.set(''); this.fActive.set(true);
+    this.fTitleSw.set(''); this.fExcerptSw.set(''); this.fBodySw.set('');
     this.error.set('');
     this.editorOpen.set(true);
   }
@@ -157,7 +172,8 @@ export class PortalNewsComponent {
   openEdit(it: NewsItem): void {
     this.editId.set(it.id);
     this.fTitle.set(it.title); this.fCategory.set(it.category); this.fImage.set(it.image ?? '');
-    this.fExcerpt.set(it.excerpt ?? ''); this.fBody.set(''); this.fActive.set(it.isActive);
+    this.fExcerpt.set(it.excerpt ?? ''); this.fBody.set(it.body ?? ''); this.fActive.set(it.isActive);
+    this.fTitleSw.set(it.title_sw ?? ''); this.fExcerptSw.set(it.excerpt_sw ?? ''); this.fBodySw.set(it.body_sw ?? '');
     this.error.set('');
     this.editorOpen.set(true);
   }
@@ -179,7 +195,8 @@ export class PortalNewsComponent {
   save(): void {
     this.saving.set(true);
     const payload = { title: this.fTitle().trim(), category: this.fCategory(), image: this.fImage() || null,
-      excerpt: this.fExcerpt() || null, body: this.fBody() || null, isActive: this.fActive() };
+      excerpt: this.fExcerpt() || null, body: this.fBody() || null, isActive: this.fActive(),
+      title_sw: this.fTitleSw().trim() || null, excerpt_sw: this.fExcerptSw().trim() || null, body_sw: this.fBodySw().trim() || null };
     const req = this.editId()
       ? this.http.put(`/api/v1/content/news/${this.editId()}`, payload)
       : this.http.post('/api/v1/content/news', payload);
@@ -191,7 +208,8 @@ export class PortalNewsComponent {
 
   toggleActive(it: NewsItem): void {
     this.http.put(`/api/v1/content/news/${it.id}`,
-      { title: it.title, category: it.category, image: it.image, excerpt: it.excerpt, isActive: !it.isActive })
+      { title: it.title, category: it.category, image: it.image, excerpt: it.excerpt, body: it.body,
+        title_sw: it.title_sw, excerpt_sw: it.excerpt_sw, body_sw: it.body_sw, isActive: !it.isActive })
       .subscribe(() => this.reload());
   }
 

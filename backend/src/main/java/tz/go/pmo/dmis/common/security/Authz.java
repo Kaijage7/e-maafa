@@ -171,12 +171,33 @@ public final class Authz {
     public static final String RESPONSE_COMMAND =
             "hasAnyRole('" + SUPER_ADMIN + "','" + SECRETARY + "','" + DIRECTOR + "','" + ASST_DIRECTOR + "','" + EOCC + "')";
     /**
+     * Publish an incident to the PUBLIC portal (live map / News & Events). This is an EOCC coordination-
+     * centre function, not a field action — so it is restricted to the EOCC and national command/comms,
+     * never the district/regional responders who only report &amp; approve within their own area.
+     */
+    public static final String RESPONSE_PUBLISH =
+            "hasAnyRole('" + EOCC + "','" + COMMS_OFFICER + "','" + DIRECTOR + "','" + ASST_DIRECTOR + "','" + SECRETARY + "','" + SUPER_ADMIN + "','" + ICT_ADMIN + "')";
+    /**
      * Submit a stakeholder bid / supply offer — the one partner-facing write in Response. External
      * Partners are the bidders, so they are included alongside the response operators who may record an
      * offer on a stakeholder's behalf; excludes Comms (the accept/dismiss decision is the OVERSIGHT tier).
      */
     public static final String RESPONSE_BID_SUBMIT =
             "hasAnyRole('" + SUPER_ADMIN + "','" + ICT_ADMIN + "','" + EOCC + "','" + DIRECTOR + "','" + ASST_DIRECTOR + "','" + PARTNERS + "','" + MDA_FOCAL + "','" + RAS + "','" + REG_DC + "','" + DAS + "','" + DIST_DC + "')";
+
+    // ---- Permission-based action gates (governed by the Roles & Permissions matrix, not a hardcoded role
+    //      list). The workflow services still enforce WHOSE TURN it is (stage owner + jurisdiction); these
+    //      gate WHETHER the user is permitted to perform the action at all — toggled in User Management. ----
+    /** Report/create an incident. */
+    public static final String PERM_INCIDENT_CREATE = "hasAuthority('incidents.create')";
+    /** Edit an incident or post a situation update. */
+    public static final String PERM_INCIDENT_UPDATE = "hasAuthority('incidents.update')";
+    /** Act on the approval chain (approve / roll back / forward / resubmit / escalate / verify). */
+    public static final String PERM_INCIDENT_APPROVE = "hasAuthority('incidents.approve')";
+    /** Close out an incident. */
+    public static final String PERM_INCIDENT_CLOSE = "hasAuthority('incidents.close')";
+    /** Read incident data / generate incident reports. */
+    public static final String PERM_INCIDENT_VIEW = "hasAuthority('incidents.view')";
 
     // ---- Statutory declaration chain — each step gated to its own authority, not one command tier --
     /** s.10 review step — the National Technical Committee (Super Admin may act break-glass). */
@@ -192,6 +213,12 @@ public final class Authz {
      */
     public static final String DECLARE_AUTHORITY =
             "hasAnyRole('" + SUPER_ADMIN + "','" + MINISTER + "','" + PRESIDENT + "')";
+
+    // Permission-based declaration gates (matrix-configurable). PROPOSE = initiate/recommend a declaration
+    // request (command tier + the statutory committees); DECLARE = the gazetting/proclaiming authority act
+    // (Minister s.32 / President s.33; Super Admin break-glass) — never the operational/command tier.
+    public static final String PERM_DECLARATION_PROPOSE = "hasAuthority('disaster_declarations.propose')";
+    public static final String PERM_DECLARATION_DECLARE = "hasAuthority('disaster_declarations.declare')";
 
     // ---- Early Warning (EW): bulletin ingest, warning lifecycle, dissemination, field monitoring ----
     /**

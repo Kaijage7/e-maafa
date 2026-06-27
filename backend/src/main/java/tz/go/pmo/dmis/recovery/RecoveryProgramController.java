@@ -17,6 +17,7 @@ import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Recovery Programs (Recovery) — port of the Laravel recovery_programs module: the long-term
@@ -30,13 +31,15 @@ public class RecoveryProgramController {
     private static final List<String> STATUSES = List.of("Planning", "Ongoing", "Completed", "Suspended", "Cancelled");
 
     private final JdbcTemplate jdbc;
+    private final JurisdictionScope jurisdiction;
 
-    public RecoveryProgramController(JdbcTemplate jdbc) {
+    public RecoveryProgramController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
+        this.jurisdiction = jurisdiction;
     }
 
     @GetMapping
-    @PreAuthorize(Authz.RECOVERY_MANAGE)
+    @PreAuthorize("hasAuthority('recovery.view')")
     public Map<String, Object> index(@RequestParam(required = false) String status,
                                      @RequestParam(required = false) String search) {
         StringBuilder where = new StringBuilder("1=1");
@@ -50,8 +53,11 @@ public class RecoveryProgramController {
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("programs", jdbc.queryForList("""
+        // Area scope: an officer sees programs tied to an incident in their own area, plus programs not
+        // bound to an area (no incident → i.region_id/district_id null = national/cross-cutting). National
+        // and non-area roles keep the full view (predicate adds nothing).
+        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        StringBuilder sql = new StringBuilder("""
                 select p.id, p.program_name, p.description, p.program_type, p.status, p.start_date,
                        p.expected_completion_date, p.actual_completion_date, p.total_budget_allocated,
                        p.currency, p.geographic_scope, p.key_objectives_outcomes,
@@ -59,10 +65,14 @@ public class RecoveryProgramController {
                 from public.recovery_programs p
                 left join public.agencies a on a.id = p.lead_agency_id
                 left join public.incidents i on i.id = p.incident_id
-                where %s
-                order by case p.status when 'Ongoing' then 0 when 'Planning' then 1 when 'Completed' then 2 else 3 end,
-                         p.created_at desc limit 200
-                """.formatted(where), params.toArray()));
+                where """);
+        sql.append(' ').append(where);
+        sql.append("""
+                 order by case p.status when 'Ongoing' then 0 when 'Planning' then 1 when 'Completed' then 2 else 3 end,
+                          p.created_at desc limit 200
+                """);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("programs", jdbc.queryForList(sql.toString(), params.toArray()));
         out.put("stats", jdbc.queryForMap("""
                 select count(*) as total,
                        count(*) filter (where status='Ongoing') as ongoing,
@@ -79,7 +89,7 @@ public class RecoveryProgramController {
         return out;
     }
 
-    @PreAuthorize(Authz.RECOVERY_MANAGE)
+    @PreAuthorize("hasAuthority('recovery.manage')")
     @PostMapping
     @Transactional
     public Map<String, Object> store(@RequestBody Map<String, Object> b) {
@@ -101,7 +111,7 @@ public class RecoveryProgramController {
         return Map.of("success", true, "id", id, "message", "Recovery program created.");
     }
 
-    @PreAuthorize(Authz.RECOVERY_OVERSIGHT)
+    @PreAuthorize("hasAuthority('recovery.manage')")
     @PostMapping("/{id}/status")
     @Transactional
     public Map<String, Object> setStatus(@PathVariable long id, @RequestBody Map<String, Object> b) {

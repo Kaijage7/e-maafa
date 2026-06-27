@@ -83,8 +83,8 @@ import { visibleModules } from '../core/module-access';
 })
 export class ModuleHubComponent {
   auth = inject(AuthService);
-  // Show each role only the modules they work in (frontend focus; backend @PreAuthorize is the real gate).
-  modules = visibleModules(MODULES, this.auth.user()?.roles);
+  // Show each user only the modules their permissions grant (matches the backend ModuleGuardFilter).
+  modules = visibleModules(MODULES, this.auth.user());
 
   constructor() {
     // home-v2.blade.php sets @section('module-color', '#003366') — the hub uses the navy accent.

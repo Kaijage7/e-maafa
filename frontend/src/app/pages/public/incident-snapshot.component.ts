@@ -35,9 +35,9 @@ interface SnapUpdate { detail: string; type: string; at: string; }
           <div [style.background]="sevColor(s.incident.severityLevel)" style="padding:1.2rem 1.4rem;color:#fff;">
             <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
               <span style="background:rgba(255,255,255,0.25);font-size:0.7rem;font-weight:700;padding:3px 12px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;">
-                <i class="fas fa-circle" style="font-size:0.6rem;"></i> Live incident
+                <i class="fas fa-circle" style="font-size:0.6rem;"></i> {{ L.t('snap_live_incident') }}
               </span>
-              <span style="background:rgba(255,255,255,0.25);font-size:0.7rem;font-weight:700;padding:3px 12px;border-radius:10px;">{{ s.incident.severityLevel || 'Unknown' }}</span>
+              <span style="background:rgba(255,255,255,0.25);font-size:0.7rem;font-weight:700;padding:3px 12px;border-radius:10px;">{{ s.incident.severityLevel || L.t('snap_unknown') }}</span>
               <span style="font-size:0.78rem;opacity:0.92;">{{ s.incident.hazardName }}{{ s.incident.incidentType ? ' · ' + s.incident.incidentType : '' }}</span>
             </div>
             <h1 style="font-weight:800;line-height:1.25;margin:0.7rem 0 0.3rem;font-size:1.6rem;">{{ s.incident.title }}</h1>
@@ -47,13 +47,13 @@ interface SnapUpdate { detail: string; type: string; at: string; }
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:1.2rem;padding:0.9rem 1.4rem;font-size:0.8rem;color:var(--text-secondary,#64748b);">
             <span><i class="fas fa-flag me-1"></i><span [style.color]="lc(s.incident.status).color" style="font-weight:700;">{{ lc(s.incident.status).label }}</span> · {{ s.incident.status || '—' }}</span>
-            <span><i class="fas fa-clock me-1"></i>Reported: {{ fmt(s.incident.reportedAt) }}</span>
-            <span><i class="fas fa-sync me-1"></i>Updated: {{ fmt(s.incident.updatedAt) }}</span>
+            <span><i class="fas fa-clock me-1"></i>{{ L.t('snap_reported') }} {{ fmt(s.incident.reportedAt) }}</span>
+            <span><i class="fas fa-sync me-1"></i>{{ L.t('snap_updated') }} {{ fmt(s.incident.updatedAt) }}</span>
           </div>
         </div>
 
         <!-- Human impact -->
-        <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.8rem;">Human impact</h4>
+        <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.8rem;">{{ L.t('snap_human_impact') }}</h4>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.8rem;">
           @for (k of impactCards(s.incident); track k.label) {
             <div style="border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:0.8rem 1rem;background:var(--card-bg,#fff);">
@@ -65,23 +65,23 @@ interface SnapUpdate { detail: string; type: string; at: string; }
 
         <!-- Situation -->
         @if (s.incident.description) {
-          <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.6rem;">Situation</h4>
+          <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.6rem;">{{ L.t('snap_situation') }}</h4>
           <p style="font-size:0.95rem;color:var(--text-secondary,#475569);line-height:1.8;white-space:pre-line;">{{ s.incident.description }}</p>
         }
         @if (s.incident.actionTaken) {
           <div style="margin-top:0.8rem;background:rgba(16,185,129,0.08);border-radius:12px;padding:0.8rem 1rem;">
-            <div style="font-size:0.74rem;font-weight:700;color:#059669;text-transform:uppercase;">Action taken</div>
+            <div style="font-size:0.74rem;font-weight:700;color:#059669;text-transform:uppercase;">{{ L.t('snap_action_taken') }}</div>
             <div style="font-size:0.9rem;color:var(--text-primary,#2C3E50);">{{ s.incident.actionTaken }}</div>
           </div>
         }
 
         <!-- Response & resources -->
-        <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.8rem;">Response &amp; resources allocated</h4>
+        <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.8rem;">{{ L.t('snap_response_resources') }}</h4>
         @if (s.resources.length) {
           <div style="overflow-x:auto;border:1px solid rgba(0,0,0,0.08);border-radius:12px;">
             <table style="width:100%;border-collapse:collapse;font-size:0.86rem;">
               <thead><tr style="background:rgba(0,51,102,0.05);text-align:left;">
-                <th style="padding:0.6rem 0.9rem;">Resource</th><th style="padding:0.6rem 0.9rem;">Quantity</th><th style="padding:0.6rem 0.9rem;">Status</th>
+                <th style="padding:0.6rem 0.9rem;">{{ L.t('snap_th_resource') }}</th><th style="padding:0.6rem 0.9rem;">{{ L.t('snap_th_quantity') }}</th><th style="padding:0.6rem 0.9rem;">{{ L.t('snap_th_status') }}</th>
               </tr></thead>
               <tbody>
                 @for (r of s.resources; track $index) {
@@ -95,11 +95,11 @@ interface SnapUpdate { detail: string; type: string; at: string; }
             </table>
           </div>
         } @else {
-          <p style="font-size:0.88rem;color:var(--text-secondary,#64748b);"><i class="fas fa-box-open me-1"></i>No resources have been allocated to this incident yet.</p>
+          <p style="font-size:0.88rem;color:var(--text-secondary,#64748b);"><i class="fas fa-box-open me-1"></i>{{ L.t('snap_no_resources') }}</p>
         }
 
         <!-- Live updates -->
-        <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.8rem;">Live updates</h4>
+        <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.8rem;">{{ L.t('snap_live_updates') }}</h4>
         @if (s.updates.length) {
           @for (u of s.updates; track $index) {
             <div style="display:flex;gap:0.8rem;padding:0.6rem 0;border-bottom:1px solid rgba(0,0,0,0.06);">
@@ -111,13 +111,13 @@ interface SnapUpdate { detail: string; type: string; at: string; }
             </div>
           }
         } @else {
-          <p style="font-size:0.88rem;color:var(--text-secondary,#64748b);"><i class="fas fa-stream me-1"></i>No public updates posted yet. This page reflects the latest status as responders update the system.</p>
+          <p style="font-size:0.88rem;color:var(--text-secondary,#64748b);"><i class="fas fa-stream me-1"></i>{{ L.t('snap_no_updates') }}</p>
         }
       } @else if (notFound()) {
         <div style="text-align:center;padding:6rem 1rem;color:var(--text-secondary,#64748b);">
           <i class="fas fa-shield-alt" style="font-size:3rem;opacity:0.3;"></i>
-          <h4 style="margin-top:1rem;">This incident is not publicly available</h4>
-          <p style="font-size:0.88rem;">It may not have been published to the portal, or the link is no longer active.</p>
+          <h4 style="margin-top:1rem;">{{ L.t('snap_not_available') }}</h4>
+          <p style="font-size:0.88rem;">{{ L.t('snap_not_available_detail') }}</p>
           <a routerLink="/portal" style="color:#60a5fa;">{{ L.t('lbl_portal') }}</a>
         </div>
       }
@@ -162,11 +162,11 @@ export class IncidentSnapshotComponent {
 
   impactCards(i: SnapshotIncident) {
     return [
-      { label: 'Deaths', value: i.deathsTotal ?? 0, color: '#dc2626' },
-      { label: 'Injured', value: i.injuredTotal ?? 0, color: '#d97706' },
-      { label: 'Missing', value: i.missingTotal ?? 0, color: '#7c3aed' },
-      { label: 'Displaced', value: i.displaced ?? 0, color: '#0ea5e9' },
-      { label: 'Children affected', value: i.childrenAffected ?? 0, color: '#059669' },
+      { label: this.L.t('snap_deaths'), value: i.deathsTotal ?? 0, color: '#dc2626' },
+      { label: this.L.t('snap_injured'), value: i.injuredTotal ?? 0, color: '#d97706' },
+      { label: this.L.t('snap_missing'), value: i.missingTotal ?? 0, color: '#7c3aed' },
+      { label: this.L.t('snap_displaced'), value: i.displaced ?? 0, color: '#0ea5e9' },
+      { label: this.L.t('snap_children_affected'), value: i.childrenAffected ?? 0, color: '#059669' },
     ];
   }
 

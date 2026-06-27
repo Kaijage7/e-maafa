@@ -48,14 +48,14 @@ public class MitigationMeasureController {
     @PostMapping
     @Operation(summary = "Create a measure (full SRS field set)")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
     public MitigationMeasureResponses.Detail store(@Valid @RequestBody MitigationMeasureWriteRequest request) {
         return mitigationMeasureService.store(request);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a measure")
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
     public MitigationMeasureResponses.Detail update(@PathVariable Long id,
                                                     @Valid @RequestBody MitigationMeasureWriteRequest request) {
         return mitigationMeasureService.update(id, request);
@@ -64,7 +64,7 @@ public class MitigationMeasureController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a measure")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
     public void destroy(@PathVariable Long id) {
         mitigationMeasureService.destroy(id);
     }

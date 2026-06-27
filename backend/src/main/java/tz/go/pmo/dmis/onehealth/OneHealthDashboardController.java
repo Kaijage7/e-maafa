@@ -14,6 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Port of OneHealthDashboardController + OneHealthService::getDashboardStats():
@@ -27,9 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class OneHealthDashboardController {
 
     private final JdbcTemplate jdbc;
+    private final JurisdictionScope jurisdiction;
 
-    public OneHealthDashboardController(JdbcTemplate jdbc) {
+    public OneHealthDashboardController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
+        this.jurisdiction = jurisdiction;
     }
 
     @GetMapping
@@ -153,20 +156,20 @@ public class OneHealthDashboardController {
                 where e.deleted_at is null group by r.name
                 """, rs -> { byRegion.put(rs.getString(1), rs.getLong(2)); });
 
-        // ── Recent events (10) ──
+        // ── Recent events (10) — the only row-exposing list here, so area-scope it (own area or shared/null;
+        // national sees all). The aggregate counts above remain a national One Health situational view. ──
+        StringBuilder reWhere = new StringBuilder("e.deleted_at is null");
+        List<Object> reParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("e", reWhere, reParams);
         List<Map<String, Object>> recent = new ArrayList<>();
-        jdbc.query("""
-                select e.id, e.event_id, e.event_title, e.event_description, e.status, e.priority_level,
-                    e.created_at, a.category as area_category, s.organization as stakeholder_organization,
-                    r.name as region_name
-                from public.oh_events e
-                left join public.oh_areas_of_concern a on a.id = e.area_of_concern_id
-                left join public.stakeholders s on s.id = e.stakeholder_id
-                left join public.regions r on r.id = e.region_id
-                where e.deleted_at is null
-                order by e.created_at desc
-                limit 10
-                """, rs -> {
+        jdbc.query("select e.id, e.event_id, e.event_title, e.event_description, e.status, e.priority_level, "
+                + "e.created_at, a.category as area_category, s.organization as stakeholder_organization, "
+                + "r.name as region_name "
+                + "from public.oh_events e "
+                + "left join public.oh_areas_of_concern a on a.id = e.area_of_concern_id "
+                + "left join public.stakeholders s on s.id = e.stakeholder_id "
+                + "left join public.regions r on r.id = e.region_id "
+                + "where " + reWhere + " order by e.created_at desc limit 10", rs -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", rs.getLong("id"));
             m.put("event_id", rs.getString("event_id"));
@@ -181,7 +184,7 @@ public class OneHealthDashboardController {
             m.put("region_name", rs.getString("region_name"));
             m.put("created_at_relative", diffForHumans(rs.getTimestamp("created_at")));
             recent.add(m);
-        });
+        }, reParams.toArray());
 
         Long ewAlertsActive = jdbc.queryForObject("""
                 select count(*) from public.oh_events

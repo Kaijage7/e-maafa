@@ -33,7 +33,7 @@ import tz.go.pmo.dmis.common.security.Authz;
 @RequestMapping("/v1/ew/warnings")
 // Approve + publish are the critical pending→public-map gate: oversight tier only (maker-checker on the
 // public alert), so the operator who ingests/drafts a warning is not the one who releases it. Was isAuthenticated().
-@PreAuthorize(Authz.EW_APPROVE)
+@PreAuthorize("hasAuthority('early_warning.approve')")
 public class EwWarningLifecycleController {
 
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -267,8 +267,11 @@ public class EwWarningLifecycleController {
             jdbc.update(
                 "insert into public.early_warnings (warning_code, hazard_type, hazard_id, severity_level, " +
                 "alert_message, affected_regions, affected_districts, latitude, longitude, show_on_map, status, created_at, updated_at) " +
-                // DMIS portal (PortalPublicService) shows early_warnings where status='active' + show_on_map
-                "values (?,?,?,?,?,?,?,?,?, true, 'active', now(), now())",
+                // DMIS portal (PortalPublicService) shows early_warnings where status='active' AND show_on_map.
+                // Default OFF the public map: publishing a warning records it (active) but does NOT light the
+                // public map — it appears only when PMO explicitly pushes it (POST /{id}/map / EOCC Bulletin →
+                // Publish → Map). Keeps the public map to PMO-selected warnings, not every published one.
+                "values (?,?,?,?,?,?,?,?,?, false, 'active', now(), now())",
                 code, hazardType, wh.get("hazard_id"), severity, alertMsg, region, district, lat, lng);
             published++;
         }

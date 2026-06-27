@@ -547,6 +547,35 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
         .bindTooltip(`<b>${this.agName(ov.agency)} · ${ov.type}</b><br>${this.label(ov.alert_level)}<br><small>${this.join(ov.areas)}</small>`, { sticky: true })
         .addTo(this.overlayLayer);
     }
+    // Hydromet (TMA rainfall / MoW floods) live in the tier choropleth, not the overlays — give them a hazard
+    // icon too (one per distinct hydromet hazard type) so PMO sees the rain/flood symbol like every other agency.
+    const day = this.curDay();
+    const tierSources: Record<string, string> = day?.tier_sources ?? {};
+    const tiers = day?.tiers;
+    const levelOf = (d: string): string =>
+      tiers?.major_warning?.includes(d) ? 'MAJOR_WARNING' : tiers?.warning?.includes(d) ? 'WARNING' : 'ADVISORY';
+    const hydro: Record<string, string[]> = {};   // "AGENCY:TYPE" -> districts
+    for (const [district, src] of Object.entries(tierSources)) {
+      const [ag, type] = String(src).split(':');
+      if (!type || !['TMA', 'MOW'].includes((ag || '').toUpperCase())) { continue; }
+      (hydro[`${ag}:${type}`] ??= []).push(district);
+    }
+    for (const [key, districts] of Object.entries(hydro)) {
+      const [ag, type] = key.split(':');
+      const target = districts.find(d => centre(d)) ?? districts[0];
+      const c = target ? centre(target) : null;
+      if (!c) { continue; }
+      const lvl = levelOf(target);
+      const icon = L.divIcon({
+        className: 'dmd-ov',
+        html: `<div style="width:30px;height:30px;border-radius:50%;border:3px solid ${alertColor(lvl)};background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)">
+                 <img src="${HAZ_ICON(ICON_BY_TYPE[type] || 'heavy_rain.png')}" style="width:20px;height:20px"></div>`,
+        iconSize: [30, 30], iconAnchor: [15, 15],
+      });
+      L.marker([c.lat, c.lng], { icon, pane: 'overlayicons' })
+        .bindTooltip(`<b>${this.agName(ag.toLowerCase())} · ${type}</b><br>${this.label(lvl)}<br><small>${this.join(districts)}</small>`, { sticky: true })
+        .addTo(this.overlayLayer);
+    }
   }
   srcLabel(src: string): string {
     const [ag, type] = src.split(':');

@@ -64,7 +64,7 @@ public class PortalSectionsAdminController {
     @PostMapping("/hazard-cards")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Add a hazard card")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> createHazardCard(@RequestBody HazardCardWrite req) {
         if (req.name() == null || req.name().isBlank()) {
@@ -82,7 +82,7 @@ public class PortalSectionsAdminController {
 
     @PutMapping("/hazard-cards/{id}")
     @Operation(summary = "Update a hazard card")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> updateHazardCard(@PathVariable long id, @RequestBody HazardCardWrite req) {
         int n = jdbc.update("update public.portal_hazard_cards set name=coalesce(?,name), icon=coalesce(?,icon),"
@@ -100,7 +100,7 @@ public class PortalSectionsAdminController {
 
     @DeleteMapping("/hazard-cards/{id}")
     @Operation(summary = "Delete a hazard card")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> deleteHazardCard(@PathVariable long id) {
         jdbc.update("delete from public.portal_hazard_cards where id=?", id);
@@ -122,7 +122,7 @@ public class PortalSectionsAdminController {
     /** Replaces one JSON-list setting wholesale (the editors submit the full list). */
     @PutMapping("/json-settings/{key}")
     @Operation(summary = "Save capabilities.items or emergency.numbers")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> saveJsonSetting(@PathVariable String key, @RequestBody List<Map<String, Object>> items) {
         if (!List.of("capabilities.items", "emergency.numbers", "unsubscribe.reasons").contains(key)) {

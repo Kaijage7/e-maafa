@@ -40,7 +40,7 @@ import tz.go.pmo.dmis.common.security.Authz;
 @RequiredArgsConstructor
 public class UserManagementController {
 
-    private static final String CAN_WRITE = Authz.SYS_ADMIN;
+    private static final String CAN_WRITE = "hasAuthority('user_management.manage')";
     private static final String MODEL_TYPE = "App\\Models\\User";
 
     private final JdbcTemplate jdbc;

@@ -57,7 +57,7 @@ public class AgencyAdminController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Register an agency")
-    @PreAuthorize(Authz.AGENCY_MANAGE)
+    @PreAuthorize("hasAuthority('user_management.manage')")
     @Transactional
     public Map<String, Object> create(@RequestBody AgencyWriteRequest req) {
         if (req.name() == null || req.name().isBlank()) {
@@ -75,7 +75,7 @@ public class AgencyAdminController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update an agency")
-    @PreAuthorize(Authz.AGENCY_MANAGE)
+    @PreAuthorize("hasAuthority('user_management.manage')")
     @Transactional
     public Map<String, Object> update(@PathVariable long id, @RequestBody AgencyWriteRequest req) {
         int n = jdbc.update("update public.agencies set name=coalesce(?,name), acronym=coalesce(?,acronym),"
@@ -100,7 +100,7 @@ public class AgencyAdminController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete an agency (blocked if referenced; deactivate instead)")
-    @PreAuthorize(Authz.SYS_ADMIN)
+    @PreAuthorize("hasAuthority('user_management.manage')")
     @Transactional
     public void delete(@PathVariable long id) {
         Long exists = jdbc.queryForObject("select count(*) from public.agencies where id = ?", Long.class, id);

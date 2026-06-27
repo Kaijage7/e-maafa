@@ -33,7 +33,7 @@ import tz.go.pmo.dmis.common.security.Authz;
 @RequestMapping("/ew/bulletins")
 // Ingest creates pending warnings in the national pipeline from PMO-DMD bulletins — trusted
 // operator data entry, not any signed-in user. Was isAuthenticated().
-@PreAuthorize(Authz.EW_INGEST)
+@PreAuthorize("hasAuthority('early_warning.create')")
 public class EwBulletinIngestController {
 
     private static final ObjectMapper JSON = new ObjectMapper();

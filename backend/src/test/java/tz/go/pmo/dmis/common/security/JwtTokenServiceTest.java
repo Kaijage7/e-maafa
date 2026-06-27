@@ -36,7 +36,7 @@ class JwtTokenServiceTest {
     @Test
     void mintsTokenWhoseSubjectIsNumericUserIdAndCarriesRealmRoles() {
         String token = new JwtTokenService(encoder(GOOD_SECRET, "test"), "dmis", 720)
-                .mint(42L, "Jane Doe", "jane@pmo.go.tz", List.of("Director", "EOCC"));
+                .mint(42L, "Jane Doe", "jane@pmo.go.tz", List.of("Director", "EOCC"), List.of("incidents.view"));
 
         Jwt jwt = decoder(GOOD_SECRET, "test").decode(token);
 
@@ -52,7 +52,7 @@ class JwtTokenServiceTest {
     @Test
     void tokenSignedWithOneSecretIsRejectedByAnother() {
         String token = new JwtTokenService(encoder(GOOD_SECRET, "test"), "dmis", 720)
-                .mint(1L, "A", "a@b.go.tz", List.of("Super Admin"));
+                .mint(1L, "A", "a@b.go.tz", List.of("Super Admin"), List.of());
 
         JwtDecoder otherKey = decoder("another-secret-another-secret-1234567890ab", "test");
         assertThatThrownBy(() -> otherKey.decode(token)).isInstanceOf(Exception.class);
@@ -78,7 +78,7 @@ class JwtTokenServiceTest {
     void localProfileAllowsBlankSecretUsingDevDefault() {
         // Must NOT throw; the round-trip works with the bundled dev default under local.
         String token = new JwtTokenService(encoder("", "local"), "dmis", 720)
-                .mint(7L, "Dev", "dev@local", List.of("Super Admin"));
+                .mint(7L, "Dev", "dev@local", List.of("Super Admin"), List.of());
         assertThat(decoder("", "local").decode(token).getSubject()).isEqualTo("7");
     }
 }

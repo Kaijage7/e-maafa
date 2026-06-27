@@ -6,7 +6,8 @@ import { StatCardComponent } from '../../shell/stat-card.component';
 
 interface Material {
   id: number; hazard: string; audience: string; materialType: string; title: string;
-  body: string; videoUrl: string | null; filePath: string | null; sortOrder: number; isActive: boolean;
+  body: string; titleSw?: string | null; bodySw?: string | null;
+  videoUrl: string | null; filePath: string | null; sortOrder: number; isActive: boolean;
 }
 
 const AUDIENCES = [
@@ -135,6 +136,19 @@ const TYPES = [
               </div>
             }
 
+            <!-- Optional Swahili authoring — public hubs fall back to English when these are empty -->
+            <div style="border:1px solid var(--border);border-radius:11px;padding:0.85rem 0.9rem;background:rgba(0,51,102,0.025);display:grid;gap:0.6rem;">
+              <div style="font-size:0.78rem;font-weight:700;color:#003366;display:flex;align-items:center;gap:6px;">
+                <i class="fas fa-language"></i> Kiswahili (Swahili) <span style="font-weight:500;color:var(--text-mid);">— hiari / optional</span>
+              </div>
+              <input class="form-control" placeholder="Kichwa cha habari (Title in Swahili)" [value]="fTitleSw()" (input)="fTitleSw.set($any($event.target).value)">
+              @if (fType() === 'action_guide') {
+                <textarea class="form-control" rows="7" placeholder="Hatua za kuchukua — MOJA KWA KILA MSTARI (one statement per line)" [value]="fBodySw()" (input)="fBodySw.set($any($event.target).value)"></textarea>
+              } @else {
+                <textarea class="form-control" rows="3" placeholder="Maelezo kwa Kiswahili (Description in Swahili)" [value]="fBodySw()" (input)="fBodySw.set($any($event.target).value)"></textarea>
+              }
+            </div>
+
             @if (error()) { <div style="color:#dc2626;font-size:0.82rem;">{{ error() }}</div> }
             <div style="display:flex;justify-content:flex-end;gap:0.6rem;">
               <button type="button" style="border:1px solid var(--border);background:#fff;border-radius:9px;padding:0.5rem 1rem;cursor:pointer;" (click)="editorOpen.set(false)">Cancel</button>
@@ -160,6 +174,7 @@ export class EducationMaterialsComponent {
   editId = signal<number | null>(null);
   fHazard = signal(''); fAudience = signal('adults'); fType = signal('action_guide');
   fTitle = signal(''); fBody = signal(''); fVideo = signal(''); fFile = signal('');
+  fTitleSw = signal(''); fBodySw = signal('');
   fPhase = signal('before');
   saving = signal(false); uploading = signal(false); error = signal('');
 
@@ -196,6 +211,7 @@ export class EducationMaterialsComponent {
     this.editId.set(null);
     this.fHazard.set(''); this.fAudience.set('adults'); this.fType.set('action_guide');
     this.fTitle.set(''); this.fBody.set(''); this.fVideo.set(''); this.fFile.set('');
+    this.fTitleSw.set(''); this.fBodySw.set('');
     this.fPhase.set('before');
     this.error.set('');
     this.editorOpen.set(true);
@@ -205,6 +221,7 @@ export class EducationMaterialsComponent {
     this.editId.set(m.id);
     this.fHazard.set(m.hazard); this.fAudience.set(m.audience); this.fType.set(m.materialType);
     this.fTitle.set(m.title); this.fBody.set(m.body ?? ''); this.fVideo.set(m.videoUrl ?? '');
+    this.fTitleSw.set(m.titleSw ?? ''); this.fBodySw.set(m.bodySw ?? '');
     this.fPhase.set((m as any).phase ?? 'before');
     this.fFile.set(m.filePath ?? '');
     this.error.set('');
@@ -229,6 +246,7 @@ export class EducationMaterialsComponent {
     const payload = {
       hazard: this.fHazard(), audience: this.fAudience(), materialType: this.fType(),
       title: this.fTitle().trim(), body: this.fBody() || null,
+      titleSw: this.fTitleSw().trim() || null, bodySw: this.fBodySw() || null,
       videoUrl: this.fVideo() || null, filePath: this.fFile() || null, phase: this.fPhase(),
     };
     const req = this.editId()
@@ -243,7 +261,8 @@ export class EducationMaterialsComponent {
   toggleActive(m: Material): void {
     this.http.put(`/api/v1/content/education-materials/${m.id}`,
       { hazard: m.hazard, audience: m.audience, materialType: m.materialType, title: m.title,
-        body: m.body, videoUrl: m.videoUrl, filePath: m.filePath, isActive: !m.isActive, phase: (m as any).phase ?? 'any' })
+        body: m.body, titleSw: m.titleSw ?? null, bodySw: m.bodySw ?? null,
+        videoUrl: m.videoUrl, filePath: m.filePath, isActive: !m.isActive, phase: (m as any).phase ?? 'any' })
       .subscribe(() => this.reload());
   }
 

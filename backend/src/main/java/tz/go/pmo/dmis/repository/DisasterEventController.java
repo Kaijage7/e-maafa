@@ -33,7 +33,7 @@ import tz.go.pmo.dmis.common.security.Authz;
 public class DisasterEventController {
 
     /** Write access: EOCC officers own data entry; leadership + admins can intervene. */
-    private static final String CAN_WRITE = Authz.REPOSITORY_WRITE;
+    private static final String CAN_WRITE = "hasAuthority('disaster_repository.enter')";
 
     private final DisasterEventService service;
 

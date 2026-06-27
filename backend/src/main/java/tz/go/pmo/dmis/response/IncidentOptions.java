@@ -77,6 +77,16 @@ public final class IncidentOptions {
         EMERGENCY_NEEDS.put("other", "Other (specify)");
 
         WORKFLOW_STATUSES.put("draft", "Draft");
+        // Escalation ladder (INCIDENT-WORKFLOW-PLAN.md): DDMC → DED → RDMC → RAS → EOCC → Director → PS.
+        WORKFLOW_STATUSES.put("waiting_ddmc", "Waiting for DDMC (District Coordinator)");
+        WORKFLOW_STATUSES.put("waiting_ded", "Waiting for DED");
+        WORKFLOW_STATUSES.put("waiting_rdmc", "Waiting for RDMC (Regional Coordinator)");
+        WORKFLOW_STATUSES.put("waiting_ras", "Waiting for RAS");
+        WORKFLOW_STATUSES.put("waiting_eocc", "Waiting for EOCC");
+        WORKFLOW_STATUSES.put("waiting_director", "Waiting for Director (DMD)");
+        WORKFLOW_STATUSES.put("waiting_ps", "Waiting for PS (Permanent Secretary)");
+        WORKFLOW_STATUSES.put("closed_rumor", "Closed — Rumour / Normal Case");
+        WORKFLOW_STATUSES.put("resolved", "Resolved (handled locally)");
         WORKFLOW_STATUSES.put("waiting_das_approval", "Waiting for DAS Approval");
         WORKFLOW_STATUSES.put("waiting_ras_approval", "Waiting for RAS Approval");
         WORKFLOW_STATUSES.put("waiting_national_approval", "Waiting for Asst. Director Review");

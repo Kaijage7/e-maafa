@@ -77,15 +77,36 @@ public class JurisdictionScope {
 
     /** Which tier the current actor belongs to (NATIONAL wins, then REGION, then DISTRICT, else NONE). */
     public Tier currentTier() {
+        return tierFor(currentArea());
+    }
+
+    /**
+     * Resolve the tier from an ALREADY-FETCHED area map, so the append methods can derive the tier and the
+     * area ids from a single {@code users} read instead of two (one for {@link #currentTier()} and one for
+     * the predicate). Behaviour is identical to the inline logic {@code currentTier()} used before.
+     *
+     * <p>National roles are explicitly national (and carry no area id). Every other login is scoped by the
+     * AREA ATTRIBUTE on its user record — district_id → DISTRICT, region_id → REGION. This makes the tier
+     * AREA-SPECIFIC CONFIG (driven by the user's assigned area), so a new sub-national role (e.g. a District
+     * Planning Officer) is scoped to its own district with NO code change here. The role sets remain only as
+     * a fallback for a sub-national login that has no area id assigned.
+     */
+    private Tier tierFor(Map<String, Object> area) {
         Set<String> roles = SecurityUtils.currentUserRoles();
         if (!Collections.disjoint(roles, NATIONAL)) {
             return Tier.NATIONAL;
         }
-        if (!Collections.disjoint(roles, REGION)) {
+        if (area.get("district_id") != null) {
+            return Tier.DISTRICT;
+        }
+        if (area.get("region_id") != null) {
             return Tier.REGION;
         }
         if (!Collections.disjoint(roles, DISTRICT)) {
             return Tier.DISTRICT;
+        }
+        if (!Collections.disjoint(roles, REGION)) {
+            return Tier.REGION;
         }
         return Tier.NONE;
     }
@@ -149,10 +170,11 @@ public class JurisdictionScope {
      */
     public void appendAreaScope(String alias, StringBuilder where, List<Object> params) {
         String p = alias == null || alias.isBlank() ? "" : alias + ".";
-        switch (currentTier()) {
+        Map<String, Object> area = currentArea();   // single users-table read; tier + ids both derive from it
+        switch (tierFor(area)) {
             case NATIONAL -> { /* all areas */ }
             case REGION -> {
-                Object regionId = currentArea().get("region_id");
+                Object regionId = area.get("region_id");
                 if (regionId == null) {
                     where.append(" and 1=0");
                 } else {
@@ -161,7 +183,7 @@ public class JurisdictionScope {
                 }
             }
             case DISTRICT -> {
-                Object districtId = currentArea().get("district_id");
+                Object districtId = area.get("district_id");
                 if (districtId == null) {
                     where.append(" and 1=0");
                 } else {
@@ -184,10 +206,11 @@ public class JurisdictionScope {
      */
     public void appendAreaScopeSharedOrOwn(String alias, StringBuilder where, List<Object> params) {
         String p = alias == null || alias.isBlank() ? "" : alias + ".";
-        switch (currentTier()) {
+        Map<String, Object> area = currentArea();   // single users-table read; tier + ids both derive from it
+        switch (tierFor(area)) {
             case NATIONAL, NONE -> { /* full set — unchanged behaviour for national + non-area roles */ }
             case REGION -> {
-                Object regionId = currentArea().get("region_id");
+                Object regionId = area.get("region_id");
                 if (regionId == null) {
                     where.append(" and ").append(p).append("region_id is null");   // area role, no area → only shared
                 } else {
@@ -196,14 +219,39 @@ public class JurisdictionScope {
                 }
             }
             case DISTRICT -> {
-                Object districtId = currentArea().get("district_id");
+                Object districtId = area.get("district_id");
+                Object regionId = area.get("region_id");
                 if (districtId == null) {
                     where.append(" and ").append(p).append("district_id is null");
                 } else {
-                    where.append(" and (").append(p).append("district_id = ? or ").append(p).append("district_id is null)");
+                    // Own district, OR a region-level row (district NULL) belonging to the officer's OWN region,
+                    // OR a fully-national row (both NULL). A row carrying another region's region_id with a NULL
+                    // district must NOT be treated as "shared" — that mis-shared regional records to all districts.
+                    where.append(" and (").append(p).append("district_id = ? or (")
+                            .append(p).append("district_id is null and (")
+                            .append(p).append("region_id = ? or ").append(p).append("region_id is null)))");
                     params.add(districtId);
+                    params.add(regionId);
                 }
             }
+        }
+    }
+
+    /** The matrix permission that widens warehouse visibility from own-region-only to include national/zonal. */
+    public static final String WAREHOUSE_VIEW_NATIONAL = "warehouse_and_stock.view_national";
+
+    /**
+     * Warehouse visibility scope, matrix-controlled. DEFAULT (no permission): an area officer sees ONLY their
+     * own region's warehouses (strict {@link #appendAreaScope}) and the nation sees all — i.e. regions do not
+     * see other regions' or the national/zonal shared stores. A role granted {@link #WAREHOUSE_VIEW_NATIONAL}
+     * additionally sees the national/zonal stores (region_id IS NULL), via the shared-or-own predicate. This
+     * keeps the cross-area warehouse policy in the Roles & Permissions matrix rather than hardcoded in queries.
+     */
+    public void appendWarehouseScope(String alias, StringBuilder where, List<Object> params) {
+        if (SecurityUtils.hasAuthority(WAREHOUSE_VIEW_NATIONAL)) {
+            appendAreaScopeSharedOrOwn(alias, where, params);
+        } else {
+            appendAreaScope(alias, where, params);
         }
     }
 

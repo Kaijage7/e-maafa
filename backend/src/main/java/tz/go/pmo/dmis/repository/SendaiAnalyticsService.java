@@ -296,12 +296,24 @@ public class SendaiAnalyticsService {
         return y == null ? java.time.Year.now().getValue() : y;
     }
 
-    /** Latest baseline at or before the requested year; a sensible national fallback otherwise. */
+    /**
+     * Latest baseline at or before the requested year. If none exists (a year earlier than the earliest
+     * recorded baseline), use the EARLIEST recorded baseline for that metric rather than a hardcoded national
+     * figure — so the normalized indicators (A-1/B-1 per-100k, C-1 % of GDP) always trace to sourced
+     * sendai_baselines data. The literal {@code fallback} is a last resort only if the table has NO row at
+     * all for the metric (which itself signals a seeding gap, not a silently-fabricated value).
+     */
     private double baseline(String metric, int year, double fallback) {
         List<Double> rows = jdbc.queryForList(
                 "select value from sendai_baselines where metric = ? and year <= ? order by year desc limit 1",
                 Double.class, metric, year);
-        return rows.isEmpty() ? fallback : rows.get(0);
+        if (!rows.isEmpty()) {
+            return rows.get(0);
+        }
+        List<Double> earliest = jdbc.queryForList(
+                "select value from sendai_baselines where metric = ? order by year asc limit 1",
+                Double.class, metric);
+        return earliest.isEmpty() ? fallback : earliest.get(0);
     }
 
     private static long n(Map<String, Object> row, String key) {

@@ -47,11 +47,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class LocalAuthFilter extends OncePerRequestFilter {
 
     private final JdbcTemplate jdbc;
+    private final PermissionResolver permissions;
     /** role name -> a representative users.id, cached so the persona resolution isn't a per-request query. */
     private final Map<String, Long> roleUserCache = new ConcurrentHashMap<>();
 
-    public LocalAuthFilter(JdbcTemplate jdbc) {
+    public LocalAuthFilter(JdbcTemplate jdbc, PermissionResolver permissions) {
         this.jdbc = jdbc;
+        this.permissions = permissions;
     }
 
     @Override
@@ -75,18 +77,23 @@ public class LocalAuthFilter extends OncePerRequestFilter {
     }
 
     private Authentication authFor(String rolesHeader) {
-        List<String> roles = StringUtils.hasText(rolesHeader)
-                ? Arrays.stream(rolesHeader.split(",")).map(String::trim).filter(StringUtils::hasText).toList()
-                : List.of(Authz.ALL);
+        boolean godMode = !StringUtils.hasText(rolesHeader);
+        List<String> roles = godMode
+                ? List.of(Authz.ALL)
+                : Arrays.stream(rolesHeader.split(",")).map(String::trim).filter(StringUtils::hasText).toList();
         Long subjectId = resolveSubjectId(roles);
         Jwt jwt = Jwt.withTokenValue("local")
                 .header("alg", "none")
                 .subject(Long.toString(subjectId))
                 .claim("sub", Long.toString(subjectId))
                 .build();
-        List<GrantedAuthority> authorities = roles.stream()
+        List<GrantedAuthority> authorities = new java.util.ArrayList<>(roles.stream()
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
-                .toList();
+                .toList());
+        // Fine-grained permission authorities for the RBAC layer: the chosen persona's role permissions,
+        // or ALL of them for the no-header god-mode persona (keeps dev/E2E full access when gates flip).
+        (godMode ? permissions.all() : permissions.forRoles(roles))
+                .forEach(p -> authorities.add(new SimpleGrantedAuthority(p)));
         return new JwtAuthenticationToken(jwt, authorities);
     }
 

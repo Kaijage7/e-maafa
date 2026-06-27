@@ -75,6 +75,10 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
         <i class="fas" [class.fa-tower-broadcast]="!pushing()" [class.fa-spinner]="pushing()" [class.fa-spin]="pushing()"></i>
         {{ pushing() ? 'Pushing…' : 'Push to EOCC' }}
       </button>
+      <button class="btn-add" type="button" style="background:#fff;color:#b91c1c;border:1px solid #fecaca; margin-left:8px" [disabled]="clearing()" (click)="clearMine()" title="Remove TMA's currently-issued warning from the cross-agency map and PMO-DMD">
+        <i class="fas" [class.fa-eraser]="!clearing()" [class.fa-spinner]="clearing()" [class.fa-spin]="clearing()"></i>
+        {{ clearing() ? 'Clearing…' : 'Clear my warning' }}
+      </button>
     </dmis-page-header>
 
     <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.76rem;color:#64748b;text-decoration:none;margin:4px 0 10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
@@ -252,6 +256,7 @@ export class EwAlertMapComponent {
   drawLevel = signal('WARNING');      // level assigned to a newly-drawn delineation shape
   generating = signal(false);
   pushing = signal(false);
+  clearing = signal(false);
   status = signal('');
   statusErr = signal(false);
   private sanitizer = inject(DomSanitizer);
@@ -619,6 +624,17 @@ export class EwAlertMapComponent {
     this.agencyBus.submit('tma', payload).subscribe({
       next: () => { this.pushing.set(false); this.flash('Pushed to EOCC — shared with PMO-DMD for impact analysis and visible to all entities.', false); },
       error: () => { this.pushing.set(false); this.flash('Push to EOCC failed — try again.', true); },
+    });
+  }
+
+  /** Clear TMA's currently-issued warning — it leaves the cross-agency map + PMO-DMD at once. */
+  clearMine(): void {
+    this.clearing.set(true);
+    this.agencyBus.withdraw('tma').subscribe({
+      next: (r: any) => { this.clearing.set(false);
+        this.flash(r?.withdrawn ? 'Your warning was cleared — it has left the cross-agency map and PMO-DMD.' : 'No active warning to clear.', false);
+        loadCrossAgencyRef(this.http, ex => this.agencyBus.allLatest(ex), 'tma', m => { this.crossRef.set(m); this.applyRef(); }); },
+      error: () => { this.clearing.set(false); this.flash('Could not clear the warning — check your permissions and try again.', true); },
     });
   }
 

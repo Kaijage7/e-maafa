@@ -37,7 +37,7 @@ import tz.go.pmo.dmis.common.security.Authz;
 @RequiredArgsConstructor
 public class TranslationController {
 
-    private static final String CAN_WRITE = Authz.TRANSLATION_WRITE;
+    private static final String CAN_WRITE = "hasAuthority('translations.manage')";
 
     private final JdbcTemplate jdbc;
 

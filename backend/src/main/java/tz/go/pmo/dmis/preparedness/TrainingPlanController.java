@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import tz.go.pmo.dmis.common.security.Authz;
 
 /** API for the Training Plans screen, over the existing table (read + create). */
 @RestController
@@ -35,7 +34,7 @@ public class TrainingPlanController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a new training plan")
-    @PreAuthorize(Authz.PREPAREDNESS_MANAGE)
+    @PreAuthorize("hasAuthority('preparedness.manage')")
     public Map<String, Object> create(@RequestBody TrainingPlanWriteRequest request) {
         return service.create(request);
     }
@@ -49,21 +48,21 @@ public class TrainingPlanController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a training plan")
-    @PreAuthorize(Authz.PREPAREDNESS_MANAGE)
+    @PreAuthorize("hasAuthority('preparedness.manage')")
     public Map<String, Object> update(@PathVariable long id, @RequestBody TrainingPlanWriteRequest request) {
         return service.update(id, request);
     }
 
     @PostMapping("/{id}/publish")
     @Operation(summary = "Publish an upcoming training as a public News/Event item")
-    @PreAuthorize(Authz.PREPAREDNESS_MANAGE)
+    @PreAuthorize("hasAuthority('preparedness.manage')")
     public Map<String, Object> publish(@PathVariable long id) {
         return service.publish(id);
     }
 
     @PostMapping("/{id}/push-priority")
     @Operation(summary = "Push a training to DRR priorities (creates a mitigation measure)")
-    @PreAuthorize(Authz.PREPAREDNESS_MANAGE)
+    @PreAuthorize("hasAuthority('preparedness.manage')")
     public Map<String, Object> pushPriority(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         String priority = body == null ? null : asStr(body.get("priority"));
         return service.pushPriority(id, priority);
@@ -71,7 +70,7 @@ public class TrainingPlanController {
 
     @PostMapping("/{id}/request-support")
     @Operation(summary = "Request stakeholder funding support for an unfunded training")
-    @PreAuthorize(Authz.PREPAREDNESS_MANAGE)
+    @PreAuthorize("hasAuthority('preparedness.manage')")
     public Map<String, Object> requestSupport(@PathVariable long id) {
         return service.requestSupport(id);
     }

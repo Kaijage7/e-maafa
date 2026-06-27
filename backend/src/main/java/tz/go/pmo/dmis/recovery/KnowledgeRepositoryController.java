@@ -76,7 +76,7 @@ public class KnowledgeRepositoryController {
         return out;
     }
 
-    @PreAuthorize(Authz.RECOVERY_KNOWLEDGE_SUBMIT)
+    @PreAuthorize("hasAuthority('recovery.manage')")
     @PostMapping
     @Transactional
     public Map<String, Object> store(@RequestBody Map<String, Object> b) {
@@ -97,7 +97,7 @@ public class KnowledgeRepositoryController {
         return Map.of("success", true, "id", id, "message", "Knowledge entry submitted for review.");
     }
 
-    @PreAuthorize(Authz.RECOVERY_APPROVE)
+    @PreAuthorize("hasAuthority('recovery.manage')")
     @PostMapping("/{id}/approve")
     @Transactional
     public Map<String, Object> approve(@PathVariable long id) {

@@ -8,10 +8,10 @@ import { StatCardComponent } from '../../shell/stat-card.component';
 interface Translation { id: number; labelKey: string; group: string; en: string; sw: string; }
 
 /**
- * System Settings → Translations. The bilingual (English / Kiswahili) UI-string registry, seeded
- * from the public portal labels. Admins edit EN/SW inline; "untranslated" flags rows where the
- * Swahili still equals the English. (Honest: the live i18n is the code-based PortalLabels service;
- * this registry is the managed source of truth a loader can hydrate from — `GET /map`.)
+ * Content Management → Translations. The bilingual (English / Kiswahili) UI-string registry that the
+ * public portal hydrates live (PortalLabels fetches GET /v1/portal/i18n over its built-in fallback).
+ * Content managers edit EN/SW inline; "untranslated" flags rows where the Swahili still equals the
+ * English. Lives in Content Management alongside the other portal content (news, publications, etc.).
  */
 @Component({
   selector: 'page-translations',
@@ -19,7 +19,7 @@ interface Translation { id: number; labelKey: string; group: string; en: string;
   imports: [FormsModule, PageHeaderComponent, PanelComponent, StatCardComponent],
   template: `
     <dmis-page-header title="Translations" icon="fa-language"
-      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Translations'}]">
+      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Translations'}]">
       <button class="btn-add" type="button" (click)="openForm()"><i class="fas fa-plus"></i> Add Key</button>
     </dmis-page-header>
 

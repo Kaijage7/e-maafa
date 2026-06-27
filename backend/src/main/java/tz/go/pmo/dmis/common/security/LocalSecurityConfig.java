@@ -61,7 +61,9 @@ public class LocalSecurityConfig {
                 // hidden from it so it falls through to the persona instead of being 401'd.
                 .oauth2ResourceServer(oauth -> oauth
                         .bearerTokenResolver(new JwtShapedBearerTokenResolver())
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
+                // Module-level permission gate, after persona/token auth has populated the SecurityContext.
+                .addFilterAfter(new ModuleGuardFilter(), BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 }

@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Early Warning Management analytics — links Early Warning THROUGHOUT: each issued warning
@@ -30,18 +32,39 @@ import org.springframework.web.bind.annotation.RestController;
 public class EwManagementController {
 
     private final JdbcTemplate jdbc;
+    private final JurisdictionScope jurisdiction;
 
-    public EwManagementController(JdbcTemplate jdbc) {
+    public EwManagementController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
+        this.jurisdiction = jurisdiction;
+    }
+
+    /** The acting area officer's region (REGION/DISTRICT tier), or null for national/non-area (sees all). */
+    private Long areaRegion() {
+        JurisdictionScope.Tier t = jurisdiction.currentTier();
+        if (t == JurisdictionScope.Tier.REGION || t == JurisdictionScope.Tier.DISTRICT) {
+            Object r = jurisdiction.currentArea().get("region_id");
+            return r instanceof Number n ? n.longValue() : null;
+        }
+        return null;
     }
 
     @GetMapping
     public Map<String, Object> analysis(@RequestParam(required = false) String from,
                                         @RequestParam(required = false) String to) {
+        // EW effectiveness analytics is a staff/leadership report — a donor/partner account must not read it.
+        if (jurisdiction.currentStakeholderId() != null) {
+            throw new ResourceNotFoundException("Not found.");
+        }
         String fromD = (from != null && from.matches("\\d{4}-\\d{2}-\\d{2}")) ? from : "2000-01-01";
         String toD = (to != null && to.matches("\\d{4}-\\d{2}-\\d{2}")) ? to : "2100-01-01";
+        // An area officer sees the EW picture for their OWN region; national sees the whole country.
+        Long myRegion = areaRegion();
 
         // ── issued warnings (source of truth: warning_hazards × warnings), with the warned area name ──
+        List<Object> wParams = new ArrayList<>(List.of(toD, fromD));
+        String wRegion = "";
+        if (myRegion != null) { wRegion = " and wh.region_id = ? "; wParams.add(myRegion); }
         List<Map<String, Object>> warnings = jdbc.queryForList(
             "select wh.id, w.warning_code, wh.hazard_id, h.name as hazard, wh.warning_level, " +
             "       wh.region_id, r.name as area, wh.district_id, " +
@@ -52,7 +75,8 @@ public class EwManagementController {
             "left join public.hazards h on h.id = wh.hazard_id " +
             "left join public.regions r on r.id = wh.region_id " +
             "where wh.deleted_at is null and wh.validity_start::date <= ?::date and wh.validity_end::date >= ?::date " +
-            "order by wh.validity_start desc", toD, fromD);
+            wRegion +
+            "order by wh.validity_start desc", wParams.toArray());
 
         int warnedIncident = 0, warningNoIncident = 0, prepDuring = 0;
         long totalLeadHours = 0; int leadN = 0;
@@ -105,6 +129,9 @@ public class EwManagementController {
         }
 
         // ── unwarned incidents: in the window but NOT covered by any approved/published warning's area ──
+        List<Object> uParams = new ArrayList<>(List.of(fromD + " 00:00:00", toD + " 23:59:59"));
+        String uRegion = "";
+        if (myRegion != null) { uRegion = " and i.region_id = ? "; uParams.add(myRegion); }
         List<Map<String, Object>> unwarned = jdbc.queryForList(
             "select i.id, i.title, i.hazard_id, h.name as hazard, i.severity_level, i.status, i.reported_at, " +
             "       coalesce(i.region_name, ri.name) as region_name " +
@@ -121,8 +148,9 @@ public class EwManagementController {
             "       and i.reported_at >= wh.validity_start and i.reported_at < (wh.validity_end + interval '1 day') " +
             "       and ( (i.region_id is not null and i.region_id = wh.region_id) " +
             "             or lower(coalesce(i.region_name, ri.name, '')) = lower(coalesce(r.name,'~')) ) ) " +
+            uRegion +
             "order by i.reported_at desc",
-            fromD + " 00:00:00", toD + " 23:59:59");
+            uParams.toArray());
 
         // ── DRR (EW context): % of validated/archived disaster events linked to an early warning ──
         Map<String, Object> drr = new LinkedHashMap<>();

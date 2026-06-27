@@ -164,11 +164,16 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
                   <button class="btn btn-sm btn-add" (click)="act('resubmit', 'Resubmit after corrections?')"><i class="fas fa-redo me-1"></i> Resubmit</button>
                 }
                 @if (canApprove()) {
-                  <button class="btn btn-sm btn-success" (click)="act('approve', 'Approve at the current stage?')"><i class="fas fa-check me-1"></i> Approve</button>
-                  <button class="btn btn-sm btn-outline-danger" (click)="act('rollback', 'Roll back for corrections? Comments are required.', true)"><i class="fas fa-undo me-1"></i> Roll Back</button>
+                  <button class="btn btn-sm btn-success" (click)="act('approve', 'Approve and escalate to the next level?')"><i class="fas fa-check me-1"></i> Approve / Escalate</button>
                 }
-                @if (canForward()) {
-                  <button class="btn btn-sm btn-outline-primary" (click)="forward()"><i class="fas fa-share me-1"></i> Forward</button>
+                @if (canRollback()) {
+                  <button class="btn btn-sm btn-outline-danger" (click)="act('rollback', 'Roll back to the previous level for corrections? Comments are required.', true)"><i class="fas fa-undo me-1"></i> Roll Back</button>
+                }
+                @if (canResolve()) {
+                  <button class="btn btn-sm btn-outline-success" (click)="act('resolve', 'Resolve locally — resources sufficient at this level? The levels above will be informed.')"><i class="fas fa-circle-check me-1"></i> Resolve Locally</button>
+                }
+                @if (canCloseRumor()) {
+                  <button class="btn btn-sm btn-outline-secondary" (click)="act('close-rumor', 'Close as a rumour / normal case? District leadership (DED, DAS) will be informed.')"><i class="fas fa-ban me-1"></i> Close (Rumour)</button>
                 }
               </div>
               <div class="detail-label mt-3">Operational Status</div>
@@ -279,13 +284,30 @@ export class IncidentShowComponent implements OnInit {
     return this.wf() === 'rolled_back_to_das';
   }
 
+  /** Escalation ladder stages (INCIDENT-WORKFLOW-PLAN.md). The backend still gates WHO may act at each. */
   canApprove(): boolean {
-    return ['waiting_das_approval', 'waiting_ras_approval', 'waiting_assistant_director_approval',
-      'waiting_director_approval', 'waiting_ps_approval', 'waiting_national_approval'].includes(this.wf());
+    return ['waiting_ddmc', 'waiting_ded', 'waiting_rdmc', 'waiting_ras',
+      'waiting_eocc', 'waiting_director', 'waiting_ps'].includes(this.wf());
+  }
+
+  /** Roll-back is available at every stage except the DDMC entry. */
+  canRollback(): boolean {
+    return ['waiting_ded', 'waiting_rdmc', 'waiting_ras',
+      'waiting_eocc', 'waiting_director', 'waiting_ps'].includes(this.wf());
+  }
+
+  /** DDMC gatekeeper: close an entry-stage report as a rumour / normal case. */
+  canCloseRumor(): boolean {
+    return this.wf() === 'waiting_ddmc';
+  }
+
+  /** DED (district) / RAS (region): resolve locally when resources sufficed, instead of escalating. */
+  canResolve(): boolean {
+    return ['waiting_ded', 'waiting_ras'].includes(this.wf());
   }
 
   canForward(): boolean {
-    return ['waiting_assistant_director_approval', 'waiting_national_approval'].includes(this.wf());
+    return false;   // the linear escalation ladder replaced the ad-hoc national forward
   }
 
   /** Operational status (separate axis from the approval workflow_status). */

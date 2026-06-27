@@ -35,7 +35,8 @@ interface LandingPayload {
   slides: { title: string; slideType: string }[];
   gallery: { imagePath: string; caption: string; altText: string; marqueeRow: number }[];
   settings: Record<string, string>;
-  latestNews: { title: string; slug: string; excerpt: string; image: string; category: string; publishedAt: string }[];
+  latestNews: { title: string; slug: string; excerpt: string; image: string; category: string; publishedAt: string;
+    title_sw?: string | null; excerpt_sw?: string | null }[];
   latestPublications: { id: number; documentName: string; documentType: string; yearOfApproval: number; narrativeDescription: string; attachmentPath: string }[];
   stakeholderCount: number;
   publicationCounts: Record<string, number>;
@@ -86,7 +87,7 @@ const CAPABILITIES = [
   { title: 'GIS Mapping', icon: 'fa-map-marked-alt', color: '#60a5fa', description: 'Interactive geospatial mapping of hazards, risks, resources, and evacuation routes across all regions.' },
   { title: 'Incident Management', icon: 'fa-tasks', color: '#4ade80', description: 'End-to-end incident tracking from initial report through response coordination to recovery programs.' },
   { title: 'Resource Management', icon: 'fa-warehouse', color: '#60a5fa', description: 'Track warehouses, inventory, and allocated resources for rapid deployment during emergencies.' },
-  { title: 'Risk Assessment', icon: 'fa-shield-alt', color: '#a78bfa', description: 'Comprehensive risk profiling with vulnerability analysis and mitigation strategy planning.' },
+  { title: 'Risk Assessment', icon: 'fa-shield-alt', color: '#a78bfa', description: 'INFORM subnational risk index — hazard & exposure, vulnerability and coping capacity scored for every council, on the map and by dimension.', link: '/inform-risk' },
   { title: 'Stakeholder Coordination', icon: 'fa-hands-helping', color: '#fb923c', description: 'Multi-agency collaboration platform connecting government, NGOs, and international organizations.' },
 ];
 
@@ -134,6 +135,7 @@ export class LandingComponent implements OnDestroy {
   // Report-hazard form fields (the source wizard's essential inputs)
   rType = signal(''); rDesc = signal(''); rLocation = signal(''); rUrgency = signal('Medium');
   rName = signal(''); rPhone = signal('');
+  rReportedBy = signal('public'); rOrg = signal('');   // public | institution | sector | ministry (official → straight to EOCC)
 
   /** Managed cards from Content Management; built-in defaults if the API has none. */
   hazardCards = computed<HazardCard[]>(() => {
@@ -160,6 +162,11 @@ export class LandingComponent implements OnDestroy {
 
   /** Card description in the visitor's language. */
   cardDesc = (c: HazardCard) => (this.L.lang() === 'sw' ? c.descriptionSw : c.descriptionEn) || c.descriptionEn || '';
+
+  /** Swahili value for Swahili visitors when present; otherwise the English fallback (used by news cards). */
+  nl(en: string | null | undefined, sw?: string | null): string {
+    return this.L.lang() === 'sw' && sw ? sw : (en ?? '');
+  }
   private map: any;
   private drill: { reset: () => void } | null = null;
   /** True once the user has drilled below national level — shows the back control. */
@@ -240,6 +247,7 @@ export class LandingComponent implements OnDestroy {
     this.http.post<{ reportCode: string }>('/api/v1/portal/report-hazard', {
       hazardType: this.rType(), description: this.rDesc().trim(), location: this.rLocation() || null,
       urgency: this.rUrgency(), reporterName: this.rName() || null, reporterPhone: this.rPhone() || null,
+      reporterType: this.rReportedBy(), reporterOrg: this.rReportedBy() === 'public' ? null : (this.rOrg() || null),
     }).subscribe({
       next: r => { this.reportSaving.set(false); this.reportDone.set(r.reportCode); },
       error: () => this.reportSaving.set(false),
@@ -250,6 +258,7 @@ export class LandingComponent implements OnDestroy {
     this.reportOpen.set(false);
     this.reportDone.set('');
     this.rType.set(''); this.rDesc.set(''); this.rLocation.set(''); this.rUrgency.set('Medium');
+    this.rReportedBy.set('public'); this.rOrg.set('');
   }
 
   /* ------------------------------- map -------------------------------- */

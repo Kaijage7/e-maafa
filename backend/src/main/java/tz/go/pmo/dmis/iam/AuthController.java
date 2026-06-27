@@ -35,7 +35,7 @@ public class AuthController {
     public record LoginRequest(String email, String password) {
     }
 
-    public record UserDto(String name, String email, List<String> roles) {
+    public record UserDto(String name, String email, List<String> roles, List<String> permissions, String agency) {
     }
 
     public record LoginResponse(String token, UserDto user) {
@@ -61,11 +61,26 @@ public class AuthController {
         List<String> roles = jdbc.queryForList(
                 "select r.name from public.model_has_roles mhr join public.roles r on r.id = mhr.role_id where mhr.model_id = ?",
                 String.class, id);
-        UserDto user = new UserDto((String) row.get("name"), (String) row.get("email"), roles);
+        // Effective fine-grained permissions (module.action) granted via the user's roles — returned to the
+        // client (menu + route guard) and carried in the token so the RBAC layer enforces with hasAuthority(...).
+        List<String> permissions = jdbc.queryForList(
+                "select distinct p.name from public.model_has_roles mhr"
+                        + " join public.role_has_permissions rhp on rhp.role_id = mhr.role_id"
+                        + " join public.permissions p on p.id = rhp.permission_id"
+                        + " where mhr.model_id = ? order by p.name",
+                String.class, id);
+        // The agency this login authors for (EW entities — TMA/MoH/MoW/…), lowercased acronym, or null for
+        // non-agency logins (PMO/EOCC/command/admin). The frontend uses it to lock an EW entity to its own
+        // window; the backend already enforces it on writes via JurisdictionScope.currentAgencyCode().
+        List<String> agencyRows = jdbc.queryForList(
+                "select lower(a.acronym) from public.users u join public.agencies a on a.id = u.agency_id where u.id = ?",
+                String.class, id);
+        String agency = agencyRows.isEmpty() ? null : agencyRows.get(0);
+        UserDto user = new UserDto((String) row.get("name"), (String) row.get("email"), roles, permissions, agency);
         // Mint a real signed JWT: sub = numeric users.id (the one subject contract the resource
         // server + CurrentUserResolver agree on), realm_access.roles = the SRS roles for hasAnyRole,
-        // name/email for the audit actor. Replaces the meaningless random UUID.
-        String token = tokens.mint(id, (String) row.get("name"), (String) row.get("email"), roles);
+        // permissions = the fine-grained capabilities, name/email for the audit actor.
+        String token = tokens.mint(id, (String) row.get("name"), (String) row.get("email"), roles, permissions);
         return ResponseEntity.ok(new LoginResponse(token, user));
     }
 }

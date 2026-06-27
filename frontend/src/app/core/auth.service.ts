@@ -6,6 +6,10 @@ export interface AuthUser {
   name: string;
   email: string;
   roles: string[];
+  permissions?: string[];
+  /** The EW/agency code this login is bound to (tma/mow/gst/moh/moa/nemc/mlf), or null/absent for
+   *  PMO/national/admin logins who may view every entity. Drives Early-Warning per-entity isolation. */
+  agency?: string | null;
 }
 
 interface LoginResponse {
@@ -59,6 +63,19 @@ export class AuthService {
 
   hasRole(role: string): boolean {
     return this.user()?.roles?.includes(role) ?? false;
+  }
+
+  /**
+   * Whether the user holds a fine-grained permission. Legacy sessions stored before permissions existed
+   * have no permissions array — those fail OPEN (true) so a stale login is never locked out; they get the
+   * real set on next login. An explicit empty array means "genuinely none" → false.
+   */
+  hasPermission(permission: string): boolean {
+    const perms = this.user()?.permissions;
+    if (perms == null) {
+      return true;
+    }
+    return perms.includes(permission);
   }
 
   private restore(): AuthUser | null {

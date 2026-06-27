@@ -45,13 +45,20 @@ public class StakeholderAdminController {
 
     @GetMapping
     @Operation(summary = "Stakeholder directory + stats")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('stakeholders.view')")
     public Map<String, Object> index() {
         // jurisdiction visibility: region/district officer sees their own area + shared (null-area) partners;
         // national tier + non-area roles see all. Stats are derived from the returned rows, so they auto-scope.
         StringBuilder where = new StringBuilder(" where 1=1");
         List<Object> params = new java.util.ArrayList<>();
         jurisdiction.appendAreaScopeSharedOrOwn("s", where, params);
+        // STAKEHOLDER ISOLATION: a partner login (bound to a stakeholder org) sees ONLY its OWN organisation
+        // in the directory, never the other partners; operators / PMO keep the full directory to coordinate.
+        Long myStakeholder = jurisdiction.currentStakeholderId();
+        if (myStakeholder != null) {
+            where.append(" and s.id = ?");
+            params.add(myStakeholder);
+        }
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select s.id, s.name, s.organization, s.type, s.sector, s.email, s.phone, s.region, s.district,"
                         + " s.contact_person_name as \"contactPersonName\", s.contact_person_title as \"contactPersonTitle\","
@@ -72,7 +79,7 @@ public class StakeholderAdminController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Register a stakeholder (admin)")
-    @PreAuthorize(Authz.STAKEHOLDER_ADMIN)
+    @PreAuthorize("hasAuthority('stakeholders.manage')")
     @Transactional
     public Map<String, Object> create(@RequestBody StakeholderWriteRequest req) {
         if (req.name() == null || req.name().isBlank() || req.organization() == null || req.organization().isBlank()) {
@@ -94,7 +101,7 @@ public class StakeholderAdminController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a stakeholder")
-    @PreAuthorize(Authz.STAKEHOLDER_ADMIN)
+    @PreAuthorize("hasAuthority('stakeholders.manage')")
     @Transactional
     public Map<String, Object> update(@PathVariable long id, @RequestBody StakeholderWriteRequest req) {
         // resolve picker names to FK ids; null (e.g. toggleActive sends only isActive) leaves the area unchanged
@@ -119,7 +126,7 @@ public class StakeholderAdminController {
 
     @PutMapping("/{id}/verify")
     @Operation(summary = "Verify / unverify a partner (the verification workflow)")
-    @PreAuthorize(Authz.STAKEHOLDER_VERIFY)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @Transactional
     public Map<String, Object> verify(@PathVariable long id, @RequestBody Map<String, Object> req) {
         boolean verified = Boolean.parseBoolean(String.valueOf(req.getOrDefault("verified", "true")));
@@ -155,7 +162,7 @@ public class StakeholderAdminController {
      */
     @PutMapping("/{id}/link-user")
     @Operation(summary = "Link a login account to this partner (enables self-service donations)")
-    @PreAuthorize(Authz.STAKEHOLDER_ADMIN)
+    @PreAuthorize("hasAuthority('stakeholders.manage')")
     @Transactional
     public Map<String, Object> linkUser(@PathVariable long id, @RequestBody Map<String, Object> req) {
         find(id);

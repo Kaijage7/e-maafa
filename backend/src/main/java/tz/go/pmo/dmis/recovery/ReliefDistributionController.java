@@ -17,6 +17,7 @@ import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Relief Distribution (Recovery) — port of the Laravel relief_distributions module: logs each relief
@@ -29,13 +30,15 @@ import tz.go.pmo.dmis.common.security.Authz;
 public class ReliefDistributionController {
 
     private final JdbcTemplate jdbc;
+    private final JurisdictionScope jurisdiction;
 
-    public ReliefDistributionController(JdbcTemplate jdbc) {
+    public ReliefDistributionController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
+        this.jurisdiction = jurisdiction;
     }
 
     @GetMapping
-    @PreAuthorize(Authz.RECOVERY_MANAGE)
+    @PreAuthorize("hasAuthority('recovery.view')")
     public Map<String, Object> index(@RequestParam(required = false) String status,
                                      @RequestParam(required = false) String search) {
         StringBuilder where = new StringBuilder("1=1");
@@ -50,6 +53,11 @@ public class ReliefDistributionController {
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
+        // Row-level area scope: an area officer sees rows tied to an incident in their own
+        // region/district (plus incident-less / unassigned rows, which surface as i.* IS NULL via the
+        // LEFT JOIN); national + non-area roles add nothing and keep the full view. Appended last in
+        // the WHERE so its bind param trails the status/search params in '?' order.
+        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("distributions", jdbc.queryForList("""
                 select d.id, d.distribution_date, d.location_name, d.district_name, d.region_name,
@@ -85,7 +93,7 @@ public class ReliefDistributionController {
         return out;
     }
 
-    @PreAuthorize(Authz.RECOVERY_MANAGE)
+    @PreAuthorize("hasAuthority('recovery.manage')")
     @PostMapping
     @Transactional
     public Map<String, Object> store(@RequestBody Map<String, Object> b) {
@@ -107,7 +115,7 @@ public class ReliefDistributionController {
         return Map.of("success", true, "id", id, "message", "Relief distribution recorded.");
     }
 
-    @PreAuthorize(Authz.RECOVERY_OVERSIGHT)
+    @PreAuthorize("hasAuthority('recovery.manage')")
     @PostMapping("/{id}/confirm")
     @Transactional
     public Map<String, Object> confirm(@PathVariable long id) {

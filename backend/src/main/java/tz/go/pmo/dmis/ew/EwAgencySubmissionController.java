@@ -51,6 +51,16 @@ public class EwAgencySubmissionController {
     private static final Set<String> HYDROMET = Set.of("tma", "mow");
     private static final List<String> TIER_ORDER = List.of("MAJOR_WARNING", "WARNING", "ADVISORY");
 
+    /**
+     * Validity window for the cross-agency map + DMD consolidation: a submission auto-fades off the shared
+     * visuals once it is past its forecast validity from the issue date — TMA 5 days (722E_4), MoW 3 days,
+     * the event entities 2 days — so a warning from last week no longer clutters the picture. The entity can
+     * also retract earlier (withdraw). created_at backs up a missing issue_date. Append to an existing WHERE.
+     */
+    private static final String STILL_VALID =
+            " and coalesce(issue_date, created_at::date) >= current_date"
+            + " - (case lower(agency) when 'tma' then 4 when 'mow' then 2 else 1 end)";
+
     private static int rank(String level) {
         if (level == null) return 0;
         return switch (level.toUpperCase(Locale.ROOT)) {
@@ -87,6 +97,24 @@ public class EwAgencySubmissionController {
         if (mine != null && !mine.equalsIgnoreCase(agency)) {
             throw new AccessDeniedException("Your agency may not author bulletins on behalf of another entity.");
         }
+    }
+
+    /**
+     * Per-agency READ isolation: an agency-bound login (e.g. MoH) may view ONLY its own entity's
+     * early-warning data; a non-agency login (null = PMO/EOCC/national/admin) sees every entity (the
+     * PMO-tier overview + consolidation). This replaces the former "every entity reads each other"
+     * interlink so each warning entity only sees its own dashboard.
+     */
+    private void assertAgencyRead(String agency) {
+        String mine = jurisdiction.currentAgencyCode();
+        if (mine != null && !mine.equalsIgnoreCase(agency)) {
+            throw new AccessDeniedException("Your entity may only view its own early-warning data.");
+        }
+    }
+
+    /** The caller's own agency code, or null for PMO/national/admin (who see all entities). */
+    private String myAgencyOrNull() {
+        return jurisdiction.currentAgencyCode();
     }
 
     /** lowercase, trim, collapse internal whitespace — tolerant region-name key. */
@@ -168,7 +196,7 @@ public class EwAgencySubmissionController {
     // ── Submit ──────────────────────────────────────────────────────────────────────────────────
     @PostMapping("/agency/{agency}/submission")
     @Transactional
-    @PreAuthorize(Authz.EW_REPORT)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     @SuppressWarnings("unchecked")
     public Map<String, Object> submit(@PathVariable String agency,
                                       @RequestBody Map<String, Object> payload) throws Exception {
@@ -225,7 +253,7 @@ public class EwAgencySubmissionController {
      *  receives it and PMO can re-consolidate / revise the same warning_code. */
     @PostMapping("/agency/{agency}/update")
     @Transactional
-    @PreAuthorize(Authz.EW_REPORT)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     @SuppressWarnings("unchecked")
     public Map<String, Object> update(@PathVariable String agency,
                                       @RequestParam("warningCode") String warningCode,
@@ -278,6 +306,9 @@ public class EwAgencySubmissionController {
         StringBuilder where = new StringBuilder("is_update = true");
         List<Object> args = new ArrayList<>();
         if (warning_code != null && !warning_code.isBlank()) { where.append(" and warning_code = ?"); args.add(warning_code); }
+        // An agency-bound login only ever sees its OWN updates (PMO/national sees all or filters freely).
+        String mine = myAgencyOrNull();
+        if (mine != null) { agency = mine; }
         if (agency != null && !agency.isBlank()) { where.append(" and agency = ?"); args.add(agency.toLowerCase(Locale.ROOT)); }
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select id, agency, warning_code, revision, top_alert, regions::text as regions, hazard_types::text as hazard_types, " +
@@ -290,6 +321,7 @@ public class EwAgencySubmissionController {
     @GetMapping("/agency/{agency}/latest")
     public Map<String, Object> latest(@PathVariable String agency) {
         String a = agency == null ? "" : agency.toLowerCase(Locale.ROOT);
+        assertAgencyRead(a);
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select id, agency, bridge_ts, issue_date, issue_time, report_period, payload, regions, " +
             "districts, hazard_types, alert_summary, top_alert, item_count from public.ew_agency_submissions " +
@@ -305,6 +337,7 @@ public class EwAgencySubmissionController {
     public Map<String, Object> history(@PathVariable String agency,
                                        @RequestParam(required = false, defaultValue = "20") int limit) {
         String a = agency == null ? "" : agency.toLowerCase(Locale.ROOT);
+        assertAgencyRead(a);
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select id, agency, bridge_ts, issue_date, issue_time, top_alert, item_count, regions, " +
             "districts, hazard_types, is_latest from public.ew_agency_submissions where agency = ? " +
@@ -314,14 +347,20 @@ public class EwAgencySubmissionController {
         return Map.of("agency", a, "history", rows, "count", rows.size());
     }
 
-    /** Withdraw an agency's current bulletin (retract a false alert) — clears is_latest so it leaves the
-     * cross-agency reads + the DMD consolidation. The superseded rows remain for audit. */
+    /** Clear / withdraw an entity's current bulletin — the warning entity retracts its own issued warning
+     * (or an approver retracts one): clears is_latest so it leaves the cross-agency reads + the DMD
+     * consolidation immediately. The superseded rows remain for audit. The issuing entity (early_warning.create)
+     * can clear; an agency-bound login may only clear ITS OWN entity. */
     @org.springframework.web.bind.annotation.DeleteMapping("/agency/{agency}/latest")
     @Transactional
-    @PreAuthorize(Authz.EW_APPROVE)
+    @PreAuthorize("hasAuthority('early_warning.create') or hasAuthority('early_warning.approve')")
     public Map<String, Object> withdraw(@PathVariable String agency) {
         String a = agency == null ? "" : agency.toLowerCase(Locale.ROOT);
         if (!AGENCIES.contains(a)) throw new BusinessRuleException("Unknown warning entity: " + agency);
+        String mine = myAgencyOrNull();
+        if (mine != null && !mine.equalsIgnoreCase(a)) {
+            throw new BusinessRuleException("You can only clear your own entity's warning.");
+        }
         int n = jdbc.update("update public.ew_agency_submissions set is_latest = false where agency = ? and is_latest = true", a);
         return Map.of("ok", true, "agency", a, "withdrawn", n);
     }
@@ -332,11 +371,14 @@ public class EwAgencySubmissionController {
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select id, agency, bridge_ts, issue_date, issue_time, report_period, payload, regions, " +
             "districts, hazard_types, alert_summary, top_alert, item_count from public.ew_agency_submissions " +
-            "where is_latest = true order by bridge_ts desc");
+            "where is_latest = true" + STILL_VALID + " order by bridge_ts desc");
+        // An agency-bound login sees ONLY its own entity in the cross-agency map; PMO/national sees all.
+        String mine = myAgencyOrNull();
         Map<String, Object> byAgency = new LinkedHashMap<>();
         for (Map<String, Object> r : rows) {
             String a = String.valueOf(r.get("agency"));
             if (a.equalsIgnoreCase(exclude)) continue;
+            if (mine != null && !a.equalsIgnoreCase(mine)) continue;
             if (!byAgency.containsKey(a)) byAgency.put(a, envelope(r));
         }
         return Map.of("agencies", byAgency, "count", byAgency.size());
@@ -346,8 +388,11 @@ public class EwAgencySubmissionController {
     @GetMapping("/dmd/consolidated")
     @SuppressWarnings("unchecked")
     public Map<String, Object> consolidated(@RequestParam(required = false, defaultValue = "5") int days) {
-        List<Map<String, Object>> rows = jdbc.queryForList(
-            "select agency, payload from public.ew_agency_submissions where is_latest = true");
+        // PMO-DMD consolidation overlays every entity; an agency-bound login only sees its own contribution.
+        String mine = myAgencyOrNull();
+        List<Map<String, Object>> rows = mine == null
+            ? jdbc.queryForList("select agency, payload from public.ew_agency_submissions where is_latest = true" + STILL_VALID)
+            : jdbc.queryForList("select agency, payload from public.ew_agency_submissions where is_latest = true" + STILL_VALID + " and agency = ?", mine);
 
         // HYDROMET tier choropleth (TMA+MoW only): day -> district -> [level, agency, type]
         Map<Integer, Map<String, String[]>> perDay = new LinkedHashMap<>();

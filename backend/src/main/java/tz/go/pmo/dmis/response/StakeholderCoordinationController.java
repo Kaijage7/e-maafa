@@ -31,11 +31,14 @@ public class StakeholderCoordinationController {
 
     private final JdbcTemplate jdbc;
     private final tz.go.pmo.dmis.common.security.JurisdictionScope jurisdiction;
+    private final tz.go.pmo.dmis.common.security.AreaGuard areaGuard;
 
     public StakeholderCoordinationController(JdbcTemplate jdbc,
-                                             tz.go.pmo.dmis.common.security.JurisdictionScope jurisdiction) {
+                                             tz.go.pmo.dmis.common.security.JurisdictionScope jurisdiction,
+                                             tz.go.pmo.dmis.common.security.AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
+        this.areaGuard = areaGuard;
     }
 
     @GetMapping
@@ -80,6 +83,9 @@ public class StakeholderCoordinationController {
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Stakeholder not found.");
         }
+        // jurisdiction: stakeholders are a shared-or-own registry (NULL area = national/shared).
+        // Out-of-area partners must 404, mirroring the area-scoped list (appendAreaScopeSharedOrOwn).
+        areaGuard.assertOwnOrShared("public.stakeholders", id);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("stakeholder", rows.get(0));
 

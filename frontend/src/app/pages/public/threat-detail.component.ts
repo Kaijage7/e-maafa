@@ -52,7 +52,7 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
               <span [style.background]="sevColor(t.severity)" style="color:#fff;font-size:0.66rem;font-weight:800;padding:3px 12px;border-radius:12px;text-transform:uppercase;">{{ t.severity }}</span>
             </div>
             <p style="color:var(--text-secondary, #64748b);margin:0.25rem 0 0;font-size:0.88rem;">
-              <i class="fas fa-broadcast-tower me-1"></i>Source: <strong>{{ t.sourceAgency }}</strong>
+              <i class="fas fa-broadcast-tower me-1"></i>{{ L.t('threat_source') }}: <strong>{{ t.sourceAgency }}</strong>
               <span class="ms-3"><i class="fas fa-chart-line me-1"></i>{{ t.trendLabel }}</span>
             </p>
           </div>
@@ -66,13 +66,13 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
           <figure style="margin:1rem 0 0;max-width:680px;">
             <img [src]="'/api/storage/' + t.graphicPath" [alt]="t.name + ' outlook graphic'"
                  style="width:100%;border-radius:14px;border:1px solid rgba(0,0,0,0.08);">
-            <figcaption style="font-size:0.72rem;color:#94a3b8;margin-top:4px;">Source: {{ t.sourceAgency }}</figcaption>
+            <figcaption style="font-size:0.72rem;color:#94a3b8;margin-top:4px;">{{ L.t('threat_source') }}: {{ t.sourceAgency }}</figcaption>
           </figure>
         }
 
         <!-- ===== DMD interventions timeline ===== -->
         <h4 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:1.8rem 0 1rem;">
-          <i class="fas fa-tasks me-2" style="color:#003366;"></i>DMD Interventions
+          <i class="fas fa-tasks me-2" style="color:#003366;"></i>{{ L.t('threat_dmd_interventions') }}
         </h4>
         <div style="display:grid;gap:0.7rem;">
           @for (u of updates(); track u.title) {
@@ -87,16 +87,16 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
               </div>
             </div>
           } @empty {
-            <p style="color:var(--text-secondary, #64748b);font-size:0.88rem;">Interventions will be announced here.</p>
+            <p style="color:var(--text-secondary, #64748b);font-size:0.88rem;">{{ L.t('threat_interventions_announced_here') }}</p>
           }
         </div>
 
         <!-- ===== Stakeholder plans: map + list + submission ===== -->
         <h4 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:2rem 0 0.4rem;">
-          <i class="fas fa-map-marked-alt me-2" style="color:#003366;"></i>Stakeholder Plans
+          <i class="fas fa-map-marked-alt me-2" style="color:#003366;"></i>{{ L.t('threat_stakeholder_plans') }}
         </h4>
         <p style="color:var(--text-secondary, #64748b);font-size:0.85rem;margin-bottom:1rem;">
-          Sector, regional and LGA contingency plans submitted to PMO under this threat — plotted below and tracked in the disaster repository.
+          {{ L.t('threat_stakeholder_plans_intro') }}
         </p>
         <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:1rem;align-items:start;">
           <div #planMap style="height:500px;border-radius:16px;border:1px solid rgba(0,0,0,0.08);background:#d7e8f5;z-index:1;"></div>
@@ -112,7 +112,7 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
               </div>
             } @empty {
               <div style="text-align:center;color:var(--text-secondary, #64748b);padding:1.6rem;border:1px dashed rgba(0,0,0,0.12);border-radius:12px;font-size:0.85rem;">
-                No plans submitted yet — be the first stakeholder to respond.
+                {{ L.t('threat_no_plans_yet') }}
               </div>
             }
           </div>
@@ -120,20 +120,20 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
 
         <!-- Plan submission (stakeholders) -->
         <div style="border:1px solid rgba(0,0,0,0.08);border-radius:16px;background:var(--card-bg, #fff);padding:1.3rem 1.4rem;margin-top:1.2rem;">
-          <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0 0 0.9rem;"><i class="fas fa-file-upload me-2" style="color:#003366;"></i>Submit your plan to PMO</h5>
+          <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0 0 0.9rem;"><i class="fas fa-file-upload me-2" style="color:#003366;"></i>{{ L.t('threat_submit_plan_heading') }}</h5>
           @if (!planDone()) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-              <input class="form-control" placeholder="Plan title *" [value]="fTitle()" (input)="fTitle.set($any($event.target).value)">
-              <input class="form-control" placeholder="Stakeholder / organisation *" [value]="fName()" (input)="fName.set($any($event.target).value)">
+              <input class="form-control" [placeholder]="L.t('threat_plan_title_ph')" [value]="fTitle()" (input)="fTitle.set($any($event.target).value)">
+              <input class="form-control" [placeholder]="L.t('threat_stakeholder_org_ph')" [value]="fName()" (input)="fName.set($any($event.target).value)">
               <select class="form-control" [value]="fType()" (change)="fType.set($any($event.target).value)">
                 @for (st of stakeholderTypes; track st) { <option [value]="st">{{ st.toUpperCase() }}</option> }
               </select>
               <select class="form-control" [value]="fRegion()" (change)="onRegion($any($event.target).value)">
-                <option value="">Region (places the plan on the map)</option>
+                <option value="">{{ L.t('threat_region_option') }}</option>
                 @for (r of regions(); track r) { <option [value]="r">{{ r }}</option> }
               </select>
               <div style="display:flex;gap:0.5rem;align-items:center;grid-column:1 / -1;">
-                <input class="form-control" style="flex:1;" placeholder="Plan document (PDF) — upload →" [value]="fFile()" readonly>
+                <input class="form-control" style="flex:1;" [placeholder]="L.t('threat_plan_document_ph')" [value]="fFile()" readonly>
                 <label class="btn-gold" style="cursor:pointer;margin:0;white-space:nowrap;">
                   <i class="fas" [class.fa-upload]="!uploading()" [class.fa-spinner]="uploading()" [class.fa-spin]="uploading()"></i>
                   <input type="file" accept=".pdf" hidden (change)="uploadPlan($any($event.target).files)">
@@ -143,12 +143,12 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
             @if (planError()) { <div style="color:#dc2626;font-size:0.82rem;margin-top:0.6rem;">{{ planError() }}</div> }
             <button class="btn-gold" style="margin-top:0.9rem;" [disabled]="!fTitle().trim() || !fName().trim() || planSaving()" (click)="submitPlan()">
               <i class="fas" [class.fa-paper-plane]="!planSaving()" [class.fa-spinner]="planSaving()" [class.fa-spin]="planSaving()"></i>
-              {{ planSaving() ? 'Submitting…' : 'Submit to PMO' }}
+              {{ planSaving() ? L.t('threat_submitting') : L.t('threat_submit_to_pmo') }}
             </button>
           } @else {
             <div style="display:flex;align-items:center;gap:12px;color:#059669;">
               <i class="fas fa-check-circle" style="font-size:1.6rem;"></i>
-              <div style="font-size:0.9rem;font-weight:600;">Plan received — it now appears on the threat map and is tracked in the disaster repository.</div>
+              <div style="font-size:0.9rem;font-weight:600;">{{ L.t('threat_plan_received') }}</div>
             </div>
           }
         </div>
@@ -156,7 +156,7 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
         <!-- ===== Past impacts (NDRF-IP 2025/26–2030/31) ===== -->
         @if (t.pastImpactsEn || t.pastImpactsSw) {
           <h4 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:2rem 0 0.8rem;">
-            <i class="fas fa-history me-2" style="color:#003366;"></i>{{ L.lang() === 'sw' ? 'Athari za Nyuma kwa Tanzania' : 'Past Impacts to Tanzania' }}
+            <i class="fas fa-history me-2" style="color:#003366;"></i>{{ L.t('threat_past_impacts') }}
           </h4>
           <!-- white-space:pre-line keeps the episode paragraphs (1997/98, 2023/24, financing) separated -->
           <div style="border-left:4px solid #003366;background:rgba(0,51,102,0.04);border-radius:0 14px 14px 0;padding:1.1rem 1.3rem;font-size:0.9rem;color:var(--text-secondary, #475569);line-height:1.8;white-space:pre-line;">

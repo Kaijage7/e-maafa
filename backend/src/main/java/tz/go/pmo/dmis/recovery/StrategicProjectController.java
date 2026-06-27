@@ -68,7 +68,7 @@ public class StrategicProjectController {
         return out;
     }
 
-    @PreAuthorize(Authz.RECOVERY_MANAGE)
+    @PreAuthorize("hasAuthority('recovery.manage')")
     @PostMapping
     @Transactional
     public Map<String, Object> store(@RequestBody Map<String, Object> b) throws Exception {
@@ -90,7 +90,7 @@ public class StrategicProjectController {
         return Map.of("success", true, "id", id, "entry_id", entryId, "message", "Project " + entryId + " registered.");
     }
 
-    @PreAuthorize(Authz.RECOVERY_MANAGE)
+    @PreAuthorize("hasAuthority('recovery.manage')")
     @PostMapping("/{id}/status")
     @Transactional
     public Map<String, Object> setStatus(@PathVariable long id, @RequestBody Map<String, Object> b) {

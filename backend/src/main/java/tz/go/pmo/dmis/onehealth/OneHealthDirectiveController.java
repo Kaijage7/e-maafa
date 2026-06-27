@@ -38,14 +38,18 @@ public class OneHealthDirectiveController {
 
     private final JdbcTemplate jdbc;
     private final OneHealthEventService service;
+    private final tz.go.pmo.dmis.common.security.AreaGuard areaGuard;
 
-    public OneHealthDirectiveController(JdbcTemplate jdbc, OneHealthEventService service) {
+    public OneHealthDirectiveController(JdbcTemplate jdbc, OneHealthEventService service,
+                                        tz.go.pmo.dmis.common.security.AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.service = service;
+        this.areaGuard = areaGuard;
     }
 
-    // ─── Index ───
+    // ─── Index ───  (directives are a PMO-DMD function — non-PMO must not even see them)
 
+    @PreAuthorize("hasAuthority('one_health.directive')")
     @GetMapping
     public Map<String, Object> index(@RequestParam(required = false) String status,
                                      @RequestParam(required = false) String priority,
@@ -162,6 +166,7 @@ public class OneHealthDirectiveController {
 
     // ─── Show ───
 
+    @PreAuthorize("hasAuthority('one_health.directive')")
     @GetMapping("/{id}")
     public Map<String, Object> show(@PathVariable long id) {
         Map<String, Object> d = findOr404(id);
@@ -255,9 +260,9 @@ public class OneHealthDirectiveController {
         return out;
     }
 
-    // ─── Update (edit modal) ───
+    // ─── Update (edit modal) — PMO-DMD function ───
 
-    @PreAuthorize(Authz.OH_OPERATE)
+    @PreAuthorize("hasAuthority('one_health.directive')")
     @PutMapping("/{id}")
     @Transactional
     @SuppressWarnings("unchecked")
@@ -336,7 +341,7 @@ public class OneHealthDirectiveController {
 
     // ─── Acknowledge (stakeholder action) ───
 
-    @PreAuthorize(Authz.OH_ACKNOWLEDGE)
+    @PreAuthorize("hasAuthority('one_health.manage')")
     @PostMapping("/{id}/acknowledge")
     @Transactional
     public ResponseEntity<Map<String, Object>> acknowledge(@PathVariable long id,
@@ -349,7 +354,7 @@ public class OneHealthDirectiveController {
 
     // ─── Escalate (reminders to unacknowledged) ───
 
-    @PreAuthorize(Authz.OH_OPERATE)
+    @PreAuthorize("hasAuthority('one_health.directive')")
     @PostMapping("/{id}/escalate")
     public Map<String, Object> escalate(@PathVariable long id) {
         Map<String, Object> d = findOr404(id);
@@ -383,11 +388,13 @@ public class OneHealthDirectiveController {
 
     // ─── Submit implementation response ───
 
-    @PreAuthorize(Authz.OH_RESPOND)
+    @PreAuthorize("hasAuthority('one_health.manage')")
     @PostMapping("/{id}/respond")
     @Transactional
     public ResponseEntity<Map<String, Object>> respond(@PathVariable long id, @RequestBody Map<String, Object> body) {
         findOr404(id);
+        // Scope by the directive's event area (STRICT) — a cross-area directive 404s.
+        areaGuard.assertParentOwn("public.oh_directives", "event_id", "public.oh_events", id);
         Map<String, List<String>> errors = new LinkedHashMap<>();
         String status = OneHealthEventService.strOf(body.get("implementation_status"));
         Integer pct = body.get("implementation_percentage") == null ? null
@@ -459,6 +466,7 @@ public class OneHealthDirectiveController {
 
     // ─── Implementation history (grouped by stakeholder) ───
 
+    @PreAuthorize("hasAuthority('one_health.directive')")
     @GetMapping("/{id}/implementation-history")
     public Map<String, Object> implementationHistory(@PathVariable long id) {
         findOr404(id);

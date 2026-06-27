@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,6 +29,7 @@ public class CommunicationOverviewController {
     }
 
     /** Audiences the compose form can target (group counts) + the hazard and role sub-pickers. */
+    @PreAuthorize("hasAuthority('communication_and_alerts.view')")
     @GetMapping("/audiences")
     public Map<String, Object> audiences() {
         Map<String, Object> out = new LinkedHashMap<>();
@@ -54,6 +56,7 @@ public class CommunicationOverviewController {
               else 'Other'
             end""";
 
+    @PreAuthorize("hasAuthority('communication_and_alerts.view')")
     @GetMapping("/overview")
     public Map<String, Object> overview(@RequestParam(defaultValue = "month") String range) {
         String since = since(range);

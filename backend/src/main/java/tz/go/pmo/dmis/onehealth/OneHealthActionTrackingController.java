@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 
 /**
  * Port of OneHealth\OneHealthActionTrackingController: action items per event,
@@ -33,15 +34,18 @@ public class OneHealthActionTrackingController {
 
     private final JdbcTemplate jdbc;
     private final OneHealthEventService service;
+    private final AreaGuard areaGuard;
 
-    public OneHealthActionTrackingController(JdbcTemplate jdbc, OneHealthEventService service) {
+    public OneHealthActionTrackingController(JdbcTemplate jdbc, OneHealthEventService service, AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.service = service;
+        this.areaGuard = areaGuard;
     }
 
     /** Action tracking index payload for an event. */
     @GetMapping("/events/{eventId}/actions")
     public Map<String, Object> index(@PathVariable long eventId) {
+        areaGuard.assertOwn("public.oh_events", eventId);
         Map<String, Object> ev = service.findEventOr404(eventId);
 
         List<Map<String, Object>> actions = jdbc.queryForList("""
@@ -83,10 +87,11 @@ public class OneHealthActionTrackingController {
     }
 
     /** Store a new action item (the "Add Action Item" modal). */
-    @PreAuthorize(Authz.OH_OPERATE)
+    @PreAuthorize("hasAuthority('one_health.manage')")
     @PostMapping("/events/{eventId}/actions")
     @Transactional
     public ResponseEntity<Map<String, Object>> store(@PathVariable long eventId, @RequestBody Map<String, Object> body) {
+        areaGuard.assertOwn("public.oh_events", eventId);
         service.findEventOr404(eventId);
         Map<String, List<String>> errors = new LinkedHashMap<>();
         String title = OneHealthEventService.strOf(body.get("action_title"));
@@ -129,7 +134,7 @@ public class OneHealthActionTrackingController {
     }
 
     /** Edit an action item. */
-    @PreAuthorize(Authz.OH_OPERATE)
+    @PreAuthorize("hasAuthority('one_health.manage')")
     @PutMapping("/actions/{id}")
     @Transactional
     public ResponseEntity<Map<String, Object>> update(@PathVariable long id, @RequestBody Map<String, Object> body) {
@@ -181,7 +186,7 @@ public class OneHealthActionTrackingController {
     }
 
     /** Quick progress slider — rolls the average up into the event completion. */
-    @PreAuthorize(Authz.OH_OPERATE)
+    @PreAuthorize("hasAuthority('one_health.manage')")
     @PostMapping("/actions/{id}/progress")
     @Transactional
     public ResponseEntity<Map<String, Object>> updateProgress(@PathVariable long id, @RequestBody Map<String, Object> body) {
@@ -222,10 +227,11 @@ public class OneHealthActionTrackingController {
     }
 
     /** Closure workflow (OH-11 fix: reachable for PMO sessions). */
-    @PreAuthorize(Authz.OH_APPROVE)
+    @PreAuthorize("hasAuthority('one_health.manage')")
     @PostMapping("/events/{eventId}/close")
     @Transactional
     public ResponseEntity<Map<String, Object>> closeEvent(@PathVariable long eventId, @RequestBody Map<String, Object> body) {
+        areaGuard.assertOwn("public.oh_events", eventId);
         Map<String, Object> ev = service.findEventOr404(eventId);
         String outcome = OneHealthEventService.strOf(body.get("outcome_summary"));
         if (outcome == null) {
@@ -246,10 +252,11 @@ public class OneHealthActionTrackingController {
     }
 
     /** Archive (only closed events). */
-    @PreAuthorize(Authz.OH_APPROVE)
+    @PreAuthorize("hasAuthority('one_health.manage')")
     @PostMapping("/events/{eventId}/archive")
     @Transactional
     public ResponseEntity<Map<String, Object>> archiveEvent(@PathVariable long eventId) {
+        areaGuard.assertOwn("public.oh_events", eventId);
         Map<String, Object> ev = service.findEventOr404(eventId);
         if (!"closed".equals(ev.get("status"))) {
             return ResponseEntity.unprocessableEntity()
@@ -262,6 +269,9 @@ public class OneHealthActionTrackingController {
     // ─── helpers ───
 
     private Map<String, Object> findActionOr404(long id) {
+        // Scope the action by its parent event's area (STRICT): an out-of-area action 404s,
+        // mirroring how the actions list scopes via assertOwn on oh_events.
+        areaGuard.assertParentOwn("public.oh_action_trackings", "event_id", "public.oh_events", id);
         List<Map<String, Object>> rows = jdbc.queryForList("select * from public.oh_action_trackings where id = ?", id);
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Action item not found.");

@@ -38,7 +38,7 @@ import tz.go.pmo.dmis.common.security.Authz;
 @RequiredArgsConstructor
 public class ResourceCatalogueController {
 
-    private static final String CAN_WRITE = Authz.CATALOGUE_WRITE;
+    private static final String CAN_WRITE = "hasAuthority('resource_catalogue.manage')";
 
     private final JdbcTemplate jdbc;
 

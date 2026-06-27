@@ -48,7 +48,7 @@ public class PortalManagementAdminController {
 
     @PutMapping("/slides/{id}")
     @Operation(summary = "Toggle a hero slide / change its order")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> updateSlide(@PathVariable long id, @RequestBody Map<String, Object> req) {
         jdbc.update("update public.portal_slides set is_active = coalesce(?, is_active),"
@@ -59,7 +59,7 @@ public class PortalManagementAdminController {
 
     @PutMapping("/gallery/{id}")
     @Operation(summary = "Toggle a gallery image / move it between marquee rows")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> updateGallery(@PathVariable long id, @RequestBody Map<String, Object> req) {
         jdbc.update("update public.portal_gallery set is_active = coalesce(?, is_active),"
@@ -72,7 +72,7 @@ public class PortalManagementAdminController {
 
     @PutMapping("/settings/{key}")
     @Operation(summary = "Update one portal setting value (hero stats, counters …)")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> updateSetting(@PathVariable String key, @RequestBody Map<String, Object> req) {
         String value = req.get("value") == null ? null : String.valueOf(req.get("value"));

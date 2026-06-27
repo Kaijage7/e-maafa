@@ -78,7 +78,7 @@ public class SmsLogController {
      * Routes through the M-Gov gateway, which logs each recipient to {@code sms_logs} as 'manual'.
      */
     @PostMapping("/send")
-    @PreAuthorize(Authz.COMMS_DISSEMINATE)
+    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     public Map<String, Object> send(@RequestBody Map<String, Object> body) {
         // Manual / pasted (incl. from-Excel) numbers, plus any selected audience group resolved live.
         Set<String> recipientSet = new LinkedHashSet<>(Recipients.parse(body.get("recipients")));

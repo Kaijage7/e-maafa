@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 
 /**
@@ -31,14 +33,19 @@ public class PublicReportsController {
 
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService users;
+    private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
 
-    public PublicReportsController(JdbcTemplate jdbc, IncidentWorkflowService users) {
+    public PublicReportsController(JdbcTemplate jdbc, IncidentWorkflowService users, JurisdictionScope jurisdiction,
+            AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.users = users;
+        this.jurisdiction = jurisdiction;
+        this.areaGuard = areaGuard;
     }
 
     @GetMapping
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('incidents.view')")
     public Map<String, Object> index(@RequestParam(required = false) String status,
                                      @RequestParam(required = false) String search) {
         StringBuilder where = new StringBuilder("1=1");
@@ -53,6 +60,9 @@ public class PublicReportsController {
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
+        // The DDMC sees citizen reports in their own district plus untagged ones (a NULL area = a not-yet-
+        // assigned report visible to all coordinators); national triage sees all.
+        jurisdiction.appendAreaScopeSharedOrOwn("r", where, params);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("reports", jdbc.queryForList("""
                 select r.id, r.report_code, r.hazard_type, r.description, r.location_description,
@@ -79,7 +89,7 @@ public class PublicReportsController {
 
     /** Mark a report under review. */
     @PostMapping("/{id}/review")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
     @Transactional
     public Map<String, Object> review(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         requireNew(id, "reviewing");
@@ -92,7 +102,7 @@ public class PublicReportsController {
 
     /** Dismiss a non-credible / duplicate report. */
     @PostMapping("/{id}/dismiss")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
     @Transactional
     public Map<String, Object> dismiss(@PathVariable long id, @RequestBody Map<String, Object> body) {
         Map<String, Object> report = findOr404(id);
@@ -115,7 +125,7 @@ public class PublicReportsController {
      * into the response workflow. The incident starts at 'Reported' for the normal approval chain.
      */
     @PostMapping("/{id}/convert")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
     @Transactional
     public Map<String, Object> convert(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> report = findOr404(id);
@@ -126,6 +136,15 @@ public class PublicReportsController {
         if ("dismissed".equals(report.get("status"))) {
             throw new BusinessRuleException("This report was dismissed and cannot be converted — re-review it first.");
         }
+        // DDMC "approve presence": the converted incident enters the ladder at the DED stage (the DDMC has
+        // confirmed it by converting). It needs a district to be scopable — taken from the report if tagged,
+        // else assigned by the DDMC in the convert request.
+        Long districtId = firstLong(report.get("district_id"), body == null ? null : body.get("district_id"));
+        Long regionId = firstLong(report.get("region_id"), body == null ? null : body.get("region_id"));
+        if (districtId == null) {
+            throw new BusinessRuleException(
+                    "Assign the incident's district before converting — the citizen report is not geo-tagged.");
+        }
         String severity = body != null && body.get("severity_level") != null
                 ? String.valueOf(body.get("severity_level")) : "Moderate";
         Long incidentTypeId = jdbc.query("""
@@ -134,21 +153,24 @@ public class PublicReportsController {
                 "%" + report.get("hazard_type") + "%", String.valueOf(report.get("hazard_type")));
         Long incidentId = jdbc.queryForObject("""
                 insert into public.incidents(title, description, incident_type_id, severity_level, status,
-                    workflow_status, location_description, latitude, longitude, reported_at, created_at, updated_at)
-                values (?,?,?,?, 'Reported', 'draft', ?, ?, ?, now(), now(), now()) returning id
+                    workflow_status, origin_level, district_id, region_id, location_description, latitude, longitude,
+                    reported_at, submitted_by_user_id, submitted_at, created_at, updated_at)
+                values (?,?,?,?, 'Reported', 'waiting_ded', 'district', ?, ?, ?, ?, ?, now(), ?, now(), now(), now()) returning id
                 """, Long.class,
                 "Citizen report: " + report.get("hazard_type") + " at " + report.get("location_description"),
                 "Converted from public hazard report " + report.get("report_code")
                         + " (reporter: " + report.get("reporter_name") + ")."
                         + (report.get("description") == null ? "" : " " + report.get("description")),
-                incidentTypeId, severity, report.get("location_description"),
-                report.get("latitude"), report.get("longitude"));
+                incidentTypeId, severity, districtId, regionId, report.get("location_description"),
+                report.get("latitude"), report.get("longitude"), users.actingUserId());
+        users.logHistory(incidentId, "created", null, "waiting_ded",
+                "Citizen report " + report.get("report_code") + " converted by DDMC — presence approved, escalated to DED.");
         jdbc.update("""
                 update public.public_hazard_reports set status = 'converted', linked_incident_id = ?,
                     reviewed_by = ?, reviewed_at = now(), updated_at = now() where id = ?
                 """, incidentId, users.actingUserId(), id);
         return Map.of("success", true, "incident_id", incidentId,
-                "message", "Report converted to incident #" + incidentId + " — it now enters the response workflow.");
+                "message", "Report confirmed — incident #" + incidentId + " enters the chain at the DED stage.");
     }
 
     // ── helpers ──
@@ -165,6 +187,9 @@ public class PublicReportsController {
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Report not found.");
         }
+        // Mirror the list scope (appendAreaScopeSharedOrOwn): in-area officers may action their own reports
+        // plus untagged (NULL area) ones; cross-area access 404s. National tier sees/acts on everything.
+        areaGuard.assertOwnOrShared("public.public_hazard_reports", id);
         return rows.get(0);
     }
 
@@ -174,5 +199,25 @@ public class PublicReportsController {
         }
         String s = String.valueOf(v).trim();
         return s.isEmpty() ? null : s;
+    }
+
+    /** First non-null of two values coerced to Long (report's own area, else the value supplied on convert). */
+    private static Long firstLong(Object a, Object b) {
+        Long x = toLong(a);
+        return x != null ? x : toLong(b);
+    }
+
+    private static Long toLong(Object v) {
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
+        try {
+            return Long.valueOf(String.valueOf(v).trim());
+        } catch (NumberFormatException notNumeric) {
+            return null;
+        }
     }
 }

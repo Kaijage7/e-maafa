@@ -39,7 +39,7 @@ public class JwtTokenService {
     }
 
     /** Mint a signed HS256 token for the authenticated user. */
-    public String mint(long userId, String name, String email, List<String> roles) {
+    public String mint(long userId, String name, String email, List<String> roles, List<String> permissions) {
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
@@ -47,6 +47,7 @@ public class JwtTokenService {
                 .expiresAt(now.plus(ttlMinutes, ChronoUnit.MINUTES))
                 .subject(Long.toString(userId))
                 .claim("realm_access", Map.of("roles", roles == null ? List.of() : roles))
+                .claim("permissions", permissions == null ? List.of() : permissions)
                 .claim("name", name == null ? "" : name)
                 .claim("preferred_username", email == null ? "" : email)
                 .claim("email", email == null ? "" : email)

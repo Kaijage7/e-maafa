@@ -35,7 +35,7 @@ public class AlertSubscriptionController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a new alert subscriber")
-    @PreAuthorize(Authz.PREPAREDNESS_MANAGE)
+    @PreAuthorize("hasAuthority('preparedness.manage')")
     public Map<String, Object> create(@RequestBody AlertSubscriptionWriteRequest request) {
         return service.create(request);
     }
@@ -49,7 +49,7 @@ public class AlertSubscriptionController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update an alert subscriber")
-    @PreAuthorize(Authz.PREPAREDNESS_MANAGE)
+    @PreAuthorize("hasAuthority('preparedness.manage')")
     public Map<String, Object> update(@PathVariable long id, @RequestBody AlertSubscriptionWriteRequest request) {
         return service.update(id, request);
     }

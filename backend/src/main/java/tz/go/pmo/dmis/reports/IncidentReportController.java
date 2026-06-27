@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Incident Reports — the comprehensive, analytical reporting view of incidents for Reports &
@@ -25,9 +27,11 @@ import tz.go.pmo.dmis.common.error.BusinessRuleException;
 public class IncidentReportController {
 
     private final JdbcTemplate jdbc;
+    private final JurisdictionScope jurisdiction;
 
-    public IncidentReportController(JdbcTemplate jdbc) {
+    public IncidentReportController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
+        this.jurisdiction = jurisdiction;
     }
 
     @GetMapping
@@ -36,6 +40,10 @@ public class IncidentReportController {
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String severity,
                                      @RequestParam(required = false) String region) {
+        // National analytics is a staff/leadership report — a donor/partner account must not read it.
+        if (jurisdiction.currentStakeholderId() != null) {
+            throw new ResourceNotFoundException("Not found.");
+        }
         LocalDate end = parseOr(end_date, LocalDate.now());
         LocalDate start = parseOr(start_date, end.minusMonths(12));
         if (start.isAfter(end)) {
@@ -51,6 +59,9 @@ public class IncidentReportController {
         if (notBlank(status)) { where.append(" and i.status = ?"); p.add(status); }
         if (notBlank(severity)) { where.append(" and i.severity_level = ?"); p.add(severity); }
         if (notBlank(region)) { where.append(" and i.region_name ilike ?"); p.add("%" + region + "%"); }
+        // Area officers report only their own area (or shared/national); national sees the whole country.
+        // One append covers every breakdown below — they all share this where + args on alias i (incidents).
+        jurisdiction.appendAreaScopeSharedOrOwn("i", where, p);
         Object[] args = p.toArray();
         String w = where.toString();
 

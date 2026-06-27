@@ -86,7 +86,7 @@ public class ThreatAdminController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Register a threat")
-    @PreAuthorize(Authz.THREAT_MANAGE)
+    @PreAuthorize("hasAuthority('hazards.manage')")
     @Transactional
     public Map<String, Object> create(@RequestBody ThreatWrite req) {
         if (req.name() == null || req.name().isBlank()) {
@@ -105,7 +105,7 @@ public class ThreatAdminController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a threat")
-    @PreAuthorize(Authz.THREAT_MANAGE)
+    @PreAuthorize("hasAuthority('hazards.manage')")
     @Transactional
     public Map<String, Object> update(@PathVariable long id, @RequestBody ThreatWrite req) {
         int n = jdbc.update("update public.threats set name=coalesce(?,name),"
@@ -127,7 +127,7 @@ public class ThreatAdminController {
     @PostMapping("/{id}/updates")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Add a DMD intervention/update to the threat timeline")
-    @PreAuthorize(Authz.THREAT_MANAGE)
+    @PreAuthorize("hasAuthority('hazards.manage')")
     @Transactional
     public Map<String, Object> addUpdate(@PathVariable long id, @RequestBody UpdateWrite req) {
         if (req.title() == null || req.title().isBlank()) {
@@ -145,7 +145,7 @@ public class ThreatAdminController {
 
     @PutMapping("/updates/{updateId}")
     @Operation(summary = "Edit a timeline entry (e.g. flip NEW → ONGOING → COMPLETED, or POSTPONED)")
-    @PreAuthorize(Authz.THREAT_MANAGE)
+    @PreAuthorize("hasAuthority('hazards.manage')")
     @Transactional
     public Map<String, Object> editUpdate(@PathVariable long updateId, @RequestBody UpdateWrite req) {
         int n = jdbc.update("update public.threat_updates set title=coalesce(?,title), detail=coalesce(?,detail),"
@@ -162,7 +162,7 @@ public class ThreatAdminController {
 
     @PutMapping("/plans/{planId}/status")
     @Operation(summary = "Review a stakeholder plan (Submitted → Under review → Approved)")
-    @PreAuthorize(Authz.THREAT_MANAGE)
+    @PreAuthorize("hasAuthority('hazards.manage')")
     @Transactional
     public Map<String, Object> reviewPlan(@PathVariable long planId, @RequestBody Map<String, Object> req) {
         String status = String.valueOf(req.getOrDefault("status", "Under review"));
@@ -176,7 +176,7 @@ public class ThreatAdminController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a threat (cascades its timeline + plans)")
-    @PreAuthorize(Authz.THREAT_MANAGE)
+    @PreAuthorize("hasAuthority('hazards.manage')")
     @Transactional
     public Map<String, Object> delete(@PathVariable long id) {
         jdbc.update("delete from public.threats where id=?", id);

@@ -29,11 +29,11 @@ interface Publication {
         }
         @if (p.attachmentPath) {
           <a [href]="'/api/storage/' + p.attachmentPath" target="_blank" class="btn-gold" style="display:inline-flex;margin-top:1.2rem;text-decoration:none;">
-            <i class="fas fa-download"></i> Download PDF
+            <i class="fas fa-download"></i> {{ L.t('pubd_download_pdf') }}
           </a>
         }
         @if (related().length) {
-          <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:2.5rem 0 0.8rem;">Related {{ p.documentType }}</h5>
+          <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:2.5rem 0 0.8rem;">{{ L.t('pubd_related') }} {{ p.documentType }}</h5>
           <div class="row g-3">
             @for (r of related(); track r.id) {
               <div class="col-md-6">
@@ -48,7 +48,7 @@ interface Publication {
       } @else if (notFound()) {
         <div style="text-align:center;padding:5rem 1rem;color:var(--text-secondary, #64748b);">
           <i class="fas fa-file-pdf" style="font-size:3rem;opacity:0.3;"></i>
-          <h4 style="margin-top:1rem;">Publication not found</h4>
+          <h4 style="margin-top:1rem;">{{ L.t('pubd_not_found') }}</h4>
           <a routerLink="/publications/Policies" style="color:#60a5fa;">{{ L.t('lbl_publication') }}</a>
         </div>
       }

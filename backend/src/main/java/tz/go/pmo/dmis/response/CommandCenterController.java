@@ -17,7 +17,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Port of Response\CoordinationController — the Command Center: disaster
@@ -43,13 +45,18 @@ public class CommandCenterController {
     private final ActivationService activations;
     private final IncidentWorkflowService users;
     private final AnticipatoryPlanController plans;
+    private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
 
     public CommandCenterController(JdbcTemplate jdbc, ActivationService activations,
-                                   IncidentWorkflowService users, AnticipatoryPlanController plans) {
+                                   IncidentWorkflowService users, AnticipatoryPlanController plans,
+                                   JurisdictionScope jurisdiction, AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.activations = activations;
         this.users = users;
         this.plans = plans;
+        this.jurisdiction = jurisdiction;
+        this.areaGuard = areaGuard;
     }
 
     // ─── Activations index ───
@@ -59,7 +66,10 @@ public class CommandCenterController {
         Map<String, Object> out = new LinkedHashMap<>();
         // LEFT JOIN incidents throughout — anticipatory (forecast) activations have no incident
         // until impact, but must still appear in the index; fall back to the hazard description.
-        out.put("active", jdbc.queryForList("""
+        // Area officers see only activations whose incident is in their own district/region (or shared);
+        // forecast activations with no incident yet carry NULL i.region_id, so they stay visible to all.
+        // National + non-area roles keep the full view.
+        StringBuilder activeSql = new StringBuilder("""
                 select ra.*, coalesce(i.title, ra.hazard_description) as incident_title,
                        i.severity_level, i.region_name, u.name as activated_by_name,
                        (select count(*) from public.incident_tasks t where t.activation_id = ra.id) as total_tasks,
@@ -67,36 +77,47 @@ public class CommandCenterController {
                 from public.response_activations ra
                 left join public.incidents i on i.id = ra.incident_id
                 left join public.users u on u.id = ra.activated_by
-                where ra.status = 'active' order by ra.activated_at desc
-                """).stream().map(CommandCenterController::cleanActivationJson).toList());
-        out.put("completed", jdbc.queryForList("""
+                where ra.status = 'active'""");
+        List<Object> activeParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("i", activeSql, activeParams);
+        activeSql.append(" order by ra.activated_at desc");
+        out.put("active", jdbc.queryForList(activeSql.toString(), activeParams.toArray())
+                .stream().map(CommandCenterController::cleanActivationJson).toList());
+        StringBuilder completedSql = new StringBuilder("""
                 select ra.*, coalesce(i.title, ra.hazard_description) as incident_title, u.name as activated_by_name
                 from public.response_activations ra
                 left join public.incidents i on i.id = ra.incident_id
                 left join public.users u on u.id = ra.activated_by
-                where ra.status in ('completed','deactivated')
-                order by ra.deactivated_at desc nulls last limit 10
-                """).stream().map(CommandCenterController::cleanActivationJson).toList());
+                where ra.status in ('completed','deactivated')""");
+        List<Object> completedParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("i", completedSql, completedParams);
+        completedSql.append(" order by ra.deactivated_at desc nulls last limit 10");
+        out.put("completed", jdbc.queryForList(completedSql.toString(), completedParams.toArray())
+                .stream().map(CommandCenterController::cleanActivationJson).toList());
         // Approved incidents that have no activation yet (the source's awaiting list)
-        out.put("awaiting", jdbc.queryForList("""
+        StringBuilder awaitingSql = new StringBuilder("""
                 select i.id, i.title, i.severity_level, i.region_name, i.workflow_status
                 from public.incidents i
                 where i.workflow_status = 'approved' and i.is_simulation = false
                   and not exists (select 1 from public.response_activations ra
-                                  where ra.incident_id = i.id and ra.status = 'active')
-                order by i.reported_at desc limit 50
-                """));
+                                  where ra.incident_id = i.id and ra.status = 'active')""");
+        List<Object> awaitingParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("i", awaitingSql, awaitingParams);
+        awaitingSql.append(" order by i.reported_at desc limit 50");
+        out.put("awaiting", jdbc.queryForList(awaitingSql.toString(), awaitingParams.toArray()));
         out.put("posture_doctrine", jdbc.queryForList(
                 "select * from public.posture_doctrine order by sort_order"));
         return out;
     }
 
     /** Open an activation — mode 'live' or 'simulation' (drill clone, V29). */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('command_post.activate')")
     @PostMapping("/activate/{incidentId}")
     @Transactional
     public Map<String, Object> activate(@PathVariable long incidentId,
                                         @RequestBody(required = false) Map<String, Object> body) {
+        // Only open a command post for an incident in the caller's own area (national sees all).
+        areaGuard.assertOwn("public.incidents", incidentId);
         boolean simulation = body != null && "simulation".equals(body.get("mode"));
         String notes = body == null || body.get("notes") == null ? null : String.valueOf(body.get("notes"));
         Map<String, Object> result = activations.activate(incidentId, simulation, notes);
@@ -113,7 +134,7 @@ public class CommandCenterController {
      * preparedness plans activate for the forecast-impact areas, and every DRF
      * lane goes visibly ON CALL.
      */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('command_post.activate')")
     @PostMapping("/forecast")
     @Transactional
     public Map<String, Object> activateFromForecast(@RequestBody Map<String, Object> body) throws Exception {
@@ -154,11 +175,12 @@ public class CommandCenterController {
      * Walk the posture ladder (monitoring → emergency → disaster), per the
      * NDPRP escalation triggers. De-escalation is allowed (storm weakening).
      */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('command_post.posture')")
     @PostMapping("/{id}/posture")
     @Transactional
     public Map<String, Object> changePosture(@PathVariable long id, @RequestBody Map<String, Object> body) {
         Map<String, Object> activation = findOr404(id);
+        assertMayManageForecast(activation);
         String posture = require(body.get("posture"), "posture");
         // 'safeguard' (Blue) is the de-escalation posture: storm passing, residual flood/landslide
         // risk remains — doctrine forbids jumping Red->stood-down without it.
@@ -176,11 +198,12 @@ public class CommandCenterController {
     }
 
     /** The forecast died or missed — stand the post down, journalling the reason. */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('command_post.posture')")
     @PostMapping("/{id}/cancel-forecast")
     @Transactional
     public Map<String, Object> cancelForecast(@PathVariable long id, @RequestBody Map<String, Object> body) {
         Map<String, Object> activation = findOr404(id);
+        assertMayManageForecast(activation);
         if (!"forecast".equals(activation.get("trigger_type"))) {
             throw new BusinessRuleException("Only forecast-triggered activations can be cancelled this way.");
         }
@@ -199,11 +222,12 @@ public class CommandCenterController {
      * forecast activation becomes a disaster response — an incident is created
      * from the forecast details and linked, posture jumps to 'disaster'.
      */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('command_post.posture')")
     @PostMapping("/{id}/impact")
     @Transactional
     public Map<String, Object> confirmImpact(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> activation = findOr404(id);
+        assertMayManageForecast(activation);
         if (activation.get("incident_id") != null) {
             throw new BusinessRuleException("This activation is already linked to an incident.");
         }
@@ -378,7 +402,7 @@ public class CommandCenterController {
     // ─── Lane actions ───
 
     /** Hand a whole DRF lane to a stakeholder organisation. */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('tasks.manage')")
     @PostMapping("/{id}/drf/{drfId}/assign")
     @Transactional
     public Map<String, Object> assignDrf(@PathVariable long id, @PathVariable long drfId,
@@ -397,7 +421,7 @@ public class CommandCenterController {
     }
 
     /** Add a custom task to a lane. */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('tasks.manage')")
     @PostMapping("/{id}/drf/{drfId}/task")
     @Transactional
     public Map<String, Object> addTask(@PathVariable long id, @PathVariable long drfId,
@@ -421,7 +445,7 @@ public class CommandCenterController {
     }
 
     /** Update a lane task — only changed fields are written, each change journalled. */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('tasks.manage')")
     @PostMapping("/{id}/task/{taskId}")
     @Transactional
     public Map<String, Object> updateTask(@PathVariable long id, @PathVariable long taskId,
@@ -488,7 +512,7 @@ public class CommandCenterController {
         return Map.of("success", true, "message", "Task updated.");
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('tasks.manage')")
     @DeleteMapping("/{id}/task/{taskId}")
     @Transactional
     public Map<String, Object> destroyTask(@PathVariable long id, @PathVariable long taskId) {
@@ -505,11 +529,11 @@ public class CommandCenterController {
     }
 
     /** Close the activation as completed (mission done) or deactivated (stood down). */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('command_post.posture')")
     @PostMapping("/{id}/deactivate")
     @Transactional
     public Map<String, Object> deactivate(@PathVariable long id, @RequestBody Map<String, Object> body) {
-        findOr404(id);
+        assertMayManageForecast(findOr404(id));
         String status = require(body.get("status"), "status");
         if (!List.of("completed", "deactivated").contains(status)) {
             throw new BusinessRuleException("Status must be completed or deactivated.");
@@ -547,13 +571,39 @@ public class CommandCenterController {
                 """.formatted(where, limit), params.toArray());
     }
 
+    /**
+     * Fetch an activation the caller is allowed to see. An incident-linked activation is visible only to
+     * officers in that incident's area (or national); a forecast activation has no incident yet (NULL
+     * region) and stays visible to all, exactly as the index LEFT JOINs it. This single scoped fetch is what
+     * keeps every by-id read and lane mutation (board, drf, assign, task add/update/delete, posture,
+     * deactivate, impact, readiness) from reaching another region's response. Out-of-area → 404.
+     */
     private Map<String, Object> findOr404(long id) {
+        StringBuilder where = new StringBuilder("ra.id = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(id);
+        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
         List<Map<String, Object>> rows = jdbc.queryForList(
-                "select * from public.response_activations where id = ?", id);
+                "select ra.* from public.response_activations ra "
+                        + "left join public.incidents i on i.id = ra.incident_id where " + where,
+                params.toArray());
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Activation not found.");
         }
         return rows.get(0);
+    }
+
+    /**
+     * Forecast (anticipatory, multi-region) activations belong to the national command that opened them —
+     * a single area officer must not stand one down, change its posture, or confirm impact for the whole
+     * country. Incident-linked activations are already area-scoped by {@link #findOr404}, so this is a no-op
+     * for them. Out-of-tier → 404 (indistinguishable from "not yours").
+     */
+    private void assertMayManageForecast(Map<String, Object> activation) {
+        if (activation.get("incident_id") == null
+                && jurisdiction.currentTier() != JurisdictionScope.Tier.NATIONAL) {
+            throw new ResourceNotFoundException("Activation not found.");
+        }
     }
 
     private static String requireIn(Object v, List<String> allowed, String field) {

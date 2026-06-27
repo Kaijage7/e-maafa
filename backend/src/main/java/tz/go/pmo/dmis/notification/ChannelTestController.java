@@ -28,7 +28,7 @@ public class ChannelTestController {
         this.mail = mail;
     }
 
-    @PreAuthorize(Authz.CHANNEL_TEST_WRITE)
+    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     @PostMapping("/sms")
     public Map<String, Object> testSms(@RequestBody Map<String, Object> body) {
         String phone = str(body.get("phone"));
@@ -47,7 +47,7 @@ public class ChannelTestController {
         return out;
     }
 
-    @PreAuthorize(Authz.CHANNEL_TEST_WRITE)
+    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     @PostMapping("/email")
     public Map<String, Object> testEmail(@RequestBody Map<String, Object> body) {
         String to = str(body.get("email"));

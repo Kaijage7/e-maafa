@@ -72,7 +72,7 @@ public class ScannerController {
 
     /** Trigger a live scan of all OSINT sources; returns how many were captured + how many were new. */
     @PostMapping("/scan")
-    @PreAuthorize(Authz.EW_REPORT)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> scan(@RequestParam(defaultValue = "7") int days) {
         return scanner.scanAll(days);
     }
@@ -108,7 +108,7 @@ public class ScannerController {
      */
     @PostMapping("/report")
     @Transactional
-    @PreAuthorize(Authz.EW_REPORT)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> manualReport(@RequestBody Map<String, Object> r) {
         String title = str(r.get("title"));
         if (title == null || title.isBlank()) {
@@ -128,7 +128,7 @@ public class ScannerController {
 
     /** Dismiss a detection (false alarm / not actionable). */
     @PostMapping("/{id}/dismiss")
-    @PreAuthorize(Authz.EW_REPORT)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> dismiss(@PathVariable long id) {
         int n = jdbc.update("update public.scanner_detections set status='dismissed' where id=? and status not in ('dispatched')", id);
         if (n == 0) throw new ResourceNotFoundException("Detection not found or already dispatched.");
@@ -138,7 +138,7 @@ public class ScannerController {
     /** Dispatch a detection: as ∈ {incident, entity, dismiss}. */
     @PostMapping("/{id}/dispatch")
     @Transactional
-    @PreAuthorize(Authz.EW_INGEST)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> dispatch(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select id, title, summary, url, hazard_type, severity, region, district, latitude, longitude, status "
@@ -233,7 +233,7 @@ public class ScannerController {
 
     /** Mark a tasking responded (the entity issued its official assessment / submission). */
     @PostMapping("/taskings/{id}/respond")
-    @PreAuthorize(Authz.EW_REPORT)
+    @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> respondTasking(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         Long submissionId = body != null ? parseLong(body.get("submission_id")) : null;
         int n = jdbc.update("update public.scanner_entity_taskings set status='responded', responded_submission_id=?, "

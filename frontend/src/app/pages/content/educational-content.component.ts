@@ -5,8 +5,9 @@ import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 
 interface EduItem {
-  id: number; title: string; contentType: string; summary: string; author: string;
-  targetAudience: string; isPublished: boolean; publicationDate: string | null;
+  id: number; title: string; contentType: string; summary: string; fullContent?: string; author: string;
+  targetAudience: string; isPublished: boolean; publicationDate: string | null; publicationDateIso?: string | null;
+  titleSw?: string | null; summarySw?: string | null; fullContentSw?: string | null;
 }
 
 /**
@@ -88,6 +89,17 @@ interface EduItem {
             </div>
             <textarea class="form-control" rows="2" placeholder="Summary" [value]="fSummary()" (input)="fSummary.set($any($event.target).value)"></textarea>
             <textarea class="form-control" rows="7" placeholder="Full content" [value]="fBody()" (input)="fBody.set($any($event.target).value)"></textarea>
+
+            <!-- ===== Kiswahili (Swahili) — optional; public falls back to English when blank ===== -->
+            <fieldset style="border:1px solid var(--border);border-radius:10px;padding:0.85rem 0.9rem 0.95rem;margin:0;display:grid;gap:0.75rem;">
+              <legend style="font-size:0.8rem;font-weight:700;color:var(--text-mid);padding:0 0.4rem;width:auto;margin:0;">
+                <i class="fas fa-language" style="margin-right:0.35rem;"></i> Kiswahili (Swahili) <span style="font-weight:500;opacity:0.8;">— optional</span>
+              </legend>
+              <input class="form-control" placeholder="Kichwa cha habari (Title)" [value]="fTitleSw()" (input)="fTitleSw.set($any($event.target).value)">
+              <textarea class="form-control" rows="2" placeholder="Muhtasari (Summary)" [value]="fSummarySw()" (input)="fSummarySw.set($any($event.target).value)"></textarea>
+              <textarea class="form-control" rows="7" placeholder="Maudhui kamili (Full content)" [value]="fBodySw()" (input)="fBodySw.set($any($event.target).value)"></textarea>
+            </fieldset>
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;align-items:center;">
               <input type="date" class="form-control" [value]="fDate()" (input)="fDate.set($any($event.target).value)">
               <label style="display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;color:var(--text-mid);">
@@ -117,6 +129,8 @@ export class EducationalContentComponent {
   editId = signal<number | null>(null);
   fTitle = signal(''); fType = signal('Guideline'); fAuthor = signal(''); fAudience = signal('');
   fSummary = signal(''); fBody = signal(''); fDate = signal(''); fPublished = signal(false);
+  // Optional Swahili authoring (public portal falls back to English when blank).
+  fTitleSw = signal(''); fSummarySw = signal(''); fBodySw = signal('');
   saving = signal(false); error = signal('');
 
   constructor() { this.reload(); }
@@ -139,6 +153,7 @@ export class EducationalContentComponent {
     this.editId.set(null);
     this.fTitle.set(''); this.fType.set('Guideline'); this.fAuthor.set(''); this.fAudience.set('');
     this.fSummary.set(''); this.fBody.set(''); this.fDate.set(''); this.fPublished.set(false);
+    this.fTitleSw.set(''); this.fSummarySw.set(''); this.fBodySw.set('');
     this.error.set('');
     this.editorOpen.set(true);
   }
@@ -147,7 +162,8 @@ export class EducationalContentComponent {
     this.editId.set(it.id);
     this.fTitle.set(it.title); this.fType.set(it.contentType); this.fAuthor.set(it.author ?? '');
     this.fAudience.set(it.targetAudience ?? ''); this.fSummary.set(it.summary ?? '');
-    this.fBody.set(''); this.fDate.set(''); this.fPublished.set(it.isPublished);
+    this.fBody.set(it.fullContent ?? ''); this.fDate.set(it.publicationDateIso ?? ''); this.fPublished.set(it.isPublished);
+    this.fTitleSw.set(it.titleSw ?? ''); this.fSummarySw.set(it.summarySw ?? ''); this.fBodySw.set(it.fullContentSw ?? '');
     this.error.set('');
     this.editorOpen.set(true);
   }
@@ -156,7 +172,8 @@ export class EducationalContentComponent {
     this.saving.set(true);
     const payload = { title: this.fTitle().trim(), contentType: this.fType(), author: this.fAuthor() || null,
       targetAudience: this.fAudience() || null, summary: this.fSummary() || null,
-      fullContent: this.fBody() || null, publicationDate: this.fDate() || null, isPublished: this.fPublished() };
+      fullContent: this.fBody() || null, publicationDate: this.fDate() || null, isPublished: this.fPublished(),
+      titleSw: this.fTitleSw() || null, summarySw: this.fSummarySw() || null, fullContentSw: this.fBodySw() || null };
     const req = this.editId()
       ? this.http.put(`/api/v1/content/education/${this.editId()}`, payload)
       : this.http.post('/api/v1/content/education', payload);

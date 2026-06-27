@@ -46,14 +46,14 @@ public class FrameworkController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create a framework (draft relaxes requireds; status defaults Active)")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
     public Map<String, Object> store(@Valid @ModelAttribute FrameworkWriteRequest request) {
         return frameworkService.store(request);
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Update a framework (new attachment replaces the old)")
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
     public Map<String, Object> update(@PathVariable Long id, @Valid @ModelAttribute FrameworkWriteRequest request) {
         return frameworkService.update(id, request);
     }
@@ -61,7 +61,7 @@ public class FrameworkController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a framework and its attachment")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
     public void destroy(@PathVariable Long id) {
         frameworkService.destroy(id);
     }

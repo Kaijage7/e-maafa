@@ -131,7 +131,7 @@ public class PortalLocalSeeder implements CommandLineRunner {
                 + "\"detail\":\"How it works in the system: a citizen or field officer reports an incident (from this portal or the app). It is reviewed up the chain — District Coordinator → DAS → Regional Coordinator → RAS → Assistant Director → Director. Once approved, the EOCC coordinates the response: tasks are assigned, resources dispatched from the nearest warehouses, and progress tracked until recovery programmes close the incident.\"},"
                 + "{\"title\":\"Resource Management\",\"icon\":\"fa-warehouse\",\"color\":\"#60a5fa\",\"description\":\"Track warehouses, inventory, and allocated resources for rapid deployment during emergencies.\","
                 + "\"detail\":\"How it works in the system: zonal and temporary warehouses keep a live stock ledger (food, shelter, rescue equipment). When an incident is approved, responders request allocations; approvals dispatch stock with movement tracking, and every movement updates the single inventory truth so the EOCC always knows what is available and where.\"},"
-                + "{\"title\":\"Risk Assessment\",\"icon\":\"fa-shield-alt\",\"color\":\"#a78bfa\",\"link\":\"/m/prevention-mitigation/risk-assessments\",\"description\":\"Comprehensive risk profiling with vulnerability analysis and mitigation strategy planning.\"},"
+                + "{\"title\":\"Risk Assessment\",\"icon\":\"fa-shield-alt\",\"color\":\"#a78bfa\",\"link\":\"/inform-risk\",\"description\":\"INFORM subnational risk index — hazard & exposure, vulnerability and coping capacity scored for every council, on the map and by dimension.\"},"
                 + "{\"title\":\"Stakeholder Coordination\",\"icon\":\"fa-hands-helping\",\"color\":\"#fb923c\",\"link\":\"/m/response/stakeholders\",\"description\":\"Multi-agency collaboration platform connecting government, NGOs, and international organizations.\"}]";
     }
 
@@ -288,7 +288,8 @@ public class PortalLocalSeeder implements CommandLineRunner {
         if (count("early_warnings") > 0) {
             return;
         }
-        // Flat early_warnings rows = the public hero map's markers (EarlyWarning::onMap)
+        // Flat early_warnings demo records. Seeded OFF the public map (show_on_map=false): the public map
+        // shows only warnings PMO has explicitly pushed, not seed/auto rows.
         ew("EW-2026-10021", "Heavy rainfall", "Warning", "Heavy rainfall expected over Dar es Salaam, Pwani and Morogoro; localized flooding likely in low-lying areas.", "Dar es Salaam, Pwani, Morogoro", -6.82, 39.27, 120000);
         ew("EW-2026-10022", "Flood", "Emergency", "Rufiji river above danger level; evacuation advised for riverside villages.", "Pwani (Rufiji)", -7.96, 39.18, 45000);
         ew("EW-2026-10023", "Strong winds", "Watch", "Strong southerly winds over Lake Victoria; small vessels advised caution.", "Mwanza, Mara", -2.51, 32.9, 30000);
@@ -300,7 +301,7 @@ public class PortalLocalSeeder implements CommandLineRunner {
                     double lat, double lng, int atRisk) {
         jdbc.update("insert into public.early_warnings(warning_code,hazard_type,severity_level,alert_message,"
                         + "affected_regions,latitude,longitude,people_at_risk,show_on_map,status,created_at,updated_at)"
-                        + " values (?,?,?,?,?,?,?,?,true,'active',now(),now())",
+                        + " values (?,?,?,?,?,?,?,?,false,'active',now(),now())",
                 code, type, severity, message, regions, lat, lng, atRisk);
     }
 

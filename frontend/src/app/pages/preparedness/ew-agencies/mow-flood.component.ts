@@ -85,6 +85,9 @@ interface Day { day_number: number; assessments: Assessment[]; }
           <button class="btn primary" [disabled]="submitting()" (click)="pushToEocc()">
             <i class="fas fa-tower-broadcast"></i> {{ submitting() ? 'Pushing…' : 'Push to EOCC' }}
           </button>
+          <button class="btn" style="background:#fff;color:#b91c1c;border:1px solid #fecaca" [disabled]="clearing()" (click)="clearMine()" title="Remove MoW's current assessment from the cross-agency map and PMO-DMD">
+            <i class="fas fa-eraser"></i> {{ clearing() ? 'Clearing…' : 'Clear my warning' }}
+          </button>
         </div>
       </div>
 
@@ -187,6 +190,7 @@ export class MowFloodComponent implements OnInit, OnDestroy {
   days = signal<Day[]>([1, 2, 3].map(n => ({ day_number: n, assessments: [] })));
   activeDay = signal(1);
   submitting = signal(false);
+  clearing = signal(false);
   generating = signal(false);
   flash = signal<{ msg: string; err: boolean } | null>(null);
   tmaNote = signal<string>('');
@@ -413,6 +417,17 @@ export class MowFloodComponent implements OnInit, OnDestroy {
     this.svc.submit('mow', payload).subscribe({
       next: (r: any) => { this.submitting.set(false); this.flash.set({ msg: `Pushed to EOCC — ${r.items} flood assessment(s) shared; PMO will consolidate for impact analysis, and all entities can see it.`, err: false }); },
       error: () => { this.submitting.set(false); this.flash.set({ msg: 'Push to EOCC failed.', err: true }); },
+    });
+  }
+
+  /** Clear MoW's currently-issued flood assessment — it leaves the cross-agency map + PMO-DMD at once. */
+  clearMine(): void {
+    this.clearing.set(true);
+    this.svc.withdraw('mow').subscribe({
+      next: (r: any) => { this.clearing.set(false);
+        this.flash.set({ msg: r?.withdrawn ? 'Your assessment was cleared — it has left the cross-agency map and PMO-DMD.' : 'No active assessment to clear.', err: false });
+        loadCrossAgencyRef(this.http, ex => this.svc.allLatest(ex), 'mow', m => { this.crossRef.set(m); this.applyRef(); }); },
+      error: () => { this.clearing.set(false); this.flash.set({ msg: 'Could not clear it — check your permissions and try again.', err: true }); },
     });
   }
 

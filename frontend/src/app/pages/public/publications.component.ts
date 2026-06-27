@@ -31,8 +31,7 @@ const LANGUAGE_PARTS: { code: 'en' | 'sw'; label: string; flagColor: string }[] 
       <a routerLink="/" style="color:#60a5fa;text-decoration:none;font-size:0.85rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
       <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0.8rem 0 0.3rem;">{{ L.t('lbl_publication') }}</h1>
       <p style="color:var(--text-secondary, #64748b);font-size:0.88rem;margin-bottom:1.4rem;">
-        {{ L.lang() === 'sw' ? 'Nyaraka rasmi za Idara ya Usimamizi wa Maafa — matoleo ya Kiingereza na Kiswahili.'
-           : 'Official Disaster Management Department documents — English and Kiswahili editions.' }}
+        {{ L.t('pubs_subtitle') }}
       </p>
 
       <!-- Type tabs driven by the live per-type counts -->
@@ -70,7 +69,7 @@ const LANGUAGE_PARTS: { code: 'en' | 'sw'; label: string; flagColor: string }[] 
                     <a [href]="'/api/storage/' + pub.attachmentPath" target="_blank" style="font-size:0.8rem;color:#059669;font-weight:700;text-decoration:none;"><i class="fas fa-download me-1"></i>{{ L.t('lbl_pdf') }}</a>
                   }
                   @if (pub.externalLink) {
-                    <a [href]="pub.externalLink" target="_blank" rel="noopener" style="font-size:0.74rem;color:#94a3b8;text-decoration:none;"><i class="fas fa-external-link-alt me-1"></i>{{ L.lang() === 'sw' ? 'Chanzo' : 'Source' }}</a>
+                    <a [href]="pub.externalLink" target="_blank" rel="noopener" style="font-size:0.74rem;color:#94a3b8;text-decoration:none;"><i class="fas fa-external-link-alt me-1"></i>{{ L.t('pubs_source') }}</a>
                   }
                 </div>
               </div>

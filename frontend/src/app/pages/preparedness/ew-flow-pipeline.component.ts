@@ -1,10 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 
 /**
  * The Early Warning process pipeline (Hazard Information → Impact Analysis → Dissemination → Monitoring),
- * as a guided timeline of console shortcuts. Rendered directly on the Early Warning Systems landing (no
- * separate "New Warning" step) so an operator sees the whole flow and the registry together.
+ * as a guided timeline of console shortcuts. PER-ENTITY ISOLATION: an agency-bound warning entity (e.g.
+ * MoH) sees ONLY its own authoring console; the PMO-DMD stages (consolidation / dissemination / monitoring,
+ * which span every entity) are shown only to PMO/national/admin logins. Mirrors the backend read scoping.
  */
 @Component({
   selector: 'ew-flow-pipeline',
@@ -50,43 +52,63 @@ import { RouterLink } from '@angular/router';
       <div class="pipeline">
         <section class="stage">
           <span class="node">1</span>
-          <div class="stage-hd"><h3>Hazard Information</h3><div class="sub">Each warning entity authors its bulletin (map + delineation), then pushes to the EOCC.</div></div>
+          <div class="stage-hd"><h3>Hazard Information</h3><div class="sub">{{ isPmo ? 'Each warning entity authors its bulletin (map + delineation), then pushes to the EOCC.' : 'Author your entity bulletin (map + delineation), then push to the EOCC.' }}</div></div>
           <div class="cards">
-            <a class="card" style="--c:#1E88E5" routerLink="/m/preparedness/early-warnings/new-bulletin"><span class="ic"><i class="fas fa-cloud-sun-rain"></i></span><div><div class="nm">Tanzania Meteorological Authority</div><div class="ds">Severe weather — 722E-4</div></div></a>
-            <a class="card" style="--c:#00ACC1" routerLink="/m/preparedness/early-warnings/mow"><span class="ic"><i class="fas fa-water"></i></span><div><div class="nm">Ministry of Water</div><div class="ds">Basin / flood risk</div></div></a>
-            <a class="card" style="--c:#7B1FA2" routerLink="/m/preparedness/early-warnings/gst"><span class="ic"><i class="fas fa-mountain"></i></span><div><div class="nm">Geological Survey of Tanzania</div><div class="ds">Earthquake / landslide / volcano</div></div></a>
-            <a class="card" style="--c:#388E3C" routerLink="/m/preparedness/early-warnings/moh"><span class="ic"><i class="fas fa-virus"></i></span><div><div class="nm">Ministry of Health</div><div class="ds">Disease outbreaks</div></div></a>
-            <a class="card" style="--c:#F57C00" routerLink="/m/preparedness/early-warnings/moa"><span class="ic"><i class="fas fa-wheat-awn"></i></span><div><div class="nm">Ministry of Agriculture</div><div class="ds">Drought / food security</div></div></a>
-            <a class="card" style="--c:#D32F2F" routerLink="/m/preparedness/early-warnings/nemc"><span class="ic"><i class="fas fa-smog"></i></span><div><div class="nm">National Environment Mgmt Council</div><div class="ds">Pollution / air quality</div></div></a>
-            <a class="card" style="--c:#6D4C41" routerLink="/m/preparedness/early-warnings/mlf"><span class="ic"><i class="fas fa-cow"></i></span><div><div class="nm">Ministry of Livestock &amp; Fisheries</div><div class="ds">Livestock disease / fisheries</div></div></a>
+            @for (c of visibleCards; track c.route) {
+              <a class="card" [style.--c]="c.c" [routerLink]="'/m/preparedness/early-warnings/' + c.route"><span class="ic"><i class="fas {{ c.icon }}"></i></span><div><div class="nm">{{ c.nm }}</div><div class="ds">{{ c.ds }}</div></div></a>
+            } @empty {
+              <div class="sub">No warning-entity console is linked to your login. Contact PMO-DMD.</div>
+            }
           </div>
         </section>
 
-        <section class="stage">
-          <span class="node">2</span>
-          <div class="stage-hd"><h3>Impact Analysis</h3><div class="sub">PMO-DMD consolidates every entity's push as a layer and generates the impact bulletin.</div></div>
-          <div class="cards">
-            <a class="card" style="--c:#4527A0" routerLink="/m/preparedness/early-warnings/consolidated"><span class="ic"><i class="fas fa-layer-group"></i></span><div><div class="nm">PMO-DMD Consolidated Impact</div><div class="ds">Overlay layers → multirisk impact bulletin → push</div></div></a>
-          </div>
-        </section>
+        @if (isPmo) {
+          <section class="stage">
+            <span class="node">2</span>
+            <div class="stage-hd"><h3>Impact Analysis</h3><div class="sub">PMO-DMD consolidates every entity's push as a layer and generates the impact bulletin.</div></div>
+            <div class="cards">
+              <a class="card" style="--c:#4527A0" routerLink="/m/preparedness/early-warnings/consolidated"><span class="ic"><i class="fas fa-layer-group"></i></span><div><div class="nm">PMO-DMD Consolidated Impact</div><div class="ds">Overlay layers → multirisk impact bulletin → push</div></div></a>
+            </div>
+          </section>
 
-        <section class="stage">
-          <span class="node">3</span>
-          <div class="stage-hd"><h3>Dissemination</h3><div class="sub">Publish the bulletin to the map and send it to people in the affected areas.</div></div>
-          <div class="cards">
-            <a class="card" style="--c:#0D6EFD" routerLink="/m/preparedness/early-warnings/eocc-bulletin"><span class="ic"><i class="fas fa-tower-broadcast"></i></span><div><div class="nm">EOCC Bulletin</div><div class="ds">View · publish to map · disseminate (SMS / email)</div></div></a>
-          </div>
-        </section>
+          <section class="stage">
+            <span class="node">3</span>
+            <div class="stage-hd"><h3>Dissemination</h3><div class="sub">Publish the bulletin to the map and send it to people in the affected areas.</div></div>
+            <div class="cards">
+              <a class="card" style="--c:#0D6EFD" routerLink="/m/preparedness/early-warnings/eocc-bulletin"><span class="ic"><i class="fas fa-tower-broadcast"></i></span><div><div class="nm">EOCC Bulletin</div><div class="ds">View · publish to map · disseminate (SMS / email)</div></div></a>
+            </div>
+          </section>
 
-        <section class="stage">
-          <span class="node">4</span>
-          <div class="stage-hd"><h3>Monitoring (EOCC)</h3><div class="sub">Situational awareness and verification before and after issuance.</div></div>
-          <div class="cards">
-            <a class="card" style="--c:#7C3AED" routerLink="/m/preparedness/early-warnings/scanner"><span class="ic"><i class="fas fa-satellite-dish"></i></span><div><div class="nm">EW Monitoring</div><div class="ds">Scanner · regional / sectorial · entity updates · focal / DRRC</div></div></a>
-          </div>
-        </section>
+          <section class="stage">
+            <span class="node">4</span>
+            <div class="stage-hd"><h3>Monitoring (EOCC)</h3><div class="sub">Situational awareness and verification before and after issuance.</div></div>
+            <div class="cards">
+              <a class="card" style="--c:#7C3AED" routerLink="/m/preparedness/early-warnings/scanner"><span class="ic"><i class="fas fa-satellite-dish"></i></span><div><div class="nm">EW Monitoring</div><div class="ds">Scanner · regional / sectorial · entity updates · focal / DRRC</div></div></a>
+            </div>
+          </section>
+        }
       </div>
     </div>
   `,
 })
-export class EwFlowPipelineComponent {}
+export class EwFlowPipelineComponent {
+  private readonly auth = inject(AuthService);
+
+  /** code -> console route (TMA's authoring console is the 722E-4 "new-bulletin" screen). */
+  private readonly cards = [
+    { agency: 'tma',  route: 'new-bulletin', c: '#1E88E5', icon: 'fa-cloud-sun-rain', nm: 'Tanzania Meteorological Authority',     ds: 'Severe weather — 722E-4' },
+    { agency: 'mow',  route: 'mow',          c: '#00ACC1', icon: 'fa-water',          nm: 'Ministry of Water',                      ds: 'Basin / flood risk' },
+    { agency: 'gst',  route: 'gst',          c: '#7B1FA2', icon: 'fa-mountain',       nm: 'Geological Survey of Tanzania',          ds: 'Earthquake / landslide / volcano' },
+    { agency: 'moh',  route: 'moh',          c: '#388E3C', icon: 'fa-virus',          nm: 'Ministry of Health',                     ds: 'Disease outbreaks' },
+    { agency: 'moa',  route: 'moa',          c: '#F57C00', icon: 'fa-wheat-awn',      nm: 'Ministry of Agriculture',                ds: 'Drought / food security' },
+    { agency: 'nemc', route: 'nemc',         c: '#D32F2F', icon: 'fa-smog',           nm: 'National Environment Mgmt Council',      ds: 'Pollution / air quality' },
+    { agency: 'mlf',  route: 'mlf',          c: '#6D4C41', icon: 'fa-cow',            nm: 'Ministry of Livestock & Fisheries',      ds: 'Livestock disease / fisheries' },
+  ];
+
+  /** PMO / national / admin = not bound to a single entity → sees the whole pipeline and every console. */
+  get isPmo(): boolean { return !this.myAgency; }
+  private get myAgency(): string { return (this.auth.user()?.agency ?? '').toLowerCase(); }
+
+  /** An agency-bound entity sees only its own authoring console; PMO sees all. */
+  get visibleCards() { return this.isPmo ? this.cards : this.cards.filter(c => c.agency === this.myAgency); }
+}

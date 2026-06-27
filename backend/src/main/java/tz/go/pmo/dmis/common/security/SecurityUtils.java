@@ -34,6 +34,22 @@ public final class SecurityUtils {
         return currentUserRoles().stream().findFirst().orElse("System");
     }
 
+    /**
+     * True if the authenticated actor carries the given authority — typically a matrix PERMISSION name (e.g.
+     * {@code warehouse_and_stock.view_national}). The JWT carries permissions as authorities (the same set
+     * {@code hasAuthority(...)} in {@code @PreAuthorize} matches), so this lets server-side data scoping be
+     * gated by a real Roles-&-Permissions grant instead of hardcoded behaviour.
+     */
+    public static boolean hasAuthority(String authority) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority::equals);
+    }
+
     /** The acting user's role names (the {@code ROLE_} prefix stripped), for who-sees-what filtering. */
     public static Set<String> currentUserRoles() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

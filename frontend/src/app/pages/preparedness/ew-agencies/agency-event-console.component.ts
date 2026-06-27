@@ -84,6 +84,9 @@ export interface ConsoleConfig {
           <button class="btn" [style.background]="def.color" [disabled]="submitting()" (click)="pushToEocc()">
             <i class="fas fa-tower-broadcast"></i> {{ submitting() ? 'Pushing…' : 'Push to EOCC' }}
           </button>
+          <button class="btn" style="background:#fff;color:#b91c1c;border:1px solid #fecaca" [disabled]="clearing()" (click)="clearMine()" title="Remove this entity's current warning from the cross-agency map and PMO-DMD">
+            <i class="fas fa-eraser"></i> {{ clearing() ? 'Clearing…' : 'Clear my warning' }}
+          </button>
         </div>
       </div>
 
@@ -217,6 +220,7 @@ export class AgencyEventConsoleComponent implements OnInit {
   refOn = signal(true);             // overlay what OTHER entities issued on this map (reference, like PMO) — on by default
   crossRef = signal<any[]>([]);     // [{ name, color, faIcon, entity, level }]
   submitting = signal(false);
+  clearing = signal(false);
   generating = signal(false);
   flash = signal<{ msg: string; err: boolean; href?: string; file?: string } | null>(null);
 
@@ -387,6 +391,17 @@ export class AgencyEventConsoleComponent implements OnInit {
     this.svc.submit(this.config.agency, b.payload).subscribe({
       next: (r: any) => { this.submitting.set(false); this.flash.set({ msg: `Pushed to EOCC — ${r.items} ${this.def.unit.toLowerCase()}(s) shared; PMO will consolidate for impact analysis, and all entities can see it.`, err: false }); },
       error: () => { this.submitting.set(false); this.flash.set({ msg: 'Push to EOCC failed.', err: true }); },
+    });
+  }
+
+  /** Clear this entity's currently-issued warning — it leaves the cross-agency map + PMO-DMD at once. */
+  clearMine(): void {
+    this.clearing.set(true);
+    this.svc.withdraw(this.config.agency).subscribe({
+      next: (r: any) => { this.clearing.set(false);
+        this.flash.set({ msg: r?.withdrawn ? 'Your warning was cleared — it has left the cross-agency map and PMO-DMD.' : 'No active warning to clear.', err: false });
+        this.loadCrossRef(); },
+      error: () => { this.clearing.set(false); this.flash.set({ msg: 'Could not clear it — check your permissions and try again.', err: true }); },
     });
   }
 

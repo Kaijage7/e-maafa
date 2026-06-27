@@ -419,7 +419,7 @@ public class ResponseLocalSeeder {
                 ('Market fire — Kariakoo trading area', ?, 'Kariakoo market block C',
                  'Ilala', 'Dar es Salaam', ?, ?, -6.8235, 39.2695, now() - interval '1 day',
                  'Overnight fire destroyed trading stalls; cause under investigation.',
-                 'Moderate', 'Reported', 'waiting_national_approval', 'district', 'Local Seed',
+                 'Moderate', 'Reported', 'waiting_eocc', 'district', 'Local Seed',
                  ?, now() - interval '1 day', 0, 3, 0, now() - interval '1 day', now()),
                 ('Windstorm roof damage — Dodoma Urban schools', ?, 'Three primary schools around Dodoma CBD',
                  'Dodoma Urban', 'Dodoma', ?, ?, -6.1722, 35.7395, now() - interval '6 hours',

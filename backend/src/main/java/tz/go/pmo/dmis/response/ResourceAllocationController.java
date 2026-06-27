@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Port of Response\ResourceAllocationController: the request → forward-to-PMO →
@@ -45,29 +47,38 @@ public class ResourceAllocationController {
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService incidents;
     private final ApprovalWorkflowEngine approvals;
+    private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
 
     public ResourceAllocationController(JdbcTemplate jdbc, IncidentWorkflowService incidents,
-                                        ApprovalWorkflowEngine approvals) {
+                                        ApprovalWorkflowEngine approvals, JurisdictionScope jurisdiction,
+                                        AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.incidents = incidents;
         this.approvals = approvals;
+        this.jurisdiction = jurisdiction;
+        this.areaGuard = areaGuard;
     }
 
     // ─── Index: the three operational queues + stock summary ───
 
     @GetMapping
     public Map<String, Object> index() {
+        areaGuard.assertNotStakeholder();   // staff queues — partners use the bidding portal, not this
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("pending_requests", queue("ar.status in ('Requested','Pending Approval')", "ar.created_at desc"));
         out.put("forwarded_requests", queue("ar.status = 'Pending PMO Approval'", "ar.forwarded_at desc"));
         out.put("active_deployments", queue("ar.status in ('Approved','Deployed','In Transit')", "ar.updated_at desc"));
-        out.put("warehouse_inventory", jdbc.queryForList("""
+        StringBuilder wsql = new StringBuilder("""
                 select w.id, w.name, coalesce(sum(ii.quantity), 0) as total_items,
                        count(*) filter (where ii.quantity < 100) as critical_items
                 from public.warehouses w
                 left join public.inventory_items ii on ii.warehouse_id = w.id
-                group by w.id, w.name order by w.name
-                """));
+                where 1=1""");
+        List<Object> wparams = new ArrayList<>();
+        jurisdiction.appendWarehouseScope("w", wsql, wparams);
+        wsql.append(" group by w.id, w.name order by w.name");
+        out.put("warehouse_inventory", jdbc.queryForList(wsql.toString(), wparams.toArray()));
         out.put("available_resources", jdbc.queryForList("""
                 select r.category, count(distinct r.id) as total, coalesce(sum(ii.quantity), 0) as total_quantity
                 from public.resources r
@@ -78,7 +89,9 @@ public class ResourceAllocationController {
     }
 
     private List<Map<String, Object>> queue(String where, String order) {
-        return jdbc.queryForList("""
+        // Area officers see only allocations whose incident is in their own district/region (or shared);
+        // national + non-area roles keep the full view. Scope rides on the incident the request serves.
+        StringBuilder sql = new StringBuilder("""
                 select ar.id, ar.status, ar.quantity_requested, ar.quantity_allocated, ar.unit_of_measure,
                     ar.justification_for_request, ar.source_details, ar.allocation_date, ar.created_at,
                     ar.dispatched_at, ar.deployed_at, ar.delivered_at, ar.rejection_reason,
@@ -90,19 +103,32 @@ public class ResourceAllocationController {
                 join public.resources r on r.id = ar.resource_id
                 left join public.users ru on ru.id = ar.requested_by
                 left join public.users fu on fu.id = ar.forwarded_by
-                where %s order by %s
-                """.formatted(where, order));
+                where 1=1""");
+        // Seed the WHERE with 1=1 and parenthesise the caller predicate: an empty `where` no longer yields
+        // "where  and ..." (a 500), and a future "a or b" predicate cannot widen the area-scope clause.
+        if (where != null && !where.isBlank()) {
+            sql.append(" and (").append(where).append(')');
+        }
+        List<Object> params = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        sql.append(" order by ").append(order);
+        return jdbc.queryForList(sql.toString(), params.toArray());
     }
 
     /** Eligible incidents (approved chain OR operationally active) + catalogue with live stock. */
     @GetMapping("/form-data")
     public Map<String, Object> formData() {
+        areaGuard.assertNotStakeholder();   // staff allocation form — not for partners
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("incidents", jdbc.queryForList("""
-                select id, title, severity_level, status, workflow_status from public.incidents
-                where workflow_status = 'approved' or status in ('Active Response','Verified')
-                order by severity_level asc, reported_at desc
-                """));
+        // Area officers may only target incidents in their own region/district; national tier sees all.
+        // STRICT scope mirrors store()'s assertOwn on incidents (out-of-area incidents must not be pickable).
+        StringBuilder isql = new StringBuilder("""
+                select id, title, severity_level, status, workflow_status from public.incidents i
+                where (workflow_status = 'approved' or status in ('Active Response','Verified'))""");
+        List<Object> iparams = new ArrayList<>();
+        jurisdiction.appendAreaScope("i", isql, iparams);
+        isql.append(" order by severity_level asc, reported_at desc");
+        out.put("incidents", jdbc.queryForList(isql.toString(), iparams.toArray()));
         out.put("resources", jdbc.queryForList("""
                 select r.id, r.name, r.category, r.unit_of_measure,
                        coalesce(sum(ii.quantity), 0) as available_stock
@@ -110,7 +136,11 @@ public class ResourceAllocationController {
                 left join public.inventory_items ii on ii.resource_id = r.id
                 group by r.id order by r.category, r.name
                 """));
-        out.put("warehouses", jdbc.queryForList("select id, name, zone from public.warehouses order by name"));
+        StringBuilder whsql = new StringBuilder("select id, name, zone from public.warehouses w where 1=1");
+        List<Object> whparams = new ArrayList<>();
+        jurisdiction.appendWarehouseScope("w", whsql, whparams);
+        whsql.append(" order by name");
+        out.put("warehouses", jdbc.queryForList(whsql.toString(), whparams.toArray()));
         out.put("urgency_levels", List.of("low", "medium", "high", "critical"));
         out.put("status_options", STATUS_OPTIONS);
         return out;
@@ -118,7 +148,7 @@ public class ResourceAllocationController {
 
     // ─── Store: one request → N allocation rows (one per resource line) ───
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.request')")
     @PostMapping
     @Transactional
     @SuppressWarnings("unchecked")
@@ -152,6 +182,10 @@ public class ResourceAllocationController {
 
         // Gate to approved/active incidents — verbatim source rule + message
         Map<String, Object> incident = incidents.findOr404(incidentId);
+        // Jurisdiction: an area officer may only request resources against an incident in their own
+        // region/district (STRICT, mirrors how the queues/form-data scope incidents). Out of area → 404,
+        // so a District-A officer cannot bind a request to District-B's incident.
+        areaGuard.assertOwn("public.incidents", incidentId);
         boolean eligible = "approved".equals(incident.get("workflow_status"))
                 || List.of("Active Response", "Verified").contains(incident.get("status"));
         if (!eligible) {
@@ -199,11 +233,14 @@ public class ResourceAllocationController {
 
     // ─── Forward / Approve / Reject / Status / Track ───
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.request')")
     @PostMapping("/{id}/forward")
     @Transactional
     public Map<String, Object> forward(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> allocation = findOr404(id);
+        // Scope via the served incident (shared-or-own, mirrors the queues): an area officer may forward only
+        // an allocation whose incident is in their own area; out of area → 404.
+        areaGuard.assertParentOwnOrShared("public.allocated_resources", "incident_id", "public.incidents", id);
         if (!"Requested".equals(allocation.get("status"))) {
             throw new BusinessRuleException("Only requests with status \"Requested\" can be forwarded.");
         }
@@ -216,7 +253,7 @@ public class ResourceAllocationController {
         return Map.of("success", true, "message", "Request forwarded to PMO for approval.");
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @PostMapping("/{id}/approve")
     @Transactional
     public Map<String, Object> approve(@PathVariable long id) {
@@ -247,7 +284,7 @@ public class ResourceAllocationController {
         return Map.of("success", true, "message", "Resource allocation approved successfully.");
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @PostMapping("/{id}/reject")
     @Transactional
     public ResponseEntity<Map<String, Object>> reject(@PathVariable long id, @RequestBody Map<String, Object> body) {
@@ -266,11 +303,14 @@ public class ResourceAllocationController {
     }
 
     /** Deployment lifecycle transitions with the source's matrix and timestamps. */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
     @PostMapping("/{id}/status")
     @Transactional
     public Map<String, Object> updateStatus(@PathVariable long id, @RequestBody Map<String, Object> body) {
         Map<String, Object> allocation = findOr404(id);
+        // Scope via the served incident (shared-or-own, mirrors the queues): a dispatch officer may transition
+        // only an allocation whose incident is in their own area; out of area → 404.
+        areaGuard.assertParentOwnOrShared("public.allocated_resources", "incident_id", "public.incidents", id);
         String newStatus = strOf(body.get("status"));
         String notes = strOf(body.get("notes"));
         if (newStatus == null || !List.of("In Transit", "Deployed", "Delivered", "Returned").contains(newStatus)) {
@@ -310,8 +350,14 @@ public class ResourceAllocationController {
     /** Deployment tracking timeline + audit history for the track view. */
     @GetMapping("/{id}/track")
     public Map<String, Object> track(@PathVariable long id) {
-        findOr404(id); // unknown ids must 404, not leak a 500
-        Map<String, Object> allocation = jdbc.queryForMap("""
+        areaGuard.assertNotStakeholder();   // staff deployment tracking — not for partners
+        // Jurisdiction visibility: an area officer may track only an allocation whose incident is in their own
+        // district/region (or shared/null-area); national tier sees all. Out of area → 404 (mirrors the queues).
+        StringBuilder where = new StringBuilder("ar.id = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(id);
+        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        List<Map<String, Object>> found = jdbc.queryForList("""
                 select ar.*, i.title as incident_title, i.id as incident_id, r.name as resource_name,
                        w.name as warehouse_name, u.name as requested_by_name
                 from public.allocated_resources ar
@@ -319,8 +365,11 @@ public class ResourceAllocationController {
                 join public.resources r on r.id = ar.resource_id
                 left join public.warehouses w on w.id = ar.deployed_from_warehouse
                 left join public.users u on u.id = ar.requested_by
-                where ar.id = ?
-                """, id);
+                """ + " where " + where, params.toArray());
+        if (found.isEmpty()) {
+            throw new ResourceNotFoundException("Allocation not found.");
+        }
+        Map<String, Object> allocation = found.get(0);
         Map<String, Object> out = new LinkedHashMap<>(allocation);
         out.put("timeline", Map.of(
                 "requested", allocation.get("created_at"),

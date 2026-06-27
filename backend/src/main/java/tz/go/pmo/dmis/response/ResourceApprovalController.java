@@ -36,12 +36,18 @@ public class ResourceApprovalController {
     private final JdbcTemplate jdbc;
     private final ApprovalWorkflowEngine engine;
     private final IncidentWorkflowService users;
+    private final tz.go.pmo.dmis.common.security.JurisdictionScope jurisdiction;
+    private final tz.go.pmo.dmis.common.security.AreaGuard areaGuard;
 
     public ResourceApprovalController(JdbcTemplate jdbc, ApprovalWorkflowEngine engine,
-                                      IncidentWorkflowService users) {
+                                      IncidentWorkflowService users,
+                                      tz.go.pmo.dmis.common.security.JurisdictionScope jurisdiction,
+                                      tz.go.pmo.dmis.common.security.AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.engine = engine;
         this.users = users;
+        this.jurisdiction = jurisdiction;
+        this.areaGuard = areaGuard;
     }
 
     // ─── Queues ───
@@ -86,6 +92,9 @@ public class ResourceApprovalController {
                 join public.resources r on r.id = ar.resource_id
                 left join public.users u on u.id = ar.requested_by
                 where 1=1 and """).append('(').append(where).append(')');
+        // Jurisdiction visibility: area officers (DED/DAS/RAS/RC) see only requests tied to incidents in
+        // their own area; national + the logistics/PMO roles who run the resource chain see all.
+        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
         if (search != null && !search.isBlank()) {
             sql.append(" and (r.name ilike ? or i.title ilike ? or coalesce(u.name,'') ilike ?)");
             String like = "%" + search + "%";
@@ -125,7 +134,7 @@ public class ResourceApprovalController {
 
     // ─── Actions ───
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @PostMapping("/{id}/approve")
     public Map<String, Object> approve(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         findOr404(id);
@@ -136,7 +145,7 @@ public class ResourceApprovalController {
                 "workflow_status", result.get("workflow_status"));
     }
 
-    @PreAuthorize(Authz.RESPONSE_OVERSIGHT)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @PostMapping("/{id}/fast-track")
     public Map<String, Object> fastTrack(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         findOr404(id);
@@ -145,7 +154,7 @@ public class ResourceApprovalController {
                 "message", "Request fully approved via fast track! The requestor has been notified.");
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @PostMapping("/{id}/reject")
     public ResponseEntity<Map<String, Object>> reject(@PathVariable long id, @RequestBody Map<String, Object> body) {
         findOr404(id);
@@ -158,7 +167,7 @@ public class ResourceApprovalController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Request rejected. The requestor has been notified."));
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @PostMapping("/{id}/rollback")
     public ResponseEntity<Map<String, Object>> rollback(@PathVariable long id, @RequestBody Map<String, Object> body) {
         findOr404(id);
@@ -171,7 +180,7 @@ public class ResourceApprovalController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Request rolled back to requestor for revision."));
     }
 
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @PostMapping("/{id}/resubmit")
     public Map<String, Object> resubmit(@PathVariable long id) {
         findOr404(id);
@@ -180,7 +189,7 @@ public class ResourceApprovalController {
     }
 
     /** Approvers may redirect the fulfilment source (warehouse/agency/procurement). */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @PostMapping("/{id}/update-source")
     @Transactional
     public Map<String, Object> updateSource(@PathVariable long id, @RequestBody Map<String, Object> body) {
@@ -191,6 +200,11 @@ public class ResourceApprovalController {
         }
         Long warehouseId = body.get("warehouse_id") == null ? null
                 : (long) Double.parseDouble(String.valueOf(body.get("warehouse_id")));
+        // The redirected fulfilment warehouse must be in the caller's area (NULL area = national/shared).
+        // Out-of-area target 404s rather than letting an officer redirect into a foreign warehouse.
+        if (warehouseId != null) {
+            areaGuard.assertWarehouseVisible("public.warehouses", warehouseId);
+        }
         jdbc.update("""
                 update public.allocated_resources set source = ?, warehouse_id = ?,
                     source_details = case when ? = 'warehouse' and ? is not null then 'warehouse:' || ?
@@ -202,7 +216,7 @@ public class ResourceApprovalController {
     }
 
     /** PMO bulk approve (PMOApprovalController::bulkApprove) — fast-tracks each id. */
-    @PreAuthorize(Authz.RESPONSE_OVERSIGHT)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @PostMapping("/bulk-approve")
     public Map<String, Object> bulkApprove(@RequestBody Map<String, Object> body) {
         Object raw = body.get("ids");
@@ -214,6 +228,9 @@ public class ResourceApprovalController {
         for (Object idObj : ids) {
             long id = (long) Double.parseDouble(String.valueOf(idObj));
             try {
+                // Scope each id to the caller's area (via parent incident) before fast-tracking;
+                // out-of-area ids surface as a per-id failure rather than being silently approved.
+                findOr404(id);
                 engine.fastTrack(id, strOf(body.get("remarks")));
                 done++;
             } catch (Exception e) {
@@ -231,6 +248,10 @@ public class ResourceApprovalController {
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Allocation not found.");
         }
+        // Jurisdiction: an allocation is visible/actionable only when its parent incident is in the
+        // caller's area (national sees all). Mirrors the list's appendAreaScopeSharedOrOwn("i").
+        // Out-of-area resolves to 404, never 403.
+        areaGuard.assertParentOwnOrShared("public.allocated_resources", "incident_id", "public.incidents", id);
         return rows.get(0);
     }
 

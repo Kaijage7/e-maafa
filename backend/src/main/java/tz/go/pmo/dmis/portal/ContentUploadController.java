@@ -40,7 +40,7 @@ public class ContentUploadController {
     private String publicRoot;
 
     @PostMapping
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Operation(summary = "Upload an image; returns the stored path + serving URL")
     public Map<String, Object> upload(@RequestParam("file") MultipartFile file,
                                       @RequestParam(defaultValue = "news") String folder) {

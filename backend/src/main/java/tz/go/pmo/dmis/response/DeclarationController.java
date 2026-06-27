@@ -81,7 +81,7 @@ public class DeclarationController {
     }
 
     /** Propose a declaration — usually from a disaster-posture activation. */
-    @PreAuthorize(Authz.RESPONSE_COMMAND)
+    @PreAuthorize("hasAuthority('disaster_declarations.propose')")
     @PostMapping
     @Transactional
     public Map<String, Object> propose(@RequestBody Map<String, Object> body) {
@@ -109,7 +109,7 @@ public class DeclarationController {
     }
 
     /** National Technical Committee review (s.10) — proposed → technical_review. */
-    @PreAuthorize(Authz.DECLARE_REVIEW)
+    @PreAuthorize("hasAuthority('disaster_declarations.review')")
     @PostMapping("/{id}/technical-review")
     @Transactional
     public Map<String, Object> technicalReview(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
@@ -119,7 +119,7 @@ public class DeclarationController {
     }
 
     /** National Steering Committee endorsement (s.8(1)(d)) — technical_review → steering_endorsed. */
-    @PreAuthorize(Authz.DECLARE_ENDORSE)
+    @PreAuthorize("hasAuthority('disaster_declarations.endorse')")
     @PostMapping("/{id}/endorse")
     @Transactional
     public Map<String, Object> endorse(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
@@ -132,7 +132,7 @@ public class DeclarationController {
      * The authority declares: Minister gazettes the Disaster Area (s.32) / President proclaims the
      * State of Emergency (s.33). Sets the effective window (disaster area defaults to 3 months).
      */
-    @PreAuthorize(Authz.DECLARE_AUTHORITY)
+    @PreAuthorize("hasAuthority('disaster_declarations.declare')")
     @PostMapping("/{id}/declare")
     @Transactional
     public Map<String, Object> declare(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
@@ -169,7 +169,7 @@ public class DeclarationController {
     }
 
     /** Extend a Disaster Area declaration (s.32 — "or such other extended period"). */
-    @PreAuthorize(Authz.DECLARE_AUTHORITY)
+    @PreAuthorize("hasAuthority('disaster_declarations.declare')")
     @PostMapping("/{id}/extend")
     @Transactional
     public Map<String, Object> extend(@PathVariable long id, @RequestBody Map<String, Object> body) {
@@ -190,7 +190,7 @@ public class DeclarationController {
     }
 
     /** Revoke / lift a declaration. */
-    @PreAuthorize(Authz.DECLARE_AUTHORITY)
+    @PreAuthorize("hasAuthority('disaster_declarations.declare')")
     @PostMapping("/{id}/revoke")
     @Transactional
     public Map<String, Object> revoke(@PathVariable long id, @RequestBody Map<String, Object> body) {

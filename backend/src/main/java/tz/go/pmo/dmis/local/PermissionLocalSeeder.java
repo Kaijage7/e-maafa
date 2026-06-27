@@ -37,22 +37,26 @@ public class PermissionLocalSeeder implements CommandLineRunner {
     private static Map<String, List<String>> buildCatalogue() {
         Map<String, List<String>> c = new LinkedHashMap<>();
         c.put("Prevention & Mitigation", List.of("view", "manage"));
-        c.put("Hazards", List.of("view", "manage"));
-        c.put("Risk Assessment", List.of("view", "create", "approve"));
+        c.put("Hazards", List.of("manage"));
+        c.put("Risk Assessment", List.of("create", "approve"));
+        c.put("Risk Index", List.of("create", "approve"));
         c.put("Early Warning", List.of("view", "create", "disseminate", "approve"));
         c.put("Preparedness", List.of("view", "manage"));
-        c.put("Incidents", List.of("view", "create", "update", "approve", "close"));
+        c.put("Incidents", List.of("view", "create", "update", "approve", "close", "publish"));
+        c.put("Budget & Finance", List.of("view", "manage", "approve", "disburse"));
         c.put("Resource Allocation", List.of("view", "request", "approve", "dispatch"));
-        c.put("Warehouse & Stock", List.of("view", "manage"));
+        c.put("Stakeholders", List.of("view", "manage"));
+        c.put("Warehouse & Stock", List.of("view", "manage", "view_national"));
         c.put("Damage Assessment", List.of("view", "create", "verify"));
         c.put("Tasks", List.of("view", "manage"));
         c.put("Communication & Alerts", List.of("view", "send"));
         c.put("Command Post", List.of("view", "activate", "posture"));
         c.put("Anticipatory Action Plans", List.of("view", "create", "approve"));
-        c.put("Disaster Declarations", List.of("view", "propose", "declare"));
-        c.put("One Health", List.of("view", "manage", "disseminate"));
+        c.put("Contingency Plans", List.of("view", "manage", "approve"));
+        c.put("Disaster Declarations", List.of("view", "propose", "declare", "review", "endorse"));
+        c.put("One Health", List.of("view", "manage", "disseminate", "approve", "acknowledge", "directive"));
         c.put("Recovery", List.of("view", "manage"));
-        c.put("Disaster Repository", List.of("view", "enter", "validate"));
+        c.put("Disaster Repository", List.of("enter"));
         c.put("Reports & Analytics", List.of("view"));
         c.put("Content Management", List.of("view", "manage"));
         c.put("User Management", List.of("view", "manage"));
@@ -60,6 +64,7 @@ public class PermissionLocalSeeder implements CommandLineRunner {
         c.put("Location Management", List.of("view", "manage"));
         c.put("Resource Catalogue", List.of("view", "manage"));
         c.put("Approval Workflows", List.of("view", "manage"));
+        c.put("Translations", List.of("view", "manage"));
         return c;
     }
 
@@ -74,21 +79,26 @@ public class PermissionLocalSeeder implements CommandLineRunner {
         p.put("Super Admin", List.of("*"));
         p.put("ICT Admin", List.of("*|view", "User Management|*", "Roles & Permissions|*",
                 "Location Management|*", "Resource Catalogue|*", "Approval Workflows|*",
-                "Content Management|*", "Translations|*"));
+                "Content Management|*", "Translations|*", "Disaster Repository|enter"));
         p.put("Secretary", List.of("*|view", "Incidents|approve", "Resource Allocation|approve",
-                "Disaster Declarations|declare", "Disaster Declarations|propose", "Command Post|activate"));
+                "Disaster Declarations|declare", "Disaster Declarations|propose", "Command Post|activate",
+                "Approval Workflows|manage", "One Health|directive"));
         p.put("Director", List.of("*|view", "Incidents|approve", "Incidents|close",
                 "Resource Allocation|approve", "Anticipatory Action Plans|approve", "Risk Assessment|approve",
-                "Damage Assessment|verify", "Disaster Repository|validate", "Disaster Declarations|propose",
-                "Disaster Declarations|declare", "Command Post|activate", "Command Post|posture", "Early Warning|approve"));
+                "Damage Assessment|verify", "Disaster Repository|enter",
+                "Disaster Declarations|propose", "Disaster Declarations|declare", "Command Post|activate",
+                "Command Post|posture", "Early Warning|approve", "Location Management|manage",
+                "Resource Catalogue|manage", "Approval Workflows|manage", "One Health|directive"));
         p.put("Asst. Director", List.of("*|view", "Incidents|approve", "Resource Allocation|approve",
                 "Anticipatory Action Plans|approve", "Damage Assessment|verify", "Command Post|activate",
-                "Command Post|posture", "Disaster Repository|validate"));
+                "Command Post|posture", "Disaster Repository|validate", "Disaster Repository|enter",
+                "Resource Catalogue|manage", "One Health|directive"));
         p.put("EOCC", List.of("*|view", "Incidents|create", "Incidents|update", "Resource Allocation|request",
                 "Resource Allocation|dispatch", "Warehouse & Stock|manage", "Damage Assessment|create",
                 "Damage Assessment|verify", "Tasks|manage", "Communication & Alerts|send", "Command Post|activate",
                 "Command Post|posture", "Anticipatory Action Plans|create", "Disaster Repository|enter",
-                "Disaster Repository|validate", "Early Warning|create", "Early Warning|disseminate"));
+                "Disaster Repository|validate", "Early Warning|create", "Early Warning|disseminate",
+                "Resource Catalogue|manage", "One Health|directive"));
         p.put("Reg DC", List.of("*|view", "Incidents|approve", "Tasks|manage", "Damage Assessment|verify",
                 "Resource Allocation|request"));
         p.put("RAS", List.of("*|view", "Incidents|approve", "Tasks|manage", "Damage Assessment|verify"));
@@ -97,7 +107,7 @@ public class PermissionLocalSeeder implements CommandLineRunner {
         p.put("DAS", List.of("*|view", "Incidents|create", "Incidents|update", "Tasks|manage",
                 "Damage Assessment|create"));
         p.put("Comms Officer", List.of("*|view", "Communication & Alerts|send", "Content Management|manage",
-                "Early Warning|disseminate"));
+                "Early Warning|disseminate", "Translations|manage"));
         p.put("MDA Focal", List.of("*|view", "One Health|manage", "One Health|disseminate"));
         p.put("Partners", List.of("Reports & Analytics|view", "Tasks|view", "Anticipatory Action Plans|view",
                 "Disaster Repository|view", "Content Management|view"));
@@ -151,12 +161,20 @@ public class PermissionLocalSeeder implements CommandLineRunner {
             if (roleId == null) {
                 continue; // role not seeded yet (ordering) — picked up on a later run
             }
+            // Seed the default policy ONLY for a role that has no permissions yet (fresh install). A role
+            // already configured — by a previous seed or by an admin in User Management → Roles & Permissions
+            // — is left untouched, so permission changes (incl. least-privilege tightening) survive restarts.
+            Long existing = jdbc.queryForObject(
+                    "select count(*) from public.role_has_permissions where role_id = ?", Long.class, roleId);
+            if (existing != null && existing > 0) {
+                continue;
+            }
             for (String rule : entry.getValue()) {
                 assigned += applyRule(roleId, rule);
             }
         }
         if (assigned > 0) {
-            log.info("role→permission policy applied: {} assignments", assigned);
+            log.info("role→permission policy applied: {} assignments (only roles with no prior permissions)", assigned);
         }
     }
 

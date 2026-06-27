@@ -33,6 +33,7 @@ export const MODULES: Module[] = [
       { name: 'Strategic Infrastructure', path: 'infrastructure', icon: 'fa-building', description: 'Critical infrastructure inventory and resilience status', legacyRoute: 'admin.infrastructure-items.index' },
       { name: 'Disaster Repository', path: 'past-disasters', icon: 'fa-history', description: 'Historical disaster records', legacyRoute: 'admin.past-disasters.index' },
       { name: 'Risk Mapping', path: 'risk-mapping', icon: 'fa-map-marked-alt', description: 'Risk assessment and GIS mapping', legacyRoute: 'admin.gis.map' },
+      { name: 'INFORM Risk Index', path: 'risk-index', icon: 'fa-layer-group', description: 'INFORM subnational risk index — hazard, vulnerability & coping by council', legacyRoute: '' },
     ],
   },
   {
@@ -84,6 +85,13 @@ export const MODULES: Module[] = [
     ],
   },
   {
+    slug: 'budget-finance', name: 'Budget & Finance', icon: 'fa-coins', color: '#fd7e14',
+    description: 'Disaster budgets, maker-checker commitments, virement and the NDMF fund',
+    items: [
+      { name: 'Disaster Budgets', path: 'budgets', icon: 'fa-wallet', description: 'Tier budgets, line allocations, commitments (commit≠expenditure) and reconciliation', legacyRoute: '' },
+    ],
+  },
+  {
     slug: 'one-health', name: 'One Health', icon: 'fa-heartbeat', color: '#20c997',
     description: 'Cross-sector disease surveillance and event management',
     items: [
@@ -114,7 +122,6 @@ export const MODULES: Module[] = [
       { name: 'Roles & Permissions', path: 'roles', icon: 'fa-user-shield', description: 'Configure roles and access control', legacyRoute: 'admin.roles.index' },
       { name: 'Approval Workflows', path: 'approval-workflows', icon: 'fa-tasks', description: 'Configure approval workflows for modules', legacyRoute: 'admin.approval-workflow.index' },
       { name: 'Location Management', path: 'locations', icon: 'fa-map-marker-alt', description: 'Manage regions, districts and wards', legacyRoute: 'admin.locations.index' },
-      { name: 'Translations', path: 'translations', icon: 'fa-language', description: 'Manage system translations', legacyRoute: 'admin.translations.index' },
       { name: 'Resource Management', path: 'resource-settings', icon: 'fa-cubes', description: 'Configure resources, types, units and approval settings', legacyRoute: 'admin.resource-settings.index' },
       { name: 'Incident Types', path: 'incident-types', icon: 'fa-triangle-exclamation', description: 'Manage the incident/hazard type catalogue used across Response', legacyRoute: 'admin.incident-types.index' },
     ],
@@ -125,6 +132,7 @@ export const MODULES: Module[] = [
     items: [
       { name: 'Portal Management', path: 'portal-management', icon: 'fa-globe', description: 'Manage landing page content', legacyRoute: 'admin.portal-management.index' },
       { name: 'Educational Content', path: 'educational-content', icon: 'fa-graduation-cap', description: 'Public education materials', legacyRoute: 'admin.educational-content.index' },
+      { name: 'Translations', path: 'translations', icon: 'fa-language', description: 'Bilingual (English / Kiswahili) portal labels and UI strings', legacyRoute: 'admin.translations.index' },
       { name: 'Agencies', path: 'agencies', icon: 'fa-building', description: 'Manage partner agencies', legacyRoute: 'admin.agencies.index' },
       { name: 'Communication Center', path: 'communication-center', icon: 'fa-tower-broadcast', description: 'SMS, email & alerts — compose, send and delivery logs in one place', legacyRoute: 'admin.sms-management.index' },
       { name: 'Publications', path: 'publications', icon: 'fa-file-pdf', description: 'Manage public portal publications', legacyRoute: 'admin.disaster-risk-frameworks.index' },
@@ -142,6 +150,7 @@ export const MODULES: Module[] = [
       { name: 'Partner Directory', path: 'directory', icon: 'fa-address-book', description: 'Register, verify and manage partner organizations', legacyRoute: 'admin.stakeholders.index' },
       { name: 'Resource Donations', path: 'donations', icon: 'fa-hand-holding-heart', description: 'Open calls to donate, partner bids and NDMF cash donations', legacyRoute: 'stakeholder.resource-donations.index' },
       { name: 'Open Needs', path: 'open-needs', icon: 'fa-bullhorn', description: 'What the platform needs now — open donation calls and unfunded training-support requests', legacyRoute: '' },
+      { name: 'Fund a Measure or Training', path: 'support-needs', icon: 'fa-seedling', description: 'Mitigation measures (DRR priorities) and trainings needing support — pledge your contribution', legacyRoute: '' },
       { name: 'Early Warning Bulletins', path: 'early-warnings', icon: 'fa-tower-broadcast', description: 'Partner-authored early-warning bulletins', legacyRoute: 'stakeholders.warnings.index' },
       { name: 'One Health Reporting', path: 'one-health', icon: 'fa-notes-medical', description: 'Report One Health events from the field', legacyRoute: 'stakeholders.one-health.events.index' },
     ],

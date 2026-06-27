@@ -68,7 +68,7 @@ public class SettingsController {
     }
 
     /** Replace a module's whole chain — the simplest faithful editor (delete + reinsert in order). */
-    @PreAuthorize(Authz.APPROVAL_CONFIG_WRITE)
+    @PreAuthorize("hasAuthority('approval_workflows.manage')")
     @PostMapping("/approval-chains/{moduleId}/steps")
     @Transactional
     public Map<String, Object> saveChain(@PathVariable long moduleId, @RequestBody Map<String, Object> body) {
@@ -99,7 +99,7 @@ public class SettingsController {
                 "message", "Approval chain updated. New requests will follow this " + (order - 1) + "-step chain.");
     }
 
-    @PreAuthorize(Authz.APPROVAL_CONFIG_WRITE)
+    @PreAuthorize("hasAuthority('approval_workflows.manage')")
     @PostMapping("/approval-chains/{moduleId}/toggle")
     @Transactional
     public Map<String, Object> toggleModule(@PathVariable long moduleId) {
@@ -123,7 +123,7 @@ public class SettingsController {
         return out;
     }
 
-    @PreAuthorize(Authz.CATALOGUE_WRITE)
+    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
     @PostMapping("/resources")
     @Transactional
     public Map<String, Object> createResource(@RequestBody Map<String, Object> body) {
@@ -137,7 +137,7 @@ public class SettingsController {
         return Map.of("success", true, "id", id, "message", "Resource added to the catalogue.");
     }
 
-    @PreAuthorize(Authz.CATALOGUE_WRITE)
+    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
     @PostMapping("/resources/{id}")
     @Transactional
     public Map<String, Object> updateResource(@PathVariable long id, @RequestBody Map<String, Object> body) {
@@ -153,7 +153,7 @@ public class SettingsController {
         return Map.of("success", true, "message", "Resource updated.");
     }
 
-    @PreAuthorize(Authz.CATALOGUE_WRITE)
+    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
     @DeleteMapping("/resources/{id}")
     @Transactional
     public Map<String, Object> deleteResource(@PathVariable long id) {
@@ -185,7 +185,7 @@ public class SettingsController {
                 "icons", IncidentOptions.INCIDENT_ICONS);
     }
 
-    @PreAuthorize(Authz.CATALOGUE_WRITE)
+    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
     @PostMapping("/incident-types")
     @Transactional
     public Map<String, Object> createIncidentType(@RequestBody Map<String, Object> body) {
@@ -198,7 +198,7 @@ public class SettingsController {
         return Map.of("success", true, "id", id, "message", "Incident type added.");
     }
 
-    @PreAuthorize(Authz.CATALOGUE_WRITE)
+    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
     @PostMapping("/incident-types/{id}")
     @Transactional
     public Map<String, Object> updateIncidentType(@PathVariable long id, @RequestBody Map<String, Object> body) {
@@ -214,7 +214,7 @@ public class SettingsController {
         return Map.of("success", true, "message", "Incident type updated.");
     }
 
-    @PreAuthorize(Authz.CATALOGUE_WRITE)
+    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
     @DeleteMapping("/incident-types/{id}")
     @Transactional
     public Map<String, Object> deleteIncidentType(@PathVariable long id) {

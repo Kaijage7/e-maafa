@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,24 @@ public class InventoryService {
     private final ResourceRepository resources;
     private final WarehouseRepository warehouses;
     private final JdbcTemplate jdbc;
+    private final JurisdictionScope jurisdiction;
+
+    /**
+     * Warehouse ids the caller may see — own area + NULL-area national/shared stores. Returns {@code null}
+     * for the national / non-area tier, meaning "no restriction" (sees every warehouse). Used to keep the
+     * Emergency-Supplies list and the New-Item warehouse dropdown to the officer's own jurisdiction.
+     */
+    private java.util.Set<Long> visibleWarehouseIds() {
+        JurisdictionScope.Tier t = jurisdiction.currentTier();
+        if (t != JurisdictionScope.Tier.REGION && t != JurisdictionScope.Tier.DISTRICT) {
+            return null;   // national + non-area: full view
+        }
+        StringBuilder w = new StringBuilder("1=1");
+        List<Object> p = new java.util.ArrayList<>();
+        jurisdiction.appendWarehouseScope("", w, p);
+        return new java.util.HashSet<>(jdbc.queryForList(
+                "select id from public.warehouses where " + w, Long.class, p.toArray()));
+    }
 
     @Transactional(readOnly = true)
     public InventoryResponse index() {
@@ -44,7 +63,14 @@ public class InventoryService {
                 .collect(Collectors.toMap(Warehouse::getId, Warehouse::getName));
         LocalDate today = LocalDate.now(ZONE);
 
+        java.util.Set<Long> visibleW = visibleWarehouseIds();
         List<InventoryItem> all = items.findAllByOrderByIdDesc();
+        if (visibleW != null) {
+            // own-area + national-shared stores; a NULL-warehouse item is the national/unassigned pool (kept)
+            all = all.stream()
+                    .filter(i -> i.getWarehouseId() == null || visibleW.contains(i.getWarehouseId()))
+                    .toList();
+        }
         List<InventoryResponse.ItemRow> rows = all.stream()
                 .map(i -> toRow(i, resourceName, warehouseName, resourceThreshold, today)).toList();
 
@@ -65,7 +91,9 @@ public class InventoryService {
                 .map(r -> Map.<String, Object>of("id", r.getId(), "name", safe(r.getName()),
                         "category", safe(r.getCategory())))
                 .toList();
+        java.util.Set<Long> visibleW = visibleWarehouseIds();
         List<Map<String, Object>> wh = warehouses.findAll().stream()
+                .filter(w -> visibleW == null || visibleW.contains(w.getId()))
                 .sorted((a, b) -> safe(a.getName()).compareToIgnoreCase(safe(b.getName())))
                 .map(w -> Map.<String, Object>of("id", w.getId(), "name", safe(w.getName())))
                 .toList();

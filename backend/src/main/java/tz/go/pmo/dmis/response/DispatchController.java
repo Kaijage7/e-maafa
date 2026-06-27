@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Port of Admin\ResourceDispatchController (2,662 lines) — the dispatch console:
@@ -56,13 +57,15 @@ public class DispatchController {
     private final DispatchSupportService sources;
     private final IncidentWorkflowService users;
     private final tz.go.pmo.dmis.notification.NotificationService notifications; // the ONE dispatcher
+    private final JurisdictionScope jurisdiction;
 
     public DispatchController(JdbcTemplate jdbc, DispatchSupportService sources, IncidentWorkflowService users,
-                              tz.go.pmo.dmis.notification.NotificationService notifications) {
+                              tz.go.pmo.dmis.notification.NotificationService notifications, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
         this.sources = sources;
         this.users = users;
         this.notifications = notifications;
+        this.jurisdiction = jurisdiction;
     }
 
     // ─── Dashboard ───
@@ -76,7 +79,9 @@ public class DispatchController {
             incidentFilter = " and ar.incident_id = ?";
             params.add(incident_id);
         }
-        List<Map<String, Object>> allocations = jdbc.queryForList("""
+        // Area officers see only dispatches whose incident is in their own district/region (or shared);
+        // national + non-area roles keep the full board. Scope rides on the served incident.
+        StringBuilder sql = new StringBuilder("""
                 select ar.id, ar.incident_id, ar.resource_id, ar.status, ar.quantity_requested,
                        ar.quantity_allocated, ar.unit_of_measure, ar.allocation_date, ar.source_details,
                        ar.created_at, i.title as incident_title, i.severity_level, i.status as incident_status,
@@ -87,9 +92,11 @@ public class DispatchController {
                 join public.resources r on r.id = ar.resource_id
                 left join public.users u on u.id = ar.requested_by
                 left join public.users au on au.id = ar.approved_by
-                where ar.status in (?,?,?,?)%s
-                order by ar.allocation_date desc nulls last, ar.created_at desc
-                """.formatted(incidentFilter), params.toArray());
+                where ar.status in (?,?,?,?)""");
+        sql.append(incidentFilter);
+        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        sql.append(" order by ar.allocation_date desc nulls last, ar.created_at desc");
+        List<Map<String, Object>> allocations = jdbc.queryForList(sql.toString(), params.toArray());
 
         // Group by incident, then aggregate per resource (the source's groupedAllocations)
         Map<Long, Map<String, Object>> grouped = new LinkedHashMap<>();
@@ -183,7 +190,7 @@ public class DispatchController {
      * manager gate (no stock moves yet); agency stock dispatches immediately.
      */
     @PostMapping("/allocations/{id}/dispatch")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
     @Transactional
     public Map<String, Object> dispatch(@PathVariable long id, @RequestBody Map<String, Object> body) {
         String sourceType = require(str(body.get("source_type")), "source_type");
@@ -285,7 +292,7 @@ public class DispatchController {
      * deduct twice (the source's lockForUpdate + isPending check).
      */
     @PostMapping("/approvals/{id}/approve")
-    @PreAuthorize(Authz.RESPONSE_OVERSIGHT)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @Transactional
     public Map<String, Object> approveDispatch(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> approval = lockApproval(id);
@@ -328,7 +335,7 @@ public class DispatchController {
 
     /** Manager rejects: nothing moves; allocation returns to 'Approved' for another source. */
     @PostMapping("/approvals/{id}/reject")
-    @PreAuthorize(Authz.RESPONSE_OVERSIGHT)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @Transactional
     public Map<String, Object> rejectDispatch(@PathVariable long id, @RequestBody Map<String, Object> body) {
         String reason = str(body.get("reason"));
@@ -355,7 +362,7 @@ public class DispatchController {
 
     /** Submit an allocation to procurement; tracked inside source_details. */
     @PostMapping("/allocations/{id}/procurement")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
     @Transactional
     public Map<String, Object> submitProcurement(@PathVariable long id, @RequestBody Map<String, Object> body) {
         double quantity = positive(body.get("quantity"));
@@ -410,7 +417,7 @@ public class DispatchController {
     }
 
     @PostMapping("/procurement/{allocationId}/approve")
-    @PreAuthorize(Authz.RESPONSE_OVERSIGHT)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @Transactional
     public Map<String, Object> approveProcurement(@PathVariable long allocationId,
                                                   @RequestBody(required = false) Map<String, Object> body) {
@@ -428,7 +435,7 @@ public class DispatchController {
      * entry and intake the received quantity into the destination warehouse.
      */
     @PostMapping("/procurement/{allocationId}/deliver")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
     @Transactional
     public Map<String, Object> deliverProcurement(@PathVariable long allocationId, @RequestBody Map<String, Object> body) {
         String destinationType = require(str(body.get("destination_type")), "destination_type");
@@ -495,7 +502,7 @@ public class DispatchController {
     }
 
     @PostMapping("/procurement/{allocationId}/cancel")
-    @PreAuthorize(Authz.RESPONSE_OVERSIGHT)
+    @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @Transactional
     public Map<String, Object> cancelProcurement(@PathVariable long allocationId, @RequestBody Map<String, Object> body) {
         String reason = str(body.get("reason"));
@@ -536,7 +543,7 @@ public class DispatchController {
     // ─── Agency request (national channel; journal entry, no immediate stock move) ───
 
     @PostMapping("/allocations/{id}/agency-request")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('resource_allocation.request')")
     @Transactional
     public Map<String, Object> submitAgencyRequest(@PathVariable long id, @RequestBody Map<String, Object> body) {
         long agencyResourceId = lng(body.get("agency_resource_id"), "agency_resource_id");

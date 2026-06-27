@@ -2,6 +2,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { moduleBySlug } from '../core/modules';
+import { routePermission } from '../core/access';
 
 /** Exact reproduction of components/dmis/sidebar.blade.php (module mode: back-to-hub + current module). */
 @Component({
@@ -20,10 +21,10 @@ import { moduleBySlug } from '../core/modules';
           <div class="sb-section" [attr.data-section]="m.slug">
             <div class="sb-section-header" style="cursor:default;" [attr.data-tip]="m.name">
               <div class="sb-section-icon"><i class="fas {{ m.icon }}"></i></div>
-              <div class="sb-section-text"><div class="sb-section-name">{{ m.name }}</div><div class="sb-section-count">{{ m.items.length }} items</div></div>
+              <div class="sb-section-text"><div class="sb-section-name">{{ m.name }}</div><div class="sb-section-count">{{ items().length }} items</div></div>
             </div>
             <div class="sb-items">
-              @for (item of m.items; track item.path) {
+              @for (item of items(); track item.path) {
                 <a [routerLink]="linkFor(m.slug, item.path)" class="sb-link" [class.active]="item.path === activeItem()">
                   <i class="fas {{ item.icon }} sb-link-icon"></i><span class="sb-link-text">{{ item.name }}</span>
                 </a>
@@ -46,6 +47,20 @@ export class SidebarComponent {
   currentModule = input<string | null>(null);
   activeItem = input<string | null>(null);
   module = computed(() => moduleBySlug(this.currentModule() ?? ''));
+
+  /** Sidebar items the user may open — an item is shown only if its route permission is granted (same map
+   * as the backend ModuleGuardFilter and the route guard). So component visibility is configured purely in
+   * User Management → Roles & Permissions, never hardcoded per user/role. Unmapped items always show. */
+  items = computed(() => {
+    const m = this.module();
+    if (!m) {
+      return [];
+    }
+    return m.items.filter(item => {
+      const perm = routePermission(this.linkFor(m.slug, item.path).join('/'));
+      return !perm || this.auth.hasPermission(perm);
+    });
+  });
 
   /** Build a routerLink segment array, splitting nested item paths (e.g. 'early-warnings/mow') into
    * real segments so RouterLink doesn't percent-encode the slash. */

@@ -1,6 +1,7 @@
 package tz.go.pmo.dmis.response;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Port of Response\ResponseDashboardController + EOCCDashboardController —
@@ -37,14 +40,27 @@ public class DashboardController {
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService users;
     private final ActivationService activations;
+    private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
 
-    public DashboardController(JdbcTemplate jdbc, IncidentWorkflowService users, ActivationService activations) {
+    public DashboardController(JdbcTemplate jdbc, IncidentWorkflowService users, ActivationService activations,
+                              JurisdictionScope jurisdiction, AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.users = users;
         this.activations = activations;
+        this.jurisdiction = jurisdiction;
+        this.areaGuard = areaGuard;
+    }
+
+    /** Build "<extra> and <area predicate>" for an incidents query (alias optional); national tier adds nothing. */
+    private String incidentScope(String alias, String extra, List<Object> params) {
+        StringBuilder w = new StringBuilder(extra == null || extra.isBlank() ? "1=1" : extra);
+        jurisdiction.appendAreaScopeSharedOrOwn(alias, w, params);
+        return w.toString();
     }
 
     /** Response overview dashboard (stat cards, feeds, type/region rollups, map markers). */
+    @PreAuthorize("hasAuthority('incidents.view')")
     @GetMapping("/dashboard")
     public Map<String, Object> dashboard() {
         Map<String, Object> out = new LinkedHashMap<>();
@@ -57,30 +73,29 @@ public class DashboardController {
                   (select count(*) from public.incidents where severity_level = 'Critical' and status <> 'Closed') as critical_incidents,
                   (select count(*) from public.damage_assessments where status = 'Pending Verification') as assessments_pending
                 """));
-        out.put("critical_alerts", jdbc.queryForList("""
-                select id, title, location_description from public.incidents
-                where severity_level = 'Critical' and status = 'Active Response'
-                order by reported_at desc limit 5
-                """));
-        out.put("recent_incidents", jdbc.queryForList("""
-                select i.id, i.title, i.location_description, i.severity_level, i.status, i.reported_at,
-                       i.latitude, i.longitude, coalesce(it.name, 'Unknown') as hazard_name
-                from public.incidents i
-                left join public.incident_types it on it.id = i.incident_type_id
-                where i.reported_at >= now() - interval '24 hours'
-                order by i.reported_at desc limit 10
-                """));
-        out.put("incidents_by_type", jdbc.queryForList("""
-                select coalesce(it.name, 'Unknown') as hazard_name, count(*) as total
-                from public.incidents i
-                left join public.incident_types it on it.id = i.incident_type_id
-                where i.status <> 'Closed' group by 1 order by total desc
-                """));
-        out.put("regional_data", jdbc.queryForList("""
-                select region_name, count(*) as total from public.incidents
-                where region_name is not null and status <> 'Closed'
-                group by region_name order by total desc
-                """));
+        List<Object> caP = new ArrayList<>();
+        out.put("critical_alerts", jdbc.queryForList(
+                "select id, title, location_description from public.incidents where "
+                + incidentScope("", "severity_level = 'Critical' and status = 'Active Response'", caP)
+                + " order by reported_at desc limit 5", caP.toArray()));
+        List<Object> riP = new ArrayList<>();
+        out.put("recent_incidents", jdbc.queryForList(
+                "select i.id, i.title, i.location_description, i.severity_level, i.status, i.reported_at, "
+                + "i.latitude, i.longitude, coalesce(it.name, 'Unknown') as hazard_name "
+                + "from public.incidents i left join public.incident_types it on it.id = i.incident_type_id "
+                + "where " + incidentScope("i", "i.reported_at >= now() - interval '24 hours'", riP)
+                + " order by i.reported_at desc limit 10", riP.toArray()));
+        List<Object> ibtP = new ArrayList<>();
+        out.put("incidents_by_type", jdbc.queryForList(
+                "select coalesce(it.name, 'Unknown') as hazard_name, count(*) as total "
+                + "from public.incidents i left join public.incident_types it on it.id = i.incident_type_id "
+                + "where " + incidentScope("i", "i.status <> 'Closed'", ibtP) + " group by 1 order by total desc",
+                ibtP.toArray()));
+        List<Object> rdP = new ArrayList<>();
+        out.put("regional_data", jdbc.queryForList(
+                "select region_name, count(*) as total from public.incidents where "
+                + incidentScope("", "region_name is not null and status <> 'Closed'", rdP)
+                + " group by region_name order by total desc", rdP.toArray()));
         out.put("new_incidents", jdbc.queryForObject(
                 "select count(*) from public.incidents where reported_at >= now() - interval '5 minutes'", Long.class));
         out.put("timestamp", OffsetDateTime.now().toString());
@@ -88,6 +103,7 @@ public class DashboardController {
     }
 
     /** The merged EOCC live board payload (also the 30-second poll). */
+    @PreAuthorize("hasAuthority('command_post.view')")
     @GetMapping("/eocc")
     public Map<String, Object> eocc() {
         Map<String, Object> out = new LinkedHashMap<>();
@@ -107,17 +123,17 @@ public class DashboardController {
                 """));
         out.put("incidents_by_status", jdbc.queryForList(
                 "select status, count(*) as count from public.incidents group by status order by count desc"));
-        out.put("recent_incidents", jdbc.queryForList("""
-                select id, title, location_description, severity_level, status, created_at, latitude, longitude
-                from public.incidents where created_at >= now() - interval '24 hours'
-                order by created_at desc limit 5
-                """));
+        List<Object> erP = new ArrayList<>();
+        out.put("recent_incidents", jdbc.queryForList(
+                "select id, title, location_description, severity_level, status, created_at, latitude, longitude "
+                + "from public.incidents where " + incidentScope("", "created_at >= now() - interval '24 hours'", erP)
+                + " order by created_at desc limit 5", erP.toArray()));
         // Map layer: every open incident with coordinates, coloured by severity on the client
-        out.put("map_incidents", jdbc.queryForList("""
-                select id, title, severity_level, status, latitude, longitude
-                from public.incidents
-                where status <> 'Closed' and latitude is not null and longitude is not null limit 300
-                """));
+        List<Object> miP = new ArrayList<>();
+        out.put("map_incidents", jdbc.queryForList(
+                "select id, title, severity_level, status, latitude, longitude from public.incidents where "
+                + incidentScope("", "status <> 'Closed' and latitude is not null and longitude is not null", miP)
+                + " limit 300", miP.toArray()));
         out.put("alert_stats", jdbc.queryForMap("""
                 select
                   count(*) filter (where channels::jsonb ? 'sms') as sms_sent,
@@ -141,7 +157,7 @@ public class DashboardController {
      * source, wired here to open a response activation for an incident
      * (the one the Command Center coordinates around).
      */
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('command_post.activate')")
     @PostMapping("/eocc/activate")
     @Transactional
     public Map<String, Object> activate(@RequestBody Map<String, Object> body) {
@@ -149,6 +165,8 @@ public class DashboardController {
             throw new BusinessRuleException("The incident_id field is required.");
         }
         long incidentId = (long) Double.parseDouble(String.valueOf(body.get("incident_id")));
+        // Only open a command post for an incident in the caller's own area (national sees all).
+        areaGuard.assertOwn("public.incidents", incidentId);
         // Same machinery as the Command Center: activation row + the 95 DRF lane tasks
         Map<String, Object> result = activations.activate(incidentId, false,
                 body.get("notes") == null ? null : String.valueOf(body.get("notes")));

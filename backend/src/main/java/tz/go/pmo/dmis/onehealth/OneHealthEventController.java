@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Port of OneHealth\OneHealthEventController (index/store/review/quickView +
@@ -33,10 +35,15 @@ public class OneHealthEventController {
 
     private final JdbcTemplate jdbc;
     private final OneHealthEventService service;
+    private final AreaGuard areaGuard;
+    private final JurisdictionScope jurisdiction;
 
-    public OneHealthEventController(JdbcTemplate jdbc, OneHealthEventService service) {
+    public OneHealthEventController(JdbcTemplate jdbc, OneHealthEventService service,
+                                   AreaGuard areaGuard, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
         this.service = service;
+        this.areaGuard = areaGuard;
+        this.jurisdiction = jurisdiction;
     }
 
     // ─── Index: filters + pagination + KPI stats ───
@@ -98,6 +105,11 @@ public class OneHealthEventController {
             params.add(like);
             params.add(like);
         }
+
+        // Jurisdiction (area) scope: an area officer sees only their own area's events (oh_events carry
+        // region_id/district_id); national + non-area roles keep the full view. Shared-or-own so events with
+        // a null area stay visible. Mirrors the by-id guards on show/quick-view/directive below.
+        jurisdiction.appendAreaScopeSharedOrOwn("e", where, params);
 
         long total = jdbc.queryForObject("select count(*) from public.oh_events e where " + where,
                 Long.class, params.toArray());
@@ -161,7 +173,11 @@ public class OneHealthEventController {
             rows.add(m);
         }, listParams.toArray());
 
-        // KPI stats (global, not filter-scoped — as in the source)
+        // KPI stats (not user-filter-scoped — as in the source — but still area-scoped so an area officer's
+        // KPIs reflect only their own area, not nationwide counts).
+        StringBuilder statsWhere = new StringBuilder("deleted_at is null");
+        List<Object> statsParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("", statsWhere, statsParams);
         Map<String, Object> stats = jdbc.queryForMap("""
                 select count(*) as total,
                     count(*) filter (where status = 'submitted') as submitted,
@@ -170,8 +186,8 @@ public class OneHealthEventController {
                     count(*) filter (where status = 'monitoring') as monitoring,
                     count(*) filter (where status = 'closed') as closed,
                     count(*) filter (where status not in ('closed','archived')) as active
-                from public.oh_events where deleted_at is null
-                """);
+                from public.oh_events where %s
+                """.formatted(statsWhere), statsParams.toArray());
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("data", rows);
@@ -204,9 +220,38 @@ public class OneHealthEventController {
 
     // ─── Store ───
 
-    @PreAuthorize(Authz.OH_REPORT_EVENT)
+    @PreAuthorize("hasAuthority('one_health.manage')")
     @PostMapping
     public ResponseEntity<Map<String, Object>> store(@RequestBody OhEventWriteRequest r) {
+        // Bind the event's area to the caller: an area officer's event is created in their OWN area,
+        // ignoring any body-supplied region (anti-spoofing). National tier may use the body.
+        JurisdictionScope.Tier tier = jurisdiction.currentTier();
+        if (tier == JurisdictionScope.Tier.REGION || tier == JurisdictionScope.Tier.DISTRICT) {
+            Map<String, Object> area = jurisdiction.currentArea();
+            Object regionId = area.get("region_id");
+            Object districtId = area.get("district_id");
+            if (tier == JurisdictionScope.Tier.DISTRICT && districtId != null) {
+                // district officer: pin both region+district to their own area
+                r.setDistrictId(((Number) districtId).longValue());
+                Long regForDistrict = jdbc.queryForObject(
+                        "select region_id from public.districts where id = ?", Long.class,
+                        ((Number) districtId).longValue());
+                if (regForDistrict != null) {
+                    r.setRegionId(regForDistrict);
+                }
+            } else if (regionId != null) {
+                // region officer: pin region to their own; keep body district but force it in-region
+                r.setRegionId(((Number) regionId).longValue());
+                if (r.getDistrictId() != null) {
+                    Long regOfBodyDistrict = districtRegion(r.getDistrictId());
+                    if (regOfBodyDistrict == null || !regOfBodyDistrict.equals(((Number) regionId).longValue())) {
+                        r.setDistrictId(null);   // out-of-region district → drop; validateStore will require a valid one
+                        r.setWardId(null);
+                        r.setWardVillage(null);
+                    }
+                }
+            }
+        }
         Map<String, List<String>> errors = validateStore(r);
         if (!errors.isEmpty()) {
             return ResponseEntity.unprocessableEntity()
@@ -287,6 +332,7 @@ public class OneHealthEventController {
     @GetMapping("/{id}")
     public Map<String, Object> show(@PathVariable long id) {
         service.findEventOr404(id);
+        areaGuard.assertOwnOrShared("public.oh_events", id);
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select e.*, a.name as area_name, a.category as area_category, ci.name as concern_item_name,
                     s.organization as stakeholder_organization, s.name as stakeholder_name,
@@ -437,7 +483,7 @@ public class OneHealthEventController {
                 .body(Map.of("success", false, "message", "You are not authorized to edit this event."));
     }
 
-    @PreAuthorize(Authz.SUPER_ADMIN_ONLY)
+    @PreAuthorize("hasAuthority('one_health.manage')")
     @PutMapping("/{id}")
     public ResponseEntity<Map<String, Object>> update(@PathVariable long id) {
         service.findEventOr404(id);
@@ -447,9 +493,10 @@ public class OneHealthEventController {
 
     // ─── Review ───
 
-    @PreAuthorize(Authz.OH_APPROVE)
+    @PreAuthorize("hasAuthority('one_health.approve')")
     @PostMapping("/{id}/review")
     public ResponseEntity<Map<String, Object>> review(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        areaGuard.assertOwnOrShared("public.oh_events", id);
         Map<String, Object> b = body == null ? Map.of() : body;
         Map<String, List<String>> errors = new LinkedHashMap<>();
         String priority = OneHealthEventService.strOf(b.get("priority_level"));
@@ -472,16 +519,18 @@ public class OneHealthEventController {
 
     @GetMapping("/{id}/quick-view")
     public Map<String, Object> quickView(@PathVariable long id) {
+        areaGuard.assertOwnOrShared("public.oh_events", id);
         return service.quickView(id);
     }
 
-    // ─── Issue Directive (OneHealthDirectiveController::store) ───
+    // ─── Issue Directive (OneHealthDirectiveController::store) — PMO-DMD function ───
 
-    @PreAuthorize(Authz.OH_OPERATE)
+    @PreAuthorize("hasAuthority('one_health.directive')")
     @PostMapping("/{id}/directives")
     @SuppressWarnings("unchecked")
     public ResponseEntity<Map<String, Object>> storeDirective(@PathVariable long id, @RequestBody Map<String, Object> body) {
         service.findEventOr404(id);
+        areaGuard.assertOwnOrShared("public.oh_events", id);
         Map<String, List<String>> errors = new LinkedHashMap<>();
         String title = OneHealthEventService.strOf(body.get("directive_title"));
         String description = OneHealthEventService.strOf(body.get("action_description"));
@@ -570,6 +619,13 @@ public class OneHealthEventController {
     }
 
     // ─── helpers ───
+
+    /** Region id that owns a district, or null if the district is unknown. */
+    private Long districtRegion(long districtId) {
+        List<Long> ids = jdbc.queryForList(
+                "select region_id from public.districts where id = ?", Long.class, districtId);
+        return ids.isEmpty() ? null : ids.get(0);
+    }
 
     private boolean exists(String table, long id) {
         Long c = jdbc.queryForObject("select count(*) from public." + table + " where id = ?", Long.class, id);

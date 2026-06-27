@@ -45,14 +45,14 @@ public class RiskAssessmentController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create (standalone create page: full SRS set, draft/submit, code generation)")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('risk_assessment.create')")
     public RiskAssessmentResponses.Detail store(@Valid @ModelAttribute RiskAssessmentWriteRequest request) {
         return riskAssessmentService.store(request);
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Update (edit page's narrower field set; approval transition; matrix recalc)")
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('risk_assessment.create')")
     public RiskAssessmentResponses.Detail update(@PathVariable Long id,
                                                  @Valid @ModelAttribute RiskAssessmentWriteRequest request) {
         return riskAssessmentService.update(id, request);
@@ -61,21 +61,21 @@ public class RiskAssessmentController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete an assessment and its stored files")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(Authz.MITIGATION_MANAGE)
+    @PreAuthorize("hasAuthority('risk_assessment.create')")
     public void destroy(@PathVariable Long id) {
         riskAssessmentService.destroy(id);
     }
 
     @PostMapping("/{id}/approve")
     @Operation(summary = "Approve an assessment")
-    @PreAuthorize(Authz.MITIGATION_APPROVE)
+    @PreAuthorize("hasAuthority('risk_assessment.approve')")
     public void approve(@PathVariable Long id) {
         riskAssessmentService.approve(id);
     }
 
     @PostMapping("/{id}/publish")
     @Operation(summary = "Publish an approved assessment")
-    @PreAuthorize(Authz.MITIGATION_APPROVE)
+    @PreAuthorize("hasAuthority('risk_assessment.approve')")
     public void publish(@PathVariable Long id) {
         riskAssessmentService.publish(id);
     }

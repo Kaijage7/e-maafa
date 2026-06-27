@@ -29,6 +29,8 @@ import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.notification.ExternalDeliveryService;
 import tz.go.pmo.dmis.notification.MailService;
 
@@ -53,14 +55,19 @@ public class OneHealthDisseminationController {
     private final ObjectMapper objectMapper;
     private final Path storageRoot;
     private final ExternalDeliveryService delivery; // the one async SMS+SMTP sender (real gateway)
+    private final AreaGuard areaGuard;
+    private final JurisdictionScope jurisdiction;
 
     public OneHealthDisseminationController(JdbcTemplate jdbc, OneHealthEventService service,
                                             ObjectMapper objectMapper, ExternalDeliveryService delivery,
+                                            AreaGuard areaGuard, JurisdictionScope jurisdiction,
                                             @Value("${dmis.storage.public-root:./storage}") String publicRoot) {
         this.jdbc = jdbc;
         this.service = service;
         this.objectMapper = objectMapper;
         this.delivery = delivery;
+        this.areaGuard = areaGuard;
+        this.jurisdiction = jurisdiction;
         this.storageRoot = Path.of(publicRoot);
     }
 
@@ -85,7 +92,12 @@ public class OneHealthDisseminationController {
             where.append(" and d.status = ?");
             params.add(status);
         }
-        long total = jdbc.queryForObject("select count(*) from public.oh_disseminations d where " + where,
+        // Disseminations have no area column; scope via the parent event's region/district using the SAME
+        // shared-or-own policy the OH events list uses (national/NULL-area events stay visible; other regions'
+        // events are hidden) so an area officer never sees another region's disseminations.
+        jurisdiction.appendAreaScopeSharedOrOwn("e", where, params);
+        long total = jdbc.queryForObject(
+                "select count(*) from public.oh_disseminations d join public.oh_events e on e.id = d.event_id where " + where,
                 Long.class, params.toArray());
         int perPage = 15;
         int lastPage = (int) Math.max(1, Math.ceil(total / (double) perPage));
@@ -119,13 +131,20 @@ public class OneHealthDisseminationController {
             rows.add(m);
         }, listParams.toArray());
 
+        // Stats roll-up must use the same area scope as the list (only filters that touch area are the
+        // jurisdiction predicate on e; the dissemination_type/approval/status request filters are deliberately
+        // excluded from the stats card, matching the original which aggregated the whole — now area-scoped — set).
+        StringBuilder statsWhere = new StringBuilder("1=1");
+        List<Object> statsParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("e", statsWhere, statsParams);
         Map<String, Object> stats = jdbc.queryForMap("""
                 select count(*) as total,
-                    count(*) filter (where approval_status = 'pending') as pending_approval,
-                    count(*) filter (where status = 'sent') as sent,
-                    count(*) filter (where status = 'failed') as failed
-                from public.oh_disseminations
-                """);
+                    count(*) filter (where d.approval_status = 'pending') as pending_approval,
+                    count(*) filter (where d.status = 'sent') as sent,
+                    count(*) filter (where d.status = 'failed') as failed
+                from public.oh_disseminations d join public.oh_events e on e.id = d.event_id
+                where %s
+                """.formatted(statsWhere), statsParams.toArray());
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("data", rows);
@@ -142,6 +161,8 @@ public class OneHealthDisseminationController {
 
     @GetMapping("/disseminations/{id}")
     public Map<String, Object> show(@PathVariable long id) {
+        // Scope via the parent event's area (disseminations carry no area column); out-of-area 404s.
+        areaGuard.assertParentOwnOrShared("public.oh_disseminations", "event_id", "public.oh_events", id);
         Map<String, Object> d = findOr404(id);
         long eventId = ((Number) d.get("event_id")).longValue();
         Map<String, Object> event = jdbc.queryForMap("select id, event_id, status from public.oh_events where id = ?", eventId);
@@ -202,7 +223,7 @@ public class OneHealthDisseminationController {
 
     // ─── Store (dual track) ───
 
-    @PreAuthorize(Authz.OH_DISSEMINATE)
+    @PreAuthorize("hasAuthority('one_health.disseminate')")
     @PostMapping(value = "/events/{eventId}/disseminations/stakeholder", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @Transactional
     public ResponseEntity<Map<String, Object>> storeStakeholder(@PathVariable long eventId,
@@ -211,6 +232,8 @@ public class OneHealthDisseminationController {
             @RequestParam(name = "channels", required = false) List<String> channels,
             @RequestPart(name = "recipient_file", required = false) MultipartFile recipientFile) {
         service.findEventOr404(eventId);
+        // The dissemination inherits the event's area; block creating one on a cross-area event (404).
+        areaGuard.assertOwnOrShared("public.oh_events", eventId);
         Map<String, List<String>> errors = new LinkedHashMap<>();
         String alertMessage = trim(form.get("alert_message"));
         String sector = trim(form.get("sector"));
@@ -273,7 +296,7 @@ public class OneHealthDisseminationController {
         return ResponseEntity.ok(Map.of("success", true, "message", message, "id", dissId));
     }
 
-    @PreAuthorize(Authz.OH_DISSEMINATE)
+    @PreAuthorize("hasAuthority('one_health.disseminate')")
     @PostMapping(value = "/events/{eventId}/disseminations/public", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @Transactional
     public ResponseEntity<Map<String, Object>> storePublic(@PathVariable long eventId,
@@ -282,6 +305,8 @@ public class OneHealthDisseminationController {
             @RequestParam(name = "channels", required = false) List<String> channels,
             @RequestPart(name = "recipient_file", required = false) MultipartFile recipientFile) {
         service.findEventOr404(eventId);
+        // The dissemination inherits the event's area; block creating one on a cross-area event (404).
+        areaGuard.assertOwnOrShared("public.oh_events", eventId);
         Map<String, List<String>> errors = new LinkedHashMap<>();
         String alertMessage = trim(form.get("alert_message"));
         String directives = trim(form.get("directives"));
@@ -330,7 +355,7 @@ public class OneHealthDisseminationController {
 
     // ─── Approve / Reject ───
 
-    @PreAuthorize(Authz.OH_APPROVE)
+    @PreAuthorize("hasAuthority('one_health.approve')")
     @PostMapping("/disseminations/{id}/approve")
     @Transactional
     public ResponseEntity<Map<String, Object>> approve(@PathVariable long id, @org.springframework.web.bind.annotation.RequestBody Map<String, Object> body) {
@@ -359,7 +384,7 @@ public class OneHealthDisseminationController {
 
     // ─── Acknowledge (stakeholder-session action; PMO sessions get the source 403) ───
 
-    @PreAuthorize(Authz.OH_ACKNOWLEDGE)
+    @PreAuthorize("hasAuthority('one_health.acknowledge')")
     @PostMapping("/disseminations/{id}/acknowledge")
     public ResponseEntity<Map<String, Object>> acknowledge(@PathVariable long id) {
         findOr404(id);
@@ -369,10 +394,12 @@ public class OneHealthDisseminationController {
 
     // ─── Resend ───
 
-    @PreAuthorize(Authz.OH_APPROVE)
+    @PreAuthorize("hasAuthority('one_health.manage')")
     @PostMapping("/disseminations/{id}/resend")
     @Transactional
     public Map<String, Object> resend(@PathVariable long id) {
+        // resend dispatches REAL SMS/email — block cross-area resends (404), keeping the one_health.manage gate.
+        areaGuard.assertParentOwnOrShared("public.oh_disseminations", "event_id", "public.oh_events", id);
         findOr404(id);
         Map<String, Object> results = sendDissemination(id);
         return Map.of("success", true, "message", "Dissemination resent successfully.", "stats", results);

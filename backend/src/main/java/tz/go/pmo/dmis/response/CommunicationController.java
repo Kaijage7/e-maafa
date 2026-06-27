@@ -24,7 +24,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.notification.ExternalDeliveryService;
 import tz.go.pmo.dmis.notification.NotificationService;
 
@@ -73,13 +75,18 @@ public class CommunicationController {
     private final IncidentWorkflowService users;
     private final ExternalDeliveryService externalDelivery; // the one async SMS+SMTP sender (off the request thread)
     private final NotificationService notifications;        // the one in-app feed dispatcher
+    private final JurisdictionScope jurisdiction;           // row-level area scoping for the operational history list
+    private final AreaGuard areaGuard;                      // by-id read area guard (scoped-list/unscoped-detail leaks)
 
     public CommunicationController(JdbcTemplate jdbc, IncidentWorkflowService users,
-                                   ExternalDeliveryService externalDelivery, NotificationService notifications) {
+                                   ExternalDeliveryService externalDelivery, NotificationService notifications,
+                                   JurisdictionScope jurisdiction, AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.users = users;
         this.externalDelivery = externalDelivery;
         this.notifications = notifications;
+        this.jurisdiction = jurisdiction;
+        this.areaGuard = areaGuard;
     }
 
     // ─── Dashboard + form data ───
@@ -107,7 +114,7 @@ public class CommunicationController {
                        count(*) filter (where status = 'failed') as failed
                 from public.alert_recipients group by delivery_method order by count desc
                 """));
-        out.put("recent_alerts", alertList("limit 10"));
+        out.put("recent_alerts", alertList("limit 10", true));   // dashboard preview — scope to the officer's area (shared-or-own)
         return out;
     }
 
@@ -122,8 +129,13 @@ public class CommunicationController {
                 "select id, name, type, title, message, variables, is_active from public.alert_templates order by name");
         templates.forEach(t -> parseJsonField(t, "variables"));  // clean arrays, not PGobjects
         out.put("templates", templates);
-        out.put("incidents", jdbc.queryForList(
-                "select id, title, severity_level from public.incidents where status not in ('Closed','Resolved') order by reported_at desc limit 50"));
+        StringBuilder incidentSql = new StringBuilder(
+                "select i.id, i.title, i.severity_level from public.incidents i"
+                        + " where i.status not in ('Closed','Resolved')");
+        List<Object> incidentParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("i", incidentSql, incidentParams);
+        incidentSql.append(" order by i.reported_at desc limit 50");
+        out.put("incidents", jdbc.queryForList(incidentSql.toString(), incidentParams.toArray()));
         return out;
     }
 
@@ -148,7 +160,7 @@ public class CommunicationController {
      * resolved recipient × selected channel.
      */
     @PostMapping("/alerts")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     // NOT @Transactional: fanOut writes the alert + recipient rows (auto-committed) then offloads the
     // SMS/SMTP send to the @Async ExternalDeliveryService — the request never holds a DB connection
     // across gateway I/O, and a rollback can't discard a record of a message that already went out.
@@ -373,11 +385,16 @@ public class CommunicationController {
 
     @GetMapping("/alerts")
     public Map<String, Object> history() {
-        return Map.of("alerts", alertList("limit 100"));
+        return Map.of("alerts", alertList("limit 100", true));   // operational history — scope to the officer's area
     }
 
-    private List<Map<String, Object>> alertList(String limit) {
-        List<Map<String, Object>> rows = jdbc.queryForList("""
+    /**
+     * @param scopeArea when true, restrict incident-tied alerts to the caller's own area (region/district
+     *        officers); alerts not tied to an incident keep a NULL {@code i.region_id}/{@code i.district_id}
+     *        and so stay visible (shared-or-own). National + non-area roles add no predicate (full set).
+     */
+    private List<Map<String, Object>> alertList(String limit, boolean scopeArea) {
+        StringBuilder sql = new StringBuilder("""
                 select a.*, i.title as incident_title, u.name as created_by_name,
                        (select count(*) from public.alert_recipients ar where ar.alert_id = a.id) as total_recipients,
                        (select count(*) from public.alert_recipients ar
@@ -387,8 +404,13 @@ public class CommunicationController {
                 from public.alerts a
                 left join public.incidents i on i.id = a.incident_id
                 left join public.users u on u.id = a.created_by
-                order by a.created_at desc %s
-                """.formatted(limit));
+                where 1=1""");
+        List<Object> params = new ArrayList<>();
+        if (scopeArea) {
+            jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        }
+        sql.append(" order by a.created_at desc ").append(limit);
+        List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
         // Parse the json columns so the API returns clean arrays, not PGobjects.
         rows.forEach(r -> { parseJsonField(r, "channels"); parseJsonField(r, "recipient_groups"); });
         return rows;
@@ -412,12 +434,17 @@ public class CommunicationController {
 
     @GetMapping("/alerts/{id}")
     public Map<String, Object> alertDetails(@PathVariable long id) {
-        List<Map<String, Object>> alerts = jdbc.queryForList("""
-                select a.*, i.title as incident_title, u.name as created_by_name
-                from public.alerts a
-                left join public.incidents i on i.id = a.incident_id
-                left join public.users u on u.id = a.created_by where a.id = ?
-                """, id);
+        // Area guard mirroring the history list (alertList shared-or-own): an alert tied to another area's
+        // incident 404s for region/district officers, while alerts with NULL incident_id stay shared-visible.
+        StringBuilder where = new StringBuilder("a.id = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(id);
+        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        List<Map<String, Object>> alerts = jdbc.queryForList(
+                "select a.*, i.title as incident_title, u.name as created_by_name"
+                        + " from public.alerts a"
+                        + " left join public.incidents i on i.id = a.incident_id"
+                        + " left join public.users u on u.id = a.created_by where " + where, params.toArray());
         if (alerts.isEmpty()) {
             throw new ResourceNotFoundException("Alert not found.");
         }
@@ -448,7 +475,7 @@ public class CommunicationController {
      * a bare UPDATE and sent nothing.
      */
     @PostMapping("/alerts/{id}/resend-failed")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     public Map<String, Object> resendFailed(@PathVariable long id) {
         Map<String, Object> alert = jdbc.queryForMap(
                 "select title, message, recipient_groups from public.alerts where id = ?", id);
@@ -493,7 +520,7 @@ public class CommunicationController {
     // ─── Templates ───
 
     @PostMapping("/templates")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     @Transactional
     public Map<String, Object> saveTemplate(@RequestBody Map<String, Object> body) throws Exception {
         String name = requireMax(body.get("name"), 255, "name");
@@ -511,7 +538,7 @@ public class CommunicationController {
     }
 
     @PostMapping("/templates/{id}")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     @Transactional
     public Map<String, Object> updateTemplate(@PathVariable long id, @RequestBody Map<String, Object> body) throws Exception {
         String message = requireMax(body.get("message"), 1000, "message");
@@ -529,7 +556,7 @@ public class CommunicationController {
     }
 
     @PostMapping("/templates/{id}/toggle")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     @Transactional
     public Map<String, Object> toggleTemplate(@PathVariable long id) {
         int updated = jdbc.update(
@@ -541,7 +568,7 @@ public class CommunicationController {
     }
 
     @DeleteMapping("/templates/{id}")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     @Transactional
     public Map<String, Object> deleteTemplate(@PathVariable long id) {
         if (jdbc.update("delete from public.alert_templates where id = ?", id) == 0) {
@@ -552,7 +579,7 @@ public class CommunicationController {
 
     /** Fill {placeholders} from an incident + now — the compose form's preview. */
     @PostMapping("/templates/{id}/preview")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)   // read-only POST, but gated so the coverage test holds
+    @PreAuthorize("hasAuthority('communication_and_alerts.view')")   // read-only POST, but gated so the coverage test holds
     public Map<String, Object> previewTemplate(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         List<Map<String, Object>> templates = jdbc.queryForList(
                 "select title, message from public.alert_templates where id = ?", id);
@@ -564,6 +591,9 @@ public class CommunicationController {
         vars.put("date", LocalDate.now().toString());
         Object incidentId = body == null ? null : body.get("incident_id");
         if (incidentId != null) {
+            // Area guard: a region/district officer can only preview against an incident in their own area
+            // (incidents are STRICT-scoped); a foreign incident 404s instead of leaking its title/location.
+            areaGuard.assertOwn("public.incidents", (long) Double.parseDouble(String.valueOf(incidentId)));
             List<Map<String, Object>> incidents = jdbc.queryForList("""
                     select i.title, i.severity_level, coalesce(i.location_description,'') as location,
                            coalesce(d.name,'') as district

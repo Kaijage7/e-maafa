@@ -36,7 +36,8 @@ public class PortalNewsAdminController {
     private final JdbcTemplate jdbc;
 
     public record NewsWriteRequest(String title, String excerpt, String body, String image,
-                                   String category, Boolean isActive) {
+                                   String category, Boolean isActive,
+                                   String title_sw, String excerpt_sw, String body_sw) {
     }
 
     @GetMapping
@@ -44,7 +45,8 @@ public class PortalNewsAdminController {
     @PreAuthorize("isAuthenticated()")
     public Map<String, Object> index() {
         List<Map<String, Object>> items = jdbc.queryForList(
-                "select id, title, slug, excerpt, image, category, is_active as \"isActive\","
+                "select id, title, slug, excerpt, body, image, category, is_active as \"isActive\","
+                        + " title_sw, excerpt_sw, body_sw,"
                         + " to_char(published_at, 'DD Mon YYYY') as \"publishedAt\""
                         + " from public.portal_news order by published_at desc nulls last, id desc");
         long news = items.stream().filter(i -> "news".equals(i.get("category"))).count();
@@ -57,34 +59,38 @@ public class PortalNewsAdminController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a news/event item (slug auto-generated)")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> create(@RequestBody NewsWriteRequest req) {
         requireTitle(req);
         boolean active = req.isActive() == null || req.isActive();
         String slug = uniqueSlug(slugify(req.title()), null);
         Long id = jdbc.queryForObject(
-                "insert into public.portal_news(title,slug,excerpt,body,image,category,published_at,is_active,"
-                        + "created_at,updated_at) values (?,?,?,?,?,?, case when ? then now() end, ?, now(), now())"
+                "insert into public.portal_news(title,slug,excerpt,body,image,category,title_sw,excerpt_sw,body_sw,"
+                        + "published_at,is_active,created_at,updated_at)"
+                        + " values (?,?,?,?,?,?,?,?,?, case when ? then now() end, ?, now(), now())"
                         + " returning id", Long.class,
                 req.title().trim(), slug, req.excerpt(), req.body(), req.image(),
-                req.category() == null ? "news" : req.category(), active, active);
+                req.category() == null ? "news" : req.category(),
+                req.title_sw(), req.excerpt_sw(), req.body_sw(), active, active);
         return Map.of("id", id, "slug", slug, "message", "Created");
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a news/event item")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> update(@PathVariable long id, @RequestBody NewsWriteRequest req) {
         requireTitle(req);
         boolean active = req.isActive() == null || req.isActive();
         int updated = jdbc.update(
-                "update public.portal_news set title=?, excerpt=?, body=?, image=?, category=?, is_active=?,"
+                "update public.portal_news set title=?, excerpt=?, body=?, image=?, category=?,"
+                        + " title_sw=?, excerpt_sw=?, body_sw=?, is_active=?,"
                         + " published_at = case when ? and published_at is null then now() else published_at end,"
                         + " updated_at=now() where id=?",
                 req.title().trim(), req.excerpt(), req.body(), req.image(),
-                req.category() == null ? "news" : req.category(), active, active, id);
+                req.category() == null ? "news" : req.category(),
+                req.title_sw(), req.excerpt_sw(), req.body_sw(), active, active, id);
         if (updated == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found");
         }
@@ -93,7 +99,7 @@ public class PortalNewsAdminController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a news/event item")
-    @PreAuthorize(Authz.CONTENT_MANAGE)
+    @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> delete(@PathVariable long id) {
         jdbc.update("delete from public.portal_news where id=?", id);

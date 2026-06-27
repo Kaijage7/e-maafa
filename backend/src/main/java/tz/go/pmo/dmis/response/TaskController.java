@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.notification.NotificationService;
 
 /**
@@ -41,12 +42,14 @@ public class TaskController {
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService users;
     private final NotificationService notifications; // the ONE dispatcher (in-app feed + channels)
+    private final JurisdictionScope jurisdiction; // row-level area scope for operational lists
 
     public TaskController(JdbcTemplate jdbc, IncidentWorkflowService users,
-                          NotificationService notifications) {
+                          NotificationService notifications, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
         this.users = users;
         this.notifications = notifications;
+        this.jurisdiction = jurisdiction;
     }
 
     // ─── Board / my-tasks / calendar ───
@@ -64,6 +67,9 @@ public class TaskController {
             where.append(" and t.assigned_to_user_id = ?");
             params.add(users.actingUserId());
         }
+        // Row-level area scope on the joined incident: a region/district officer sees only their own
+        // area's tasks (plus area-less ones); national + non-area roles keep the full view.
+        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("tasks", jdbc.queryForList("""
                 select t.id, t.title, t.priority, t.status, t.due_date, t.completed_at, t.progress_percent,
@@ -77,40 +83,57 @@ public class TaskController {
                 where %s
                 order by %s, t.due_date asc nulls last limit 200
                 """.formatted(where, PRIORITY_ORDER), params.toArray()));
-        out.put("statistics", jdbc.queryForMap("""
+        // Aggregates must respect the same area scope as the board, otherwise an area officer's
+        // statistics/by_priority/upcoming roll up the whole country. Join the incident and append the scope.
+        StringBuilder statWhere = new StringBuilder("1=1");
+        List<Object> statParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("i", statWhere, statParams);
+        out.put("statistics", jdbc.queryForMap(("""
                 select count(*) as total_tasks,
-                       count(*) filter (where status = 'To Do') as pending_tasks,
-                       count(*) filter (where status = 'In Progress') as in_progress_tasks,
-                       count(*) filter (where status = 'Completed') as completed_tasks,
-                       count(*) filter (where status <> 'Completed' and due_date < now()) as overdue_tasks,
-                       round(100.0 * count(*) filter (where status = 'Completed') / greatest(count(*), 1), 1) as completion_rate
-                from public.incident_tasks
-                """));
-        out.put("by_priority", jdbc.queryForList(
-                "select priority, count(*) as count from public.incident_tasks group by priority"));
-        out.put("upcoming_deadlines", jdbc.queryForList("""
+                       count(*) filter (where t.status = 'To Do') as pending_tasks,
+                       count(*) filter (where t.status = 'In Progress') as in_progress_tasks,
+                       count(*) filter (where t.status = 'Completed') as completed_tasks,
+                       count(*) filter (where t.status <> 'Completed' and t.due_date < now()) as overdue_tasks,
+                       round(100.0 * count(*) filter (where t.status = 'Completed') / greatest(count(*), 1), 1) as completion_rate
+                from public.incident_tasks t
+                left join public.incidents i on i.id = t.incident_id
+                where %s
+                """).formatted(statWhere), statParams.toArray()));
+        out.put("by_priority", jdbc.queryForList(("""
+                select t.priority, count(*) as count from public.incident_tasks t
+                left join public.incidents i on i.id = t.incident_id
+                where %s group by t.priority
+                """).formatted(statWhere), statParams.toArray()));
+        StringBuilder upWhere = new StringBuilder(
+                "t.status <> 'Completed' and t.due_date between now() and now() + interval '7 days'");
+        List<Object> upParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("i", upWhere, upParams);
+        out.put("upcoming_deadlines", jdbc.queryForList(("""
                 select t.id, t.title, t.priority, t.due_date, i.title as incident_title, u.name as assigned_to_name
                 from public.incident_tasks t
                 left join public.incidents i on i.id = t.incident_id
                 left join public.users u on u.id = t.assigned_to_user_id
-                where t.status <> 'Completed' and t.due_date between now() and now() + interval '7 days'
+                where %s
                 order by t.due_date limit 10
-                """));
+                """).formatted(upWhere), upParams.toArray()));
         return out;
     }
 
     /** Calendar feed: due-date events coloured by priority (calendarView's mapping). */
     @GetMapping("/calendar")
     public Map<String, Object> calendar() {
-        List<Map<String, Object>> events = jdbc.queryForList("""
+        StringBuilder sql = new StringBuilder("""
                 select t.id, t.title, t.due_date::date as start, t.priority, t.status,
                        i.title as incident_title, u.name as assigned_to_name
                 from public.incident_tasks t
                 left join public.incidents i on i.id = t.incident_id
                 left join public.users u on u.id = t.assigned_to_user_id
-                where t.status <> 'Cancelled' and t.due_date is not null
-                order by t.due_date
-                """);
+                where t.status <> 'Cancelled' and t.due_date is not null""");
+        List<Object> params = new ArrayList<>();
+        // Same area scope as the board: an area officer's calendar shows only their own area's tasks.
+        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        sql.append(" order by t.due_date");
+        List<Map<String, Object>> events = jdbc.queryForList(sql.toString(), params.toArray());
         for (Map<String, Object> event : events) {
             event.put("color", switch (String.valueOf(event.get("priority"))) {
                 case "Critical" -> "#dc3545";
@@ -126,10 +149,15 @@ public class TaskController {
     @GetMapping("/form-data")
     public Map<String, Object> formData(@RequestParam(required = false) Long incident_id) {
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("incidents", jdbc.queryForList("""
-                select id, title, severity_level from public.incidents
-                where status in ('Active Response','Verified') order by severity_level limit 100
-                """));
+        // Area scope on the picker: an area officer may only assign tasks to incidents in their own
+        // district/region (or shared/null-area ones); national tier keeps the full list. Mirrors the board.
+        StringBuilder incWhere = new StringBuilder("i.status in ('Active Response','Verified')");
+        List<Object> incParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeSharedOrOwn("i", incWhere, incParams);
+        out.put("incidents", jdbc.queryForList(
+                "select i.id, i.title, i.severity_level from public.incidents i where " + incWhere
+                        + " order by i.severity_level limit 100",
+                incParams.toArray()));
         // Source filters User::where('is_active', true); the local users read model
         // has no such column yet — every local account is assignable.
         out.put("users", jdbc.queryForList("select id, name from public.users order by name"));
@@ -144,10 +172,19 @@ public class TaskController {
     // ─── CRUD ───
 
     @PostMapping
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('tasks.manage')")
     @Transactional
     public Map<String, Object> store(@RequestBody Map<String, Object> body) {
         long incidentId = lng(body.get("incident_id"), "incident_id");
+        // A task may only be opened against an incident in the caller's own area (national sees all); an
+        // out-of-area incident_id 404s rather than letting a district officer plant a task on another region.
+        StringBuilder areaWhere = new StringBuilder("id = ?");
+        List<Object> areaParams = new ArrayList<>();
+        areaParams.add(incidentId);
+        jurisdiction.appendAreaScope("", areaWhere, areaParams);
+        if (jdbc.queryForList("select 1 from public.incidents where " + areaWhere, areaParams.toArray()).isEmpty()) {
+            throw new ResourceNotFoundException("Incident not found.");
+        }
         String title = requireMax255(body.get("task_title"), "task_title");
         String description = require(body.get("task_description"), "task_description");
         long assignedTo = lng(body.get("assigned_to_user_id"), "assigned_to_user_id");
@@ -198,7 +235,7 @@ public class TaskController {
 
     /** The form's fields map onto the real columns, so edits persist. */
     @PostMapping("/{id}")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('tasks.manage')")
     @Transactional
     public Map<String, Object> update(@PathVariable long id, @RequestBody Map<String, Object> body) {
         findOr404(id);
@@ -221,7 +258,7 @@ public class TaskController {
     // ─── Actions ───
 
     @PostMapping("/{id}/assign")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('tasks.manage')")
     @Transactional
     public Map<String, Object> assign(@PathVariable long id, @RequestBody Map<String, Object> body) {
         findOr404(id);
@@ -238,7 +275,7 @@ public class TaskController {
     }
 
     @PostMapping("/{id}/status")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('tasks.manage')")
     @Transactional
     public Map<String, Object> updateStatus(@PathVariable long id, @RequestBody Map<String, Object> body) {
         Map<String, Object> task = findOr404(id);
@@ -312,7 +349,16 @@ public class TaskController {
     }
 
     private Map<String, Object> findOr404(long id) {
-        List<Map<String, Object>> rows = jdbc.queryForList("select * from public.incident_tasks where id = ?", id);
+        // Jurisdiction visibility: an area officer may load (read OR mutate) only a task on an incident in their
+        // own district/region (or a shared/null-area one); national tier sees all. Mirrors the board scope so
+        // the detail endpoint can't leak another area's task. Out of area → 404.
+        StringBuilder where = new StringBuilder("t.id = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(id);
+        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "select t.* from public.incident_tasks t left join public.incidents i on i.id = t.incident_id where " + where,
+                params.toArray());
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Task not found.");
         }

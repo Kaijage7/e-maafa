@@ -78,7 +78,7 @@ public class EmailLogController {
      * Routes through {@link MailService}, which logs each recipient to {@code email_logs} as 'manual'.
      */
     @PostMapping("/send")
-    @PreAuthorize(Authz.COMMS_DISSEMINATE)
+    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     public Map<String, Object> send(@RequestBody Map<String, Object> body) {
         // Manual / pasted (incl. from-Excel) addresses, plus any selected audience group resolved live.
         Set<String> recipientSet = new LinkedHashSet<>(Recipients.parse(body.get("recipients")));

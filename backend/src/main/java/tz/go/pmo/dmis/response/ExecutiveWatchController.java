@@ -9,6 +9,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Executive Watch — the national situation picture for the highest level (PM / PS / Director /
@@ -35,13 +37,21 @@ public class ExecutiveWatchController {
             "Energy", "Communications", "Transportation", "Hazardous Materials");
 
     private final JdbcTemplate jdbc;
+    private final JurisdictionScope jurisdiction;
 
-    public ExecutiveWatchController(JdbcTemplate jdbc) {
+    public ExecutiveWatchController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
+        this.jurisdiction = jurisdiction;
     }
 
     @GetMapping
     public Map<String, Object> watch() {
+        // The Executive Watch is the NATIONAL leadership common-operating-picture (PM/PS/Director/President):
+        // an inherently whole-country view, not an area report. Restrict it to the national tier; an area
+        // officer (region/district) gets 404 rather than the national picture.
+        if (jurisdiction.currentTier() != JurisdictionScope.Tier.NATIONAL) {
+            throw new ResourceNotFoundException("Not found.");
+        }
         Map<String, Object> out = new LinkedHashMap<>();
 
         long activeDisaster = count("""
@@ -134,6 +144,16 @@ public class ExecutiveWatchController {
                     select 1 from public.assessment_categories ac
                     where ac.assessment_id = da.id and ac.category = 'Infrastructure')
                 """);
+        // HazMat lifeline signal — EXACT match on the Technological hazard class (Industrial Accident,
+        // Building Collapse), NOT a fuzzy name regex (which could false-flag the national leadership board
+        // on stray words like "gas"/"oil"). The taxonomy has no dedicated "hazardous materials" hazard, so
+        // this maps the Technological class to the FEMA HazMat/technological lifeline — exact and defensible.
+        long technologicalActive = count("""
+                select count(*) from public.incidents i
+                join public.hazards h on h.id = i.hazard_id
+                where i.status in ('Active Response','Verified') and coalesce(i.is_simulation,false)=false
+                  and h.type = 'Technological'
+                """);
 
         List<Map<String, Object>> out = new ArrayList<>();
         out.add(lifeline("Safety & Security",
@@ -149,7 +169,14 @@ public class ExecutiveWatchController {
                 activeCritical > 0 ? "yellow" : "green",
                 activeCritical > 0 ? "Casualty risk in active critical incident(s)" : "Routine",
                 "Ministry of Health · DRF 6"));
-        out.add(lifeline("Energy", "green", "No reported disruption", "TANESCO · DRF 14"));
+        // Was hardcoded "green". Now grounded in REPORTED infrastructure damage (evidence, not inference) —
+        // power systems are part of assessed infrastructure damage, like Transportation. We do not assert a
+        // power problem the data doesn't show.
+        out.add(lifeline("Energy",
+                infraDamage > 0 ? "yellow" : "green",
+                infraDamage > 0 ? "Infrastructure damage reported in assessments — power systems may be affected"
+                        : "No reported power-infrastructure damage",
+                "TANESCO · DRF 14"));
         out.add(lifeline("Communications",
                 disasterPosture > 0 ? "yellow" : "green",
                 disasterPosture > 0 ? "Emergency comms active" : "Networks nominal",
@@ -158,7 +185,12 @@ public class ExecutiveWatchController {
                 infraDamage > 0 ? "yellow" : "green",
                 infraDamage > 0 ? "Infrastructure damage reported in assessments" : "Routes open",
                 "TANROADS/TARURA · DRF 3"));
-        out.add(lifeline("Hazardous Materials", "green", "No HazMat incidents", "Fire & Rescue · GCLA"));
+        // Was hardcoded "green". Now driven by EXACT active Technological-class incidents (no fuzzy regex).
+        out.add(lifeline("Hazardous Materials",
+                technologicalActive > 0 ? "red" : "green",
+                technologicalActive > 0 ? technologicalActive + " active technological/industrial incident(s) — HazMat exposure risk"
+                        : "No reported technological/HazMat incidents",
+                "Fire & Rescue · GCLA"));
         return out;
     }
 

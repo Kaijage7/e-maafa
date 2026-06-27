@@ -86,7 +86,7 @@ public class ContingencyPlanController {
     }
 
     @PostMapping
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('contingency_plans.manage')")
     @Transactional
     public Map<String, Object> store(@RequestBody Map<String, Object> body) throws Exception {
         Long id = jdbc.queryForObject("""
@@ -100,7 +100,7 @@ public class ContingencyPlanController {
     }
 
     @PostMapping("/{id}")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('contingency_plans.manage')")
     @Transactional
     public Map<String, Object> update(@PathVariable long id, @RequestBody Map<String, Object> body) throws Exception {
         findOr404(id);
@@ -114,7 +114,7 @@ public class ContingencyPlanController {
     }
 
     @PostMapping("/{id}/submit")
-    @PreAuthorize(Authz.RESPONSE_OPERATE)
+    @PreAuthorize("hasAuthority('contingency_plans.manage')")
     @Transactional
     public Map<String, Object> submit(@PathVariable long id) {
         if (!"draft".equals(findOr404(id).get("status"))) {
@@ -125,7 +125,7 @@ public class ContingencyPlanController {
     }
 
     @PostMapping("/{id}/approve")
-    @PreAuthorize(Authz.RESPONSE_OVERSIGHT)
+    @PreAuthorize("hasAuthority('contingency_plans.approve')")
     @Transactional
     public Map<String, Object> approve(@PathVariable long id) {
         if (!"pending".equals(findOr404(id).get("status"))) {
@@ -137,7 +137,7 @@ public class ContingencyPlanController {
     }
 
     @PostMapping("/{id}/reject")
-    @PreAuthorize(Authz.RESPONSE_OVERSIGHT)
+    @PreAuthorize("hasAuthority('contingency_plans.approve')")
     @Transactional
     public Map<String, Object> reject(@PathVariable long id) {
         if (!"pending".equals(findOr404(id).get("status"))) {
@@ -148,7 +148,7 @@ public class ContingencyPlanController {
     }
 
     @PostMapping("/{id}/archive")
-    @PreAuthorize(Authz.RESPONSE_OVERSIGHT)
+    @PreAuthorize("hasAuthority('contingency_plans.approve')")
     @Transactional
     public Map<String, Object> archive(@PathVariable long id) {
         findOr404(id);
