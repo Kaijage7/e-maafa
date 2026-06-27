@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { addMapNav, addTanzaniaGisBase } from '../../core/tz-map';
 import { escapeHtml } from '../../core/html';
+import { PortalLabels } from './portal-i18n';
 
 declare const L: any;
 
@@ -154,35 +155,34 @@ const DIM_DESC: Record<string, string> = {
     <div class="hero">
       <div class="hero-row">
         <div>
-          <div class="eyebrow">INFORM Risk Index · Tanzania</div>
-          <h1>Risk Explorer</h1>
-          <p>Choose a lens — overall INFORM risk, a dimension, or any single indicator — to recolour the
-             council choropleth and the ranked table. Click a council for its full INFORM profile.</p>
+          <div class="eyebrow">{{ t('eyebrow') }}</div>
+          <h1>{{ t('risk_explorer') }}</h1>
+          <p>{{ t('hero_desc') }}</p>
         </div>
         @if (national(); as n) {
           <div class="natbadge" [style.borderColor]="cls(n.risk).color">
             <div class="v">{{ fmt(n.risk) }}</div>
-            <span class="b" [style.background]="cls(n.risk).color">{{ cls(n.risk).level }} Risk</span>
+            <span class="b" [style.background]="cls(n.risk).color">{{ levelLabel(cls(n.risk).level) }} {{ t('risk_suffix') }}</span>
           </div>
         }
       </div>
     </div>
     }
     <div class="stats">
-      <div class="stat"><div class="v">{{ stats().councils }}</div><div class="l">Councils</div></div>
-      <div class="stat"><div class="v">{{ stats().regions }}</div><div class="l">Regions</div></div>
-      <div class="stat"><div class="v">{{ stats().dimensions }}</div><div class="l">Dimensions</div></div>
-      <div class="stat"><div class="v">{{ stats().indicators }}</div><div class="l">Indicators</div></div>
+      <div class="stat"><div class="v">{{ stats().councils }}</div><div class="l">{{ t('stat_councils') }}</div></div>
+      <div class="stat"><div class="v">{{ stats().regions }}</div><div class="l">{{ t('stat_regions') }}</div></div>
+      <div class="stat"><div class="v">{{ stats().dimensions }}</div><div class="l">{{ t('stat_dimensions') }}</div></div>
+      <div class="stat"><div class="v">{{ stats().indicators }}</div><div class="l">{{ t('stat_indicators') }}</div></div>
     </div>
 
     <div class="wrap">
       <!-- LENS SELECTOR ------------------------------------------------------------------------ -->
       <div class="card pad controls">
         <div class="ctl-row">
-          <span class="eyebrow">Colour councils by</span>
+          <span class="eyebrow">{{ t('colour_councils_by') }}</span>
           <div class="chips">
             @for (l of dimLenses(); track l.key) {
-              <button class="chip" [class.on]="activeScope() === l.scope" (click)="setLens(l)">{{ l.label }}</button>
+              <button class="chip" [class.on]="activeScope() === l.scope" (click)="setLens(l)">{{ lensLabel(l) }}</button>
             }
           </div>
         </div>
@@ -191,14 +191,14 @@ const DIM_DESC: Record<string, string> = {
           <p class="muted" style="font-size:.8rem; margin:.1rem 0 .5rem;">{{ dimDesc() }}</p>
           <div class="indi">
             <div class="indi-top">
-              <span class="eyebrow">{{ dim.dimension }} — drill into a category, component or indicator</span>
+              <span class="eyebrow">{{ dimLabel(dim) }} — {{ t('drill_into') }}</span>
               <select (change)="onDrillSelect($event)">
-                <option [value]="'dim:' + dim.key" [selected]="metricKey() === 'dim:' + dim.key">Whole {{ dim.dimension }} (dimension)</option>
+                <option [value]="'dim:' + dim.key" [selected]="metricKey() === 'dim:' + dim.key">{{ t('whole') }} {{ dimLabel(dim) }} {{ t('paren_dimension') }}</option>
                 @for (c of dim.categories; track c.category) {
-                  <optgroup [label]="'Category · ' + c.category">
-                    <option [value]="'cat:' + c.category" [selected]="metricKey() === 'cat:' + c.category">{{ c.category }} (category)</option>
+                  <optgroup [label]="t('optgroup_category') + ' ' + c.category">
+                    <option [value]="'cat:' + c.category" [selected]="metricKey() === 'cat:' + c.category">{{ c.category }} {{ t('paren_category') }}</option>
                     @for (comp of c.components; track comp.component) {
-                      <option [value]="'comp:' + comp.component" [selected]="metricKey() === 'comp:' + comp.component">  {{ comp.component }} (component)</option>
+                      <option [value]="'comp:' + comp.component" [selected]="metricKey() === 'comp:' + comp.component">  {{ comp.component }} {{ t('paren_component') }}</option>
                       @for (ind of comp.indicators; track ind.id) {
                         <option [value]="'ind:' + ind.id" [selected]="metricKey() === 'ind:' + ind.id">    {{ ind.name }}</option>
                       }
@@ -217,7 +217,7 @@ const DIM_DESC: Record<string, string> = {
                   <div class="grp-name">{{ comp.component }}</div>
                   <div class="ind-chips">
                     <button class="ind-chip" [class.on]="metricKey() === 'comp:' + comp.component"
-                            (click)="setMetric('comp:' + comp.component, 'comp', comp.component)" style="font-style:italic;">whole component</button>
+                            (click)="setMetric('comp:' + comp.component, 'comp', comp.component)" style="font-style:italic;">{{ t('whole_component') }}</button>
                     @for (ind of comp.indicators; track ind.id) {
                       <button class="ind-chip" [class.on]="metricKey() === 'ind:' + ind.id"
                               (click)="setMetric('ind:' + ind.id, 'ind', ind.name)" [title]="ind.id">
@@ -234,21 +234,21 @@ const DIM_DESC: Record<string, string> = {
 
       <!-- CLASS / SELECTED FILTER --------------------------------------------------------------- -->
       <div class="card pad catbar">
-        <span class="eyebrow">View</span>
+        <span class="eyebrow">{{ t('view') }}</span>
         <button class="cat" [class.on]="!classFilter() && !selectedOnly()"
                 [style.background]="!classFilter() && !selectedOnly() ? '#0d3b66' : ''"
                 [style.color]="!classFilter() && !selectedOnly() ? '#fff' : ''"
-                (click)="showAll()">All <span class="cat-n">{{ ranked().length }}</span></button>
+                (click)="showAll()">{{ t('all') }} <span class="cat-n">{{ ranked().length }}</span></button>
         <button class="cat" [class.on]="selectedOnly()" [disabled]="!selected()"
                 [style.background]="selectedOnly() ? '#0d3b66' : ''" [style.color]="selectedOnly() ? '#fff' : ''"
-                (click)="toggleSelectedOnly()">Selected{{ selected() ? ': ' + selected()!.name : '' }}</button>
+                (click)="toggleSelectedOnly()">{{ t('selected') }}{{ selected() ? ': ' + selected()!.name : '' }}</button>
         @for (c of classes; track c.level) {
           <button class="cat" [class.on]="classFilter() === c.level && !selectedOnly()"
                   [style.background]="classFilter() === c.level && !selectedOnly() ? c.color : ''"
                   [style.color]="classFilter() === c.level && !selectedOnly() ? '#fff' : ''"
                   [style.borderColor]="c.color"
                   (click)="setClassFilter(c.level)">
-            <span class="cat-dot" [style.background]="c.color"></span>{{ c.level }} <span class="cat-n">{{ classCount(c.level) }}</span>
+            <span class="cat-dot" [style.background]="c.color"></span>{{ levelLabel(c.level) }} <span class="cat-n">{{ classCount(c.level) }}</span>
           </button>
         }
       </div>
@@ -259,8 +259,8 @@ const DIM_DESC: Record<string, string> = {
           <div #mapEl id="informExpMap"></div>
         </div>
         <div class="card pad">
-          <div class="eyebrow">Regional INFORM profile</div>
-          <div class="sub muted" style="font-size:.72rem; margin:.1rem 0 .3rem;">dimension means by region, ordered by overall risk{{ emphasize() ? ' · highlighting ' + emphasize() : '' }}</div>
+          <div class="eyebrow">{{ t('regional_profile') }}</div>
+          <div class="sub muted" style="font-size:.72rem; margin:.1rem 0 .3rem;">{{ t('regional_sub') }}{{ emphasize() ? ' ' + t('highlighting') + ' ' + emphasizeLabel() : '' }}</div>
           <div [innerHTML]="regionalSvg()"></div>
         </div>
       </div>
@@ -268,12 +268,12 @@ const DIM_DESC: Record<string, string> = {
       <!-- RANKED TABLE ------------------------------------------------------------------------- -->
       <div class="card table-wrap">
         <div class="table-head">
-          <span class="muted" style="font-weight:700;">{{ filtered().length }} councils</span>
+          <span class="muted" style="font-weight:700;">{{ filtered().length }} {{ t('councils') }}</span>
           <div class="table-actions">
             @if (tableOpen()) {
-              <button class="chip" (click)="toggleSort()">{{ sortDesc() ? 'High to Low' : 'Low to High' }}</button>
+              <button class="chip" (click)="toggleSort()">{{ sortDesc() ? t('high_to_low') : t('low_to_high') }}</button>
             }
-            <button class="chip" (click)="tableOpen.set(!tableOpen())">{{ tableOpen() ? 'Hide table' : 'Show table' }}</button>
+            <button class="chip" (click)="tableOpen.set(!tableOpen())">{{ tableOpen() ? t('hide_table') : t('show_table') }}</button>
           </div>
         </div>
         @if (tableOpen()) {
@@ -281,9 +281,9 @@ const DIM_DESC: Record<string, string> = {
             <table>
               <thead>
                 <tr>
-                  <th>#</th><th>Council / LGA</th><th>Region</th>
-                  <th class="sortable num" (click)="toggleSort()">{{ activeLens().label }} {{ sortDesc() ? '▼' : '▲' }}</th>
-                  <th class="num">Hazard</th><th class="num">Vulnerability</th><th class="num">Coping</th><th>Class</th>
+                  <th>#</th><th>{{ t('th_council_lga') }}</th><th>{{ t('th_region') }}</th>
+                  <th class="sortable num" (click)="toggleSort()">{{ lensLabel(activeLens()) }} {{ sortDesc() ? '▼' : '▲' }}</th>
+                  <th class="num">{{ t('th_hazard') }}</th><th class="num">{{ t('th_vulnerability') }}</th><th class="num">{{ t('th_coping') }}</th><th>{{ t('th_class') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -296,7 +296,7 @@ const DIM_DESC: Record<string, string> = {
                     <td class="num">{{ fmt(r.hazard) }}</td>
                     <td class="num">{{ fmt(r.vulnerability) }}</td>
                     <td class="num">{{ fmt(r.coping) }}</td>
-                    <td><span class="badge" [style.background]="cls(r.value).color">{{ cls(r.value).level }}</span></td>
+                    <td><span class="badge" [style.background]="cls(r.value).color">{{ levelLabel(cls(r.value).level) }}</span></td>
                   </tr>
                 }
               </tbody>
@@ -308,13 +308,13 @@ const DIM_DESC: Record<string, string> = {
       <!-- DISTRIBUTION + HIGHEST UNITS -------------------------------------------- -->
       <div class="grid2">
         <div class="chart-card">
-          <h3>Distribution</h3>
-          <div class="sub">{{ scored().length }} councils by {{ activeLens().label.toLowerCase() }}</div>
+          <h3>{{ t('distribution') }}</h3>
+          <div class="sub">{{ scored().length }} {{ t('councils_by') }} {{ lensLabel(activeLens()).toLowerCase() }}</div>
           <div [innerHTML]="distSvg()"></div>
         </div>
         <div class="chart-card">
-          <h3>Highest councils</h3>
-          <div class="sub">top 12 by {{ activeLens().label.toLowerCase() }}</div>
+          <h3>{{ t('highest_councils') }}</h3>
+          <div class="sub">{{ t('top_12_by') }} {{ lensLabel(activeLens()).toLowerCase() }}</div>
           <div [innerHTML]="topSvg()"></div>
         </div>
       </div>
@@ -325,18 +325,18 @@ const DIM_DESC: Record<string, string> = {
           <div class="pad">
             <div class="detail-head">
               <div>
-                <div class="eyebrow">{{ d.region || '' }}{{ d.region ? ' Region · ' : '' }}{{ d.area }}</div>
+                <div class="eyebrow">{{ d.region || '' }}{{ d.region ? ' ' + t('region_word') + ' · ' : '' }}{{ d.area }}</div>
                 <h3 class="h2">{{ d.name }}</h3>
               </div>
               <div class="detail-score" [style.color]="cls(d.risk).color">
                 {{ fmt(d.risk) }}
-                <span class="badge" [style.background]="cls(d.risk).color">{{ cls(d.risk).level }}</span>
+                <span class="badge" [style.background]="cls(d.risk).color">{{ levelLabel(cls(d.risk).level) }}</span>
               </div>
             </div>
 
             <div class="dim-grid">
               <div class="dim">
-                <div class="dim-head"><span>Hazard and Exposure</span><b [style.color]="cls(d.hazard).color">{{ fmt(d.hazard) }}</b></div>
+                <div class="dim-head"><span>{{ t('dim_hazard') }}</span><b [style.color]="cls(d.hazard).color">{{ fmt(d.hazard) }}</b></div>
                 @for (b of catBars(d, 'hazard'); track b.label) {
                   <div class="bar-row" [title]="b.label + ': ' + fmt(b.value)">
                     <span class="bar-label">{{ b.label }}</span>
@@ -346,7 +346,7 @@ const DIM_DESC: Record<string, string> = {
                 }
               </div>
               <div class="dim">
-                <div class="dim-head"><span>Vulnerability</span><b [style.color]="cls(d.vulnerability).color">{{ fmt(d.vulnerability) }}</b></div>
+                <div class="dim-head"><span>{{ t('dim_vulnerability') }}</span><b [style.color]="cls(d.vulnerability).color">{{ fmt(d.vulnerability) }}</b></div>
                 @for (b of catBars(d, 'vulnerability'); track b.label) {
                   <div class="bar-row" [title]="b.label + ': ' + fmt(b.value)">
                     <span class="bar-label">{{ b.label }}</span>
@@ -356,7 +356,7 @@ const DIM_DESC: Record<string, string> = {
                 }
               </div>
               <div class="dim">
-                <div class="dim-head"><span>Lack of Coping</span><b [style.color]="cls(d.coping).color">{{ fmt(d.coping) }}</b></div>
+                <div class="dim-head"><span>{{ t('dim_coping_short') }}</span><b [style.color]="cls(d.coping).color">{{ fmt(d.coping) }}</b></div>
                 @for (b of catBars(d, 'coping'); track b.label) {
                   <div class="bar-row" [title]="b.label + ': ' + fmt(b.value)">
                     <span class="bar-label">{{ b.label }}</span>
@@ -366,7 +366,7 @@ const DIM_DESC: Record<string, string> = {
                 }
               </div>
               <div class="dim">
-                <div class="dim-head"><span>Top indicators</span></div>
+                <div class="dim-head"><span>{{ t('top_indicators') }}</span></div>
                 @for (b of topIndicatorBars(d); track b.label) {
                   <div class="bar-row" [title]="b.label + ': ' + fmt(b.value)">
                     <span class="bar-label">{{ b.label }}</span>
@@ -374,30 +374,30 @@ const DIM_DESC: Record<string, string> = {
                     <span class="bar-val">{{ fmt(b.value) }}</span>
                   </div>
                 }
-                @if (!topIndicatorBars(d).length) { <div class="muted" style="font-size:.78rem;">No indicator data</div> }
+                @if (!topIndicatorBars(d).length) { <div class="muted" style="font-size:.78rem;">{{ t('no_indicator_data') }}</div> }
               </div>
             </div>
 
             <!-- Component breakdown (horizontal SVG bars) -->
             <div class="grid2" style="margin-top:1.1rem; margin-bottom:0;">
               <div class="chart-card">
-                <h3>Component breakdown</h3>
-                <div class="sub">{{ d.name }} — by INFORM component</div>
+                <h3>{{ t('component_breakdown') }}</h3>
+                <div class="sub">{{ d.name }} — {{ t('by_inform_component') }}</div>
                 <div [innerHTML]="detailCompSvg()"></div>
               </div>
               <div class="chart-card">
-                <h3>Council vs national</h3>
-                <div class="sub">across the INFORM dimensions</div>
+                <h3>{{ t('council_vs_national') }}</h3>
+                <div class="sub">{{ t('across_dimensions') }}</div>
                 <div [innerHTML]="detailCompareSvg()"></div>
               </div>
             </div>
           </div>
         } @else {
-          <div class="detail-empty">Select a council on the map or table to see its full INFORM profile — the three dimension scores plus bar graphs of its categories, components and top indicators.</div>
+          <div class="detail-empty">{{ t('detail_empty') }}</div>
         }
       </div>
 
-      <p class="note">Sub-national analysis built from the INFORM Tanzania country-model workbook on the NBS-2022 structure — {{ stats().regions }} regions · {{ stats().councils }} councils · {{ stats().indicators }} indicators. Read-only public view.</p>
+      <p class="note">{{ t('note_a') }} {{ stats().regions }} {{ t('note_regions') }} · {{ stats().councils }} {{ t('note_councils') }} · {{ stats().indicators }} {{ t('note_indicators') }}. {{ t('note_b') }}</p>
     </div>
   `,
 })
@@ -406,10 +406,125 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   embedded = input(false);
   private http = inject(HttpClient);
   private sanitizer = inject(DomSanitizer);
+  L = inject(PortalLabels);
   mapEl = viewChild<ElementRef>('mapEl');
 
   classes = RISK_CLASSES;
   classLabels = CLASS_LABELS;
+
+  /* ------------------------------------------------------------------------------------------------
+   * Component-local bilingual table (English + Kiswahili). Keyed by a stable English string so the
+   * five INFORM risk classes / relative-quintile bands keep their English `.level` as the logical
+   * key for filtering & counting, while rendering in the portal's current language. A missing key
+   * falls back to its English value, then to the key itself — the view is never blank.
+   * ---------------------------------------------------------------------------------------------- */
+  private TR: Record<string, { en: string; sw: string }> = {
+    // Hero
+    'eyebrow':            { en: 'INFORM Risk Index · Tanzania', sw: 'Fahirisi ya Hatari ya INFORM · Tanzania' },
+    'risk_explorer':      { en: 'Risk Explorer', sw: 'Chunguza Hatari' },
+    'hero_desc':          { en: 'Choose a lens — overall INFORM risk, a dimension, or any single indicator — to recolour the council choropleth and the ranked table. Click a council for its full INFORM profile.', sw: 'Chagua kioo — hatari ya jumla ya INFORM, kipimo, au kiashiria chochote kimoja — kutia rangi upya ramani ya halmashauri na jedwali lililopangwa. Bofya halmashauri kuona wasifu wake kamili wa INFORM.' },
+    'risk_suffix':        { en: 'Risk', sw: 'Hatari' },
+    // Stats
+    'stat_councils':      { en: 'Councils', sw: 'Halmashauri' },
+    'stat_regions':       { en: 'Regions', sw: 'Mikoa' },
+    'stat_dimensions':    { en: 'Dimensions', sw: 'Vipimo' },
+    'stat_indicators':    { en: 'Indicators', sw: 'Viashiria' },
+    // Lens selector
+    'colour_councils_by': { en: 'Colour councils by', sw: 'Tia rangi halmashauri kwa' },
+    'overall_inform_risk':{ en: 'Overall INFORM Risk', sw: 'Hatari ya Jumla ya INFORM' },
+    'drill_into':         { en: 'drill into a category, component or indicator', sw: 'ingia ndani ya kundi, kijenzi au kiashiria' },
+    'whole':              { en: 'Whole', sw: 'Kizima' },
+    'paren_dimension':    { en: '(dimension)', sw: '(kipimo)' },
+    'paren_category':     { en: '(category)', sw: '(kundi)' },
+    'paren_component':    { en: '(component)', sw: '(kijenzi)' },
+    'optgroup_category':  { en: 'Category ·', sw: 'Kundi ·' },
+    'whole_component':    { en: 'whole component', sw: 'kijenzi kizima' },
+    // Class / selected filter
+    'view':               { en: 'View', sw: 'Mwonekano' },
+    'all':                { en: 'All', sw: 'Zote' },
+    'selected':           { en: 'Selected', sw: 'Iliyochaguliwa' },
+    // Regional profile
+    'regional_profile':   { en: 'Regional INFORM profile', sw: 'Wasifu wa INFORM wa Kimkoa' },
+    'regional_sub':       { en: 'dimension means by region, ordered by overall risk', sw: 'wastani wa vipimo kwa mkoa, vimepangwa kwa hatari ya jumla' },
+    'highlighting':       { en: '· highlighting', sw: '· inaangazia' },
+    // Ranked table
+    'councils':           { en: 'councils', sw: 'halmashauri' },
+    'high_to_low':        { en: 'High to Low', sw: 'Juu hadi Chini' },
+    'low_to_high':        { en: 'Low to High', sw: 'Chini hadi Juu' },
+    'hide_table':         { en: 'Hide table', sw: 'Ficha jedwali' },
+    'show_table':         { en: 'Show table', sw: 'Onyesha jedwali' },
+    'th_council_lga':     { en: 'Council / LGA', sw: 'Halmashauri / LGA' },
+    'th_region':          { en: 'Region', sw: 'Mkoa' },
+    'th_hazard':          { en: 'Hazard', sw: 'Janga' },
+    'th_vulnerability':   { en: 'Vulnerability', sw: 'Uathirikaji' },
+    'th_coping':          { en: 'Coping', sw: 'Kukabili' },
+    'th_class':           { en: 'Class', sw: 'Daraja' },
+    // Distribution + highest
+    'distribution':       { en: 'Distribution', sw: 'Mgawanyo' },
+    'councils_by':        { en: 'councils by', sw: 'halmashauri kwa' },
+    'highest_councils':   { en: 'Highest councils', sw: 'Halmashauri za Juu Zaidi' },
+    'top_12_by':          { en: 'top 12 by', sw: '12 za juu kwa' },
+    // District detail
+    'region_word':        { en: 'Region', sw: 'Mkoa' },
+    'dim_hazard':         { en: 'Hazard and Exposure', sw: 'Janga na Uwazi' },
+    'dim_vulnerability':  { en: 'Vulnerability', sw: 'Uathirikaji' },
+    'dim_coping_short':   { en: 'Lack of Coping', sw: 'Ukosefu wa Uwezo wa Kukabili' },
+    'top_indicators':     { en: 'Top indicators', sw: 'Viashiria vya Juu' },
+    'no_indicator_data':  { en: 'No indicator data', sw: 'Hakuna data ya kiashiria' },
+    'component_breakdown':{ en: 'Component breakdown', sw: 'Mchanganuo wa Vijenzi' },
+    'by_inform_component':{ en: 'by INFORM component', sw: 'kwa kijenzi cha INFORM' },
+    'council_vs_national':{ en: 'Council vs national', sw: 'Halmashauri dhidi ya kitaifa' },
+    'across_dimensions':  { en: 'across the INFORM dimensions', sw: 'katika vipimo vya INFORM' },
+    'detail_empty':       { en: 'Select a council on the map or table to see its full INFORM profile — the three dimension scores plus bar graphs of its categories, components and top indicators.', sw: 'Chagua halmashauri kwenye ramani au jedwali kuona wasifu wake kamili wa INFORM — alama za vipimo vitatu pamoja na chati za kategoria, vijenzi na viashiria vyake vya juu.' },
+    // Footer note
+    'note_a':             { en: 'Sub-national analysis built from the INFORM Tanzania country-model workbook on the NBS-2022 structure —', sw: 'Uchambuzi wa ngazi za chini umejengwa kutoka kwa kitabu cha modeli ya nchi ya INFORM Tanzania kwenye muundo wa NBS-2022 —' },
+    'note_regions':       { en: 'regions', sw: 'mikoa' },
+    'note_councils':      { en: 'councils', sw: 'halmashauri' },
+    'note_indicators':    { en: 'indicators', sw: 'viashiria' },
+    'note_b':             { en: 'Read-only public view.', sw: 'Mwonekano wa umma wa kusoma tu.' },
+    // Risk class levels (display only — English `.level` remains the logical key)
+    'Very Low':           { en: 'Very Low', sw: 'Chini Sana' },
+    'Low':                { en: 'Low', sw: 'Chini' },
+    'Medium':             { en: 'Medium', sw: 'Wastani' },
+    'High':               { en: 'High', sw: 'Juu' },
+    'Very High':          { en: 'Very High', sw: 'Juu Sana' },
+    'No data':            { en: 'No data', sw: 'Hakuna data' },
+    // Relative-quintile band labels (indicator lens legend)
+    'Lowest':             { en: 'Lowest', sw: 'Chini Zaidi' },
+    'Highest':            { en: 'Highest', sw: 'Juu Zaidi' },
+    // Dimension descriptions (drill panel)
+    'desc_hazard':        { en: 'Hazard and Exposure — how likely/intense hazards are and what is exposed.', sw: 'Janga na Uwazi — uwezekano/ukali wa majanga na kilicho hatarini.' },
+    'desc_vulnerability': { en: 'Vulnerability — susceptibility of people and systems (poverty, health, vulnerable groups).', sw: 'Uathirikaji — uwezekano wa watu na mifumo kuathirika (umaskini, afya, makundi yaliyo hatarini).' },
+    'desc_coping':        { en: 'Lack of Coping Capacity — resources and institutions available to cope; higher means fewer.', sw: 'Ukosefu wa Uwezo wa Kukabili — rasilimali na taasisi zilizopo za kukabili; juu zaidi maana yake chache zaidi.' },
+    // Map legend / tooltips / SVG
+    'inform_risk':        { en: 'INFORM Risk', sw: 'Hatari ya INFORM' },
+    'relative_suffix':    { en: '(relative)', sw: '(linganishi)' },
+    'council_word':       { en: 'Council', sw: 'Halmashauri' },
+    'national_word':      { en: 'National', sw: 'Kitaifa' },
+    'x_region_ordered':   { en: 'Region (ordered by INFORM Risk →)', sw: 'Mkoa (umepangwa kwa Hatari ya INFORM →)' },
+    'x_inform_dimension': { en: 'INFORM dimension', sw: 'Kipimo cha INFORM' },
+  };
+
+  /** Translate a component-local key to the portal's current language; falls back to English, then the key. */
+  t(k: string): string { return this.TR[k]?.[this.L.lang()] ?? this.TR[k]?.en ?? k; }
+  /** Render a risk-class / relative-band level in the current language (the English `.level` stays the key). */
+  levelLabel(level: string): string { return this.TR[level]?.[this.L.lang()] ?? this.TR[level]?.en ?? level; }
+  /**
+   * Display label for a lens. The overall-risk lens carries a hardcoded English label that we
+   * translate; every drill-down lens (dimension / category / component / indicator) carries an
+   * API-supplied name, which — like council and region names — renders as-is in both languages.
+   */
+  lensLabel(l: Lens): string { return l.level === 'risk' ? this.t('overall_inform_risk') : l.label; }
+  /** Dimension name shown in the drill panel — supplied by the API, so it renders as-is. */
+  dimLabel(dim: Dim): string { return dim.dimension; }
+  /** Translate the emphasised-dimension hint in the regional-profile subtitle. */
+  emphasizeLabel(): string {
+    const l = this.activeLens();
+    if (l.scope === 'hazard') return this.t('dim_hazard');
+    if (l.scope === 'vulnerability') return this.t('dim_vulnerability');
+    if (l.scope === 'coping') return this.t('dim_coping_short');
+    return l.level === 'risk' ? this.t('inform_risk') : '';
+  }
 
   // --- state ---
   structure = signal<Dim[]>([]);
@@ -485,6 +600,7 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
       this.selected();
       this.classFilter();
       this.selectedOnly();
+      this.L.lang();         // re-render the imperative legend + tooltips on a language switch
       this.colourAll();
       setTimeout(() => { if (this.map) { this.map.invalidateSize(); try { if (this.layer) this.map.fitBounds(this.layer.getBounds(), { padding: [10, 10] }); } catch {} } }, 120);
     });
@@ -496,7 +612,12 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   cls(v: number | null | undefined) { return classifyRisk(v); }
   fmt(v: number | null | undefined) { return fmt(v); }
   pct(v: number | null | undefined) { return pct(v); }
-  dimDesc(): string { const d = this.activeDim(); return d ? (DIM_DESC[d.key] || '') : ''; }
+  dimDesc(): string {
+    const d = this.activeDim();
+    if (!d) return '';
+    const key = d.key === 'hazard' ? 'desc_hazard' : d.key === 'vulnerability' ? 'desc_vulnerability' : d.key === 'coping' ? 'desc_coping' : '';
+    return key ? this.t(key) : (DIM_DESC[d.key] || '');
+  }
   classCount(level: string): number { return this.ranked().filter(r => classifyRisk(r.value).level === level).length; }
 
   // --- lens control ---
@@ -575,7 +696,7 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
       style: () => ({ color: '#fff', weight: 1, fillColor: NO_DATA, fillOpacity: 0.82 }),
       onEachFeature: (f: any, lyr: any) => {
         const p = f.properties || {};
-        lyr.bindTooltip(`<strong>${escapeHtml(p.name || p.code || 'Council')}</strong>`, { sticky: true });
+        lyr.bindTooltip(`<strong>${escapeHtml(p.name || p.code || this.t('council_word'))}</strong>`, { sticky: true });
         lyr.on('click', () => { if (p.code) this.selectByCode(p.code); });
       },
     }).addTo(this.map);
@@ -600,7 +721,7 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
     const rel = this.relColor();
     const isInd = this.activeLens().level === 'ind';
     this.layer.eachLayer((lyr: any) => {
-      const p = lyr.feature?.properties || {}; const code = p.code; const name = p.name || code || 'Council';
+      const p = lyr.feature?.properties || {}; const code = p.code; const name = p.name || code || this.t('council_word');
       if (!code) return;
       const r = this.rowByCode.get(code);
       const v = r?.value;
@@ -613,15 +734,15 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
         color: isSel ? '#0f172a' : dimmed ? '#e2e8f0' : '#ffffff',
         weight: isSel ? 2.4 : 1,
       });
-      const lbl = this.activeLens().label;
+      const lbl = this.lensLabel(this.activeLens());
       const cls = classifyRisk(v);
       lyr.setTooltipContent(
-        `<strong>${escapeHtml(name)}</strong><br>${escapeHtml(lbl)}: <b>${v != null && isFinite(v) ? fmt(v) : '-'}</b>${v == null || isInd ? '' : ' · ' + cls.level}`
+        `<strong>${escapeHtml(name)}</strong><br>${escapeHtml(lbl)}: <b>${v != null && isFinite(v) ? fmt(v) : '-'}</b>${v == null || isInd ? '' : ' · ' + this.levelLabel(cls.level)}`
       );
     });
   }
 
-  private legendTitle(): string { return this.activeLens().label + (this.activeLens().level === 'ind' ? ' (relative)' : ''); }
+  private legendTitle(): string { return this.lensLabel(this.activeLens()) + (this.activeLens().level === 'ind' ? ' ' + this.t('relative_suffix') : ''); }
   private renderLegend(): void {
     if (!this.map) return;
     if (this.legend) this.map.removeControl(this.legend);
@@ -630,9 +751,9 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
     this.legend.onAdd = () => {
       const div = L.DomUtil.create('div', 'legend');
       let html = `<strong>${escapeHtml(this.legendTitle())}</strong><br>`;
-      if (isInd) { REL_LEGEND.forEach((lv, i) => { html += `<i style="background:${REL_PAL[i]}"></i>${lv}<br>`; }); }
-      else { for (const c of RISK_CLASSES) html += `<i style="background:${c.color}"></i>${c.level}<br>`; }
-      html += `<i style="background:${NO_DATA}"></i>No data<br>`;
+      if (isInd) { REL_LEGEND.forEach((lv, i) => { html += `<i style="background:${REL_PAL[i]}"></i>${escapeHtml(this.levelLabel(lv))}<br>`; }); }
+      else { for (const c of RISK_CLASSES) html += `<i style="background:${c.color}"></i>${escapeHtml(this.levelLabel(c.level))}<br>`; }
+      html += `<i style="background:${NO_DATA}"></i>${escapeHtml(this.t('No data'))}<br>`;
       div.innerHTML = html; return div;
     };
     this.legend.addTo(this.map);
@@ -706,7 +827,9 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   }
 
   // Multi-series smooth line chart (regional profile + council-vs-national comparison).
-  private lineSvg(series: { name: string; color: string; values: (number | null)[] }[], xLabels: string[], emphasize: string, height: number, xTitle: string): string {
+  // `name` is the (translated) display label; the optional language-stable `key` is what the
+  // `emphasize` argument is matched against, so highlighting survives the EN/SW switch.
+  private lineSvg(series: { name: string; key?: string; color: string; values: (number | null)[] }[], xLabels: string[], emphasize: string, height: number, xTitle: string): string {
     const max = 10, W = 820, padL = 56, padR = 20, padT = 50, padB = 100, H = height;
     const plotW = W - padL - padR, plotH = H - padT - padB, x0 = padL, y0 = padT + plotH, n = xLabels.length || 1;
     const xOf = (i: number) => padL + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
@@ -731,7 +854,7 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
     xLabels.forEach((lbl, i) => { if (i % step === 0) { const xx = xOf(i); s += `<line x1="${xx}" y1="${y0}" x2="${xx}" y2="${y0 + 5}" stroke="#94a3b8"/><text x="${xx}" y="${y0 + 9}" font-size="11" fill="#1e293b" text-anchor="end" transform="rotate(-45,${xx},${y0 + 9})">${escapeHtml(lbl)}</text>`; } });
     s += `<text x="${padL + plotW / 2}" y="${H - 8}" text-anchor="middle" font-size="13" font-weight="600" fill="#0a0f1a">${escapeHtml(xTitle)}</text>`;
     for (const se of series) {
-      const em = emphasize && se.name === emphasize, dim = emphasize && !em;
+      const em = emphasize && (se.key ?? se.name) === emphasize, dim = emphasize && !em;
       const pts = se.values.map((v, i) => (v == null ? null : [xOf(i), yOf(v)])).filter(Boolean) as number[][];
       if (!pts.length) continue;
       s += `<g opacity="${dim ? 0.72 : 1}"><path d="${smooth(pts)}" fill="none" stroke="${se.color}" stroke-width="${em ? 4 : 2.6}" stroke-linejoin="round" stroke-linecap="round"/>`;
@@ -749,7 +872,7 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   distSvg = computed<SafeHtml>(() => {
     const counts: Record<string, number> = {}; for (const c of CLASS_LABELS) counts[c] = 0;
     for (const r of this.scored()) { const lvl = classifyRisk(r.value).level; counts[lvl] = (counts[lvl] || 0) + 1; }
-    const data = RISK_CLASSES.map(c => ({ label: c.level, value: counts[c.level] || 0, color: c.color }));
+    const data = RISK_CLASSES.map(c => ({ label: this.levelLabel(c.level), value: counts[c.level] || 0, color: c.color }));
     const max = Math.max(1, ...data.map(d => d.value)); const niceMax = Math.ceil(max / 5) * 5 || 5;
     return this.safe(this.barColumnSvg(data, niceMax));
   });
@@ -774,12 +897,12 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
       .map(([name, b]) => ({ name, risk: mean(b.risk), hazard: mean(b.hazard), vuln: mean(b.vuln), cope: mean(b.cope) }))
       .sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0));
     const series = [
-      { name: 'INFORM Risk', color: '#0f172a', values: regional.map(r => round1(r.risk)) },
-      { name: 'Hazard and Exposure', color: '#FF9800', values: regional.map(r => round1(r.hazard)) },
-      { name: 'Vulnerability', color: '#1f6feb', values: regional.map(r => round1(r.vuln)) },
-      { name: 'Lack of Coping', color: '#7c3aed', values: regional.map(r => round1(r.cope)) },
+      { name: this.t('inform_risk'), key: 'INFORM Risk', color: '#0f172a', values: regional.map(r => round1(r.risk)) },
+      { name: this.t('dim_hazard'), key: 'Hazard and Exposure', color: '#FF9800', values: regional.map(r => round1(r.hazard)) },
+      { name: this.t('dim_vulnerability'), key: 'Vulnerability', color: '#1f6feb', values: regional.map(r => round1(r.vuln)) },
+      { name: this.t('dim_coping_short'), key: 'Lack of Coping', color: '#7c3aed', values: regional.map(r => round1(r.cope)) },
     ];
-    return this.safe(this.lineSvg(series, regional.map(r => r.name), this.emphasize(), 440, 'Region (ordered by INFORM Risk →)'));
+    return this.safe(this.lineSvg(series, regional.map(r => r.name), this.emphasize(), 440, this.t('x_region_ordered')));
   });
   detailCompSvg = computed<SafeHtml>(() => {
     const d = this.detail(); if (!d) return this.safe('');
@@ -789,11 +912,11 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   detailCompareSvg = computed<SafeHtml>(() => {
     const d = this.detail(); if (!d) return this.safe('');
     const n = this.national();
-    const xLabels = ['Hazard and Exposure', 'Vulnerability', 'Lack of Coping', 'INFORM Risk'];
+    const xLabels = [this.t('dim_hazard'), this.t('dim_vulnerability'), this.t('dim_coping_short'), this.t('inform_risk')];
     const series = [
       { name: d.name, color: '#1f6feb', values: [round1(d.hazard), round1(d.vulnerability), round1(d.coping), round1(d.risk)] },
-      { name: 'National', color: '#94a3b8', values: n ? [round1(n.hazard), round1(n.vulnerability), round1(n.coping), round1(n.risk)] : [null, null, null, null] },
+      { name: this.t('national_word'), color: '#94a3b8', values: n ? [round1(n.hazard), round1(n.vulnerability), round1(n.coping), round1(n.risk)] : [null, null, null, null] },
     ];
-    return this.safe(this.lineSvg(series, xLabels, '', 280, 'INFORM dimension'));
+    return this.safe(this.lineSvg(series, xLabels, '', 280, this.t('x_inform_dimension')));
   });
 }
