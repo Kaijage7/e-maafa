@@ -1,7 +1,8 @@
 import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 import { addMapNav } from '../../core/tz-map';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
@@ -230,7 +231,7 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
           <div class="qa">
             <button (click)="activate()"><i class="fas fa-bolt"></i> Activate Protocol</button>
             <a routerLink="/m/response/communication"><i class="fas fa-bullhorn"></i> Mass Alert</a>
-            <a routerLink="/m/response/incidents/create"><i class="fas fa-plus"></i> New Incident</a>
+            @if (canCreate()) { <a routerLink="/m/response/incidents/create"><i class="fas fa-plus"></i> New Incident</a> }
           </div>
         </div>
       </div>
@@ -239,6 +240,8 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
 })
 export class EoccBoardComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
+  readonly canCreate = computed(() => this.auth.hasPermission('incidents.create'));
   readonly d = signal<any>({});
   readonly clock = signal('');
   readonly live = signal(true);

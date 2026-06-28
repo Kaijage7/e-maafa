@@ -229,8 +229,8 @@ public class PortalPublicService {
     // ---------------------------------------------------- citizen interactions
 
     /** Citizen "Report Hazard" wizard → public_hazard_reports (auto report code PHR-YYYY-NNNNN). A member of
-     *  the public follows the normal triage flow. An INSTITUTION / SECTOR / MINISTRY is a trusted official
-     *  source: the report is auto-converted to an incident routed STRAIGHT to the EOCC stage
+     *  the public follows the normal triage flow. An INSTITUTION / SECTOR / MINISTRY / REGION (RAS) is a
+     *  trusted official source: the report is auto-converted to an incident routed STRAIGHT to the EOCC stage
      *  (workflow_status='waiting_eocc'), skipping the district + region verification a public report climbs. */
     @Transactional
     public Map<String, Object> submitHazardReport(Map<String, Object> req) {
@@ -238,6 +238,11 @@ public class PortalPublicService {
         String description = str(req.get("description"));
         if (hazardType == null || description == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Hazard type and description are required");
+        }
+        String phone = str(req.get("reporterPhone"));
+        if (phone != null && !phone.replaceAll("[\\s-]", "").matches("^(\\+?255|0)[67]\\d{8}$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please enter a valid Tanzanian phone number, e.g. 0712345678 or +255712345678.");
         }
         String reporterType = normReporterType(str(req.get("reporterType")));
         boolean official = !"public".equals(reporterType);
@@ -284,11 +289,14 @@ public class PortalPublicService {
                 "message", "Official report received — routed straight to the EOCC as incident #" + incidentId + ".");
     }
 
-    /** Normalise the wizard's "reported by" to one of: public | institution | sector | ministry. */
+    /** Normalise the wizard's "reported by" to one of: public | institution | sector | ministry | region.
+     *  A region report is the regional authority (RAS) — like a sector/ministry it is a trusted official
+     *  source and routes straight to the EOCC. */
     private static String normReporterType(String t) {
         if (t == null) return "public";
         String s = t.trim().toLowerCase();
-        return ("institution".equals(s) || "sector".equals(s) || "ministry".equals(s)) ? s : "public";
+        return ("institution".equals(s) || "sector".equals(s) || "ministry".equals(s) || "region".equals(s))
+                ? s : "public";
     }
     private static String urgencyToSeverity(String urgency) {
         if (urgency == null) return "Moderate";

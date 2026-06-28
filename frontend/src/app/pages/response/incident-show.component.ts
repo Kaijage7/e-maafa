@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
+import { AuthService } from '../../core/auth.service';
 
 declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as the Blade page pushes it
 
@@ -41,7 +42,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'},
           {label:'Incidents', url:'/m/response/incidents'}, {label:'#' + d.incident.id}]">
         <div style="display:flex;gap:0.5rem;">
-          <a [routerLink]="['/m/response/incidents', d.incident.id, 'edit']" class="btn-add" style="background:#f59e0b;"><i class="fas fa-edit"></i> Edit</a>
+          @if (canEdit()) { <a [routerLink]="['/m/response/incidents', d.incident.id, 'edit']" class="btn-add" style="background:#f59e0b;"><i class="fas fa-edit"></i> Edit</a> }
           <a routerLink="/m/response/incidents" class="btn-add" style="background:var(--text-mid);"><i class="fas fa-arrow-left"></i> Back</a>
         </div>
       </dmis-page-header>
@@ -249,6 +250,8 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
 export class IncidentShowComponent implements OnInit {
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthService);
+  readonly canEdit = computed(() => this.auth.hasPermission('incidents.update'));
 
   data = signal<any | null>(null);
   updateText = '';

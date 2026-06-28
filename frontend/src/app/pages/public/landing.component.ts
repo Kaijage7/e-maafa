@@ -135,7 +135,7 @@ export class LandingComponent implements OnDestroy {
   // Report-hazard form fields (the source wizard's essential inputs)
   rType = signal(''); rDesc = signal(''); rLocation = signal(''); rUrgency = signal('Medium');
   rName = signal(''); rPhone = signal('');
-  rReportedBy = signal('public'); rOrg = signal('');   // public | institution | sector | ministry (official → straight to EOCC)
+  rReportedBy = signal('public'); rOrg = signal('');   // public | institution | sector | ministry | region (official → straight to EOCC)
 
   /** Managed cards from Content Management; built-in defaults if the API has none. */
   hazardCards = computed<HazardCard[]>(() => {

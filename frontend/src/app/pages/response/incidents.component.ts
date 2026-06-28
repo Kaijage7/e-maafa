@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
+import { AuthService } from '../../core/auth.service';
 
 interface IncidentRow {
   id: number; title: string; status: string; workflow_status: string; workflow_status_label: string;
@@ -47,7 +48,7 @@ interface FormData {
   template: `
     <dmis-page-header title="Incident Management" icon="fa-exclamation-triangle"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Incidents'}]">
-      <a routerLink="/m/response/incidents/create" class="btn-add"><i class="fas fa-plus"></i> Log New Incident</a>
+      @if (canCreate()) { <a routerLink="/m/response/incidents/create" class="btn-add"><i class="fas fa-plus"></i> Log New Incident</a> }
     </dmis-page-header>
 
     <div class="filter-bar">
@@ -140,6 +141,8 @@ interface FormData {
 })
 export class ResponseIncidentsComponent implements OnInit {
   private http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
+  readonly canCreate = computed(() => this.auth.hasPermission('incidents.create'));
 
   rows = signal<IncidentRow[]>([]);
   total = signal(0);

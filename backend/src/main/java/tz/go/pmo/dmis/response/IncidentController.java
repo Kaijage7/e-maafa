@@ -630,7 +630,10 @@ public class IncidentController {
             add(errors, "reported_at", "The reported at field is required.");
         } else {
             try {
-                LocalDateTime.parse(form.get("reported_at"));
+                LocalDateTime parsed = LocalDateTime.parse(form.get("reported_at"));
+                if (parsed.toLocalDate().isAfter(java.time.LocalDate.now())) {
+                    add(errors, "reported_at", "The reported at must not be a future date.");
+                }
             } catch (Exception e) {
                 add(errors, "reported_at", "The reported at does not match the format Y-m-d\\TH:i.");
             }

@@ -100,11 +100,11 @@ interface EwAnalysis {
             <tbody>
               @for (w of warnings(); track w.id) {
                 <tr>
-                  <td><b>{{ w.hazard || 'Hazard' }}</b><br><span class="muted">{{ w.area || '—' }}<span *ngIf="w.warning_code"> · {{ w.warning_code }}</span></span></td>
+                  <td><b>{{ w.hazard || 'Hazard' }}</b><br><span class="muted">{{ w.area || '—' }}@if (w.warning_code) { <span> · {{ w.warning_code }}</span> }</span></td>
                   <td><span class="lvl" [ngClass]="lvlClass(w.warning_level)">{{ w.warning_level }}</span></td>
                   <td style="white-space:nowrap">{{ w.validity_start | date:'MMM d' }} → {{ w.validity_end | date:'MMM d' }}</td>
                   <td>
-                    @if (w.ew_class === 'warned_incident') { <span class="pill p-hit">WARNED → INCIDENT</span><br><small class="muted" *ngIf="w.lead_time_hours != null">lead {{ w.lead_time_hours }}h</small> }
+                    @if (w.ew_class === 'warned_incident') { <span class="pill p-hit">WARNED → INCIDENT</span><br>@if (w.lead_time_hours != null) { <small class="muted">lead {{ w.lead_time_hours }}h</small> } }
                     @else { <span class="pill p-false">NO INCIDENT</span> }
                   </td>
                   <td>
