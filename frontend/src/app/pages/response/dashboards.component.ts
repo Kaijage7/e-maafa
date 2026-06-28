@@ -54,6 +54,16 @@ const POLL_MS = 30_000; // verbatim source cadence
       <div class="stat"><b>{{ d().statistics?.assessments_pending ?? 0 }}</b><span>Assessments Pending</span></div>
     </div>
 
+    <dmis-panel title="Recent Incidents (24h)" icon="fa-clock-rotate-left">
+      @for (i of d().recent_incidents ?? []; track i.id) {
+        <div class="feed-item">
+          <span class="sev" [style.background]="color(i.severity_level)">{{ i.severity_level }}</span>
+          <a [routerLink]="['/m/response/incidents', i.id]" style="font-weight:600; margin-left:6px">{{ i.title }}</a>
+          <span style="color:#6c757d"> — {{ i.hazard_name }} · {{ i.location_description }} · {{ i.status }}</span>
+        </div>
+      } @empty { <div style="font-size:0.8rem; color:#94a3b8; padding:10px 0">No incidents reported in the last 24 hours.</div> }
+    </dmis-panel>
+
     <div class="split">
       <dmis-panel title="Live Incident Map (24h)" icon="fa-map-location-dot">
         <div id="resp-map" class="map"></div>
@@ -78,16 +88,6 @@ const POLL_MS = 30_000; // verbatim source cadence
         </dmis-panel>
       </div>
     </div>
-
-    <dmis-panel title="Recent Incidents (24h)" icon="fa-clock-rotate-left">
-      @for (i of d().recent_incidents ?? []; track i.id) {
-        <div class="feed-item">
-          <span class="sev" [style.background]="color(i.severity_level)">{{ i.severity_level }}</span>
-          <a [routerLink]="['/m/response/incidents', i.id]" style="font-weight:600; margin-left:6px">{{ i.title }}</a>
-          <span style="color:#6c757d"> — {{ i.hazard_name }} · {{ i.location_description }} · {{ i.status }}</span>
-        </div>
-      } @empty { <div style="font-size:0.8rem; color:#94a3b8; padding:10px 0">No incidents reported in the last 24 hours.</div> }
-    </dmis-panel>
   `,
 })
 export class ResponseDashboardComponent implements OnInit, OnDestroy {

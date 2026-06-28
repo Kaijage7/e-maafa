@@ -29,6 +29,12 @@
 
     <h1 class="hero-title">{{ L.t('lbl_disaster_management') }}<br><span>{{ L.t('lbl_information_system') }}</span></h1>
 
+    <!-- CTAs kept high (under the title) so Report Hazard is visible above the fold -->
+    <div class="hero-cta-row" style="margin:0.25rem 0 0.85rem;">
+      <button class="btn-gold" (click)="reportOpen.set(true)"><i class="fas fa-flag"></i> {{ L.t('lbl_report_hazard') }}</button>
+      <a class="btn-outline-gold" routerLink="/subscribe"><i class="fas fa-bell"></i> {{ L.t('lbl_subscribe_to_alerts') }}</a>
+    </div>
+
     <!-- Slider: About / Hazards / Alerts (driven by portal_slides toggles) -->
     <div class="hero-slider" id="heroSlider">
 
@@ -99,11 +105,6 @@
       <span class="slider-label">{{ slideLabels()[slideIdx()] }}</span>
     </div>
 
-    <!-- CTAs: Report Hazard (wizard modal) + Subscribe (public subscription page) -->
-    <div class="hero-cta-row" style="margin-top:auto;">
-      <button class="btn-gold" (click)="reportOpen.set(true)"><i class="fas fa-flag"></i> {{ L.t('lbl_report_hazard') }}</button>
-      <a class="btn-outline-gold" routerLink="/subscribe"><i class="fas fa-bell"></i> {{ L.t('lbl_subscribe_to_alerts') }}</a>
-    </div>
   </div>
 
   <!-- RIGHT: live Tanzania map + floating status panel -->
