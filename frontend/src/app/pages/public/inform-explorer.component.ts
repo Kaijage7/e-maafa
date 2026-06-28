@@ -195,8 +195,8 @@ const DIM_DESC: Record<string, string> = {
               <select (change)="onDrillSelect($event)">
                 <option [value]="'dim:' + dim.key" [selected]="metricKey() === 'dim:' + dim.key">{{ t('whole') }} {{ dimLabel(dim) }} {{ t('paren_dimension') }}</option>
                 @for (c of dim.categories; track c.category) {
-                  <optgroup [label]="t('optgroup_category') + ' ' + c.category">
-                    <option [value]="'cat:' + c.category" [selected]="metricKey() === 'cat:' + c.category">{{ c.category }} {{ t('paren_category') }}</option>
+                  <optgroup [label]="t('optgroup_category') + ' ' + nm(c.category)">
+                    <option [value]="'cat:' + c.category" [selected]="metricKey() === 'cat:' + c.category">{{ nm(c.category) }} {{ t('paren_category') }}</option>
                     @for (comp of c.components; track comp.component) {
                       <option [value]="'comp:' + comp.component" [selected]="metricKey() === 'comp:' + comp.component">  {{ comp.component }} {{ t('paren_component') }}</option>
                       @for (ind of comp.indicators; track ind.id) {
@@ -211,7 +211,7 @@ const DIM_DESC: Record<string, string> = {
               <div class="grp">
                 <button class="ind-chip" [class.on]="metricKey() === 'cat:' + c.category"
                         (click)="setMetric('cat:' + c.category, 'cat', c.category)" style="font-weight:800;">
-                  <span class="grp-cat">{{ c.category }}</span>
+                  <span class="grp-cat">{{ nm(c.category) }}</span>
                 </button>
                 @for (comp of c.components; track comp.component) {
                   <div class="grp-name">{{ comp.component }}</div>
@@ -338,8 +338,8 @@ const DIM_DESC: Record<string, string> = {
               <div class="dim">
                 <div class="dim-head"><span>{{ t('dim_hazard') }}</span><b [style.color]="cls(d.hazard).color">{{ fmt(d.hazard) }}</b></div>
                 @for (b of catBars(d, 'hazard'); track b.label) {
-                  <div class="bar-row" [title]="b.label + ': ' + fmt(b.value)">
-                    <span class="bar-label">{{ b.label }}</span>
+                  <div class="bar-row" [title]="nm(b.label) + ': ' + fmt(b.value)">
+                    <span class="bar-label">{{ nm(b.label) }}</span>
                     <span class="bar-track"><span class="bar-fill" [style.width]="pct(b.value)" [style.background]="cls(b.value).color"></span></span>
                     <span class="bar-val">{{ fmt(b.value) }}</span>
                   </div>
@@ -348,8 +348,8 @@ const DIM_DESC: Record<string, string> = {
               <div class="dim">
                 <div class="dim-head"><span>{{ t('dim_vulnerability') }}</span><b [style.color]="cls(d.vulnerability).color">{{ fmt(d.vulnerability) }}</b></div>
                 @for (b of catBars(d, 'vulnerability'); track b.label) {
-                  <div class="bar-row" [title]="b.label + ': ' + fmt(b.value)">
-                    <span class="bar-label">{{ b.label }}</span>
+                  <div class="bar-row" [title]="nm(b.label) + ': ' + fmt(b.value)">
+                    <span class="bar-label">{{ nm(b.label) }}</span>
                     <span class="bar-track"><span class="bar-fill" [style.width]="pct(b.value)" [style.background]="cls(b.value).color"></span></span>
                     <span class="bar-val">{{ fmt(b.value) }}</span>
                   </div>
@@ -358,8 +358,8 @@ const DIM_DESC: Record<string, string> = {
               <div class="dim">
                 <div class="dim-head"><span>{{ t('dim_coping_short') }}</span><b [style.color]="cls(d.coping).color">{{ fmt(d.coping) }}</b></div>
                 @for (b of catBars(d, 'coping'); track b.label) {
-                  <div class="bar-row" [title]="b.label + ': ' + fmt(b.value)">
-                    <span class="bar-label">{{ b.label }}</span>
+                  <div class="bar-row" [title]="nm(b.label) + ': ' + fmt(b.value)">
+                    <span class="bar-label">{{ nm(b.label) }}</span>
                     <span class="bar-track"><span class="bar-fill" [style.width]="pct(b.value)" [style.background]="cls(b.value).color"></span></span>
                     <span class="bar-val">{{ fmt(b.value) }}</span>
                   </div>
@@ -368,8 +368,8 @@ const DIM_DESC: Record<string, string> = {
               <div class="dim">
                 <div class="dim-head"><span>{{ t('top_indicators') }}</span></div>
                 @for (b of topIndicatorBars(d); track b.label) {
-                  <div class="bar-row" [title]="b.label + ': ' + fmt(b.value)">
-                    <span class="bar-label">{{ b.label }}</span>
+                  <div class="bar-row" [title]="nm(b.label) + ': ' + fmt(b.value)">
+                    <span class="bar-label">{{ nm(b.label) }}</span>
                     <span class="bar-track"><span class="bar-fill" [style.width]="pct(b.value)" [style.background]="cls(b.value).color"></span></span>
                     <span class="bar-val">{{ fmt(b.value) }}</span>
                   </div>
@@ -514,9 +514,16 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
    * translate; every drill-down lens (dimension / category / component / indicator) carries an
    * API-supplied name, which — like council and region names — renders as-is in both languages.
    */
-  lensLabel(l: Lens): string { return l.level === 'risk' ? this.t('overall_inform_risk') : l.label; }
-  /** Dimension name shown in the drill panel — supplied by the API, so it renders as-is. */
-  dimLabel(dim: Dim): string { return dim.dimension; }
+  lensLabel(l: Lens): string { return l.level === 'risk' ? this.t('overall_inform_risk') : this.nm(l.label); }
+  /** Dimension name shown in the drill panel — translated for the fixed dimension set. */
+  dimLabel(dim: Dim): string { return this.nm(dim.dimension); }
+  /** The fixed INFORM dimension + category names translated for DISPLAY only (metric keys stay English). */
+  private readonly NAME_SW: Record<string, string> = {
+    'Hazards & Exposure': 'Janga na Uwazi', 'Vulnerability': 'Uathirikaji', 'Coping Capacity': 'Uwezo wa Kukabili',
+    'Natural': 'Asili', 'Human': 'Kibinadamu', 'Socio-Economics': 'Kijamii-Kiuchumi',
+    'Vulnerable Groups': 'Makundi Hatarishi', 'Infrastructure': 'Miundombinu', 'Institutional': 'Kitaasisi',
+  };
+  nm(name: string): string { return this.L.lang() === 'sw' ? (this.NAME_SW[name] ?? name) : name; }
   /** Translate the emphasised-dimension hint in the regional-profile subtitle. */
   emphasizeLabel(): string {
     const l = this.activeLens();
