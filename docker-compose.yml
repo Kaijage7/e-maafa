@@ -19,6 +19,10 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-dmis_pass}
     volumes:
       - dmis_pgdata:/var/lib/postgresql/data
+      # Fresh-install baseline: on a NEW volume only, Postgres runs this once so the schema starts
+      # at V122 and the backend (Spring Boot, no Laravel) boots without replaying migrations from V1.
+      # See db/baseline/README.md.
+      - ./db/baseline/baseline.sql:/docker-entrypoint-initdb.d/01-baseline.sql:ro
     ports:
       - "5440:5432"
     healthcheck:
