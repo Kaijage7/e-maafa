@@ -97,15 +97,14 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
                 <i class="fas" [class.fa-eye]="!showPwd()" [class.fa-eye-slash]="showPwd()"></i>
               </button>
             </div>
-            <div class="options-row">
-              <label class="remember-label"><input type="checkbox" name="remember"><span>Remember me</span></label>
-              <a href="#" class="forgot-link">Forgot Password?</a>
+            <div class="options-row" style="justify-content:flex-end;">
+              <span style="font-size:0.8rem;color:var(--text-light,#94a3b8);">Forgot your password? Contact your administrator.</span>
             </div>
             <button type="submit" class="btn-primary-tz" [class.is-loading]="loading()">
               <span class="btn-text"><i class="fas fa-right-to-bracket"></i> Sign In</span>
               <span class="spinner"></span>
             </button>
-            <div class="register-row"><span>Don't have an account?</span><a href="#">Register here</a></div>
+            <div class="register-row"><span>Accounts are issued by your system administrator.</span></div>
           </form>
 
           <div class="card-footer-text">&copy; {{ year }} Prime Minister's Office &mdash; United Republic of Tanzania</div>

@@ -1219,7 +1219,7 @@ export class OhEventShowComponent implements OnInit {
       }).then((result: any) => {
         if (!result.isConfirmed) { return; }
         this.http.post<any>(`/api/v1/onehealth/directives/${dir.id}/escalate`, {}).subscribe({
-          next: data => Swal.fire({ icon: 'success', title: 'Sent!', text: data.message ?? data.info, timer: 2000, timerProgressBar: true }),
+          next: data => Swal.fire({ icon: data.info ? 'info' : (data.success === false ? 'warning' : 'success'), title: data.info ? 'Already acknowledged' : (data.success === false ? 'Not sent' : 'Reminders sent'), text: data.message ?? data.info, timer: 3500, timerProgressBar: true }),
           error: err => Swal.fire('Error', err?.error?.message ?? 'Failed to escalate.', 'error'),
         });
       });

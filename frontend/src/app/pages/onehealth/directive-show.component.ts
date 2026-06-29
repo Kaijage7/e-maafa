@@ -573,7 +573,7 @@ export class OhDirectiveShowComponent implements OnInit {
       }).then((res: any) => {
         if (!res.isConfirmed) { return; }
         this.http.post<any>(`/api/v1/onehealth/directives/${this.id}/escalate`, {}).subscribe({
-          next: r => Swal.fire({ icon: r.info ? 'info' : 'success', title: r.info ? 'Already acknowledged' : 'Escalated', text: r.message ?? r.info, timer: 3000 }),
+          next: r => Swal.fire({ icon: r.info ? 'info' : (r.success === false ? 'warning' : 'success'), title: r.info ? 'Already acknowledged' : (r.success === false ? 'Not sent' : 'Reminders sent'), text: r.message ?? r.info, timer: 3500 }),
           error: err => Swal.fire('Error', err?.error?.message ?? 'An error occurred.', 'error'),
         });
       });

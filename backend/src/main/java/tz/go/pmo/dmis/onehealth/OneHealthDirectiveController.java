@@ -22,12 +22,14 @@ import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.ew.MgovSmsService;
+import tz.go.pmo.dmis.notification.MailService;
 
 /**
  * Port of OneHealth\OneHealthDirectiveController: registry with filters and KPI
  * stats, full show payload (acknowledgement + implementation tables), update with
- * stakeholder sync, acknowledge, escalate (SMS/email reminders — gateway wiring is
- * a deployment concern, recorded in logs locally), implementation responses with
+ * stakeholder sync, acknowledge, escalate (sends real SMS/email reminders to
+ * unacknowledged stakeholders via the M-Gov gateway / SMTP), implementation responses with
  * audit trail, and the grouped implementation history.
  */
 @RestController
@@ -39,12 +41,17 @@ public class OneHealthDirectiveController {
     private final JdbcTemplate jdbc;
     private final OneHealthEventService service;
     private final tz.go.pmo.dmis.common.security.AreaGuard areaGuard;
+    private final MgovSmsService sms;
+    private final MailService mail;
 
     public OneHealthDirectiveController(JdbcTemplate jdbc, OneHealthEventService service,
-                                        tz.go.pmo.dmis.common.security.AreaGuard areaGuard) {
+                                        tz.go.pmo.dmis.common.security.AreaGuard areaGuard,
+                                        MgovSmsService sms, MailService mail) {
         this.jdbc = jdbc;
         this.service = service;
         this.areaGuard = areaGuard;
+        this.sms = sms;
+        this.mail = mail;
     }
 
     // ─── Index ───  (directives are a PMO-DMD function — non-PMO must not even see them)
@@ -367,22 +374,51 @@ public class OneHealthDirectiveController {
         if (unacknowledged.isEmpty()) {
             return Map.of("success", true, "info", "All stakeholders have already acknowledged this directive.");
         }
+        String title = String.valueOf(d.get("directive_title"));
+        List<String> phones = new ArrayList<>();
+        List<String> emails = new ArrayList<>();
+        for (Map<String, Object> s : unacknowledged) {
+            Object p = s.get("phone");
+            Object e = s.get("email");
+            if (p != null && !String.valueOf(p).isBlank()) { phones.add(String.valueOf(p)); }
+            if (e != null && !String.valueOf(e).isBlank()) { emails.add(String.valueOf(e)); }
+        }
+        // Genuine reminder dispatch through the same M-Gov SMS / SMTP gateway every other send uses.
+        String smsBody = "One Health directive reminder: please act on \"" + title + "\". — PMO-DMD, e-MAAFA";
+        String emailHtml = MailService.wrap("One Health directive reminder",
+                "This is a reminder regarding the One Health directive \"" + title
+                        + "\", which is still awaiting your action. Please coordinate with PMO-DMD.");
         int smsSent = 0;
         int emailsSent = 0;
-        for (Map<String, Object> s : unacknowledged) {
-            if (s.get("phone") != null) {
-                log.info("OH escalate: SMS reminder to {} ({}) for directive '{}' [gateway wiring deferred]",
-                        s.get("organization"), s.get("phone"), d.get("directive_title"));
-                smsSent++;
-            }
-            if (s.get("email") != null) {
-                log.info("OH escalate: email reminder to {} ({}) for directive '{}' [gateway wiring deferred]",
-                        s.get("organization"), s.get("email"), d.get("directive_title"));
-                emailsSent++;
+        if (!phones.isEmpty()) {
+            try {
+                MgovSmsService.SmsResult r = sms.sendBulk(phones, smsBody, "oh_directive_reminder", id);
+                if (r.success()) { smsSent = phones.size(); }
+            } catch (Exception ex) {
+                log.error("OH escalate {}: SMS reminder send failed", id, ex);
             }
         }
+        if (!emails.isEmpty()) {
+            try {
+                MailService.MailResult mr = mail.sendBulk(emails, "e-MAAFA: One Health directive reminder",
+                        emailHtml, "oh_directive_reminder", id, null);
+                if (mr.success()) { emailsSent = emails.size(); }
+            } catch (Exception ex) {
+                log.error("OH escalate {}: email reminder send failed", id, ex);
+            }
+        }
+        if (smsSent == 0 && emailsSent == 0) {
+            if (phones.isEmpty() && emails.isEmpty()) {
+                return Map.of("success", false, "message",
+                        "No phone numbers or emails are on record for the unacknowledged stakeholder(s).");
+            }
+            boolean configured = sms.isConfigured() || mail.isConfigured();
+            return Map.of("success", false, "message", configured
+                    ? "Reminders could not be sent — the messaging gateway rejected the request. Please retry."
+                    : "Reminders were not sent — the messaging gateway is not configured.");
+        }
         return Map.of("success", true, "message",
-                "Escalation sent to " + unacknowledged.size() + " unacknowledged stakeholder(s). SMS: "
+                "Reminders sent to " + unacknowledged.size() + " unacknowledged stakeholder(s). SMS: "
                         + smsSent + ", Emails: " + emailsSent + ".");
     }
 

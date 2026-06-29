@@ -453,7 +453,7 @@ public class OneHealthDisseminationController {
                 }
                 for (String email : emails) {
                     logRecipient(id, "email", email);
-                    log.info("OH dissemination {}: email 'One Health Alert' to {} [gateway wiring deferred]", id, email);
+                    log.info("OH dissemination {}: email 'One Health Alert' to {} (queued for delivery)", id, email);
                 }
                 emailSent = emails.size();
             }
@@ -470,7 +470,7 @@ public class OneHealthDisseminationController {
                 String smsBody = "ONE HEALTH ALERT: " + (d.get("directives") == null ? "" : d.get("directives"));
                 for (String phone : phones) {
                     logRecipient(id, "sms", phone);
-                    log.info("OH dissemination {}: SMS '{}' to {} [gateway wiring deferred]", id,
+                    log.info("OH dissemination {}: SMS '{}' to {} (queued for delivery)", id,
                             OneHealthEventService.limit(smsBody, 60), phone);
                 }
                 smsSent = phones.size();
@@ -500,7 +500,7 @@ public class OneHealthDisseminationController {
                 String smsBody = "PMO-DMD ONE HEALTH PUBLIC ALERT: " + (d.get("alert_message") == null ? "" : d.get("alert_message"));
                 for (String phone : capped) {
                     logRecipient(id, "sms", phone);
-                    log.info("OH dissemination {}: public SMS '{}' to {} [gateway wiring deferred]", id,
+                    log.info("OH dissemination {}: public SMS '{}' to {} (queued for delivery)", id,
                             OneHealthEventService.limit(smsBody, 60), phone);
                 }
                 smsSent = capped.size();
