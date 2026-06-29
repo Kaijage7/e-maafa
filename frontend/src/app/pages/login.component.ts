@@ -71,12 +71,6 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
           <h2 class="brand-title">e-MAAFA Tanzania</h2>
           <p class="brand-subtitle">Disaster Management Information System</p>
 
-          <div class="status-row">
-            <div class="s-pill emergency"><span class="dot"></span><span>{{ stats().emergency }} Emergency</span></div>
-            <div class="s-pill warning"><span class="dot"></span><span>{{ stats().warning }} Warning</span></div>
-            <div class="s-pill watch"><span class="dot"></span><span>{{ stats().watch }} Watch</span></div>
-          </div>
-
           <div class="card-divider"></div>
 
           @if (error()) {
@@ -204,7 +198,6 @@ export class LoginComponent implements OnInit, OnDestroy {
   loading = signal(false);
   error = signal('');
   slide = signal(0);
-  stats = signal({ emergency: 0, warning: 0, watch: 0 });
   year = 2026;
 
   showcase: Showcase[] = [

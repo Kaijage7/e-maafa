@@ -81,6 +81,7 @@ export const routes: Routes = [
   { path: 'm/stakeholder-portal/directory', canActivate: [authGuard], loadComponent: () => import('./pages/stakeholder/stakeholders.component').then(m => m.StakeholdersComponent) },
   { path: 'm/stakeholder-portal/donations', canActivate: [authGuard], loadComponent: () => import('./pages/response/stakeholder-donations.component').then(m => m.StakeholderDonationsComponent) },
   { path: 'm/stakeholder-portal/open-needs', canActivate: [authGuard], loadComponent: () => import('./pages/response/open-needs.component').then(m => m.OpenNeedsComponent) },
+  { path: 'm/stakeholder-portal/support-needs', canActivate: [authGuard], loadComponent: () => import('./pages/response/support-needs.component').then(m => m.SupportNeedsComponent) },
   { path: 'm/stakeholder-portal/early-warnings', canActivate: [authGuard], loadComponent: () => import('./pages/preparedness/early-warnings.component').then(m => m.EarlyWarningsComponent) },
   { path: 'm/stakeholder-portal/one-health', canActivate: [authGuard], loadComponent: () => import('./pages/onehealth/events.component').then(m => m.OhEventsComponent) },
   { path: 'm/content-management/educational-content', canActivate: [authGuard], loadComponent: () => import('./pages/content/educational-content.component').then(m => m.EducationalContentComponent) },

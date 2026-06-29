@@ -58,7 +58,7 @@ type Mode = 'actual' | 'scores' | 'paste';
 
       @if (mode() === 'paste') {
         <p class="muted" style="font-size:.8rem;">Paste one indicator per line: <code>indicatorId, score</code> (0–10). Commas, tabs or spaces accepted. Unknown ids are ignored.</p>
-        <textarea class="paste" [(ngModel)]="pasteText" placeholder="HA.NAT.DR-FRE, 6.2&#10;VU.SE.POV-HDI 4.1"></textarea>
+        <textarea class="paste" [ngModel]="pasteText()" (ngModelChange)="pasteText.set($event)" placeholder="HA.NAT.DR-FRE, 6.2&#10;VU.SE.POV-HDI 4.1"></textarea>
         <p class="muted" style="margin-top:.4rem;">{{ pasteParsed().length }} valid row(s) matched this sector's indicators.</p>
       } @else {
         <div class="card" style="padding:0; overflow:auto; max-height:52vh;">
@@ -117,7 +117,7 @@ export class InformEntryComponent implements OnInit {
   owner = '';
   areaCode = '';
   enteredBy = '';
-  pasteText = '';
+  pasteText = signal('');
   loadingInd = signal(false);
   submitting = signal(false);
   success = signal<string | null>(null);
@@ -135,7 +135,7 @@ export class InformEntryComponent implements OnInit {
   }
 
   onOwnerChange(): void {
-    this.success.set(null); this.error.set(null); this.rows.set([]); this.pasteText = '';
+    this.success.set(null); this.error.set(null); this.rows.set([]); this.pasteText.set('');
     if (!this.owner) return;
     this.loadingInd.set(true);
     this.svc.getIndicators(this.owner).subscribe({
@@ -151,7 +151,7 @@ export class InformEntryComponent implements OnInit {
   pasteParsed = computed(() => {
     const byId = new Map(this.rows().map(r => [r.indicator.id.toUpperCase(), r.indicator.id]));
     const out: { indicatorId: string; value: number }[] = [];
-    for (const line of (this.pasteText || '').split(/\r?\n/)) {
+    for (const line of (this.pasteText() || '').split(/\r?\n/)) {
       const m = line.trim().split(/[\s,;\t]+/).filter(Boolean);
       if (m.length < 2) continue;
       const id = byId.get(m[0].toUpperCase());

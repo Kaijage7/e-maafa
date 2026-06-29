@@ -15,7 +15,7 @@ import { INFORM_STYLES } from './inform-ui';
     <div class="row-controls">
       <div class="field" style="min-width:240px;">
         <label for="owner">Filter by owner / sector</label>
-        <select id="owner" [(ngModel)]="ownerFilter">
+        <select id="owner" [ngModel]="ownerFilter()" (ngModelChange)="ownerFilter.set($event)">
           <option value="">All owners</option>
           @for (o of owners(); track o) { <option [value]="o">{{ o }}</option> }
         </select>
@@ -63,7 +63,7 @@ export class InformRegistryComponent implements OnInit {
   all = signal<Indicator[]>([]);
   loading = signal(true);
   error = signal<string | null>(null);
-  ownerFilter = '';
+  ownerFilter = signal('');
 
   owners = computed(() => {
     const set = new Set<string>();
@@ -71,7 +71,7 @@ export class InformRegistryComponent implements OnInit {
     return Array.from(set).sort();
   });
   filtered = computed(() => {
-    const f = this.ownerFilter;
+    const f = this.ownerFilter();
     return f ? this.all().filter(it => it.owner === f) : this.all();
   });
 

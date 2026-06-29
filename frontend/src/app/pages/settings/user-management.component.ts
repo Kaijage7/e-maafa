@@ -85,7 +85,7 @@ interface User {
           <input class="form-control" type="email" [(ngModel)]="m.email">
           @if (!editId) {
             <label class="f-lbl">Password <span class="text-danger">*</span></label>
-            <input class="form-control" type="text" [(ngModel)]="m.password" placeholder="min 6 characters">
+            <input class="form-control" type="text" [(ngModel)]="m.password" placeholder="min 8 chars, incl. a letter & a number">
           }
           <label class="f-lbl">Roles</label>
           <div class="roles-grid">
@@ -187,7 +187,7 @@ export class UserManagementComponent {
   }
 
   resetPassword(u: User): void {
-    const pw = prompt(`Set a new password for ${u.name} (min 6 characters):`);
+    const pw = prompt(`Set a new password for ${u.name} (min 8 chars, incl. a letter and a number):`);
     if (!pw) { return; }
     this.http.post(`${this.base}/${u.id}/password`, { password: pw }).subscribe({
       next: () => alert('Password reset.'),
