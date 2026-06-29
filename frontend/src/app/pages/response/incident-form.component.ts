@@ -147,6 +147,7 @@ interface FormData {
 
           <div class="section-title"><i class="fas fa-heartbeat me-1"></i> Human Impact</div>
           <div class="row g-3">
+            <div class="col-md-4"><label class="form-label fw-semibold">People Affected (total)</label><input type="number" min="0" class="form-control" placeholder="Total affected (denominator)" [(ngModel)]="form.people_affected"><small class="text-muted">Deaths / injured / displaced below are subsets of this.</small></div>
             @for (group of casualtyGroups; track group.prefix) {
               <div class="col-md-4">
                 <label class="form-label">{{ group.label }}</label>
@@ -256,7 +257,7 @@ export class IncidentFormComponent implements OnInit {
     reported_by_name: '', reported_by_contact: '', source_of_report: '', assigned_to_user_id: '',
     deaths_male: 0, deaths_female: 0, deaths_total: 0, injured_male: 0, injured_female: 0, injured_total: 0,
     missing_male: 0, missing_female: 0, missing_total: 0, displaced: 0, people_with_disabilities: 0,
-    pregnant_affected: 0, children_affected: 0, emergency_needs_other: '', action_taken: '',
+    pregnant_affected: 0, children_affected: 0, people_affected: null, emergency_needs_other: '', action_taken: '',
   };
 
   isEdit = computed(() => !!this.route.snapshot.paramMap.get('id'));

@@ -243,6 +243,8 @@ public class IncidentController {
                 toJson(infrastructureDamage), toJson(emergencyNeeds),
                 trim(form.get("emergency_needs_other")), trim(form.get("action_taken")));
 
+        jdbc.update("update public.incidents set people_affected = ? where id = ?",
+                parseLong(form.get("people_affected")), id);
         workflow.logHistory(id, "created", null, "draft", "Incident reported");
         return ResponseEntity.ok(Map.of("success", true, "message", "Incident logged successfully.", "id", id));
     }
@@ -314,6 +316,8 @@ public class IncidentController {
                 intOr0(form.get("pregnant_affected")), intOr0(form.get("children_affected")),
                 toJson(infrastructureDamage), toJson(emergencyNeeds), trim(form.get("emergency_needs_other")),
                 trim(form.get("action_taken")), id);
+        jdbc.update("update public.incidents set people_affected = ? where id = ?",
+                parseLong(form.get("people_affected")), id);
         workflow.logHistory(id, "edited", (String) incident.get("workflow_status"),
                 (String) incident.get("workflow_status"), "Incident details updated");
         return ResponseEntity.ok(Map.of("success", true, "message", "Incident updated successfully."));
@@ -681,6 +685,17 @@ public class IncidentController {
         }
         if (video != null && !video.isEmpty() && video.getSize() > 50L * 1024 * 1024) {
             add(errors, "video", "The video must not be greater than 51200 kilobytes.");
+        }
+        Long peopleAffected = parseLong(form.get("people_affected"));
+        if (peopleAffected != null && peopleAffected > 0) {
+            int maxSubset = Math.max(intOr0(form.get("deaths_total")), Math.max(intOr0(form.get("injured_total")),
+                    Math.max(intOr0(form.get("missing_total")), Math.max(intOr0(form.get("displaced")),
+                    Math.max(intOr0(form.get("children_affected")), Math.max(intOr0(form.get("people_with_disabilities")),
+                    intOr0(form.get("pregnant_affected"))))))));
+            if (maxSubset > peopleAffected) {
+                add(errors, "people_affected",
+                    "People affected must be at least as large as each impact subset (deaths, injured, missing, displaced, children, disabilities, pregnant).");
+            }
         }
         return errors;
     }

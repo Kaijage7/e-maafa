@@ -57,6 +57,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
       </div>
 
       <div class="stats-row">
+        <dmis-stat-card [value]="d.incident.people_affected ?? 0" label="People Affected" icon="fa-users" color="#6f42c1" />
         <dmis-stat-card [value]="d.incident.deaths_total ?? 0" label="Deaths" icon="fa-cross" color="#dc3545" />
         <dmis-stat-card [value]="d.incident.injured_total ?? 0" label="Injured" icon="fa-user-injured" color="#fd7e14" />
         <dmis-stat-card [value]="d.incident.missing_total ?? 0" label="Missing" icon="fa-question-circle" color="#6c757d" />
