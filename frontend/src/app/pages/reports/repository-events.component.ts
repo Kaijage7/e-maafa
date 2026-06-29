@@ -31,6 +31,7 @@ const STATUS_BADGE: Record<string, string> = {
   template: `
     <dmis-page-header title="Disaster Repository — Loss Database" icon="fa-database"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Reports & Analytics'}, {label:'Disaster Repository'}]">
+      <button class="btn-add" type="button" style="background:#64748b;margin-right:0.4rem;" (click)="exportCsv()"><i class="fas fa-download"></i> Export CSV</button>
       <button class="btn-add" type="button" (click)="drawerOpen.set(true)"><i class="fas fa-plus"></i> Register Event</button>
     </dmis-page-header>
 
@@ -178,6 +179,22 @@ export class RepositoryEventsComponent {
         this.stats.set(r.stats);
         this.hazardTypes.set(r.hazardTypes);
       });
+  }
+
+  /** A2: download the repository as CSV honouring the current filters (HttpClient → Bearer token → blob). */
+  exportCsv(): void {
+    const q = new URLSearchParams();
+    if (this.fHazard()) { q.set('hazard', this.fHazard()); }
+    if (this.fYear()) { q.set('year', this.fYear()); }
+    if (this.fStatus()) { q.set('status', this.fStatus()); }
+    this.http.get(`/api/v1/repository/events/export?${q}`, { responseType: 'blob' }).subscribe(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `disaster-repository-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
   }
 
   statusBadge(s: string): string { return STATUS_BADGE[s] ?? 'badge-pending'; }

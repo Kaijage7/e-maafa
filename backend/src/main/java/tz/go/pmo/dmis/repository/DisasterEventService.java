@@ -90,6 +90,77 @@ public class DisasterEventService {
                         + " where hazard_type is not null order by 1", String.class));
     }
 
+    /** A2 (national stakeholders feedback): download the (filtered) Disaster Repository as CSV.
+     *  Reuses the same filters as {@link #index} so the file matches what the screen shows.
+     *  UTF-8 with a BOM so Excel renders Swahili text and the TZS figures correctly. */
+    @Transactional(readOnly = true)
+    public byte[] exportCsv(String hazard, String region, Integer year, String status) {
+        StringBuilder where = new StringBuilder(" where 1=1");
+        List<Object> args = new ArrayList<>();
+        if (hazard != null && !hazard.isBlank()) {
+            where.append(" and e.hazard_type = ?");
+            args.add(hazard);
+        }
+        if (region != null && !region.isBlank()) {
+            where.append(" and (e.primary_region = ? or exists (select 1 from disaster_event_effects x"
+                    + " where x.event_id = e.id and x.region = ?))");
+            args.add(region);
+            args.add(region);
+        }
+        if (year != null) {
+            where.append(" and extract(year from e.started_on) = ?");
+            args.add(year);
+        }
+        if (status != null && !status.isBlank()) {
+            where.append(" and e.status = ?");
+            args.add(status);
+        }
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "select e.event_code, e.name, e.hazard_type, e.glide_number, e.started_on, e.ended_on,"
+                        + " e.primary_region, e.scope, e.status, e.data_source, e.gov_response_tzs,"
+                        + " coalesce((select sum(deaths_total) from disaster_event_effects x where x.event_id=e.id),0) as deaths,"
+                        + " coalesce((select sum(directly_affected+displaced) from disaster_event_effects x where x.event_id=e.id),0) as affected,"
+                        + " coalesce((select sum(total_loss_tzs) from disaster_event_effects x where x.event_id=e.id),0) as loss_tzs,"
+                        + " e.recorded_by, e.validated_by, e.validated_at"
+                        + " from disaster_events e" + where + " order by e.started_on desc, e.id desc",
+                args.toArray());
+        String[] headers = {"Event Code", "Name", "Hazard Type", "GLIDE Number", "Started On", "Ended On",
+                "Primary Region", "Scope", "Status", "Data Source", "Gov Response (TZS)", "Deaths", "Affected",
+                "Total Loss (TZS)", "Recorded By", "Validated By", "Validated At"};
+        String[] keys = {"event_code", "name", "hazard_type", "glide_number", "started_on", "ended_on",
+                "primary_region", "scope", "status", "data_source", "gov_response_tzs", "deaths", "affected",
+                "loss_tzs", "recorded_by", "validated_by", "validated_at"};
+        StringBuilder csv = new StringBuilder(); // rows below; a UTF-8 BOM is prepended to the bytes so Excel detects UTF-8
+        for (int i = 0; i < headers.length; i++) {
+            if (i > 0) { csv.append(','); }
+            csv.append(csvCell(headers[i]));
+        }
+        csv.append("\r\n");
+        for (Map<String, Object> r : rows) {
+            for (int i = 0; i < keys.length; i++) {
+                if (i > 0) { csv.append(','); }
+                Object v = r.get(keys[i]);
+                csv.append(csvCell(v == null ? "" : String.valueOf(v)));
+            }
+            csv.append("\r\n");
+        }
+        byte[] body = csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] out = new byte[3 + body.length];
+        out[0] = (byte) 0xEF;
+        out[1] = (byte) 0xBB;
+        out[2] = (byte) 0xBF; // UTF-8 BOM
+        System.arraycopy(body, 0, out, 3, body.length);
+        return out;
+    }
+
+    /** RFC 4180 CSV cell: quote when it contains a comma, quote or newline; double any inner quote. */
+    private static String csvCell(String s) {
+        if (s == null) { s = ""; }
+        boolean quote = s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0;
+        s = s.replace("\"", "\"\"");
+        return quote ? "\"" + s + "\"" : s;
+    }
+
     // ------------------------------------------------------------------ event card
 
     @Transactional(readOnly = true)

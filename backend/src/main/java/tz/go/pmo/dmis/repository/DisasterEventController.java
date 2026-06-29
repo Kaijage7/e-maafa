@@ -47,6 +47,22 @@ public class DisasterEventController {
         return service.index(hazard, region, year, status);
     }
 
+    @GetMapping("/export")
+    @Operation(summary = "Export the (filtered) disaster repository as a CSV download")
+    @PreAuthorize("isAuthenticated()")
+    public org.springframework.http.ResponseEntity<byte[]> export(@RequestParam(required = false) String hazard,
+                                                                  @RequestParam(required = false) String region,
+                                                                  @RequestParam(required = false) Integer year,
+                                                                  @RequestParam(required = false) String status) {
+        byte[] csv = service.exportCsv(hazard, region, year, status);
+        String filename = "disaster-repository-" + java.time.LocalDate.now() + ".csv";
+        return org.springframework.http.ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + filename + "\"")
+                .contentType(org.springframework.http.MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(csv);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Full event card: effects, linked records, totals, response investment")
     @PreAuthorize("isAuthenticated()")
