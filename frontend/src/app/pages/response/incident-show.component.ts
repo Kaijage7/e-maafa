@@ -73,6 +73,8 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
                   <div><div class="detail-label">Hazard</div><div class="detail-value">{{ d.incident.hazard_name ?? '-' }}</div></div>
                   <div><div class="detail-label">Type</div><div class="detail-value">{{ d.incident.incident_type_name ?? '-' }}</div></div>
                   <div><div class="detail-label">Reported At</div><div class="detail-value">{{ d.incident.reported_at_display }}</div></div>
+                  <div><div class="detail-label">Occurred At</div><div class="detail-value">{{ d.incident.occurred_at_display ?? '-' }}</div></div>
+                  <div><div class="detail-label">Ended At</div><div class="detail-value">{{ d.incident.ended_at_display ?? 'Ongoing' }}</div></div>
                   <div><div class="detail-label">Source</div><div class="detail-value">{{ d.incident.source_of_report ?? '-' }}</div></div>
                   <div><div class="detail-label">Reported By</div><div class="detail-value">{{ d.incident.reported_by_name ?? '-' }} {{ d.incident.reported_by_contact ? '(' + d.incident.reported_by_contact + ')' : '' }}</div></div>
                   <div><div class="detail-label">Assigned To</div><div class="detail-value">{{ d.incident.assigned_to_name ?? 'Unassigned' }}</div></div>

@@ -89,6 +89,14 @@ interface FormData {
               <input type="datetime-local" class="form-control" [(ngModel)]="form.reported_at">
             </div>
             <div class="col-md-3">
+              <label class="form-label">Occurred At</label>
+              <input type="datetime-local" class="form-control" [(ngModel)]="form.occurred_at">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Ended At</label>
+              <input type="datetime-local" class="form-control" [(ngModel)]="form.ended_at">
+            </div>
+            <div class="col-md-3">
               <label class="form-label">Origin Level</label>
               <select class="form-select" [(ngModel)]="form.origin_level">
                 <option value="district">District</option>
@@ -252,7 +260,7 @@ export class IncidentFormComponent implements OnInit {
 
   form: any = {
     title: '', hazard_id: '', incident_type_id: '', severity_level: 'Moderate', status: 'Reported',
-    reported_at: new Date().toISOString().substring(0, 16), origin_level: 'district', description: '',
+    reported_at: new Date().toISOString().substring(0, 16), occurred_at: '', ended_at: '', origin_level: 'district', description: '',
     location_description: '', region_id: '', district_id: '', latitude: '', longitude: '',
     reported_by_name: '', reported_by_contact: '', source_of_report: '', assigned_to_user_id: '',
     deaths_male: 0, deaths_female: 0, deaths_total: 0, injured_male: 0, injured_female: 0, injured_total: 0,
@@ -277,6 +285,8 @@ export class IncidentFormComponent implements OnInit {
     }
     // datetime-local needs the trimmed ISO form
     if (i.reported_at) { this.form.reported_at = String(i.reported_at).substring(0, 16); }
+    if (i.occurred_at) { this.form.occurred_at = String(i.occurred_at).substring(0, 16); }
+    if (i.ended_at) { this.form.ended_at = String(i.ended_at).substring(0, 16); }
     this.infrastructure.set(new Set(i.infrastructure_damage ?? []));
     this.needs.set(new Set(i.emergency_needs ?? []));
     this.existingPhotos.set(i.photo_paths ?? []);

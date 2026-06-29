@@ -243,8 +243,9 @@ public class IncidentController {
                 toJson(infrastructureDamage), toJson(emergencyNeeds),
                 trim(form.get("emergency_needs_other")), trim(form.get("action_taken")));
 
-        jdbc.update("update public.incidents set people_affected = ? where id = ?",
-                parseLong(form.get("people_affected")), id);
+        jdbc.update("update public.incidents set people_affected = ?, occurred_at = nullif(?,'')::timestamptz, "
+                + "ended_at = nullif(?,'')::timestamptz where id = ?",
+                parseLong(form.get("people_affected")), form.get("occurred_at"), form.get("ended_at"), id);
         workflow.logHistory(id, "created", null, "draft", "Incident reported");
         return ResponseEntity.ok(Map.of("success", true, "message", "Incident logged successfully.", "id", id));
     }
@@ -316,8 +317,9 @@ public class IncidentController {
                 intOr0(form.get("pregnant_affected")), intOr0(form.get("children_affected")),
                 toJson(infrastructureDamage), toJson(emergencyNeeds), trim(form.get("emergency_needs_other")),
                 trim(form.get("action_taken")), id);
-        jdbc.update("update public.incidents set people_affected = ? where id = ?",
-                parseLong(form.get("people_affected")), id);
+        jdbc.update("update public.incidents set people_affected = ?, occurred_at = nullif(?,'')::timestamptz, "
+                + "ended_at = nullif(?,'')::timestamptz where id = ?",
+                parseLong(form.get("people_affected")), form.get("occurred_at"), form.get("ended_at"), id);
         workflow.logHistory(id, "edited", (String) incident.get("workflow_status"),
                 (String) incident.get("workflow_status"), "Incident details updated");
         return ResponseEntity.ok(Map.of("success", true, "message", "Incident updated successfully."));
@@ -785,6 +787,8 @@ public class IncidentController {
         incident.put("infrastructure_damage", parseJsonList(incident.get("infrastructure_damage")));
         incident.put("emergency_needs", parseJsonList(incident.get("emergency_needs")));
         incident.put("reported_at_display", incident.get("reported_at") instanceof java.sql.Timestamp t ? formatTs(t) : null);
+        incident.put("occurred_at_display", incident.get("occurred_at") instanceof java.sql.Timestamp ot ? formatTs(ot) : null);
+        incident.put("ended_at_display", incident.get("ended_at") instanceof java.sql.Timestamp et ? formatTs(et) : null);
         int deaths = asInt(incident.get("deaths_total"));
         int injured = asInt(incident.get("injured_total"));
         int missing = asInt(incident.get("missing_total"));
