@@ -117,6 +117,7 @@ public class IncidentController {
                 select i.id, i.title, i.status, i.workflow_status, i.severity_level, i.origin_level,
                     i.district_name, i.region_name, i.location_description, i.reported_at, i.latitude, i.longitude,
                     i.deaths_total, i.injured_total, i.missing_total, i.displaced, i.rollback_count,
+                    i.last_rollback_at, i.last_rollback_by_role,
                     h.name as hazard_name, u.name as assigned_to_name,
                     (select count(*) from public.allocated_resources ar where ar.incident_id = i.id) as allocations_count,
                     (select count(*) from public.incident_tasks t where t.incident_id = i.id) as tasks_count,
@@ -148,7 +149,11 @@ public class IncidentController {
             m.put("injured_total", rs.getInt("injured_total"));
             m.put("missing_total", rs.getInt("missing_total"));
             m.put("displaced", rs.getInt("displaced"));
-            m.put("rollback_count", rs.getInt("rollback_count"));
+            int rbCount = rs.getInt("rollback_count");
+            m.put("rollback_count", rbCount);
+            m.put("returned", rbCount > 0);
+            m.put("last_rollback_at", formatTs(rs.getTimestamp("last_rollback_at")));
+            m.put("last_rollback_by_role", rs.getString("last_rollback_by_role"));
             m.put("allocations_count", rs.getLong("allocations_count"));
             m.put("tasks_count", rs.getLong("tasks_count"));
             m.put("response_active", rs.getBoolean("response_active"));
@@ -792,6 +797,8 @@ public class IncidentController {
         incident.put("infrastructure_damage", parseJsonList(incident.get("infrastructure_damage")));
         incident.put("emergency_needs", parseJsonList(incident.get("emergency_needs")));
         incident.put("reported_at_display", incident.get("reported_at") instanceof java.sql.Timestamp t ? formatTs(t) : null);
+        incident.put("returned", asInt(incident.get("rollback_count")) > 0);
+        incident.put("last_rollback_at_display", incident.get("last_rollback_at") instanceof java.sql.Timestamp rt ? formatTs(rt) : null);
         incident.put("occurred_at_display", incident.get("occurred_at") instanceof java.sql.Timestamp ot ? formatTs(ot) : null);
         incident.put("ended_at_display", incident.get("ended_at") instanceof java.sql.Timestamp et ? formatTs(et) : null);
         int deaths = asInt(incident.get("deaths_total"));

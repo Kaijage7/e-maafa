@@ -12,7 +12,7 @@ interface IncidentRow {
   district_name: string | null; region_name: string | null; location_description: string;
   reported_at: string | null; assigned_to_name: string | null;
   deaths_total: number; injured_total: number; missing_total: number; displaced: number;
-  rollback_count: number; allocations_count: number; tasks_count: number; response_active: boolean;
+  rollback_count: number; returned?: boolean; last_rollback_by_role?: string; allocations_count: number; tasks_count: number; response_active: boolean;
 }
 interface IndexResponse {
   data: IncidentRow[]; currentPage: number; lastPage: number; total: number;
@@ -102,7 +102,7 @@ interface FormData {
                     </td>
                     <td><span class="r-badge" [class]="'r-badge ' + severityBadge(i.severity_level)">{{ i.severity_level }}</span></td>
                     <td><span class="r-badge" [class]="'r-badge ' + statusBadge(i.status)">{{ i.status }}</span></td>
-                    <td><span class="r-badge" [class]="'r-badge ' + workflowBadge(i.workflow_status)">{{ i.workflow_status_label }}</span></td>
+                    <td><span class="r-badge" [class]="'r-badge ' + workflowBadge(i.workflow_status)">{{ i.workflow_status_label }}</span>@if (i.returned) { <span class="r-badge" style="background:#fed7aa;color:#9a3412;margin-left:4px;" title="Returned / rolled back{{ i.last_rollback_by_role ? ' by ' + i.last_rollback_by_role : '' }}">↩ Returned</span> }</td>
                     <td>
                       <div class="impact">
                         <span title="Deaths"><b>{{ i.deaths_total }}</b> †</span>

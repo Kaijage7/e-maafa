@@ -52,7 +52,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
         <span class="r-badge badge-active" style="font-size:0.8rem;padding:0.3rem 0.7rem;">{{ d.incident.status }}</span>
         <span class="r-badge badge-pending" style="font-size:0.8rem;padding:0.3rem 0.7rem;">{{ d.incident.workflow_status_label }}</span>
         @if (d.incident.rollback_count > 0) {
-          <span class="r-badge badge-rejected" style="font-size:0.8rem;padding:0.3rem 0.7rem;">{{ d.incident.rollback_count }} rollback(s)</span>
+          <span class="r-badge badge-rejected" style="font-size:0.8rem;padding:0.3rem 0.7rem;" title="Returned for corrections{{ d.incident.last_rollback_by_role ? ' by ' + d.incident.last_rollback_by_role : '' }}{{ d.incident.last_rollback_at_display ? ' on ' + d.incident.last_rollback_at_display : '' }}">↩ Returned · {{ d.incident.rollback_count }} rollback(s)</span>
         }
       </div>
 
