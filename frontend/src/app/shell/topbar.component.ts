@@ -20,14 +20,6 @@ import { AuthService } from '../core/auth.service';
         </div>
       </div>
       <div class="top-bar-right">
-        <div class="view-toggle">
-          <button type="button" class="toggle-btn toggle-btn-active">
-            <i class="fas fa-th-large"></i> <span class="toggle-text">Modules</span>
-          </button>
-          <button type="button" class="toggle-btn toggle-btn-inactive">
-            <i class="fas fa-chart-line"></i> <span class="toggle-text">Dashboard</span>
-          </button>
-        </div>
         <div class="bell-wrap">
           <button class="bell-btn" type="button" (click)="toggleBell($event)" aria-label="Notifications">
             <i class="fas fa-bell"></i>

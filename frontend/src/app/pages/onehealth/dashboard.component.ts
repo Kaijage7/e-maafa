@@ -368,14 +368,12 @@ interface DashboardStats {
               <option value="monitoring">Monitoring</option>
               <option value="closed">Closed</option>
             </select>
-            <button class="oh-more-btn" title="More options"><i class="fas fa-ellipsis-h"></i></button>
           </div>
         </div>
         <div style="overflow-x:auto;">
           <table class="oh-table">
             <thead>
               <tr>
-                <th style="width:18px;padding-left:1.25rem;"><input type="checkbox" style="accent-color:#0891b2;"></th>
                 <th>Event <i class="fas fa-sort sort-icon"></i></th>
                 <th>Reporter <i class="fas fa-sort sort-icon"></i></th>
                 <th>Priority <i class="fas fa-sort sort-icon"></i></th>
@@ -388,7 +386,6 @@ interface DashboardStats {
             <tbody>
               @for (event of filteredRecent(); track event.id) {
                 <tr>
-                  <td style="padding-left:1.25rem;"><input type="checkbox" style="accent-color:#0891b2;"></td>
                   <td>
                     <div class="oh-event-cell">
                       <div class="oh-event-icon" [class]="'oh-event-icon ' + (event.area_category || 'default')">
@@ -430,7 +427,6 @@ interface DashboardStats {
                   <td>
                     <div class="oh-row-actions">
                       <a [routerLink]="['/m/one-health/events', event.id]" class="oh-row-action" title="View"><i class="fas fa-eye"></i></a>
-                      <button class="oh-row-action" title="More"><i class="fas fa-ellipsis-v"></i></button>
                     </div>
                   </td>
                 </tr>

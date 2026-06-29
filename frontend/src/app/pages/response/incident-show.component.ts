@@ -313,10 +313,6 @@ export class IncidentShowComponent implements OnInit {
     return ['waiting_ded', 'waiting_ras'].includes(this.wf());
   }
 
-  canForward(): boolean {
-    return false;   // the linear escalation ladder replaced the ad-hoc national forward
-  }
-
   /** Operational status (separate axis from the approval workflow_status). */
   opStatus(): string {
     return this.data()?.incident.status ?? '';
@@ -383,25 +379,6 @@ export class IncidentShowComponent implements OnInit {
       next: () => ensureSweetAlert().then(() => Swal.fire({
         icon: 'success', title: 'Removed from News & Events', timer: 1600, showConfirmButton: false }).then(() => this.load())),
       error: err => ensureSweetAlert().then(() => Swal.fire('Error', err?.error?.message ?? 'An error occurred.', 'error')),
-    });
-  }
-
-  forward(): void {
-    ensureSweetAlert().then(() => {
-      Swal.fire({
-        title: 'Forward to', input: 'select',
-        inputOptions: {
-          'Director': 'Director', 'Asst. Director': 'Asst. Director', 'EOCC': 'EOCC',
-          'Assistant Director Operation': 'Assistant Director Operation',
-        },
-        showCancelButton: true, confirmButtonColor: '#0d6efd',
-      }).then((res: any) => {
-        if (!res.isConfirmed) { return; }
-        this.http.post<any>(`/api/v1/response/incidents/${this.id}/forward`, { to_role: res.value }).subscribe({
-          next: r => Swal.fire({ icon: 'success', title: 'Forwarded', text: r.message, timer: 2000, showConfirmButton: false }).then(() => this.load()),
-          error: err => Swal.fire('Error', err?.error?.message ?? 'An error occurred.', 'error'),
-        });
-      });
     });
   }
 
