@@ -244,6 +244,11 @@ public class PortalPublicService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Please enter a valid Tanzanian phone number, e.g. 0712345678 or +255712345678.");
         }
+        String email = str(req.get("reporterEmail"));
+        if (email != null && !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Please enter a valid email address, e.g. name@example.com.");
+        }
         String reporterType = normReporterType(str(req.get("reporterType")));
         boolean official = !"public".equals(reporterType);
         String reporterOrg = official ? str(req.get("reporterOrg")) : null;
@@ -252,12 +257,13 @@ public class PortalPublicService {
         String code = String.format("PHR-%d-%05d", Year.now().getValue(), (n == null ? 0 : n) + 1);
         Long reportId = jdbc.queryForObject("insert into public.public_hazard_reports(report_code,hazard_type,"
                         + "description,location_description,latitude,longitude,urgency_level,reporter_name,"
-                        + "reporter_phone,reporter_type,reporter_org,created_at,updated_at)"
-                        + " values (?,?,?,?,?,?,?,?,?,?,?,now(),now()) returning id", Long.class,
+                        + "reporter_phone,reporter_type,reporter_org,reporter_email,created_at,updated_at)"
+                        + " values (?,?,?,?,?,?,?,?,?,?,?,?,now(),now()) returning id", Long.class,
                 code, hazardType, description, str(req.get("location")),
                 num(req.get("latitude")), num(req.get("longitude")),
                 str(req.get("urgency")) == null ? "Medium" : str(req.get("urgency")),
-                str(req.get("reporterName")), str(req.get("reporterPhone")), reporterType, reporterOrg);
+                str(req.get("reporterName")), str(req.get("reporterPhone")), reporterType, reporterOrg,
+                email);
 
         if (!official) {
             return Map.of("reportCode", code,

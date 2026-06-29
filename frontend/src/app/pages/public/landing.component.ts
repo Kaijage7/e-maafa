@@ -132,9 +132,10 @@ export class LandingComponent implements OnDestroy {
   reportOpen = signal(false);
   reportDone = signal('');
   reportSaving = signal(false);
+  reportError = signal('');
   // Report-hazard form fields (the source wizard's essential inputs)
   rType = signal(''); rDesc = signal(''); rLocation = signal(''); rUrgency = signal('Medium');
-  rName = signal(''); rPhone = signal('');
+  rName = signal(''); rPhone = signal(''); rEmail = signal('');
   rReportedBy = signal('public'); rOrg = signal('');   // public | institution | sector | ministry | region (official → straight to EOCC)
 
   /** Managed cards from Content Management; built-in defaults if the API has none. */
@@ -243,14 +244,15 @@ export class LandingComponent implements OnDestroy {
   /* --------------------------- report hazard -------------------------- */
   submitReport(): void {
     if (!this.rType() || !this.rDesc().trim()) { return; }
-    this.reportSaving.set(true);
+    this.reportSaving.set(true); this.reportError.set('');
     this.http.post<{ reportCode: string }>('/api/v1/portal/report-hazard', {
       hazardType: this.rType(), description: this.rDesc().trim(), location: this.rLocation() || null,
       urgency: this.rUrgency(), reporterName: this.rName() || null, reporterPhone: this.rPhone() || null,
+      reporterEmail: this.rEmail() || null,
       reporterType: this.rReportedBy(), reporterOrg: this.rReportedBy() === 'public' ? null : (this.rOrg() || null),
     }).subscribe({
       next: r => { this.reportSaving.set(false); this.reportDone.set(r.reportCode); },
-      error: () => this.reportSaving.set(false),
+      error: (err) => { this.reportSaving.set(false); this.reportError.set(err?.error?.detail || err?.error?.message || 'Could not submit — please check your entries and try again.'); },
     });
   }
 
@@ -258,7 +260,7 @@ export class LandingComponent implements OnDestroy {
     this.reportOpen.set(false);
     this.reportDone.set('');
     this.rType.set(''); this.rDesc.set(''); this.rLocation.set(''); this.rUrgency.set('Medium');
-    this.rReportedBy.set('public'); this.rOrg.set('');
+    this.rReportedBy.set('public'); this.rOrg.set(''); this.rEmail.set(''); this.reportError.set('');
   }
 
   /* ------------------------------- map -------------------------------- */

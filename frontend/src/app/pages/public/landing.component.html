@@ -392,8 +392,10 @@
           }
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
             <input class="form-control" placeholder="Your name (optional)" [value]="rName()" (input)="rName.set($any($event.target).value)">
-            <input class="form-control" placeholder="Phone (optional)" [value]="rPhone()" (input)="rPhone.set($any($event.target).value)">
+            <input class="form-control" type="tel" placeholder="Phone (optional)" [value]="rPhone()" (input)="rPhone.set($any($event.target).value)">
+            <input class="form-control" type="email" placeholder="Email (optional)" [value]="rEmail()" (input)="rEmail.set($any($event.target).value)">
           </div>
+          @if (reportError()) { <div style="color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.5rem 0.7rem;font-size:0.85rem;">{{ reportError() }}</div> }
           <button class="btn-gold" style="justify-content:center;" [disabled]="!rType() || !rDesc().trim() || reportSaving()" (click)="submitReport()">
             <i class="fas" [class.fa-paper-plane]="!reportSaving()" [class.fa-spinner]="reportSaving()" [class.fa-spin]="reportSaving()"></i>
             {{ reportSaving() ? 'Submitting…' : 'Submit Report' }}
