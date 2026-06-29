@@ -76,6 +76,9 @@ interface EduItem {
 
         <!-- Hazard guide hubs: one repository per hazard (action guides, videos, materials by audience) -->
         <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0 0 0.9rem;">{{ L.t('lbl_know_your_hazards') }}</h5>
+        <a routerLink="/hazard-calendar" style="display:inline-flex;align-items:center;gap:7px;margin-bottom:0.9rem;padding:0.45rem 0.9rem;border-radius:9px;background:#0ea5e9;color:#fff;text-decoration:none;font-size:0.84rem;font-weight:600;">
+          <i class="fas fa-calendar-days"></i> {{ L.lang() === 'sw' ? 'Kalenda ya Majanga ya Kitaifa' : 'National Hazard Calendar' }}
+        </a>
         <div class="row g-2" style="margin-bottom:2rem;">
           @for (hz of hazardCards(); track hz.name) {
             <div class="col-6 col-md-4 col-lg-3">

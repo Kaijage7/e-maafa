@@ -519,6 +519,21 @@ public class PortalPublicService {
     }
 
     /**
+     * C3 national hazard calendar: which hazards are likely in which months (Tanzania climatology).
+     * Joined to portal_hazard_cards so the public view shows the bilingual name + the card icon/colour;
+     * ordered by the card sort order then month so the frontend can lay out a hazard × 12-month grid.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> hazardCalendar() {
+        return jdbc.queryForList(
+                "select hc.hazard_name as \"hazardName\", c.name_sw as \"hazardNameSw\", c.icon, c.color,"
+                        + " hc.month, hc.risk_level as \"riskLevel\", hc.season, hc.note"
+                        + " from public.hazard_calendar hc"
+                        + " left join public.portal_hazard_cards c on c.name = hc.hazard_name"
+                        + " order by coalesce(c.sort_order, 99), hc.hazard_name, hc.month");
+    }
+
+    /**
      * Hazard education hub (/education/hazard/{name}): the hazard's card + its repository of
      * materials grouped by audience (children / adults / persons with disabilities; 'all'
      * materials appear in every group) + related published articles by keyword.

@@ -169,4 +169,10 @@ public class PortalPublicController {
     public Map<String, Object> hazardHub(@PathVariable String name) {
         return service.hazardHub(name);
     }
+
+    @GetMapping("/hazard-calendar")
+    @Operation(summary = "National hazard calendar — likely hazards by month (Tanzania seasonality)")
+    public java.util.List<Map<String, Object>> hazardCalendar() {
+        return service.hazardCalendar();
+    }
 }

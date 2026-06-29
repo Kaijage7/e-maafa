@@ -15,6 +15,7 @@ export const routes: Routes = [
       { path: 'portal', loadComponent: () => import('./pages/public/public-portal.component').then(m => m.PublicLivePortalComponent) },
       { path: 'subscribe', loadComponent: () => import('./pages/public/subscribe.component').then(m => m.SubscribeComponent) },
       { path: 'education', loadComponent: () => import('./pages/public/education.component').then(m => m.EducationComponent) },
+      { path: 'hazard-calendar', loadComponent: () => import('./pages/public/hazard-calendar.component').then(m => m.HazardCalendarComponent) },
       { path: 'inform-risk', loadComponent: () => import('./pages/public/inform-explorer.component').then(m => m.PublicInformExplorerComponent) },
       { path: 'inform-education', loadComponent: () => import('./pages/public/inform-education.component').then(m => m.PublicInformEducationComponent) },
       { path: 'education/hazard/:name', loadComponent: () => import('./pages/public/hazard-hub.component').then(m => m.HazardHubComponent) },
