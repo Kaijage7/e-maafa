@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { PortalLabels } from './portal-i18n';
 
-interface HubHazard { name: string; icon: string; color: string; descriptionEn: string; descriptionSw: string; }
+interface HubHazard { name: string; nameSw?: string; icon: string; color: string; descriptionEn: string; descriptionSw: string; }
 interface HubMaterial {
   audience: 'children' | 'adults' | 'disabilities' | 'all';
   materialType: 'action_guide' | 'video' | 'document' | 'poster' | 'other';
@@ -49,7 +49,7 @@ const AUDIENCES = [
             <i class="fas {{ hz.icon }}"></i>
           </div>
           <div>
-            <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0;">{{ hz.name }}</h1>
+            <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0;">{{ L.lang() === 'sw' && hz.nameSw ? hz.nameSw : hz.name }}</h1>
             <p style="color:var(--text-secondary, #64748b);margin:0.2rem 0 0;">{{ L.lang() === 'sw' ? hz.descriptionSw : hz.descriptionEn }}</p>
           </div>
         </div>

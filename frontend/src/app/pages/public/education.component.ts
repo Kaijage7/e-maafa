@@ -85,7 +85,7 @@ interface EduItem {
                      [style.background]="hz.color + '1a'" [style.color]="hz.color">
                   <i class="fas {{ hz.icon }}"></i>
                 </div>
-                <div style="font-size:0.94rem;font-weight:700;color:var(--text-primary, #2C3E50);">{{ hz.name }}</div>
+                <div style="font-size:0.94rem;font-weight:700;color:var(--text-primary, #2C3E50);">{{ hazardName(hz) }}</div>
                 <i class="fas fa-chevron-right" style="margin-left:auto;font-size:0.6rem;color:#94a3b8;"></i>
               </a>
             </div>
@@ -125,6 +125,7 @@ export class EducationComponent {
   eduTitle(c: EduItem): string { return this.pick(c.titleSw, c.title); }
   eduSummary(c: EduItem): string { return this.pick(c.summarySw, c.summary); }
   eduBody(c: EduItem): string { return this.pick(c.fullContentSw, c.fullContent ?? ''); }
+  hazardName(hz: HazardCard): string { return this.pick(hz.nameSw, hz.name); }
   private pick(sw: string | undefined | null, en: string): string {
     return this.L.lang() === 'sw' && sw != null && sw.trim() !== '' ? sw : en;
   }

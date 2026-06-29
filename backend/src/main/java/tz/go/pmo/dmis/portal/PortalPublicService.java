@@ -132,7 +132,7 @@ public class PortalPublicService {
         payload.put("publicationCounts", publicationCounts());
         // Managed landing sections (Content Management → Portal Sections): hazard education cards,
         // capability cards and the topbar emergency numbers — all editable, all public.
-        payload.put("hazardCards", safeList("select name, icon, color, description_en as \"descriptionEn\","
+        payload.put("hazardCards", safeList("select name, name_sw as \"nameSw\", icon, color, description_en as \"descriptionEn\","
                 + " description_sw as \"descriptionSw\", link from public.portal_hazard_cards"
                 + " where is_active = true order by sort_order, id"));
         payload.put("capabilities", readJsonList("capabilities.items"));
@@ -526,7 +526,7 @@ public class PortalPublicService {
     @Transactional(readOnly = true)
     public Map<String, Object> hazardHub(String hazardName) {
         List<Map<String, Object>> card = jdbc.queryForList(
-                "select name, icon, color, description_en as \"descriptionEn\", description_sw as \"descriptionSw\""
+                "select name, name_sw as \"nameSw\", icon, color, description_en as \"descriptionEn\", description_sw as \"descriptionSw\""
                         + " from public.portal_hazard_cards where lower(name) = lower(?) and is_active = true", hazardName);
         if (card.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Unknown hazard");

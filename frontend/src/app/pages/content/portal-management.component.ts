@@ -6,7 +6,7 @@ import { PanelComponent } from '../../shell/panel.component';
 interface Slide { id: number; title: string; slideType: string; sortOrder: number; isActive: boolean; }
 interface GalleryImage { id: number; imagePath: string; caption: string; marqueeRow: number; sortOrder: number; isActive: boolean; }
 interface Setting { id: number; group: string; key: string; value: string; }
-interface HazardCard { id: number; name: string; icon: string; color: string; descriptionEn: string; descriptionSw: string; link: string; sortOrder: number; isActive: boolean; }
+interface HazardCard { id: number; name: string; nameSw?: string; icon: string; color: string; descriptionEn: string; descriptionSw: string; link: string; sortOrder: number; isActive: boolean; }
 interface JsonItem { [k: string]: any; }
 
 /**
@@ -99,9 +99,10 @@ interface JsonItem { [k: string]: any; }
           <p style="font-size:0.82rem;color:var(--text-mid);margin:0 0 0.8rem;">Each card on the public landing — name, bilingual description, colour and where it links on click.</p>
           <div style="display:grid;gap:0.55rem;">
             @for (c of hazardCards(); track c.id) {
-              <div style="display:grid;grid-template-columns:34px 1.1fr 2fr 2fr 1fr auto;gap:0.5rem;align-items:center;border:1px solid var(--border);border-radius:10px;padding:0.5rem 0.7rem;" [style.opacity]="c.isActive ? 1 : 0.5">
+              <div style="display:grid;grid-template-columns:34px 1.1fr 1.1fr 2fr 2fr 1fr auto;gap:0.5rem;align-items:center;border:1px solid var(--border);border-radius:10px;padding:0.5rem 0.7rem;" [style.opacity]="c.isActive ? 1 : 0.5">
                 <div style="width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;" [style.background]="c.color + '1f'" [style.color]="c.color"><i class="fas {{ c.icon }}"></i></div>
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.78rem;" [value]="c.name" (change)="patchHazardCard(c, { name: $any($event.target).value })">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.78rem;" [value]="c.name" (change)="patchHazardCard(c, { name: $any($event.target).value })" placeholder="Name (English)">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.78rem;" [value]="c.nameSw || ''" (change)="patchHazardCard(c, { nameSw: $any($event.target).value })" placeholder="Jina (Kiswahili)">
                 <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.74rem;" [value]="c.descriptionEn" (change)="patchHazardCard(c, { descriptionEn: $any($event.target).value })" placeholder="English description">
                 <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.74rem;" [value]="c.descriptionSw" (change)="patchHazardCard(c, { descriptionSw: $any($event.target).value })" placeholder="Maelezo (Kiswahili)">
                 <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.74rem;" [value]="c.link" (change)="patchHazardCard(c, { link: $any($event.target).value })" placeholder="/education">

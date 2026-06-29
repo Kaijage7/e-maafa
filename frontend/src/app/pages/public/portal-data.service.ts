@@ -4,7 +4,7 @@ import { Observable, shareReplay } from 'rxjs';
 
 /** A clickable hazard education card ("Know Your Hazards"), managed in Content Management. */
 export interface HazardCard {
-  name: string; icon: string; color: string;
+  name: string; nameSw?: string; icon: string; color: string;
   descriptionEn: string; descriptionSw: string; link: string;
 }
 

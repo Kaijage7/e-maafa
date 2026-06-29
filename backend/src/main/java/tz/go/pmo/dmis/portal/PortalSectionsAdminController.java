@@ -45,7 +45,7 @@ public class PortalSectionsAdminController {
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
 
-    public record HazardCardWrite(String name, String icon, String color, String descriptionEn,
+    public record HazardCardWrite(String name, String nameSw, String icon, String color, String descriptionEn,
                                   String descriptionSw, String link, Integer sortOrder, Boolean isActive) {
     }
 
@@ -56,7 +56,7 @@ public class PortalSectionsAdminController {
     @PreAuthorize("isAuthenticated()")
     public Map<String, Object> hazardCards() {
         return Map.of("items", jdbc.queryForList(
-                "select id, name, icon, color, description_en as \"descriptionEn\","
+                "select id, name, name_sw as \"nameSw\", icon, color, description_en as \"descriptionEn\","
                         + " description_sw as \"descriptionSw\", link, sort_order as \"sortOrder\","
                         + " is_active as \"isActive\" from public.portal_hazard_cards order by sort_order, id"));
     }
@@ -71,10 +71,10 @@ public class PortalSectionsAdminController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
         }
         Long id = jdbc.queryForObject(
-                "insert into public.portal_hazard_cards(name,icon,color,description_en,description_sw,link,"
-                        + "sort_order,is_active,created_at,updated_at) values (?,?,?,?,?,?,?,?,now(),now())"
+                "insert into public.portal_hazard_cards(name,name_sw,icon,color,description_en,description_sw,link,"
+                        + "sort_order,is_active,created_at,updated_at) values (?,?,?,?,?,?,?,?,?,now(),now())"
                         + " returning id", Long.class,
-                req.name().trim(), nz(req.icon(), "fa-exclamation-triangle"), nz(req.color(), "#6b7280"),
+                req.name().trim(), req.nameSw(), nz(req.icon(), "fa-exclamation-triangle"), nz(req.color(), "#6b7280"),
                 req.descriptionEn(), req.descriptionSw(), nz(req.link(), "/education"),
                 req.sortOrder() == null ? 0 : req.sortOrder(), req.isActive() == null || req.isActive());
         return Map.of("id", id, "message", "Hazard card added");
@@ -85,12 +85,12 @@ public class PortalSectionsAdminController {
     @PreAuthorize("hasAuthority('content_management.manage')")
     @Transactional
     public Map<String, Object> updateHazardCard(@PathVariable long id, @RequestBody HazardCardWrite req) {
-        int n = jdbc.update("update public.portal_hazard_cards set name=coalesce(?,name), icon=coalesce(?,icon),"
+        int n = jdbc.update("update public.portal_hazard_cards set name=coalesce(?,name), name_sw=coalesce(?,name_sw), icon=coalesce(?,icon),"
                         + " color=coalesce(?,color), description_en=coalesce(?,description_en),"
                         + " description_sw=coalesce(?,description_sw), link=coalesce(?,link),"
                         + " sort_order=coalesce(?,sort_order), is_active=coalesce(?,is_active), updated_at=now()"
                         + " where id=?",
-                req.name(), req.icon(), req.color(), req.descriptionEn(), req.descriptionSw(), req.link(),
+                req.name(), req.nameSw(), req.icon(), req.color(), req.descriptionEn(), req.descriptionSw(), req.link(),
                 req.sortOrder(), req.isActive(), id);
         if (n == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Card not found");

@@ -140,26 +140,27 @@ public class PortalLocalSeeder implements CommandLineRunner {
         if (count("portal_hazard_cards") > 0) {
             return;
         }
+        // {name, icon, color, description_en, description_sw, name_sw}
         String[][] cards = {
-            {"Flood", "fa-water", "#3b82f6", "Move to higher ground. Never walk or drive through flood water.", "Hamia sehemu ya juu. Usitembee wala kuendesha kwenye maji ya mafuriko."},
-            {"Drought", "fa-sun", "#f59e0b", "Conserve water, plan crops, and follow seasonal forecasts.", "Tunza maji, panga mazao, fuata utabiri wa msimu."},
-            {"Earthquake", "fa-house-damage", "#a855f7", "Drop, cover and hold on. Stay away from windows.", "Inama, jifunike na ng'ang'ania. Kaa mbali na madirisha."},
-            {"Cyclone", "fa-wind", "#0ea5e9", "Secure your home, stock supplies and follow official alerts.", "Imarisha nyumba, hifadhi mahitaji na fuata tahadhari rasmi."},
-            {"Epidemic", "fa-virus", "#059669", "Wash hands, get vaccinated and report unusual illness early.", "Nawa mikono, pata chanjo na ripoti magonjwa mapema."},
-            {"Landslide", "fa-mountain", "#004d66", "Watch for cracks and tilting trees on slopes after heavy rain.", "Angalia nyufa na miti inayoinama kwenye miteremko baada ya mvua kubwa."},
-            {"Fire", "fa-fire", "#ef4444", "Install smoke detection, plan escape routes and call 114.", "Weka king'ora cha moshi, panga njia za kutoroka na piga 114."},
-            {"Tsunami", "fa-water", "#06b6d4", "If the sea withdraws suddenly, move inland and uphill immediately.", "Bahari ikirudi ghafla, hamia bara na sehemu za juu mara moja."},
-            {"Building Collapse", "fa-building", "#6b7280", "Report cracks in buildings; evacuate structures that shift or lean.", "Ripoti nyufa kwenye majengo; ondoka kwenye majengo yanayohama."},
-            {"Heatwave", "fa-temperature-high", "#f97316", "Stay hydrated, avoid midday sun and check on the vulnerable.", "Kunywa maji, epuka jua la mchana na angalia walio hatarini."},
-            {"Volcanic Eruption", "fa-mountain", "#dc2626", "Know evacuation routes; protect yourself from ash fall.", "Fahamu njia za kuhama; jikinge na majivu."},
-            {"Accident", "fa-car-crash", "#f97316", "Secure the scene, call 112/115 and give first aid if trained.", "Linda eneo, piga 112/115 na toa huduma ya kwanza ukiwa umefunzwa."},
+            {"Flood", "fa-water", "#3b82f6", "Move to higher ground. Never walk or drive through flood water.", "Hamia sehemu ya juu. Usitembee wala kuendesha kwenye maji ya mafuriko.", "Mafuriko"},
+            {"Drought", "fa-sun", "#f59e0b", "Conserve water, plan crops, and follow seasonal forecasts.", "Tunza maji, panga mazao, fuata utabiri wa msimu.", "Ukame"},
+            {"Earthquake", "fa-house-damage", "#a855f7", "Drop, cover and hold on. Stay away from windows.", "Inama, jifunike na ng'ang'ania. Kaa mbali na madirisha.", "Tetemeko la Ardhi"},
+            {"Cyclone", "fa-wind", "#0ea5e9", "Secure your home, stock supplies and follow official alerts.", "Imarisha nyumba, hifadhi mahitaji na fuata tahadhari rasmi.", "Kimbunga"},
+            {"Epidemic", "fa-virus", "#059669", "Wash hands, get vaccinated and report unusual illness early.", "Nawa mikono, pata chanjo na ripoti magonjwa mapema.", "Mlipuko wa Ugonjwa"},
+            {"Landslide", "fa-mountain", "#004d66", "Watch for cracks and tilting trees on slopes after heavy rain.", "Angalia nyufa na miti inayoinama kwenye miteremko baada ya mvua kubwa.", "Maporomoko ya Ardhi"},
+            {"Fire", "fa-fire", "#ef4444", "Install smoke detection, plan escape routes and call 114.", "Weka king'ora cha moshi, panga njia za kutoroka na piga 114.", "Moto"},
+            {"Tsunami", "fa-water", "#06b6d4", "If the sea withdraws suddenly, move inland and uphill immediately.", "Bahari ikirudi ghafla, hamia bara na sehemu za juu mara moja.", "Tsunami"},
+            {"Building Collapse", "fa-building", "#6b7280", "Report cracks in buildings; evacuate structures that shift or lean.", "Ripoti nyufa kwenye majengo; ondoka kwenye majengo yanayohama.", "Kuporomoka kwa Jengo"},
+            {"Heatwave", "fa-temperature-high", "#f97316", "Stay hydrated, avoid midday sun and check on the vulnerable.", "Kunywa maji, epuka jua la mchana na angalia walio hatarini.", "Wimbi la Joto"},
+            {"Volcanic Eruption", "fa-mountain", "#dc2626", "Know evacuation routes; protect yourself from ash fall.", "Fahamu njia za kuhama; jikinge na majivu.", "Mlipuko wa Volkeno"},
+            {"Accident", "fa-car-crash", "#f97316", "Secure the scene, call 112/115 and give first aid if trained.", "Linda eneo, piga 112/115 na toa huduma ya kwanza ukiwa umefunzwa.", "Ajali"},
         };
         int order = 0;
         for (String[] c : cards) {
-            jdbc.update("insert into public.portal_hazard_cards(name,icon,color,description_en,description_sw,"
+            jdbc.update("insert into public.portal_hazard_cards(name,name_sw,icon,color,description_en,description_sw,"
                             + "link,sort_order,is_active,created_at,updated_at)"
-                            + " values (?,?,?,?,?,'/education',?,true,now(),now())",
-                    c[0], c[1], c[2], c[3], c[4], order++);
+                            + " values (?,?,?,?,?,?,'/education',?,true,now(),now())",
+                    c[0], c[5], c[1], c[2], c[3], c[4], order++);
         }
         log.info("portal seed: {} hazard cards", cards.length);
     }

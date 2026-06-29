@@ -163,6 +163,8 @@ export class LandingComponent implements OnDestroy {
 
   /** Card description in the visitor's language. */
   cardDesc = (c: HazardCard) => (this.L.lang() === 'sw' ? c.descriptionSw : c.descriptionEn) || c.descriptionEn || '';
+  /** Card hazard name in the visitor's language (English name is the fallback + route key). */
+  cardName = (c: HazardCard) => (this.L.lang() === 'sw' && c.nameSw ? c.nameSw : c.name);
 
   /** Swahili value for Swahili visitors when present; otherwise the English fallback (used by news cards). */
   nl(en: string | null | undefined, sw?: string | null): string {
