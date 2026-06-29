@@ -244,8 +244,9 @@ public class IncidentController {
                 trim(form.get("emergency_needs_other")), trim(form.get("action_taken")));
 
         jdbc.update("update public.incidents set people_affected = ?, occurred_at = nullif(?,'')::timestamptz, "
-                + "ended_at = nullif(?,'')::timestamptz where id = ?",
-                parseLong(form.get("people_affected")), form.get("occurred_at"), form.get("ended_at"), id);
+                + "ended_at = nullif(?,'')::timestamptz, council_id = ?, ward_id = ? where id = ?",
+                parseLong(form.get("people_affected")), form.get("occurred_at"), form.get("ended_at"),
+                parseLong(form.get("council_id")), parseLong(form.get("ward_id")), id);
         workflow.logHistory(id, "created", null, "draft", "Incident reported");
         return ResponseEntity.ok(Map.of("success", true, "message", "Incident logged successfully.", "id", id));
     }
@@ -318,8 +319,9 @@ public class IncidentController {
                 toJson(infrastructureDamage), toJson(emergencyNeeds), trim(form.get("emergency_needs_other")),
                 trim(form.get("action_taken")), id);
         jdbc.update("update public.incidents set people_affected = ?, occurred_at = nullif(?,'')::timestamptz, "
-                + "ended_at = nullif(?,'')::timestamptz where id = ?",
-                parseLong(form.get("people_affected")), form.get("occurred_at"), form.get("ended_at"), id);
+                + "ended_at = nullif(?,'')::timestamptz, council_id = ?, ward_id = ? where id = ?",
+                parseLong(form.get("people_affected")), form.get("occurred_at"), form.get("ended_at"),
+                parseLong(form.get("council_id")), parseLong(form.get("ward_id")), id);
         workflow.logHistory(id, "edited", (String) incident.get("workflow_status"),
                 (String) incident.get("workflow_status"), "Incident details updated");
         return ResponseEntity.ok(Map.of("success", true, "message", "Incident updated successfully."));
@@ -342,8 +344,11 @@ public class IncidentController {
                     au.name as assigned_to_name, su.name as submitted_by_name,
                     du.name as das_reviewed_by_name, ru.name as ras_reviewed_by_name,
                     nu.name as national_reviewed_by_name, adu.name as assistant_director_reviewed_by_name,
-                    dru.name as director_reviewed_by_name
+                    dru.name as director_reviewed_by_name,
+                    cc.name as council_name, wd.name as ward_name
                 from public.incidents i
+                left join public.councils cc on cc.id = i.council_id
+                left join public.wards wd on wd.id = i.ward_id
                 left join public.hazards h on h.id = i.hazard_id
                 left join public.incident_types it on it.id = i.incident_type_id
                 left join public.users au on au.id = i.assigned_to_user_id

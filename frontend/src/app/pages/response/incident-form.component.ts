@@ -124,9 +124,23 @@ interface FormData {
             </div>
             <div class="col-md-3">
               <label class="form-label">District</label>
-              <select class="form-select" [(ngModel)]="form.district_id">
+              <select class="form-select" [(ngModel)]="form.district_id" (ngModelChange)="onDistrictChange($event)">
                 <option value="">Select District</option>
                 @for (d of districts(); track d.id) { <option [value]="d.id">{{ d.name }}</option> }
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Council</label>
+              <select class="form-select" [(ngModel)]="form.council_id" (ngModelChange)="onCouncilChange($event)">
+                <option value="">Select Council</option>
+                @for (c of councils(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Ward</label>
+              <select class="form-select" [(ngModel)]="form.ward_id">
+                <option value="">Select Ward</option>
+                @for (w of wards(); track w.id) { <option [value]="w.id">{{ w.name }}</option> }
               </select>
             </div>
             <div class="col-md-3"><label class="form-label">Latitude</label><input type="number" step="0.0000001" class="form-control" [(ngModel)]="form.latitude"></div>
@@ -245,6 +259,8 @@ export class IncidentFormComponent implements OnInit {
   errors = signal<string[]>([]);
   submitting = signal(false);
   districts = signal<{ id: number; name: string }[]>([]);
+  councils = signal<{ id: number; name: string }[]>([]);
+  wards = signal<{ id: number; name: string }[]>([]);
   infrastructure = signal(new Set<string>());
   needs = signal(new Set<string>());
   existingPhotos = signal<string[]>([]);
@@ -261,7 +277,7 @@ export class IncidentFormComponent implements OnInit {
   form: any = {
     title: '', hazard_id: '', incident_type_id: '', severity_level: 'Moderate', status: 'Reported',
     reported_at: new Date().toISOString().substring(0, 16), occurred_at: '', ended_at: '', origin_level: 'district', description: '',
-    location_description: '', region_id: '', district_id: '', latitude: '', longitude: '',
+    location_description: '', region_id: '', district_id: '', council_id: '', ward_id: '', latitude: '', longitude: '',
     reported_by_name: '', reported_by_contact: '', source_of_report: '', assigned_to_user_id: '',
     deaths_male: 0, deaths_female: 0, deaths_total: 0, injured_male: 0, injured_female: 0, injured_total: 0,
     missing_male: 0, missing_female: 0, missing_total: 0, displaced: 0, people_with_disabilities: 0,
@@ -291,15 +307,39 @@ export class IncidentFormComponent implements OnInit {
     this.needs.set(new Set(i.emergency_needs ?? []));
     this.existingPhotos.set(i.photo_paths ?? []);
     if (i.region_id) { this.onRegionChange(String(i.region_id), i.district_id); }
+    if (i.district_id) { this.onDistrictChange(String(i.district_id), i.council_id); }
+    if (i.council_id) { this.onCouncilChange(String(i.council_id), i.ward_id); }
   }
 
   onRegionChange(regionId: string, keepDistrict?: number): void {
-    if (!keepDistrict) { this.form.district_id = ''; }
+    if (!keepDistrict) { this.form.district_id = ''; this.form.council_id = ''; this.form.ward_id = ''; this.councils.set([]); this.wards.set([]); }
     this.districts.set([]);
     if (regionId) {
       this.http.get<any[]>(`/api/v1/onehealth/events/districts/${regionId}`).subscribe(d => {
         this.districts.set(d as any);
         if (keepDistrict) { this.form.district_id = String(keepDistrict); }
+      });
+    }
+  }
+
+  onDistrictChange(districtId: string, keepCouncil?: number): void {
+    if (!keepCouncil) { this.form.council_id = ''; this.form.ward_id = ''; this.wards.set([]); }
+    this.councils.set([]);
+    if (districtId) {
+      this.http.get<any[]>(`/api/v1/portal/districts/${districtId}/councils`).subscribe(c => {
+        this.councils.set(c as any);
+        if (keepCouncil) { this.form.council_id = String(keepCouncil); }
+      });
+    }
+  }
+
+  onCouncilChange(councilId: string, keepWard?: number): void {
+    if (!keepWard) { this.form.ward_id = ''; }
+    this.wards.set([]);
+    if (councilId) {
+      this.http.get<any[]>(`/api/v1/portal/councils/${councilId}/wards`).subscribe(w => {
+        this.wards.set(w as any);
+        if (keepWard) { this.form.ward_id = String(keepWard); }
       });
     }
   }

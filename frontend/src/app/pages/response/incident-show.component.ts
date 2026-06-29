@@ -80,6 +80,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
                   <div><div class="detail-label">Assigned To</div><div class="detail-value">{{ d.incident.assigned_to_name ?? 'Unassigned' }}</div></div>
                   <div><div class="detail-label">Location</div><div class="detail-value">{{ d.incident.location_description }}</div></div>
                   <div><div class="detail-label">District / Region</div><div class="detail-value">{{ d.incident.district_name ?? '-' }} / {{ d.incident.region_name ?? '-' }}</div></div>
+                  @if (d.incident.ward_name || d.incident.council_name) { <div><div class="detail-label">Ward / Council</div><div class="detail-value">{{ d.incident.ward_name ?? '-' }} / {{ d.incident.council_name ?? '-' }}</div></div> }
                   @if (d.incident.latitude) {
                     <div><div class="detail-label">Coordinates</div><div class="detail-value">{{ d.incident.latitude }}, {{ d.incident.longitude }}</div></div>
                   }
