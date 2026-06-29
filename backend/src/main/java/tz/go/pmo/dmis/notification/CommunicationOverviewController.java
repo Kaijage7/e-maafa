@@ -36,6 +36,7 @@ public class CommunicationOverviewController {
         out.put("audiences", audiences.audiences());
         out.put("hazards", audiences.hazards());
         out.put("roles", audiences.roles());
+        out.put("agencies", audiences.agencies());
         return out;
     }
 

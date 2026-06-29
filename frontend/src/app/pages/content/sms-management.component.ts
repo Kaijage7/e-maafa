@@ -52,6 +52,7 @@ const STATUS_BADGE: Record<string, string> = {
               <option value="stakeholders">Stakeholders / partners ({{ audCount('stakeholders') }})</option>
               <option value="ew_leaders">Early Warning leaders ({{ audCount('ew_leaders') }})</option>
               <option value="role">By role…</option>
+              <option value="agency">By agency…</option>
               <option value="all_users">All system users ({{ audCount('all_users') }})</option>
             </select>
             @if (aud === 'subscribers_by_hazard') {
@@ -65,6 +66,16 @@ const STATUS_BADGE: Record<string, string> = {
                 <option value="">Select role…</option>
                 @for (r of roles(); track r.role) { <option [value]="r.role">{{ r.role }} ({{ r.phones }} with phone)</option> }
               </select>
+            }
+            @if (aud === 'agency') {
+              <div style="display:flex;flex-wrap:wrap;gap:6px;max-width:560px;align-items:center;">
+                @for (a of agencies(); track a.id) {
+                  <label style="display:inline-flex;align-items:center;gap:4px;font-size:0.76rem;border:1px solid var(--border,#d1d5db);border-radius:6px;padding:3px 8px;cursor:pointer;" [style.background]="agencySel.includes(a.id) ? '#dbeafe' : '#fff'">
+                    <input type="checkbox" [checked]="agencySel.includes(a.id)" (change)="toggleAgency(a.id)"> {{ a.acronym || a.name }}
+                  </label>
+                }
+                @if (!agencies().length) { <span style="font-size:0.76rem;color:var(--text-light);">No active agencies.</span> }
+              </div>
             }
             <label class="btn-add" style="background:#64748b;cursor:pointer;" title="Import numbers from a CSV/text file (one per line or comma-separated)">
               <i class="fas fa-file-csv"></i> Import CSV
@@ -142,7 +153,7 @@ export class SmsManagementComponent {
   showLog = signal(true);
 
   cTo = ''; cMessage = '';
-  aud = ''; hazard = ''; role = '';
+  aud = ''; hazard = ''; role = ''; agencySel: number[] = [];
   audData = signal<any | null>(null);
   sending = signal(false);
   sendMsg = signal('');
@@ -154,6 +165,7 @@ export class SmsManagementComponent {
   private auds = computed<any[]>(() => this.audData()?.audiences ?? []);
   hazards = computed<any[]>(() => this.audData()?.hazards ?? []);
   roles = computed<any[]>(() => this.audData()?.roles ?? []);
+  agencies = computed<any[]>(() => this.audData()?.agencies ?? []);
 
   constructor() {
     this.reload();
@@ -172,7 +184,8 @@ export class SmsManagementComponent {
   clearFilters(): void { this.fStatus = ''; this.fSearch = ''; this.fFrom = ''; this.fTo = ''; this.reload(); }
 
   audCount(key: string): number { const a = this.auds().find(x => x.key === key); return a ? a.sms : 0; }
-  onAud(): void { this.hazard = ''; this.role = ''; }
+  onAud(): void { this.hazard = ''; this.role = ''; this.agencySel = []; }
+  toggleAgency(id: number): void { const i = this.agencySel.indexOf(id); if (i >= 0) { this.agencySel.splice(i, 1); } else { this.agencySel.push(id); } }
 
   importFile(ev: Event): void {
     const input = ev.target as HTMLInputElement;
@@ -191,7 +204,7 @@ export class SmsManagementComponent {
     if (this.sending()) { return; }
     this.sendMsg.set('');
     this.sending.set(true);
-    const audience = this.aud ? { type: this.aud, hazard: this.hazard, role: this.role } : null;
+    const audience = this.aud ? { type: this.aud, hazard: this.hazard, role: this.role, agencyIds: this.agencySel } : null;
     this.http.post<any>(`${this.base}/send`, { recipients: this.cTo, message: this.cMessage, audience })
       .subscribe({
         next: r => {

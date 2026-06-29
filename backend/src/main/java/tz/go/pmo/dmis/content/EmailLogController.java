@@ -85,7 +85,8 @@ public class EmailLogController {
         boolean audiencePicked = false;
         if (body.get("audience") instanceof Map<?, ?> a && a.get("type") != null) {
             audiencePicked = true;
-            recipientSet.addAll(audiences.resolve(str(a.get("type")), str(a.get("hazard")), str(a.get("role"))).emails());
+            recipientSet.addAll(audiences.resolve(str(a.get("type")), str(a.get("hazard")), str(a.get("role")),
+                    tz.go.pmo.dmis.notification.AudienceService.agencyIdsFrom(a.get("agencyIds"))).emails());
         }
         List<String> recipients = new ArrayList<>(recipientSet);
         String subject = String.valueOf(body.getOrDefault("subject", "")).trim();

@@ -77,6 +77,36 @@ public class AudienceService {
         return new Audience(new ArrayList<>(phones), new ArrayList<>(emails));
     }
 
+    /** Agency-targeted fan-out: internal users linked to the agency UNION the agency registry's own contact
+     *  (users.agency_id is sparsely seeded, so both are unioned — mirrors the stakeholders case). Sends through
+     *  the same real SMS/email channels as every other audience. */
+    public Audience resolve(String type, String hazard, String role, java.util.Collection<Long> agencyIds) {
+        if (!"agency".equals(type)) { return resolve(type, hazard, role); }
+        Set<String> phones = new LinkedHashSet<>();
+        Set<String> emails = new LinkedHashSet<>();
+        if (agencyIds != null && !agencyIds.isEmpty()) {
+            String in = agencyIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+            collect(phones, emails, "select phone, email from public.users where agency_id in (" + in + ")");
+            collect(phones, emails, "select contact_person_phone as phone, contact_person_email as email "
+                    + "from public.agencies where id in (" + in + ") and is_active = true");
+        }
+        return new Audience(new ArrayList<>(phones), new ArrayList<>(emails));
+    }
+
+    /** Picker: active agencies for the Communication Center agency fan-out. */
+    public List<Map<String, Object>> agencies() {
+        return jdbc.queryForList("select id, name, acronym from public.agencies where is_active = true order by name");
+    }
+
+    /** Parse a request audience's agencyIds (a JSON array of numbers) into Longs (bad entries dropped). */
+    public static java.util.List<Long> agencyIdsFrom(Object raw) {
+        java.util.List<Long> ids = new java.util.ArrayList<>();
+        if (raw instanceof java.util.List<?> l) {
+            for (Object o : l) { try { ids.add(Long.parseLong(String.valueOf(o))); } catch (NumberFormatException ignore) {} }
+        }
+        return ids;
+    }
+
     // ── Area (location) targeting — "people registered in the affected areas" ───────────────────────────
     // The affected-area names are administrative NAMES (districts and their parent regions). Stakeholders are
     // matched on the V94 region_id/district_id FK (resolved from the name via AreaLookup — the SAME columns

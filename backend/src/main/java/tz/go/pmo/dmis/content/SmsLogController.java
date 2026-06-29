@@ -85,7 +85,8 @@ public class SmsLogController {
         boolean audiencePicked = false;
         if (body.get("audience") instanceof Map<?, ?> a && a.get("type") != null) {
             audiencePicked = true;
-            recipientSet.addAll(audiences.resolve(str(a.get("type")), str(a.get("hazard")), str(a.get("role"))).phones());
+            recipientSet.addAll(audiences.resolve(str(a.get("type")), str(a.get("hazard")), str(a.get("role")),
+                    tz.go.pmo.dmis.notification.AudienceService.agencyIdsFrom(a.get("agencyIds"))).phones());
         }
         List<String> recipients = new ArrayList<>(recipientSet);
         String message = String.valueOf(body.getOrDefault("message", "")).trim();
