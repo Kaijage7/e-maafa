@@ -363,19 +363,19 @@ export class DisasterScannerComponent {
   }
   dispatch(d: Detection, as: 'incident' | 'entity'): void {
     this.http.post<any>(`/api/v1/ew/scanner/${d.id}/dispatch`, { as }).subscribe({
-      next: r => this.notify(r?.message ?? `Dispatched.`, !r?.success),
+      next: r => { this.notify(r?.message ?? `Dispatched.`, !r?.success); if (r?.success) { this.load(); } },
       error: e => this.notify(e?.error?.detail ?? e?.error?.message ?? 'Could not dispatch.', true),
     });
   }
   dismiss(d: Detection): void {
-    this.http.post<any>(`/api/v1/ew/scanner/${d.id}/dismiss`, {}).subscribe({ next: () => this.notify('Dismissed.', false), error: () => this.notify('Could not dismiss.', true) });
+    this.http.post<any>(`/api/v1/ew/scanner/${d.id}/dismiss`, {}).subscribe({ next: () => { this.notify('Dismissed.', false); this.load(); }, error: () => this.notify('Could not dismiss.', true) });
   }
   resolveTasking(t: Tasking): void {
-    this.http.post<any>(`/api/v1/ew/scanner/taskings/${t.id}/respond`, {}).subscribe({ next: () => this.notify('Marked as responded.', false), error: () => this.notify('Could not update.', true) });
+    this.http.post<any>(`/api/v1/ew/scanner/taskings/${t.id}/respond`, {}).subscribe({ next: () => { this.notify('Marked as responded.', false); this.load(); }, error: () => this.notify('Could not update.', true) });
   }
   addReport(): void {
     this.http.post<any>('/api/v1/ew/scanner/report', this.rep).subscribe({
-      next: r => { this.rep = { title: '', source_id: this.rep.source_id, hazard_type: 'flood', region: '', severity: 'medium', summary: '' }; this.notify(r?.message ?? 'Report logged.', !r?.success); },
+      next: r => { this.rep = { title: '', source_id: this.rep.source_id, hazard_type: 'flood', region: '', severity: 'medium', summary: '' }; this.notify(r?.message ?? 'Report logged.', !r?.success); this.load(); },
       error: e => this.notify(e?.error?.message ?? 'Could not log the report.', true),
     });
   }
