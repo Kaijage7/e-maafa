@@ -4,6 +4,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
+import { RegionDistrictPickerComponent } from '../../shell/region-district-picker.component';
 
 interface Detection {
   id: number; source_id: string; title: string; summary: string; url: string;
@@ -14,6 +15,9 @@ interface Detection {
 interface Tasking {
   id: number; agency: string; hazard_type: string; region: string | null; status: string; message: string;
   requested_at: string; detection_id: number; title: string; url: string; source_id: string; severity: string;
+  urgency: string | null; source: string | null; instruction: string | null;
+  response_severity: string | null; response_message: string | null; response_action: string | null;
+  review_outcome: string | null; review_note: string | null; responded_at: string | null;
 }
 interface Update {
   id: number; agency: string; warning_code: string; revision: number; top_alert: string;
@@ -37,7 +41,17 @@ const SEV: Record<string, string> = { critical: '#dc2626', high: '#f97316', medi
 const AGENCY_NAMES: Record<string, string> = {
   tma: 'Tanzania Meteorological Authority', mow: 'Ministry of Water', gst: 'Geological Survey of Tanzania',
   moh: 'Ministry of Health', moa: 'Ministry of Agriculture', nemc: 'National Environment Management Council',
+  mlf: 'Ministry of Livestock and Fisheries',
 };
+// hazard → its owning entity (mirrors the backend HAZARD_TO_AGENCY) for the picker default.
+const HAZARD_OWNER: Record<string, string> = {
+  flood: 'mow', heavy_rain: 'tma', strong_wind: 'tma', cyclone: 'tma', lightning: 'tma',
+  earthquake: 'gst', landslide: 'gst', volcano: 'gst', disease: 'moh', drought: 'moa',
+  fire: 'nemc', pollution: 'nemc', air_pollution: 'nemc', livestock: 'mlf', fisheries: 'mlf',
+};
+const SOURCE_OPTS = ['Routine monitoring', 'Regional alert', 'Global alert', 'Cross-border', 'Media report', 'Community report', 'Field report'];
+const URGENCY_OPTS = ['Immediate', 'Urgent', 'Routine'];
+const INC_SEV_OPTS = ['Minor', 'Moderate', 'Major', 'Critical'];
 const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquake', 'landslide', 'volcano', 'disease', 'drought', 'fire', 'pollution'];
 
 /**
@@ -48,7 +62,7 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
 @Component({
   selector: 'page-disaster-scanner',
   standalone: true,
-  imports: [PageHeaderComponent, StatCardComponent, DatePipe, FormsModule],
+  imports: [PageHeaderComponent, StatCardComponent, DatePipe, FormsModule, RegionDistrictPickerComponent],
   template: `
     <dmis-page-header title="Monitoring — EOCC" icon="fa-tower-broadcast"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Early Warning Systems', url:'/m/preparedness/early-warnings'}, {label:'Monitoring'}]">
@@ -57,17 +71,27 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
     <!-- Verification inbox: signals dispatched to entities, awaiting their official assessment -->
     @if (taskings().length) {
       <div class="vbox">
-        <div class="vbox-hd"><i class="fas fa-clipboard-check"></i> Entity verification inbox <span class="vn">{{ taskings().length }} awaiting</span>
-          <span class="vsub">— dispatched from the scanner / regional reports; the entity verifies &amp; issues its assessment → feeds Impact Analysis</span></div>
+        <div class="vbox-hd"><i class="fas fa-clipboard-check"></i> Entity verification inbox <span class="vn">{{ taskings().length }} active</span>
+          @if (respondedCount()) { <span class="vn rev">{{ respondedCount() }} to review</span> }
+          <span class="vsub">— dispatched to the entity; it verifies &amp; re-sends its assessment, then EOCC accepts (→ Impact Analysis) or returns it</span></div>
         @for (t of taskings(); track t.id) {
-          <div class="vrow">
+          <div class="vrow" [class.resp]="t.status==='responded'">
             <span class="vag">{{ agencyName(t.agency) }}</span>
             <span class="vhz">{{ t.hazard_type }}</span>
+            @if (t.urgency) { <span class="vurg" [class.imm]="t.urgency==='Immediate'">{{ t.urgency }}</span> }
             @if (t.region) { <span class="vrg"><i class="fas fa-location-dot"></i> {{ t.region }}</span> }
             <a class="vti" [href]="t.url" target="_blank" rel="noopener">{{ t.title }}</a>
-            <a class="vgo" [href]="'/m/preparedness/early-warnings/' + t.agency">Open {{ t.agency.toUpperCase() }} console →</a>
-            <button class="vdone" (click)="resolveTasking(t)" title="Mark as responded"><i class="fas fa-check"></i> Responded</button>
+            <span class="vst" [attr.data-s]="t.status">{{ t.status }}</span>
+            @if (t.status==='responded') {
+              <button class="vrev acc" (click)="reviewTasking(t,'accepted')" title="Accept — feed Impact Analysis"><i class="fas fa-check"></i> Accept</button>
+              <button class="vrev ret" (click)="reviewTasking(t,'returned')" title="Return for revision"><i class="fas fa-rotate-left"></i> Return</button>
+            } @else {
+              <a class="vgo" [href]="'/m/preparedness/early-warnings/' + t.agency">Open {{ t.agency.toUpperCase() }} console →</a>
+            }
           </div>
+          @if (t.status==='responded' && t.response_message) {
+            <div class="vresp">@if (t.response_severity) { <b>{{ t.response_severity }}</b> — }{{ t.response_message }}@if (t.response_action) { · <i>{{ t.response_action }}</i> }</div>
+          }
         }
       </div>
     }
@@ -119,8 +143,8 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
               </div>
               <div class="sc-actions">
                 @if (d.status==='new') {
-                  <button class="sc-act ent" (click)="dispatch(d,'entity')" title="Route to the responsible warning entity">→ Entity</button>
-                  <button class="sc-act inc" (click)="dispatch(d,'incident')" title="Create a draft incident (approval flow)">→ Incident</button>
+                  <button class="sc-act ent" (click)="openEntity(d)" title="Route to a warning entity — choose which">→ Entity</button>
+                  <button class="sc-act inc" (click)="openIncident(d)" title="Raise as an incident — choose the area">→ Incident</button>
                   <button class="sc-act dis" (click)="dismiss(d)">Dismiss</button>
                 } @else {
                   <span class="sc-status disp">{{ d.status }}@if (d.dispatched_as) { · {{ d.dispatched_as }} }</span>
@@ -163,8 +187,8 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
               </div>
               <div class="sc-actions">
                 @if (d.status==='new') {
-                  <button class="sc-act ent" (click)="dispatch(d,'entity')">→ Entity</button>
-                  <button class="sc-act inc" (click)="dispatch(d,'incident')">→ Incident</button>
+                  <button class="sc-act ent" (click)="openEntity(d)">→ Entity</button>
+                  <button class="sc-act inc" (click)="openIncident(d)">→ Incident</button>
                   <button class="sc-act dis" (click)="dismiss(d)">Dismiss</button>
                 } @else { <span class="sc-status disp">{{ d.status }}@if (d.dispatched_as) { · {{ d.dispatched_as }} }</span> }
               </div>
@@ -243,6 +267,50 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
         </div>
       }
     }
+
+    <!-- ENTITY dispatch picker -->
+    @if (entityModal(); as d) {
+      <div class="dm-back" (click)="entityModal.set(null)">
+        <div class="dm-card" (click)="$event.stopPropagation()">
+          <div class="dm-hd"><i class="fas fa-clipboard-check"></i> Dispatch to a warning entity</div>
+          <div class="dm-sub">{{ d.title }}</div>
+          <label>Warning entity</label>
+          <select [(ngModel)]="emAgency">@for (a of agencyKeys; track a) { <option [value]="a">{{ agencyName(a) }} ({{ a.toUpperCase() }})</option> }</select>
+          @if (hazardOwner(d.hazard_type)) { <div class="dm-hint"><i class="fas fa-circle-info"></i> Suggested owner for <b>{{ d.hazard_type }}</b>: {{ agencyName(hazardOwner(d.hazard_type)!) }}</div> }
+          <div class="dm-row">
+            <div><label>Urgency</label><select [(ngModel)]="emUrgency">@for (u of urgencyOpts; track u) { <option [value]="u">{{ u }}</option> }</select></div>
+            <div><label>Source</label><select [(ngModel)]="emSource"><option value="">— select —</option>@for (s of sourceOpts; track s) { <option [value]="s">{{ s }}</option> }</select></div>
+          </div>
+          <label>Instruction to the entity</label>
+          <textarea [(ngModel)]="emInstruction" placeholder="What should they verify / assess / issue? (optional)"></textarea>
+          <div class="dm-act">
+            <button class="dm-cancel" (click)="entityModal.set(null)">Cancel</button>
+            <button class="dm-go" (click)="confirmEntity()"><i class="fas fa-paper-plane"></i> Dispatch to {{ emAgency().toUpperCase() }}</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- INCIDENT dispatch picker -->
+    @if (incidentModal(); as d) {
+      <div class="dm-back" (click)="incidentModal.set(null)">
+        <div class="dm-card" (click)="$event.stopPropagation()">
+          <div class="dm-hd"><i class="fas fa-triangle-exclamation"></i> Raise as an incident</div>
+          <div class="dm-sub">{{ d.title }}</div>
+          <label>Area — sets the focal point &amp; approval route</label>
+          <dmis-region-district [showCouncil]="false"
+            [region]="imRegion()" (regionChange)="imRegion.set($event)"
+            [district]="imDistrict()" (districtChange)="imDistrict.set($event)" />
+          <div class="dm-hint"><i class="fas fa-route"></i> {{ imDistrict() ? 'District-level → DED / DAS reviews first' : (imRegion() ? 'Region-level → RAS reviews first' : 'National-level → Director / EOCC') }}</div>
+          <label>Severity</label>
+          <select [(ngModel)]="imSeverity">@for (s of incSevOpts; track s) { <option [value]="s">{{ s }}</option> }</select>
+          <div class="dm-act">
+            <button class="dm-cancel" (click)="incidentModal.set(null)">Cancel</button>
+            <button class="dm-go inc" (click)="confirmIncident()"><i class="fas fa-flag"></i> Create draft incident</button>
+          </div>
+        </div>
+      </div>
+    }
   `,
   styles: [`
     .vbox { background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px; padding:0.7rem 0.9rem; margin:0.3rem 0 0.8rem; }
@@ -301,6 +369,28 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
     .sc-ref { font-size:0.68rem; font-weight:700; color:#0369a1; text-decoration:none; } .sc-ref:hover { text-decoration:underline; }
     .sc-empty { text-align:center; color:var(--text-mid); padding:2rem 1rem; font-size:0.86rem; }
     .sc-empty i { font-size:1.8rem; display:block; margin-bottom:0.6rem; color:#cbd5e1; }
+    .vurg { font-size:0.6rem; font-weight:800; color:#9a3412; background:#ffedd5; border-radius:6px; padding:0.08rem 0.45rem; text-transform:uppercase; }
+    .vurg.imm { color:#fff; background:#dc2626; }
+    .vst { font-size:0.62rem; font-weight:800; text-transform:capitalize; color:#475569; background:#f1f5f9; border-radius:6px; padding:0.08rem 0.45rem; }
+    .vst[data-s=responded] { color:#92400e; background:#fef3c7; } .vst[data-s=acknowledged] { color:#1d4ed8; background:#dbeafe; } .vst[data-s=returned] { color:#9f1239; background:#ffe4e6; }
+    .vrev { font-size:0.7rem; font-weight:800; border:none; border-radius:7px; padding:0.22rem 0.6rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+    .vrev.acc { background:#059669; color:#fff; } .vrev.ret { background:#fff; color:#b91c1c; border:1px solid #fecaca; }
+    .vrow.resp { background:#fffbeb; border-radius:8px; padding:0.4rem 0.5rem; margin-top:0.15rem; }
+    .vresp { font-size:0.74rem; color:#374151; padding:0.05rem 0.5rem 0.35rem; line-height:1.4; } .vresp i { color:#6d28d9; }
+    .vn.rev { background:#f59e0b; }
+    .dm-back { position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:1000; padding:1rem; }
+    .dm-card { background:#fff; border-radius:14px; padding:1.1rem 1.2rem; width:440px; max-width:100%; box-shadow:0 20px 50px rgba(0,0,0,0.3); max-height:90vh; overflow:auto; }
+    .dm-hd { font-size:1rem; font-weight:800; color:#0d3b66; display:flex; align-items:center; gap:0.5rem; }
+    .dm-sub { font-size:0.8rem; color:#64748b; margin:0.3rem 0 0.4rem; }
+    .dm-card label { display:block; font-size:0.64rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.02em; margin:0.7rem 0 0.2rem; }
+    .dm-card select, .dm-card textarea { width:100%; box-sizing:border-box; font-size:0.82rem; border:1px solid #cbd5e1; border-radius:8px; padding:0.4rem 0.55rem; font-family:inherit; }
+    .dm-card textarea { min-height:54px; resize:vertical; }
+    .dm-row { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; }
+    .dm-hint { font-size:0.7rem; color:#6d28d9; margin-top:0.35rem; display:flex; align-items:center; gap:5px; }
+    .dm-act { display:flex; justify-content:flex-end; gap:0.5rem; margin-top:1.1rem; }
+    .dm-cancel { background:#fff; border:1px solid #cbd5e1; color:#475569; border-radius:8px; padding:0.45rem 1rem; font-weight:700; font-size:0.82rem; cursor:pointer; }
+    .dm-go { background:#7c3aed; color:#fff; border:none; border-radius:8px; padding:0.45rem 1.1rem; font-weight:700; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+    .dm-go.inc { background:#0369a1; }
   `],
 })
 export class DisasterScannerComponent {
@@ -328,6 +418,14 @@ export class DisasterScannerComponent {
   statusFilters = [{ key: '', label: 'All' }, { key: 'new', label: 'Awaiting triage' }, { key: 'dispatched', label: 'Dispatched' }, { key: 'dismissed', label: 'Dismissed' }];
   hazardOpts = HAZARD_OPTS;
   agencyKeys = Object.keys(AGENCY_NAMES);
+  urgencyOpts = URGENCY_OPTS; sourceOpts = SOURCE_OPTS; incSevOpts = INC_SEV_OPTS;
+  respondedCount = computed(() => this.taskings().filter(t => t.status === 'responded').length);
+
+  // dispatch picker modals
+  entityModal = signal<Detection | null>(null);
+  emAgency = signal(''); emUrgency = signal('Urgent'); emSource = signal(''); emInstruction = signal('');
+  incidentModal = signal<Detection | null>(null);
+  imRegion = signal(''); imDistrict = signal(''); imSeverity = signal('Moderate');
 
   constructor() { this.load(); }
 
@@ -349,7 +447,7 @@ export class DisasterScannerComponent {
     this.http.get<any>('/api/v1/ew/scanner/detections?' + q.toString()).subscribe(r => {
       this.detections.set(r.detections ?? []); this.stats.set(r.stats ?? {});
     });
-    this.http.get<any>('/api/v1/ew/scanner/entity-taskings?status=awaiting').subscribe({ next: r => this.taskings.set(r.taskings ?? []), error: () => {} });
+    this.http.get<any>('/api/v1/ew/scanner/entity-taskings').subscribe({ next: r => this.taskings.set((r.taskings ?? []).filter((t: Tasking) => t.status !== 'accepted')), error: () => {} });
   }
   loadUpdates(): void { this.http.get<any>('/api/v1/ew/agency/updates').subscribe({ next: r => this.updates.set(r.updates ?? []), error: () => {} }); }
   loadFocal(): void { this.http.get<any>('/api/ew/monitoring/reports').subscribe({ next: r => this.focal.set(r.reports ?? r.data ?? []), error: () => {} }); }
@@ -361,17 +459,53 @@ export class DisasterScannerComponent {
       error: () => { this.scanning.set(false); this.notify('Scan failed — check source connectivity.', true); },
     });
   }
-  dispatch(d: Detection, as: 'incident' | 'entity'): void {
-    this.http.post<any>(`/api/v1/ew/scanner/${d.id}/dispatch`, { as }).subscribe({
-      next: r => { this.notify(r?.message ?? `Dispatched.`, !r?.success); if (r?.success) { this.load(); } },
+  hazardOwner(h: string): string | null { return HAZARD_OWNER[h] ?? null; }
+  openEntity(d: Detection): void {
+    this.entityModal.set(d);
+    this.emAgency.set(this.hazardOwner(d.hazard_type) ?? this.agencyKeys[0]);
+    this.emUrgency.set('Urgent');
+    this.emSource.set(d.reliability === 'official' ? 'Field report' : '');
+    this.emInstruction.set('');
+  }
+  openIncident(d: Detection): void {
+    this.incidentModal.set(d);
+    this.imRegion.set(d.region ?? '');
+    this.imDistrict.set(d.district ?? '');
+    this.imSeverity.set('Moderate');
+  }
+  confirmEntity(): void {
+    const d = this.entityModal();
+    if (!d) { return; }
+    this.doDispatch(d, { as: 'entity', agency: this.emAgency(), urgency: this.emUrgency(),
+      source: this.emSource() || null, instruction: this.emInstruction() || null });
+    this.entityModal.set(null);
+  }
+  confirmIncident(): void {
+    const d = this.incidentModal();
+    if (!d) { return; }
+    this.doDispatch(d, { as: 'incident', region: this.imRegion() || null,
+      district: this.imDistrict() || null, severity: this.imSeverity() });
+    this.incidentModal.set(null);
+  }
+  private doDispatch(d: Detection, body: Record<string, unknown>): void {
+    this.http.post<any>(`/api/v1/ew/scanner/${d.id}/dispatch`, body).subscribe({
+      next: r => { this.notify(r?.message ?? 'Dispatched.', !r?.success); if (r?.success) { this.load(); } },
       error: e => this.notify(e?.error?.detail ?? e?.error?.message ?? 'Could not dispatch.', true),
+    });
+  }
+  /** EOCC reviews an entity's resent assessment: accept (→ Impact Analysis) or return for revision. */
+  reviewTasking(t: Tasking, outcome: 'accepted' | 'returned'): void {
+    let note = '';
+    if (outcome === 'returned') { note = window.prompt('Reason / what to revise (optional):') ?? ''; }
+    this.http.post<any>(`/api/v1/ew/scanner/taskings/${t.id}/review`, { outcome, note }).subscribe({
+      next: r => { this.notify(r?.success
+          ? (outcome === 'accepted' ? 'Accepted — feeding Impact Analysis.' : 'Returned to the entity for revision.')
+          : (r?.message || 'Could not review.'), !r?.success); this.load(); },
+      error: e => this.notify(e?.error?.detail ?? e?.error?.message ?? 'Could not review.', true),
     });
   }
   dismiss(d: Detection): void {
     this.http.post<any>(`/api/v1/ew/scanner/${d.id}/dismiss`, {}).subscribe({ next: () => { this.notify('Dismissed.', false); this.load(); }, error: () => this.notify('Could not dismiss.', true) });
-  }
-  resolveTasking(t: Tasking): void {
-    this.http.post<any>(`/api/v1/ew/scanner/taskings/${t.id}/respond`, {}).subscribe({ next: () => { this.notify('Marked as responded.', false); this.load(); }, error: () => this.notify('Could not update.', true) });
   }
   addReport(): void {
     this.http.post<any>('/api/v1/ew/scanner/report', this.rep).subscribe({
