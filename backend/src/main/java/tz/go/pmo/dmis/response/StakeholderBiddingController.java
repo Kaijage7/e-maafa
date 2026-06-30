@@ -135,9 +135,12 @@ public class StakeholderBiddingController {
                 join public.resources r on r.id = ar.resource_id where ar.id = ?
                 """, id);
         List<Map<String, Object>> bids = jdbc.queryForList("""
-                select b.*, s.name as stakeholder_name, s.type as stakeholder_type
+                select b.*, s.name as stakeholder_name, s.type as stakeholder_type,
+                       coalesce(ru.name, ru.email) as recorded_by_name, coalesce(au.name, au.email) as accepted_by_name
                 from public.stakeholder_resource_bids b
                 join public.stakeholders s on s.id = b.stakeholder_id
+                left join public.users ru on ru.id = b.recorded_by
+                left join public.users au on au.id = b.accepted_by
                 where b.allocated_resource_id = ? and b.deleted_at is null
                 order by case b.status when 'Pending' then 0 when 'Accepted' then 1 else 2 end, b.created_at desc
                 """, id);
@@ -235,12 +238,14 @@ public class StakeholderBiddingController {
         if (deadline != null && LocalDate.parse(String.valueOf(deadline).substring(0, 10)).isBefore(LocalDate.now())) {
             throw new BusinessRuleException("The bidding deadline for this request has passed.");
         }
+        // recorded_by = the authenticated MAKER who keyed this offer (the operator for an on-behalf entry, the
+        // partner user for a self-pledge) — server-derived, kept distinct from the stakeholder it is attributed to.
         jdbc.update("""
                 insert into public.stakeholder_resource_bids(allocated_resource_id, stakeholder_id, resource_id,
-                    quantity_offered, unit_price, delivery_date, status, notes, created_at, updated_at)
-                values (?,?,?,?,?,?,'Pending',?,now(),now())
+                    quantity_offered, unit_price, delivery_date, status, notes, recorded_by, created_at, updated_at)
+                values (?,?,?,?,?,?,'Pending',?,?,now(),now())
                 """, allocationId, stakeholderId, allocation.get("resource_id"), quantity, unitPrice,
-                parseDate(body.get("delivery_date")), str(body.get("notes")));
+                parseDate(body.get("delivery_date")), str(body.get("notes")), users.actingUserId());
     }
 
     /** Accept: journal the offer onto the allocation and move it to 'Sourcing'. */
@@ -252,8 +257,10 @@ public class StakeholderBiddingController {
         guardAllocationArea(bidAllocationId(bid));
         requireStatus(bid, "Pending", "Only pending bids can be accepted.");
         String notes = str(body == null ? null : body.get("notes"));
-        jdbc.update("update public.stakeholder_resource_bids set status = 'Accepted', notes = coalesce(?, notes), updated_at = now() where id = ?",
-                notes, id);
+        // accepted_by = the authenticated CHECKER (PMO) who accepts — distinct from recorded_by (the maker),
+        // so maker and checker are separate, identified parties (segregation of duties / non-repudiation).
+        jdbc.update("update public.stakeholder_resource_bids set status = 'Accepted', accepted_by = ?, notes = coalesce(?, notes), updated_at = now() where id = ?",
+                users.actingUserId(), notes, id);
 
         long allocationId = bidAllocationId(bid);
         Map<String, Object> allocation = findAllocation(allocationId);

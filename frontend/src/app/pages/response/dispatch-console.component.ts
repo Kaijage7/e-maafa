@@ -298,6 +298,7 @@ interface ProcurementRow {
                   <span class="chip" [class]="b.status === 'Pending' ? 'c-waiting' : b.status === 'Accepted' ? 'c-sourcing' : b.status === 'Received' ? 'c-approved' : 'c-other'">{{ b.status }}</span>
                   <div class="src-meta">{{ b.quantity_offered }} &#64; {{ b.unit_price }} · delivery {{ b.delivery_date?.substring(0, 10) }}
                     @if (b.notes) { · {{ b.notes.substring(0, 50) }} }</div>
+                  @if (b.recorded_by_name) { <div class="src-meta" style="font-size:.72rem;opacity:.8;"><i class="fas fa-user-pen"></i> Recorded by {{ b.recorded_by_name }}@if (b.accepted_by_name) { · accepted by {{ b.accepted_by_name }} }</div> }
                   <div style="margin-top:6px">
                     @if (b.status === 'Pending') {
                       <button class="btn-sm b-green" (click)="acceptBid(b)">Accept</button>
