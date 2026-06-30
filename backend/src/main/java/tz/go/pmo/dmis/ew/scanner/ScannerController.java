@@ -150,8 +150,8 @@ public class ScannerController {
         }
         String as = body != null && body.get("as") != null ? String.valueOf(body.get("as")).toLowerCase(Locale.ROOT) : "entity";
         switch (as) {
-            case "incident": return routeToIncident(id, d);
-            case "entity":   return routeToEntity(id, d);
+            case "incident": return routeToIncident(id, d, body);
+            case "entity":   return routeToEntity(id, d, body);
             case "dismiss":
                 jdbc.update("update public.scanner_detections set status='dismissed' where id=?", id);
                 return Map.of("success", true, "id", id, "dispatched_as", "dismissed");
@@ -160,56 +160,85 @@ public class ScannerController {
         }
     }
 
-    /** Route to the focal-point INCIDENT flow: create a draft incident that rides the national approval chain. */
-    private Map<String, Object> routeToIncident(long id, Map<String, Object> d) {
+    /** Route to the focal-point INCIDENT flow: create a draft incident that rides the national approval chain.
+     *  The operator may override the detection's area (region/district) and severity in {@code body}; the chosen
+     *  area sets origin_level (district→DED/DAS, region→RAS, else national) and therefore the first approver. */
+    private Map<String, Object> routeToIncident(long id, Map<String, Object> d, Map<String, Object> body) {
         String hazardType = str(d.get("hazard_type"));
         Long hazardId = resolveHazardId(hazardType);
-        String region = str(d.get("region"));
+        String chosenRegion = body != null ? str(body.get("region")) : null;
+        String chosenDistrict = body != null ? str(body.get("district")) : null;
+        String region = (chosenRegion != null && !chosenRegion.isBlank()) ? chosenRegion.trim() : str(d.get("region"));
+        String district = (chosenDistrict != null && !chosenDistrict.isBlank()) ? chosenDistrict.trim() : str(d.get("district"));
         Long regionId = resolveRegionId(region);
-        String severity = mapSeverity(str(d.get("severity")));
-        String originLevel = regionId != null ? "region" : "national";
+        Long districtId = resolveDistrictId(district, regionId);
+        if (districtId != null && regionId == null) {                 // district chosen without region → derive region
+            regionId = jdbc.queryForList("select region_id from public.districts where id=?", Long.class, districtId)
+                .stream().findFirst().orElse(null);
+            if (regionId != null && (region == null || region.isBlank())) {
+                region = jdbc.queryForList("select name from public.regions where id=?", String.class, regionId)
+                    .stream().findFirst().orElse(region);
+            }
+        }
+        String chosenSev = body != null ? str(body.get("severity")) : null;
+        String severity = mapIncidentSeverity((chosenSev != null && !chosenSev.isBlank()) ? chosenSev : str(d.get("severity")));
+        String originLevel = districtId != null ? "district" : (regionId != null ? "region" : "national");
         healSeq("incidents");
         Long incidentId = jdbc.queryForObject(
-            "insert into public.incidents(title, hazard_id, region_id, region_name, latitude, longitude, reported_at, "
-                + "description, severity_level, status, workflow_status, origin_level, source_of_report, created_at, updated_at) "
-                + "values (?,?,?,?,?,?, now(), ?,?, 'Reported', 'draft', ?, 'Disaster Scanner', now(), now()) returning id",
-            Long.class, str(d.get("title")), hazardId, regionId, region, dbl(d.get("latitude")), dbl(d.get("longitude")),
-            str(d.get("summary")), severity, originLevel);
+            "insert into public.incidents(title, hazard_id, region_id, region_name, district_id, district_name, latitude, longitude, "
+                + "reported_at, description, severity_level, status, workflow_status, origin_level, source_of_report, created_at, updated_at) "
+                + "values (?,?,?,?,?,?,?,?, now(), ?,?, 'Reported', 'draft', ?, 'Disaster Scanner', now(), now()) returning id",
+            Long.class, str(d.get("title")), hazardId, regionId, region, districtId, district,
+            dbl(d.get("latitude")), dbl(d.get("longitude")), str(d.get("summary")), severity, originLevel);
         jdbc.update("update public.scanner_detections set status='dispatched', dispatched_as='incident', "
             + "dispatched_ref=?, incident_id=? where id=?", "INC-" + incidentId, incidentId, id);
+        String area = district != null && !district.isBlank() ? district : (region != null ? region : "national");
         notifications.notifyAllUsers(Notice.inApp("scanner_incident",
             "New incident from Disaster Scanner",
-            str(d.get("title")) + (region != null ? " — " + region : "") + " (awaiting focal-point review).",
+            str(d.get("title")) + " — " + area + " (" + originLevel + ", awaiting focal-point review).",
             "/m/response/incidents", "incident", incidentId, severity.toLowerCase(Locale.ROOT)));
         return Map.of("success", true, "id", id, "dispatched_as", "incident", "incident_id", incidentId,
-            "message", "Created draft incident #" + incidentId + " — now in the focal-point / approval flow.");
+            "origin_level", originLevel, "area", area,
+            "message", "Created draft incident #" + incidentId + " for " + area + " — now in the "
+                + originLevel + "-level focal-point / approval flow.");
     }
 
-    /** Route an online-only hazard (or SHOC/IGAD/AU alert) to the RELEVANT warning entity for verification. */
-    private Map<String, Object> routeToEntity(long id, Map<String, Object> d) {
+    /** Route a hazard to a warning entity for verification. The operator may pick the entity explicitly in
+     *  {@code body.agency} (default = the hazard's owner) and attach urgency / source / an instruction. */
+    private Map<String, Object> routeToEntity(long id, Map<String, Object> d, Map<String, Object> body) {
         String hazardType = str(d.get("hazard_type"));
-        String agency = resolveAgency(hazardType, str(d.get("title")) + " " + str(d.get("summary")));
+        String chosen = body != null ? str(body.get("agency")) : null;
+        String agency = (chosen != null && !chosen.isBlank())
+            ? chosen.trim().toLowerCase(Locale.ROOT)
+            : resolveAgency(hazardType, str(d.get("title")) + " " + str(d.get("summary")));
         if (agency == null) {
             return Map.of("success", false, "id", id,
-                "message", "No warning entity owns hazard '" + hazardType + "'. Route it as an incident instead.");
+                "message", "No warning entity owns hazard '" + hazardType + "'. Pick an entity, or route it as an incident.");
         }
+        if (!AGENCY_NAME.containsKey(agency)) {
+            return Map.of("success", false, "id", id, "message", "Unknown warning entity '" + agency + "'.");
+        }
+        String urgency = normalizeUrgency(body != null ? str(body.get("urgency")) : null);
+        String source = body != null ? str(body.get("source")) : null;
+        String instruction = body != null ? str(body.get("instruction")) : null;
         String region = str(d.get("region"));
         String hazardLabel = hazardType == null ? "hazard" : hazardType.replace('_', ' ');
+        String message = (instruction != null && !instruction.isBlank()) ? instruction.trim()
+            : "Online report of " + hazardLabel + (region != null ? " in " + region : "")
+                + " — please verify and issue an official assessment.";
         Long taskingId = jdbc.queryForObject(
-            "insert into public.scanner_entity_taskings(detection_id, agency, hazard_type, region, status, message, requested_at) "
-                + "values (?,?,?,?, 'awaiting', ?, now()) returning id",
-            Long.class, id, agency, hazardType, region,
-            "Online report of " + hazardLabel + (region != null ? " in " + region : "")
-                + " — please verify and issue an official assessment.");
+            "insert into public.scanner_entity_taskings(detection_id, agency, hazard_type, region, status, message, "
+                + "urgency, source, instruction, requested_at) values (?,?,?,?, 'awaiting', ?,?,?,?, now()) returning id",
+            Long.class, id, agency, hazardType, region, message, urgency, source, instruction);
         jdbc.update("update public.scanner_detections set status='dispatched', dispatched_as=?, assigned_entity=? where id=?",
             "entity:" + agency, agency, id);
+        String urgTag = urgency != null ? "[" + urgency + "] " : "";
         notifications.notifyAllUsers(Notice.inApp("scanner_tasking",
-            AGENCY_NAME.getOrDefault(agency, agency.toUpperCase(Locale.ROOT)) + ": verify online " + hazardLabel + " report",
-            "Online report of " + hazardLabel + (region != null ? " in " + region : "")
-                + " was not yet issued by an entity. Verify and issue an official assessment.",
-            "/m/preparedness/early-warnings/" + agency, "scanner_detection", id, "high"));
-        return Map.of("success", true, "id", id, "dispatched_as", "entity", "agency", agency,
-            "tasking_id", taskingId, "message", "Routed to " + AGENCY_NAME.getOrDefault(agency, agency.toUpperCase(Locale.ROOT))
+            AGENCY_NAME.get(agency) + ": " + urgTag + "verify online " + hazardLabel + " report",
+            message, "/m/preparedness/early-warnings/" + agency, "scanner_detection", id,
+            "Immediate".equals(urgency) ? "critical" : "high"));
+        return Map.of("success", true, "id", id, "dispatched_as", "entity", "agency", agency, "tasking_id", taskingId,
+            "message", "Routed to " + AGENCY_NAME.get(agency) + (urgency != null ? " (" + urgency + ")" : "")
                 + " for verification & official assessment.");
     }
 
@@ -223,23 +252,93 @@ public class ScannerController {
         if (status != null && !status.isBlank()) { where.append(" and t.status=?"); args.add(status); }
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select t.id, t.agency, t.hazard_type, t.region, t.status, t.message, t.requested_at, "
+                + "t.urgency, t.source, t.instruction, t.acknowledged_at, "
+                + "t.response_severity, t.response_message, t.response_action, t.response_attachment, "
+                + "t.review_outcome, t.review_note, t.reviewed_at, "
                 + "t.responded_submission_id, t.responded_at, d.id as detection_id, d.title, d.summary, d.url, "
                 + "d.source_id, d.severity "
                 + "from public.scanner_entity_taskings t join public.scanner_detections d on d.id = t.detection_id "
                 + "where " + where + " order by t.requested_at desc limit 200", args.toArray());
         return Map.of("taskings", rows,
-            "awaiting", jdbc.queryForObject("select count(*) from public.scanner_entity_taskings where status='awaiting'", Integer.class));
+            "awaiting", jdbc.queryForObject("select count(*) from public.scanner_entity_taskings where status in ('awaiting','acknowledged','returned')", Integer.class),
+            "responded", jdbc.queryForObject("select count(*) from public.scanner_entity_taskings where status='responded'", Integer.class));
     }
 
-    /** Mark a tasking responded (the entity issued its official assessment / submission). */
+    /** Entity acknowledges receipt of a tasking (awaiting → acknowledged). */
+    @PostMapping("/taskings/{id}/acknowledge")
+    @Transactional
+    @PreAuthorize("hasAuthority('early_warning.create')")
+    public Map<String, Object> acknowledgeTasking(@PathVariable long id) {
+        int n = jdbc.update("update public.scanner_entity_taskings set status='acknowledged', acknowledged_at=now() "
+            + "where id=? and status='awaiting'", id);
+        if (n == 0) throw new ResourceNotFoundException("Tasking not found or no longer awaiting.");
+        return Map.of("success", true, "id", id, "status", "acknowledged");
+    }
+
+    /** The entity submits its official ASSESSMENT and re-sends the tasking for EOCC review
+     *  (awaiting/acknowledged/returned → responded). This is the "work on it & resend" leg. */
     @PostMapping("/taskings/{id}/respond")
+    @Transactional
     @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> respondTasking(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         Long submissionId = body != null ? parseLong(body.get("submission_id")) : null;
+        String sev = body != null ? str(body.get("response_severity")) : null;
+        String msg = body != null ? str(body.get("response_message")) : null;
+        String act = body != null ? str(body.get("response_action")) : null;
+        String att = body != null ? str(body.get("response_attachment")) : null;
+        if ((msg == null || msg.isBlank()) && submissionId == null) {
+            return Map.of("success", false, "id", id, "message", "Add your assessment before re-sending.");
+        }
         int n = jdbc.update("update public.scanner_entity_taskings set status='responded', responded_submission_id=?, "
-            + "responded_at=now() where id=?", submissionId, id);
-        if (n == 0) throw new ResourceNotFoundException("Tasking not found.");
+            + "response_severity=?, response_message=?, response_action=?, response_attachment=?, responded_at=now() "
+            + "where id=? and status in ('awaiting','acknowledged','returned')",
+            submissionId, sev, msg, act, att, id);
+        if (n == 0) throw new ResourceNotFoundException("Tasking not found or not in a respondable state.");
+        Map<String, Object> t = jdbc.queryForMap("select agency, hazard_type, region, detection_id "
+            + "from public.scanner_entity_taskings where id=?", id);
+        String hazard = str(t.get("hazard_type")) == null ? "hazard" : str(t.get("hazard_type")).replace('_', ' ');
+        notifications.notifyAllUsers(Notice.inApp("scanner_response",
+            AGENCY_NAME.getOrDefault(str(t.get("agency")), String.valueOf(t.get("agency")).toUpperCase(Locale.ROOT))
+                + " responded — assessment for review",
+            hazard + (t.get("region") != null ? " in " + t.get("region") : "")
+                + " — official assessment submitted; review to accept or return.",
+            "/m/preparedness/early-warnings/scanner", "scanner_detection", parseLong(t.get("detection_id")),
+            "Critical".equalsIgnoreCase(sev) ? "critical" : "high"));
         return Map.of("success", true, "id", id, "status", "responded");
+    }
+
+    /** EOCC reviews an entity's response: accept (feeds Impact Analysis) or return for revision (entity reworks).
+     *  responded → accepted | returned. */
+    @PostMapping("/taskings/{id}/review")
+    @Transactional
+    @PreAuthorize("hasAuthority('early_warning.approve')")
+    public Map<String, Object> reviewTasking(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        String outcome = body != null ? str(body.get("outcome")) : null;
+        outcome = outcome == null ? "" : outcome.trim().toLowerCase(Locale.ROOT);
+        if (!outcome.equals("accepted") && !outcome.equals("returned")) {
+            return Map.of("success", false, "id", id, "message", "outcome must be 'accepted' or 'returned'.");
+        }
+        String note = body != null ? str(body.get("note")) : null;
+        int n = jdbc.update("update public.scanner_entity_taskings set status=?, review_outcome=?, review_note=?, "
+            + "reviewed_at=now() where id=? and status='responded'", outcome, outcome, note, id);
+        if (n == 0) throw new ResourceNotFoundException("Tasking not found or not awaiting review.");
+        Map<String, Object> t = jdbc.queryForMap("select agency, hazard_type, region, detection_id "
+            + "from public.scanner_entity_taskings where id=?", id);
+        String entity = AGENCY_NAME.getOrDefault(str(t.get("agency")), String.valueOf(t.get("agency")).toUpperCase(Locale.ROOT));
+        String hazard = str(t.get("hazard_type")) == null ? "hazard" : str(t.get("hazard_type")).replace('_', ' ');
+        String where = t.get("region") != null ? " in " + t.get("region") : "";
+        if (outcome.equals("returned")) {
+            notifications.notifyAllUsers(Notice.inApp("scanner_returned",
+                entity + ": assessment returned for revision",
+                hazard + where + " — " + (note != null && !note.isBlank() ? note : "please revise and re-send."),
+                "/m/preparedness/early-warnings/" + t.get("agency"), "scanner_detection", parseLong(t.get("detection_id")), "high"));
+        } else {
+            notifications.notifyAllUsers(Notice.inApp("scanner_accepted",
+                entity + ": assessment accepted",
+                hazard + where + " — accepted; feeding Impact Analysis.",
+                "/m/preparedness/early-warnings/scanner", "scanner_detection", parseLong(t.get("detection_id")), "low"));
+        }
+        return Map.of("success", true, "id", id, "status", outcome);
     }
 
     // ── helpers ──
@@ -262,13 +361,32 @@ public class ScannerController {
             Long.class, name.trim().toLowerCase(Locale.ROOT));
         return ids.isEmpty() ? null : ids.get(0);
     }
-    private static String mapSeverity(String s) {
-        if (s == null) return "Medium";
-        switch (s.toLowerCase(Locale.ROOT)) {
-            case "critical": return "Critical";
-            case "high": return "High";
-            case "low": return "Low";
-            default: return "Medium";
+    private Long resolveDistrictId(String name, Long regionId) {
+        if (name == null || name.isBlank()) return null;
+        String nm = name.trim().toLowerCase(Locale.ROOT);
+        List<Long> ids = regionId != null
+            ? jdbc.queryForList("select id from public.districts where lower(name)=? and region_id=? limit 1", Long.class, nm, regionId)
+            : jdbc.queryForList("select id from public.districts where lower(name)=? limit 1", Long.class, nm);
+        return ids.isEmpty() ? null : ids.get(0);
+    }
+    /** Normalize to the e-MAAFA dispatch urgency standard; null if unrecognized/absent. */
+    private static String normalizeUrgency(String u) {
+        if (u == null) return null;
+        switch (u.trim().toLowerCase(Locale.ROOT)) {
+            case "immediate": return "Immediate";
+            case "urgent":    return "Urgent";
+            case "routine":   return "Routine";
+            default:          return null;
+        }
+    }
+    /** Map any severity word to the incident severity vocabulary (Minor/Moderate/Major/Critical). */
+    private static String mapIncidentSeverity(String s) {
+        if (s == null) return "Moderate";
+        switch (s.trim().toLowerCase(Locale.ROOT)) {
+            case "critical":            return "Critical";
+            case "major": case "high":  return "Major";
+            case "minor": case "low":   return "Minor";
+            default:                    return "Moderate";   // medium / moderate / unknown
         }
     }
     private void healSeq(String table) {
