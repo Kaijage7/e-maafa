@@ -54,6 +54,10 @@ const ACTIONS: Action[] = [
               @for (m of q.dark; track $index) { <rect [attr.x]="m[0]" [attr.y]="m[1]" width="1.02" height="1.02" [attr.fill]="q.color"/> }
             </svg>
             <div class="qr-url">{{ q.url }}</div>
+            <button class="no-print" type="button" (click)="download(q)"
+                    style="margin-top:.65rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:.4rem 1rem;font-size:.8rem;font-weight:700;cursor:pointer;" [style.color]="q.color">
+              <i class="fas fa-download me-1"></i> Download PNG
+            </button>
             <div class="qr-desc no-print">{{ q.desc }}</div>
           </div>
         }
@@ -77,4 +81,23 @@ export class QrOutreachComponent {
   });
 
   print(): void { window.print(); }
+
+  /** Render the QR matrix to a high-res PNG and download it (no external service). */
+  download(q: { key: string; color: string; n: number; dark: [number, number][] }): void {
+    const scale = 16, border = 4, px = (q.n + 2 * border) * scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = px; canvas.height = px;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { return; }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, px, px);
+    ctx.fillStyle = q.color;
+    for (const [x, y] of q.dark) {
+      ctx.fillRect((x + border) * scale, (y + border) * scale, scale, scale);
+    }
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `emaafa-qr-${q.key}.png`;
+    a.click();
+  }
 }
