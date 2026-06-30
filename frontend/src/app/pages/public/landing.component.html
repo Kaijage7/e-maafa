@@ -430,3 +430,12 @@
     </div>
   </div>
 }
+
+<!-- Fixed "scan to register" QR — visible on arrival (bottom-left); encodes the register page on the current origin -->
+<a [routerLink]="['/register-partner']" class="ll-qr" title="Scan with a phone — or tap — to register as a partner">
+  <svg [attr.viewBox]="qr.vb" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+    <rect [attr.x]="-3" [attr.y]="-3" [attr.width]="qr.n + 6" [attr.height]="qr.n + 6" fill="#ffffff"/>
+    @for (m of qr.dark; track $index) { <rect [attr.x]="m[0]" [attr.y]="m[1]" width="1" height="1" fill="#0d3b66"/> }
+  </svg>
+  <span class="ll-qr-cap">SCAN TO REGISTER</span>
+</a>

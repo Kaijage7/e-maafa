@@ -7,6 +7,7 @@ import { PortalLabels } from './portal-i18n';
 import { PortalDataService, HazardCard, CapabilityCard } from './portal-data.service';
 import { incidentLifecycle } from './incident-lifecycle';
 import { CountUpDirective, RevealDirective } from './fx';
+import { qrcodegen } from '../../shared/qrcodegen';
 
 declare const L: any; // Leaflet (global, loaded in index.html)
 
@@ -109,6 +110,15 @@ const PUB_THUMBS = [
   standalone: true,
   imports: [RouterLink, CountUpDirective, RevealDirective, DecimalPipe],
   templateUrl: './landing.component.html',
+  styles: [`
+    .ll-qr { position:fixed; left:18px; bottom:18px; z-index:40; display:flex; flex-direction:column; align-items:center; gap:.4rem;
+      background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:.65rem .65rem .5rem; text-decoration:none;
+      box-shadow:0 12px 30px rgba(0,51,102,0.20); transition:transform .2s ease, box-shadow .2s ease; }
+    .ll-qr:hover { transform:translateY(-3px); box-shadow:0 18px 40px rgba(0,51,102,0.26); }
+    .ll-qr svg { width:108px; height:108px; display:block; }
+    .ll-qr-cap { font-size:.6rem; font-weight:800; letter-spacing:.05em; color:#0d3b66; }
+    @media (max-width:575px){ .ll-qr { left:12px; bottom:12px; } .ll-qr svg { width:86px; height:86px; } }
+  `],
 })
 export class LandingComponent implements OnDestroy {
   L = inject(PortalLabels);
@@ -116,6 +126,21 @@ export class LandingComponent implements OnDestroy {
   private portalData = inject(PortalDataService);
   private router = inject(Router);
   mapEl = viewChild<ElementRef>('heroMap');
+
+  /** "Scan to register" QR shown fixed at the foot of the arrival page — encodes the register page on the
+   *  current origin (auto-targets localhost / LAN / live domain), rendered in-system via the vendored encoder. */
+  qr = (() => {
+    const origin = (typeof window !== 'undefined' && window.location) ? window.location.origin : 'http://localhost:4200';
+    const q = qrcodegen.QrCode.encodeText(origin + '/register-partner', qrcodegen.QrCode.Ecc.MEDIUM);
+    const n = q.size;
+    const dark: [number, number][] = [];
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        if (q.getModule(x, y)) { dark.push([x, y]); }
+      }
+    }
+    return { n, dark, vb: `-3 -3 ${n + 6} ${n + 6}` };
+  })();
 
   /* ------------------------------ state ------------------------------ */
   data = signal<LandingPayload | null>(null);
