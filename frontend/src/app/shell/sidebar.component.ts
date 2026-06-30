@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { moduleBySlug } from '../core/modules';
 import { routePermission } from '../core/access';
+import { qrcodegen } from '../shared/qrcodegen';
 
 /** Exact reproduction of components/dmis/sidebar.blade.php (module mode: back-to-hub + current module). */
 @Component({
@@ -34,6 +35,15 @@ import { routePermission } from '../core/access';
         }
       </div>
       <div class="sidebar-footer">
+        <a [routerLink]="['/m/content-management/qr-outreach']" class="sb-qr" title="Scan to register a partner — or click to open QR Outreach"
+           style="display:block;text-align:center;padding:.55rem .5rem .6rem;text-decoration:none;">
+          <svg [attr.viewBox]="qr.vb" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"
+               style="width:94px;height:94px;background:#fff;border-radius:7px;padding:5px;box-sizing:border-box;">
+            <rect [attr.x]="-3" [attr.y]="-3" [attr.width]="qr.n + 6" [attr.height]="qr.n + 6" fill="#ffffff"/>
+            @for (m of qr.dark; track $index) { <rect [attr.x]="m[0]" [attr.y]="m[1]" width="1" height="1" fill="#0d3b66"/> }
+          </svg>
+          <div class="sb-qr-cap" style="font-size:.62rem;color:rgba(255,255,255,.72);margin-top:.3rem;font-weight:700;letter-spacing:.04em;">SCAN TO REGISTER</div>
+        </a>
         <div class="sb-user">
           <div class="sb-user-avatar">{{ auth.initials() }}</div>
           <div class="sb-user-info"><div class="sb-user-name">{{ auth.user()?.name }}</div><div class="sb-user-role">{{ auth.primaryRole() }}</div></div>
@@ -47,6 +57,21 @@ export class SidebarComponent {
   currentModule = input<string | null>(null);
   activeItem = input<string | null>(null);
   module = computed(() => moduleBySlug(this.currentModule() ?? ''));
+
+  /** Small "scan to register" QR at the foot of the sidebar — encodes the register page on the current
+   *  origin (so it auto-targets localhost / LAN / live domain), rendered in-system via the vendored encoder. */
+  qr = (() => {
+    const origin = (typeof window !== 'undefined' && window.location) ? window.location.origin : 'http://localhost:4200';
+    const q = qrcodegen.QrCode.encodeText(origin + '/register-partner', qrcodegen.QrCode.Ecc.MEDIUM);
+    const n = q.size;
+    const dark: [number, number][] = [];
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        if (q.getModule(x, y)) { dark.push([x, y]); }
+      }
+    }
+    return { n, dark, vb: `-3 -3 ${n + 6} ${n + 6}` };
+  })();
 
   /** Sidebar items the user may open — an item is shown only if its route permission is granted (same map
    * as the backend ModuleGuardFilter and the route guard). So component visibility is configured purely in
