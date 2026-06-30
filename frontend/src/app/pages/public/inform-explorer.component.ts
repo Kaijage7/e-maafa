@@ -101,7 +101,7 @@ const DIM_DESC: Record<string, string> = {
     .ind-chip.on { background:#1f6feb; color:#fff; border-color:#1f6feb; }
     .ind-chip .own { opacity:.7; font-weight:500; }
 
-    .catbar { display:flex; gap:.4rem; align-items:center; flex-wrap:nowrap; overflow-x:auto; margin-bottom:.9rem; padding:.5rem .8rem; }
+    .catbar { display:flex; flex-direction:row; gap:.4rem .5rem; align-items:center; flex-wrap:wrap; margin-bottom:.9rem; padding:.5rem .8rem; }
     .cat { font:inherit; font-size:.74rem; font-weight:700; padding:.28rem .65rem; border-radius:50px; border:1.5px solid #cbd5e1; background:#fff; color:#475569; cursor:pointer; display:inline-flex; align-items:center; gap:.3rem; flex:none; white-space:nowrap; }
     .cat:disabled { opacity:.45; cursor:default; }
     .cat-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
