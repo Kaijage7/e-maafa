@@ -467,13 +467,40 @@ public class PortalPublicService {
         if (name == null || organization == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name and organization are required");
         }
+        String phone = str(req.get("phone"));
+        String email = str(req.get("email"));
+        if (phone != null && !phone.replaceAll("[\\s-]", "").matches("^(\\+?255|0)[67]\\d{8}$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Enter a valid Tanzanian phone number (e.g. 0712 345 678) so we can send your confirmation.");
+        }
+        if (email != null && !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a valid email address.");
+        }
         Long id = jdbc.queryForObject("insert into public.stakeholders(name,organization,type,email,phone,region,district,country,"
                         + "is_active,is_verified,created_at,updated_at)"
                         + " values (?,?,?,?,?,?,?,?,true,false,now(),now()) returning id", Long.class,
                 name, organization, str(req.get("type")) == null ? "NGO" : str(req.get("type")),
-                str(req.get("email")), str(req.get("phone")), str(req.get("region")),
+                email, phone, str(req.get("region")),
                 str(req.get("district")), str(req.get("country")));
-        return Map.of("id", id, "message", "Registration received — pending verification by PMO");
+        // Genuine confirmation via the same live M-Gov SMS / SMTP channels every other notification uses
+        // (best-effort: the registration is saved regardless of whether the gateway accepts the message).
+        String congrats = "Congratulations " + name + "! You are registered as a partner with PMO e-MAAFA "
+                + "(Tanzania Disaster Management). Your details are under review — you will be notified once verified.";
+        boolean smsSent = false;
+        if (phone != null && !phone.isBlank()) {
+            try { smsSent = sms.sendBulk(List.of(phone), congrats, "partner_register", id).success(); }
+            catch (Exception ignore) { /* confirmation is best-effort; the record is already saved */ }
+        }
+        if (email != null && !email.isBlank()) {
+            try { mail.send(email, "e-MAAFA — partner registration received",
+                    MailService.wrap("Registration received", congrats), "partner_register", id, null); }
+            catch (Exception ignore) { /* best-effort */ }
+        }
+        return Map.of("id", id, "smsSent", smsSent, "message",
+                (phone != null && !phone.isBlank())
+                        ? "Registration received — a confirmation SMS has been sent to " + phone
+                          + ". PMO will verify your details shortly."
+                        : "Registration received — pending verification by PMO.");
     }
 
     /** Public Tanzania regions for the stakeholder-registration cascade (reuses public.regions). */

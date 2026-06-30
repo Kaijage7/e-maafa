@@ -135,6 +135,7 @@ export const MODULES: Module[] = [
       { name: 'Translations', path: 'translations', icon: 'fa-language', description: 'Bilingual (English / Kiswahili) portal labels and UI strings', legacyRoute: 'admin.translations.index' },
       { name: 'Agencies', path: 'agencies', icon: 'fa-building', description: 'Manage partner agencies', legacyRoute: 'admin.agencies.index' },
       { name: 'Communication Center', path: 'communication-center', icon: 'fa-tower-broadcast', description: 'SMS, email & alerts — compose, send and delivery logs in one place', legacyRoute: 'admin.sms-management.index' },
+      { name: 'QR Outreach', path: 'qr-outreach', icon: 'fa-qrcode', description: 'Printable QR codes that open the public Register / Report / Subscribe pages', legacyRoute: '' },
       { name: 'Publications', path: 'publications', icon: 'fa-file-pdf', description: 'Manage public portal publications', legacyRoute: 'admin.disaster-risk-frameworks.index' },
       { name: 'Risk Frameworks', path: 'frameworks', icon: 'fa-file-contract', description: 'Disaster risk reduction frameworks', legacyRoute: 'mitigation.frameworks.index' },
       { name: 'News & Events', path: 'news', icon: 'fa-newspaper', description: 'Manage news articles and events', legacyRoute: 'admin.portal-news.index' },

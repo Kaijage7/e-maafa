@@ -14,6 +14,7 @@ export const routes: Routes = [
       { path: 'about', loadComponent: () => import('./pages/public/about.component').then(m => m.AboutComponent) },
       { path: 'portal', loadComponent: () => import('./pages/public/public-portal.component').then(m => m.PublicLivePortalComponent) },
       { path: 'subscribe', loadComponent: () => import('./pages/public/subscribe.component').then(m => m.SubscribeComponent) },
+      { path: 'register-partner', loadComponent: () => import('./pages/public/register-partner.component').then(m => m.RegisterPartnerComponent) },
       { path: 'education', loadComponent: () => import('./pages/public/education.component').then(m => m.EducationComponent) },
       { path: 'hazard-calendar', loadComponent: () => import('./pages/public/hazard-calendar.component').then(m => m.HazardCalendarComponent) },
       { path: 'inform-risk', loadComponent: () => import('./pages/public/inform-explorer.component').then(m => m.PublicInformExplorerComponent) },
@@ -140,6 +141,7 @@ export const routes: Routes = [
   { path: 'm/recovery/projects', canActivate: [authGuard], loadComponent: () => import('./pages/recovery/strategic-projects.component').then(m => m.StrategicProjectsComponent) },
   { path: 'm/recovery/lessons', canActivate: [authGuard], loadComponent: () => import('./pages/recovery/knowledge-repository.component').then(m => m.KnowledgeRepositoryComponent) },
   { path: 'm/content-management/communication-center', canActivate: [authGuard], loadComponent: () => import('./pages/content/communication-center.component').then(m => m.CommunicationCenterComponent) },
+  { path: 'm/content-management/qr-outreach', canActivate: [authGuard], loadComponent: () => import('./pages/content/qr-outreach.component').then(m => m.QrOutreachComponent) },
   // SMS & Email management are now tabs inside the Communication Center — old links redirect there (no duplicate screens).
   { path: 'm/content-management/sms-management', redirectTo: 'm/content-management/communication-center', pathMatch: 'full' },
   { path: 'm/content-management/email-management', redirectTo: 'm/content-management/communication-center', pathMatch: 'full' },
