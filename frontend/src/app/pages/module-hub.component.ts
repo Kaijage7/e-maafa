@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { MODULES, Module } from '../core/modules';
 import { visibleModules } from '../core/module-access';
+import { qrcodegen } from '../shared/qrcodegen';
 
 /** Exact reproduction of home-v2.blade.php — the module hub landing. */
 @Component({
@@ -49,9 +50,24 @@ import { visibleModules } from '../core/module-access';
         </a>
       }
     </div>
+
+    <a [routerLink]="['/register-partner']" class="hub-qr" title="Scan with a phone to register as a partner — or click to open the registration page">
+      <svg [attr.viewBox]="qr.vb" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+        <rect [attr.x]="-3" [attr.y]="-3" [attr.width]="qr.n + 6" [attr.height]="qr.n + 6" fill="#ffffff"/>
+        @for (m of qr.dark; track $index) { <rect [attr.x]="m[0]" [attr.y]="m[1]" width="1" height="1" fill="#0d3b66"/> }
+      </svg>
+      <span class="hub-qr-cap">SCAN TO REGISTER</span>
+    </a>
   `,
   styles: [`
     .module-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .hub-qr { position:fixed; left:18px; bottom:18px; z-index:50; display:flex; flex-direction:column; align-items:center; gap:.45rem;
+      background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:.7rem .7rem .55rem; text-decoration:none;
+      box-shadow:0 12px 30px rgba(0,51,102,0.18); transition:transform .2s ease, box-shadow .2s ease; }
+    .hub-qr:hover { transform:translateY(-3px); box-shadow:0 18px 40px rgba(0,51,102,0.24); }
+    .hub-qr svg { width:112px; height:112px; display:block; }
+    .hub-qr-cap { font-size:.62rem; font-weight:800; letter-spacing:.05em; color:#0d3b66; }
+    @media (max-width:575px){ .hub-qr svg { width:88px; height:88px; } }
     .module-card-link {
       background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       border-radius: 18px; padding: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.7); cursor: pointer;
@@ -85,6 +101,21 @@ export class ModuleHubComponent {
   auth = inject(AuthService);
   // Show each user only the modules their permissions grant (matches the backend ModuleGuardFilter).
   modules = visibleModules(MODULES, this.auth.user());
+
+  /** "Scan to register" QR for the hub — encodes the register page on the current origin (auto-targets
+   *  localhost / LAN / live domain), rendered in-system via the vendored encoder. */
+  qr = (() => {
+    const origin = (typeof window !== 'undefined' && window.location) ? window.location.origin : 'http://localhost:4200';
+    const q = qrcodegen.QrCode.encodeText(origin + '/register-partner', qrcodegen.QrCode.Ecc.MEDIUM);
+    const n = q.size;
+    const dark: [number, number][] = [];
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        if (q.getModule(x, y)) { dark.push([x, y]); }
+      }
+    }
+    return { n, dark, vb: `-3 -3 ${n + 6} ${n + 6}` };
+  })();
 
   constructor() {
     // home-v2.blade.php sets @section('module-color', '#003366') — the hub uses the navy accent.
