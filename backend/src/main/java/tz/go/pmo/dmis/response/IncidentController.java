@@ -522,10 +522,23 @@ public class IncidentController {
         workflow.findOr404(id);
         boolean on = body == null || body.get("value") == null || Boolean.parseBoolean(String.valueOf(body.get("value")));
         if (on) {
+            Map<String, Object> loc = jdbc.queryForMap(
+                    "select latitude, longitude, region_name, workflow_status from public.incidents where id = ?", id);
+            // An unverified draft is held back by default so junk/unconfirmed reports don't slip onto the public
+            // map — BUT PMO may deliberately push at any level via override (e.g. to warn the public early). The
+            // map shows the incident's live verification + response status so citizens see it is still unverified,
+            // and it updates as the incident moves through its flow.
+            if ("draft".equals(str(loc.get("workflow_status")))) {
+                boolean override = body != null && Boolean.parseBoolean(String.valueOf(body.get("override")));
+                if (!override) {
+                    return Map.of("success", false, "show_on_portal_map", false, "needs_override", true,
+                            "message", "This incident isn't verified yet (still a draft). PMO can show it on the public "
+                                    + "map anyway using override — its live status is shown so the public sees it is "
+                                    + "still being verified.");
+                }
+            }
             // The public map only plots incidents that HAVE coordinates. If this one has none, fall back to its
             // region centroid; if it has no region either, tell the operator honestly instead of a silent no-op.
-            Map<String, Object> loc = jdbc.queryForMap(
-                    "select latitude, longitude, region_name from public.incidents where id = ?", id);
             if (loc.get("latitude") == null) {
                 double[] c = centroids.forRegion(str(loc.get("region_name")));
                 if (c == null) {

@@ -355,12 +355,19 @@ export class IncidentShowComponent implements OnInit {
   }
 
   /** Push / remove the incident on the public portal live map (toggle show_on_portal_map). */
-  pushMap(on: boolean): void {
-    this.http.post<any>(`/api/v1/response/incidents/${this.id}/push-map`, { value: on }).subscribe({
+  pushMap(on: boolean, override = false): void {
+    this.http.post<any>(`/api/v1/response/incidents/${this.id}/push-map`, { value: on, override }).subscribe({
       next: r => ensureSweetAlert().then(() => {
         if (on && r && r.success === false) {
-          // The backend refused (e.g. the incident has no map location) — surface the real reason, no fake success.
-          Swal.fire('Cannot show on the map', r.message ?? 'This incident has no map location.', 'warning');
+          if (r.needs_override) {
+            // Draft/unverified — PMO may deliberately push it anyway; the map will show it is still being verified.
+            Swal.fire({ icon: 'warning', title: 'Not verified yet', text: r.message, showCancelButton: true,
+              confirmButtonText: 'Push anyway (PMO override)', confirmButtonColor: '#b45309' })
+              .then((res: { isConfirmed?: boolean }) => { if (res.isConfirmed) { this.pushMap(true, true); } });
+          } else {
+            // Genuinely can't (e.g. no map location) — surface the real reason, no fake success.
+            Swal.fire('Cannot show on the map', r.message ?? 'This incident has no map location.', 'warning');
+          }
         } else {
           Swal.fire({ icon: 'success', title: on ? 'Pushed to the public map' : 'Removed from the map',
             timer: 1600, showConfirmButton: false }).then(() => this.load());

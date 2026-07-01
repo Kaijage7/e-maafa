@@ -18,7 +18,7 @@ interface PortalWarning {
   bulletinUrl?: string | null; bulletinDescription?: string | null;
 }
 interface PortalIncident {
-  id: number; title: string; severityLevel: string; status: string;
+  id: number; title: string; severityLevel: string; status: string; workflowStatus?: string;
   latitude: number; longitude: number; regionName: string; pinnedToMap?: boolean;
 }
 interface ThreatChip { id: number; name: string; sourceAgency: string; trendLabel: string; severity: string; }
@@ -346,11 +346,16 @@ export class LandingComponent implements OnDestroy {
       for (const inc of d.incidents ?? []) {
         if (inc.latitude == null || inc.longitude == null) { continue; }
         const lc = incidentLifecycle(inc.status);
+        const wf = (inc.workflowStatus || '').toLowerCase();
+        const vf = wf === 'draft' ? { t: 'Unverified', c: '#b45309' }
+          : wf === 'approved' ? { t: 'Verified', c: '#059669' }
+          : { t: 'Being verified', c: '#2563eb' };
         this.alertMarkers.push(L.circleMarker([inc.latitude, inc.longitude],
             { radius: 7, fillColor: '#7c3aed', color: '#fff', weight: 2, fillOpacity: 0.85, dashArray: '3' })
           .addTo(this.map)
           .bindPopup(`<strong>INCIDENT: ${this.escHtml(inc.title)}</strong>`
             + `<br>${this.escHtml(inc.severityLevel ?? '')} · <span style="color:${lc.color};font-weight:700;">${lc.label}</span>`
+            + ` · <span style="color:${vf.c};font-weight:700;">${vf.t}</span>`
             + `<br><small>${this.escHtml(inc.regionName ?? '')}</small>`
             + (inc.pinnedToMap ? `<br><a href="/incident/${inc.id}">View live status, response &amp; resources →</a>` : '')));
       }

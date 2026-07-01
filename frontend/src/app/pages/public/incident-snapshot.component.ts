@@ -13,6 +13,7 @@ interface SnapshotIncident {
 }
 interface SnapResource { resource: string; quantity: number; unit: string; status: string; }
 interface SnapUpdate { detail: string; type: string; at: string; }
+interface SnapEscalation { action: string; from: string; to: string; role: string; at: string; }
 
 /**
  * Public LIVE incident snapshot ("/incident/{id}") — the page the portal map markers and the
@@ -88,7 +89,7 @@ interface SnapUpdate { detail: string; type: string; at: string; }
                   <tr style="border-top:1px solid rgba(0,0,0,0.06);">
                     <td style="padding:0.55rem 0.9rem;">{{ r.resource }}</td>
                     <td style="padding:0.55rem 0.9rem;">{{ r.quantity }} {{ r.unit || '' }}</td>
-                    <td style="padding:0.55rem 0.9rem;">{{ r.status || '—' }}</td>
+                    <td style="padding:0.55rem 0.9rem;"><span [style.color]="resColor(r.status)" style="font-weight:700;">{{ r.status || '—' }}</span></td>
                   </tr>
                 }
               </tbody>
@@ -96,6 +97,22 @@ interface SnapUpdate { detail: string; type: string; at: string; }
           </div>
         } @else {
           <p style="font-size:0.88rem;color:var(--text-secondary,#64748b);"><i class="fas fa-box-open me-1"></i>{{ L.t('snap_no_resources') }}</p>
+        }
+
+        <!-- Escalation / response progress (from the incident workflow history) -->
+        @if (s.escalation?.length) {
+          <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.8rem;">Response progress</h4>
+          <div style="border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:0.3rem 1rem;background:var(--card-bg,#fff);">
+            @for (e of s.escalation; track $index) {
+              <div style="display:flex;gap:0.8rem;padding:0.6rem 0;border-bottom:1px solid rgba(0,0,0,0.06);">
+                <div style="color:#2563eb;padding-top:2px;"><i class="fas fa-circle-check" style="font-size:0.72rem;"></i></div>
+                <div>
+                  <div style="font-size:0.9rem;color:var(--text-primary,#2C3E50);font-weight:600;">{{ escLabel(e) }}</div>
+                  <div style="font-size:0.72rem;color:#94a3b8;">{{ e.role || '' }}{{ e.role ? ' · ' : '' }}{{ fmt(e.at) }}</div>
+                </div>
+              </div>
+            }
+          </div>
         }
 
         <!-- Live updates -->
@@ -128,13 +145,13 @@ export class IncidentSnapshotComponent {
   L = inject(PortalLabels);
   protected readonly lc = incidentLifecycle;
   private http = inject(HttpClient);
-  snap = signal<{ incident: SnapshotIncident; resources: SnapResource[]; updates: SnapUpdate[] } | null>(null);
+  snap = signal<{ incident: SnapshotIncident; resources: SnapResource[]; updates: SnapUpdate[]; escalation: SnapEscalation[] } | null>(null);
   notFound = signal(false);
 
   constructor(route: ActivatedRoute) {
     route.paramMap.subscribe(params => {
       const id = params.get('id');
-      this.http.get<{ incident: SnapshotIncident; resources: SnapResource[]; updates: SnapUpdate[] }>(`/api/v1/portal/incidents/${id}`)
+      this.http.get<{ incident: SnapshotIncident; resources: SnapResource[]; updates: SnapUpdate[]; escalation: SnapEscalation[] }>(`/api/v1/portal/incidents/${id}`)
         .subscribe({
           next: r => { this.snap.set(r); this.notFound.set(false); window.scrollTo(0, 0); },
           error: () => { this.snap.set(null); this.notFound.set(true); },
@@ -174,5 +191,37 @@ export class IncidentSnapshotComponent {
     if (!s) { return '—'; }
     const d = new Date(s);
     return isNaN(d.getTime()) ? s : d.toLocaleString();
+  }
+
+  /** Citizen-friendly label for an escalation / response step (from the incident workflow history). */
+  escLabel(e: SnapEscalation): string {
+    const a = (e.action || '').toLowerCase();
+    if (a.includes('resubmit')) { return 'Re-submitted with updates'; }
+    if (a.includes('submit')) { return 'Reported & submitted for verification'; }
+    if (a.includes('approve') || a.includes('forward') || a.includes('escalat')) {
+      const stage = this.stageLabel(e.to);
+      return 'Verified & escalated' + (stage ? ' — now at ' + stage : '');
+    }
+    if (a.includes('resolve') || a.includes('close')) { return 'Resolved'; }
+    if (a.includes('reject') || a.includes('roll')) { return 'Returned for more information'; }
+    if (a.includes('edit') || a.includes('update')) { return 'Situation updated'; }
+    if (a.includes('dispatch') || a.includes('resource') || a.includes('alloc')) { return 'Resources mobilised'; }
+    return this.stageLabel(e.to) || (e.action ? e.action.replace(/_/g, ' ') : 'Update');
+  }
+  private stageLabel(s: string): string {
+    switch ((s || '').toLowerCase()) {
+      case 'waiting_ded': case 'waiting_dmc': case 'waiting_ddmc': return 'district level';
+      case 'waiting_ras': case 'waiting_rdmc': return 'regional level';
+      case 'waiting_eocc': case 'approved': return 'national / EOCC level';
+      default: return '';
+    }
+  }
+  /** Colour the resource lifecycle so a citizen sees requested → dispatched → delivered at a glance. */
+  resColor(status: string): string {
+    const s = (status || '').toLowerCase();
+    if (s.includes('deliver')) { return '#059669'; }
+    if (s.includes('transit') || s.includes('dispatch')) { return '#2563eb'; }
+    if (s.includes('request') || s.includes('pending') || s.includes('sourc') || s.includes('await')) { return '#d97706'; }
+    return '#64748b';
   }
 }

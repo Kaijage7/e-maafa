@@ -76,6 +76,7 @@ public class PortalPublicService {
         // status/approval — and only while still active: Closed/Resolved incidents drop off the public map.
         List<Map<String, Object>> incidents = safeList(
                 "select id, title, severity_level as \"severityLevel\", status,"
+                        + " workflow_status as \"workflowStatus\","
                         + " latitude, longitude, region_name as \"regionName\","
                         + " show_on_portal_map as \"pinnedToMap\""
                         + " from public.incidents"
@@ -223,6 +224,12 @@ public class PortalPublicService {
         out.put("updates", jdbc.queryForList(
                 "select update_details as \"detail\", update_type as \"type\", created_at as \"at\""
                         + " from public.incident_updates where incident_id = ? order by created_at desc limit 20", id));
+        // The escalation / response timeline (public-safe: the STAGE transitions + role + time — no user id,
+        // ip or internal notes) so a citizen sees the incident being verified, escalated and responded to.
+        out.put("escalation", jdbc.queryForList(
+                "select action, from_status as \"from\", to_status as \"to\", performed_by_role as \"role\","
+                        + " created_at as \"at\" from public.incident_workflow_histories"
+                        + " where incident_id = ? order by created_at asc", id));
         return out;
     }
 
