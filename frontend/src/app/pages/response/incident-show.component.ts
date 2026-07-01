@@ -357,9 +357,15 @@ export class IncidentShowComponent implements OnInit {
   /** Push / remove the incident on the public portal live map (toggle show_on_portal_map). */
   pushMap(on: boolean): void {
     this.http.post<any>(`/api/v1/response/incidents/${this.id}/push-map`, { value: on }).subscribe({
-      next: () => ensureSweetAlert().then(() => Swal.fire({
-        icon: 'success', title: on ? 'Pushed to the public map' : 'Removed from the map',
-        timer: 1600, showConfirmButton: false }).then(() => this.load())),
+      next: r => ensureSweetAlert().then(() => {
+        if (on && r && r.success === false) {
+          // The backend refused (e.g. the incident has no map location) — surface the real reason, no fake success.
+          Swal.fire('Cannot show on the map', r.message ?? 'This incident has no map location.', 'warning');
+        } else {
+          Swal.fire({ icon: 'success', title: on ? 'Pushed to the public map' : 'Removed from the map',
+            timer: 1600, showConfirmButton: false }).then(() => this.load());
+        }
+      }),
       error: err => ensureSweetAlert().then(() => Swal.fire('Error', err?.error?.message ?? 'An error occurred.', 'error')),
     });
   }

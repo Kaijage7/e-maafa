@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.geo.RegionCentroids;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
@@ -56,15 +57,17 @@ public class IncidentController {
     private final Path storageRoot;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
+    private final RegionCentroids centroids;
 
     public IncidentController(JdbcTemplate jdbc, IncidentWorkflowService workflow, ObjectMapper objectMapper,
-                              JurisdictionScope jurisdiction, AreaGuard areaGuard,
+                              JurisdictionScope jurisdiction, AreaGuard areaGuard, RegionCentroids centroids,
                               @Value("${dmis.storage.public-root:./storage}") String publicRoot) {
         this.jdbc = jdbc;
         this.workflow = workflow;
         this.objectMapper = objectMapper;
         this.jurisdiction = jurisdiction;
         this.areaGuard = areaGuard;
+        this.centroids = centroids;
         this.storageRoot = Path.of(publicRoot);
     }
 
@@ -518,6 +521,22 @@ public class IncidentController {
     public Map<String, Object> pushMap(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         workflow.findOr404(id);
         boolean on = body == null || body.get("value") == null || Boolean.parseBoolean(String.valueOf(body.get("value")));
+        if (on) {
+            // The public map only plots incidents that HAVE coordinates. If this one has none, fall back to its
+            // region centroid; if it has no region either, tell the operator honestly instead of a silent no-op.
+            Map<String, Object> loc = jdbc.queryForMap(
+                    "select latitude, longitude, region_name from public.incidents where id = ?", id);
+            if (loc.get("latitude") == null) {
+                double[] c = centroids.forRegion(str(loc.get("region_name")));
+                if (c == null) {
+                    return Map.of("success", false, "show_on_portal_map", false,
+                            "message", "This incident has no map location — add coordinates (or a region) on the "
+                                    + "incident first, then push to map.");
+                }
+                jdbc.update("update public.incidents set latitude = ?, longitude = ? where id = ? and latitude is null",
+                        c[0], c[1], id);
+            }
+        }
         jdbc.update("update public.incidents set show_on_portal_map = ?, "
                 + "pushed_to_map_at = case when ? then now() else pushed_to_map_at end, updated_at = now() where id = ?",
                 on, on, id);

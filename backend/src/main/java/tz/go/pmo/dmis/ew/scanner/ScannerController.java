@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.geo.RegionCentroids;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.notification.NotificationService;
@@ -45,13 +46,15 @@ public class ScannerController {
     private final JdbcTemplate jdbc;
     private final NotificationService notifications;
     private final JurisdictionScope scope;
+    private final RegionCentroids centroids;
 
     public ScannerController(DisasterScannerService scanner, JdbcTemplate jdbc, NotificationService notifications,
-                            JurisdictionScope scope) {
+                            JurisdictionScope scope, RegionCentroids centroids) {
         this.scanner = scanner;
         this.jdbc = jdbc;
         this.notifications = notifications;
         this.scope = scope;
+        this.centroids = centroids;
     }
 
     /** Where each entity authors — TMA has no agency-event console, it uses the New Bulletin (alert-map) page. */
@@ -210,13 +213,21 @@ public class ScannerController {
         String chosenSev = body != null ? str(body.get("severity")) : null;
         String severity = mapIncidentSeverity((chosenSev != null && !chosenSev.isBlank()) ? chosenSev : str(d.get("severity")));
         String originLevel = districtId != null ? "district" : (regionId != null ? "region" : "national");
+        // A scanner news detection often has NO coordinates; fall back to the chosen region's centroid so the
+        // incident can actually be plotted / pushed to the public map (otherwise it is invisible there).
+        Double lat = dbl(d.get("latitude"));
+        Double lng = dbl(d.get("longitude"));
+        if (lat == null) {
+            double[] c = centroids.forRegion(region);
+            if (c != null) { lat = c[0]; lng = c[1]; }
+        }
         healSeq("incidents");
         Long incidentId = jdbc.queryForObject(
             "insert into public.incidents(title, hazard_id, region_id, region_name, district_id, district_name, latitude, longitude, "
                 + "reported_at, description, severity_level, status, workflow_status, origin_level, source_of_report, created_at, updated_at) "
                 + "values (?,?,?,?,?,?,?,?, now(), ?,?, 'Reported', 'draft', ?, 'Disaster Scanner', now(), now()) returning id",
             Long.class, str(d.get("title")), hazardId, regionId, region, districtId, district,
-            dbl(d.get("latitude")), dbl(d.get("longitude")), str(d.get("summary")), severity, originLevel);
+            lat, lng, str(d.get("summary")), severity, originLevel);
         jdbc.update("update public.scanner_detections set status='dispatched', dispatched_as='incident', "
             + "dispatched_ref=?, incident_id=? where id=?", "INC-" + incidentId, incidentId, id);
         String area = district != null && !district.isBlank() ? district : (region != null ? region : "national");
