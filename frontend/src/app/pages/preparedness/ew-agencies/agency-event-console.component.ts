@@ -6,6 +6,7 @@ import { NgClass } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { EwAgencyService } from './ew-agency.service';
 import { EwCrossAgencyPanelComponent } from './ew-cross-agency-panel.component';
+import { EntityTaskingsComponent } from './entity-taskings.component';
 import { RegionPickerComponent } from './region-picker.component';
 import { EwPreviewModalComponent } from './ew-preview-modal.component';
 import { ALERT_LEVELS, ALERT_RANK, AGENCIES, AGENCY_HAZARDS, AgencyKey, HazardDef, HAZ_ICON, alertColor, LIKELIHOOD, IMPACT, REPORT_PERIODS } from './ew-agency.model';
@@ -36,7 +37,7 @@ export interface ConsoleConfig {
 @Component({
   selector: 'ew-agency-event-console',
   standalone: true,
-  imports: [FormsModule, NgClass, RouterLink, EwCrossAgencyPanelComponent, RegionPickerComponent, EwPreviewModalComponent],
+  imports: [FormsModule, NgClass, RouterLink, EwCrossAgencyPanelComponent, RegionPickerComponent, EwPreviewModalComponent, EntityTaskingsComponent],
   styles: [`
     .wrap { padding: 14px 18px 40px; }
     .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
@@ -96,6 +97,8 @@ export interface ConsoleConfig {
           [file]="previewFile()" (close)="previewUrl.set(null)" (push)="pushFromPreview()"></ew-preview-modal>
       }
       <ew-cross-agency-panel [current]="config.agency"></ew-cross-agency-panel>
+
+      <dmis-entity-taskings [agency]="config.agency"></dmis-entity-taskings>
 
       @if (config.reportPeriod) {
         <div class="panel" style="margin-bottom:12px; max-width:320px">

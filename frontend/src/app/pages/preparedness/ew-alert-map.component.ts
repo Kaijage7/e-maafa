@@ -8,6 +8,7 @@ import { EwAgencyService } from './ew-agencies/ew-agency.service';
 import { loadCrossAgencyRef, renderCrossAgencyRef, RefMarker } from './ew-agencies/cross-agency-ref';
 import { EwCrossAgencyPanelComponent } from './ew-agencies/ew-cross-agency-panel.component';
 import { EwPreviewModalComponent } from './ew-agencies/ew-preview-modal.component';
+import { EntityTaskingsComponent } from './ew-agencies/entity-taskings.component';
 
 declare const L: any;
 
@@ -63,7 +64,7 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
 @Component({
   selector: 'page-ew-alert-map',
   standalone: true,
-  imports: [PageHeaderComponent, DatePipe, EwCrossAgencyPanelComponent, EwPreviewModalComponent, RouterLink],
+  imports: [PageHeaderComponent, DatePipe, EwCrossAgencyPanelComponent, EwPreviewModalComponent, RouterLink, EntityTaskingsComponent],
   template: `
     <dmis-page-header title="Early Warning — New Bulletin" icon="fa-satellite-dish"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Early Warning Systems', url:'/m/preparedness/early-warnings'}, {label:'New Bulletin'}]">
@@ -80,6 +81,8 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
         {{ clearing() ? 'Clearing…' : 'Clear my warning' }}
       </button>
     </dmis-page-header>
+
+    <dmis-entity-taskings agency="tma"></dmis-entity-taskings>
 
     <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.76rem;color:#64748b;text-decoration:none;margin:4px 0 10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
 
