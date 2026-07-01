@@ -17,7 +17,7 @@ import { FormsModule } from '@angular/forms';
     @if (open().length) {
       <div class="et-box">
         <div class="et-hd"><i class="fas fa-inbox"></i> Scanner tasking inbox <span class="et-n">{{ open().length }}</span>
-          <span class="et-sub">— verify each signal and issue your official assessment; EOCC then accepts (→ Impact Analysis) or returns it</span></div>
+          <span class="et-sub">— verify each signal and issue your official assessment; EOCC then accepts it or returns it for revision</span></div>
         @for (t of open(); track t.id) {
           <div class="et-row" [class.ret]="t.status==='returned'">
             <div class="et-main">

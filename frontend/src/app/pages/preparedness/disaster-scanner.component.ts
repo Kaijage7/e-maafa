@@ -73,7 +73,7 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
       <div class="vbox">
         <div class="vbox-hd"><i class="fas fa-clipboard-check"></i> Entity verification inbox <span class="vn">{{ taskings().length }} active</span>
           @if (respondedCount()) { <span class="vn rev">{{ respondedCount() }} to review</span> }
-          <span class="vsub">— dispatched to the entity; it verifies &amp; re-sends its assessment, then EOCC accepts (→ Impact Analysis) or returns it</span></div>
+          <span class="vsub">— dispatched to the entity; it verifies &amp; re-sends its assessment, then EOCC accepts it (verified) or returns it for revision</span></div>
         @for (t of taskings(); track t.id) {
           <div class="vrow" [class.resp]="t.status==='responded'">
             <span class="vag">{{ agencyName(t.agency) }}</span>
@@ -86,7 +86,7 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
               <button class="vrev acc" (click)="reviewTasking(t,'accepted')" title="Accept — feed Impact Analysis"><i class="fas fa-check"></i> Accept</button>
               <button class="vrev ret" (click)="reviewTasking(t,'returned')" title="Return for revision"><i class="fas fa-rotate-left"></i> Return</button>
             } @else {
-              <a class="vgo" [href]="'/m/preparedness/early-warnings/' + t.agency">Open {{ t.agency.toUpperCase() }} console →</a>
+              <a class="vgo" [href]="agencyRoute(t.agency)">Open {{ t.agency.toUpperCase() }} console →</a>
             }
           </div>
           @if (t.status==='responded' && t.response_message) {
@@ -432,6 +432,8 @@ export class DisasterScannerComponent {
   haz(t: string) { return HAZ[t] ?? HAZ['other']; }
   sevColor(s: string) { return SEV[s] ?? '#64748b'; }
   agencyName(k: string) { return AGENCY_NAMES[k] ?? (k || '').toUpperCase(); }
+  /** Each entity's console route — TMA authors on New Bulletin (no agency-event console); the rest key on their code. */
+  agencyRoute(k: string) { return '/m/preparedness/early-warnings/' + (k === 'tma' ? 'new-bulletin' : k); }
   levelToSev(l: string) { return ({ MAJOR_WARNING: 'critical', WARNING: 'high', ADVISORY: 'low' } as any)[l] ?? 'medium'; }
   parseList(s: string): string { try { return (JSON.parse(s) as string[]).join(', '); } catch { return s || ''; } }
   sourceLabel(s: string): string {
@@ -499,7 +501,7 @@ export class DisasterScannerComponent {
     if (outcome === 'returned') { note = window.prompt('Reason / what to revise (optional):') ?? ''; }
     this.http.post<any>(`/api/v1/ew/scanner/taskings/${t.id}/review`, { outcome, note }).subscribe({
       next: r => { this.notify(r?.success
-          ? (outcome === 'accepted' ? 'Accepted — feeding Impact Analysis.' : 'Returned to the entity for revision.')
+          ? (outcome === 'accepted' ? 'Accepted — assessment verified & recorded.' : 'Returned to the entity for revision.')
           : (r?.message || 'Could not review.'), !r?.success); this.load(); },
       error: e => this.notify(e?.error?.detail ?? e?.error?.message ?? 'Could not review.', true),
     });

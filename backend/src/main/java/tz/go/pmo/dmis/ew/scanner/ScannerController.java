@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,8 +15,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.notification.NotificationService;
 import tz.go.pmo.dmis.notification.NotificationService.Notice;
 
@@ -41,11 +44,35 @@ public class ScannerController {
     private final DisasterScannerService scanner;
     private final JdbcTemplate jdbc;
     private final NotificationService notifications;
+    private final JurisdictionScope scope;
 
-    public ScannerController(DisasterScannerService scanner, JdbcTemplate jdbc, NotificationService notifications) {
+    public ScannerController(DisasterScannerService scanner, JdbcTemplate jdbc, NotificationService notifications,
+                            JurisdictionScope scope) {
         this.scanner = scanner;
         this.jdbc = jdbc;
         this.notifications = notifications;
+        this.scope = scope;
+    }
+
+    /** Where each entity authors — TMA has no agency-event console, it uses the New Bulletin (alert-map) page. */
+    private static String consolePath(String agency) {
+        return "/m/preparedness/early-warnings/" + ("tma".equals(agency) ? "new-bulletin" : agency);
+    }
+    /** The agency that owns a tasking (404 if it does not exist). */
+    private String taskingAgency(long id) {
+        List<String> a = jdbc.queryForList("select agency from public.scanner_entity_taskings where id=?", String.class, id);
+        if (a.isEmpty()) { throw new ResourceNotFoundException("Tasking not found."); }
+        return a.get(0);
+    }
+    /** An agency-scoped login (users.agency_id set) may act ONLY on its own agency's taskings; a national /
+     *  admin / EOCC login (no agency) may act on any. Prevents one entity answering for another. */
+    private void assertOwnAgency(String taskingAgency) {
+        String mine = scope.currentAgencyCode();
+        if (mine != null && !mine.equalsIgnoreCase(taskingAgency)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "This tasking belongs to " + taskingAgency.toUpperCase(Locale.ROOT)
+                    + " — you can only act on your own agency's taskings.");
+        }
     }
 
     // hazard_type (scanner vocabulary, lowercase) → warning entity that owns it (reconciled with AGENCY_HAZARDS).
@@ -235,7 +262,7 @@ public class ScannerController {
         String urgTag = urgency != null ? "[" + urgency + "] " : "";
         notifications.notifyAllUsers(Notice.inApp("scanner_tasking",
             AGENCY_NAME.get(agency) + ": " + urgTag + "verify online " + hazardLabel + " report",
-            message, "/m/preparedness/early-warnings/" + agency, "scanner_detection", id,
+            message, consolePath(agency), "scanner_detection", id,
             "Immediate".equals(urgency) ? "critical" : "high"));
         return Map.of("success", true, "id", id, "dispatched_as", "entity", "agency", agency, "tasking_id", taskingId,
             "message", "Routed to " + AGENCY_NAME.get(agency) + (urgency != null ? " (" + urgency + ")" : "")
@@ -269,6 +296,7 @@ public class ScannerController {
     @Transactional
     @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> acknowledgeTasking(@PathVariable long id) {
+        assertOwnAgency(taskingAgency(id));
         int n = jdbc.update("update public.scanner_entity_taskings set status='acknowledged', acknowledged_at=now() "
             + "where id=? and status='awaiting'", id);
         if (n == 0) throw new ResourceNotFoundException("Tasking not found or no longer awaiting.");
@@ -281,6 +309,7 @@ public class ScannerController {
     @Transactional
     @PreAuthorize("hasAuthority('early_warning.create')")
     public Map<String, Object> respondTasking(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        assertOwnAgency(taskingAgency(id));
         Long submissionId = body != null ? parseLong(body.get("submission_id")) : null;
         String sev = body != null ? str(body.get("response_severity")) : null;
         String msg = body != null ? str(body.get("response_message")) : null;
@@ -331,11 +360,11 @@ public class ScannerController {
             notifications.notifyAllUsers(Notice.inApp("scanner_returned",
                 entity + ": assessment returned for revision",
                 hazard + where + " — " + (note != null && !note.isBlank() ? note : "please revise and re-send."),
-                "/m/preparedness/early-warnings/" + t.get("agency"), "scanner_detection", parseLong(t.get("detection_id")), "high"));
+                consolePath(str(t.get("agency"))), "scanner_detection", parseLong(t.get("detection_id")), "high"));
         } else {
             notifications.notifyAllUsers(Notice.inApp("scanner_accepted",
                 entity + ": assessment accepted",
-                hazard + where + " — accepted; feeding Impact Analysis.",
+                hazard + where + " — verified & accepted by EOCC; the entity's assessment is recorded.",
                 "/m/preparedness/early-warnings/scanner", "scanner_detection", parseLong(t.get("detection_id")), "low"));
         }
         return Map.of("success", true, "id", id, "status", outcome);
