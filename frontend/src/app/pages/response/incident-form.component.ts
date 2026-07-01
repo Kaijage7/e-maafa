@@ -1,9 +1,12 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
+import { addTanzaniaGisBase } from '../../core/tz-map';
+
+declare const L: any; // Leaflet (global, loaded in index.html)
 
 declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as the Blade page pushes it
 
@@ -143,8 +146,13 @@ interface FormData {
                 @for (w of wards(); track w.id) { <option [value]="w.id">{{ w.name }}</option> }
               </select>
             </div>
-            <div class="col-md-3"><label class="form-label">Latitude</label><input type="number" step="0.0000001" class="form-control" [(ngModel)]="form.latitude"></div>
-            <div class="col-md-3"><label class="form-label">Longitude</label><input type="number" step="0.0000001" class="form-control" [(ngModel)]="form.longitude"></div>
+            <div class="col-md-3"><label class="form-label">Latitude</label><input type="number" step="0.0000001" class="form-control" [(ngModel)]="form.latitude" (ngModelChange)="syncMarkerFromForm()"></div>
+            <div class="col-md-3"><label class="form-label">Longitude</label><input type="number" step="0.0000001" class="form-control" [(ngModel)]="form.longitude" (ngModelChange)="syncMarkerFromForm()"></div>
+            <div class="col-12">
+              <label class="form-label"><i class="fas fa-location-crosshairs me-1"></i> Pin the location on the map
+                <span style="font-weight:400;color:#94a3b8;">— click the map (or drag the pin) to set the exact coordinates; required to show the incident on the public map</span></label>
+              <div #locMap style="height:300px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;"></div>
+            </div>
           </div>
 
           <div class="section-title"><i class="fas fa-user me-1"></i> Reporting Source</div>
@@ -250,7 +258,10 @@ interface FormData {
     </div>
   `,
 })
-export class IncidentFormComponent implements OnInit {
+export class IncidentFormComponent implements OnInit, AfterViewInit {
+  private locMapEl = viewChild<ElementRef>('locMap');
+  private map: any;
+  private marker: any;
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -295,6 +306,40 @@ export class IncidentFormComponent implements OnInit {
     }
   }
 
+  ngAfterViewInit(): void { setTimeout(() => this.initMap(), 0); }
+
+  /** Click-to-place location picker: click the map (or drag the pin) to set latitude/longitude. */
+  private initMap(): void {
+    const el = this.locMapEl()?.nativeElement;
+    if (!el || this.map || typeof L === 'undefined') { return; }
+    this.map = L.map(el, { center: [-6.3, 35.0], zoom: 5, minZoom: 5, maxZoom: 16, scrollWheelZoom: false });
+    addTanzaniaGisBase(this.map, this.http);
+    this.map.on('click', (e: any) => this.setPoint(e.latlng.lat, e.latlng.lng));
+    setTimeout(() => this.map.invalidateSize(), 200);   // container may size after layout
+    this.syncMarkerFromForm();
+  }
+  private setPoint(lat: number, lng: number): void {
+    this.form.latitude = lat.toFixed(6);
+    this.form.longitude = lng.toFixed(6);
+    this.placeMarker(lat, lng);
+  }
+  private placeMarker(lat: number, lng: number): void {
+    if (!this.map) { return; }
+    if (this.marker) {
+      this.marker.setLatLng([lat, lng]);
+    } else {
+      this.marker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
+      this.marker.on('dragend', () => { const p = this.marker.getLatLng(); this.setPoint(p.lat, p.lng); });
+    }
+  }
+  /** Reflect the current lat/lng fields onto the map (map init, edit-prefill, and manual typing). */
+  syncMarkerFromForm(): void {
+    if (!this.map) { return; }
+    const lat = parseFloat(this.form.latitude);
+    const lng = parseFloat(this.form.longitude);
+    if (!isNaN(lat) && !isNaN(lng)) { this.placeMarker(lat, lng); this.map.setView([lat, lng], Math.max(this.map.getZoom(), 9)); }
+  }
+
   private prefill(i: any): void {
     for (const key of Object.keys(this.form)) {
       if (i[key] !== undefined && i[key] !== null) { this.form[key] = i[key]; }
@@ -309,6 +354,7 @@ export class IncidentFormComponent implements OnInit {
     if (i.region_id) { this.onRegionChange(String(i.region_id), i.district_id); }
     if (i.district_id) { this.onDistrictChange(String(i.district_id), i.council_id); }
     if (i.council_id) { this.onCouncilChange(String(i.council_id), i.ward_id); }
+    setTimeout(() => this.syncMarkerFromForm(), 0);   // drop the pin if the incident already has coordinates
   }
 
   onRegionChange(regionId: string, keepDistrict?: number): void {
