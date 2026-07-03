@@ -422,7 +422,8 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
         <div class="card" style="border-color:#7c3aed">
           <h4><i class="fas fa-clipboard-list"></i> After-Action Review
             <span class="pill" style="background:#2e1065;color:#c4b5fd">{{ aar.duration.hours }}h ·
-              {{ b.activation.is_simulation ? (b.activation.allow_real_ops ? 'full-scale exercise' : 'table-top drill') : 'live response' }}</span></h4>
+              {{ b.activation.is_simulation ? (b.activation.allow_real_ops ? 'full-scale exercise' : 'table-top drill') : 'live response' }}</span>
+            <button class="btn b-outline" style="margin-left:auto" (click)="printAar()"><i class="fas fa-print"></i> Print / Export report</button></h4>
           <div class="aar-grid">
             <div class="aar-stat"><b>{{ aar.tasks.completed }}/{{ aar.tasks.total }}</b><small>tasks completed</small></div>
             <div class="aar-stat"><b>{{ aar.tasks.critical_completed }}/{{ aar.tasks.critical_total }}</b><small>72-hr critical done</small></div>
@@ -1024,6 +1025,85 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
           { resolution: r.value || null }, () => this.openBoard(id));
       }
     }));
+  }
+
+  /** Formal printable After-Action Report (print → Save as PDF). Built entirely from the board's
+   *  real data — journal timeline, task completion, DRF performance, injects, challenges. */
+  printAar(): void {
+    const b = this.board();
+    const aar = b?.aar;
+    if (!b || !aar) { return; }
+    const esc = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const dt = (s: any) => s ? String(s).substring(0, 16).replace('T', ' ') : '—';
+    const a = b.activation;
+    const kind = a.is_simulation ? (a.allow_real_ops ? 'FULL-SCALE EXERCISE' : 'TABLE-TOP DRILL') : 'LIVE RESPONSE';
+    const rows = (list: any[], f: (x: any) => string, empty: string) =>
+      list?.length ? list.map(f).join('') : `<tr><td colspan="9" class="mut">${empty}</td></tr>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>After-Action Report — ${esc(a.incident_title)}</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; margin: 34px 44px; font-size: 12px; }
+  .hd { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0d3b66; padding-bottom: 10px; }
+  .hd h1 { font-size: 17px; color: #0d3b66; margin: 2px 0 0; } .hd .gov { font-size: 10px; letter-spacing: 1.5px; color: #64748b; text-transform: uppercase; font-weight: 700; }
+  .kind { font-size: 11px; font-weight: 800; color: #6d28d9; border: 2px solid #6d28d9; border-radius: 6px; padding: 3px 10px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #0d3b66; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; margin: 20px 0 7px; }
+  table { width: 100%; border-collapse: collapse; } th, td { text-align: left; padding: 4px 7px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  th { background: #f1f5f9; font-size: 10px; text-transform: uppercase; color: #475569; }
+  .meta td:first-child { font-weight: 700; width: 170px; color: #475569; }
+  .score { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0; }
+  .sc { border: 1px solid #cbd5e1; border-radius: 8px; padding: 7px 13px; text-align: center; min-width: 96px; }
+  .sc b { display: block; font-size: 17px; color: #0d3b66; } .sc small { color: #64748b; font-size: 9.5px; }
+  .mut { color: #94a3b8; font-style: italic; } .bar { background: #e2e8f0; border-radius: 4px; height: 7px; width: 110px; }
+  .fill { background: #0d3b66; height: 7px; border-radius: 4px; }
+  .sign { display: flex; gap: 60px; margin-top: 46px; } .sign div { flex: 1; border-top: 1px solid #334155; padding-top: 5px; font-size: 11px; color: #475569; }
+  @media print { body { margin: 12mm 14mm; } }
+</style></head><body>
+<div class="hd">
+  <div><div class="gov">The United Republic of Tanzania — Prime Minister's Office · Disaster Management</div>
+    <h1>After-Action Report — ${esc(a.incident_title)}</h1></div>
+  <div class="kind">${kind}</div>
+</div>
+<h2>Exercise / response summary</h2>
+<table class="meta">
+  <tr><td>Activated</td><td>${dt(aar.duration.activated_at)} — by ${esc(a.activated_by_name ?? '—')}</td></tr>
+  <tr><td>Closed</td><td>${dt(aar.duration.deactivated_at)} (${esc(aar.duration.status)})</td></tr>
+  <tr><td>Duration</td><td>${esc(aar.duration.hours)} hours</td></tr>
+  <tr><td>Final posture</td><td>${esc(aar.duration.posture)}</td></tr>
+  <tr><td>Area</td><td>${esc(a.region_name ?? a.location_description ?? '—')}</td></tr>
+</table>
+<h2>Scorecard</h2>
+<div class="score">
+  <div class="sc"><b>${aar.tasks.completed}/${aar.tasks.total}</b><small>tasks completed</small></div>
+  <div class="sc"><b>${aar.tasks.critical_completed}/${aar.tasks.critical_total}</b><small>72-hr critical done</small></div>
+  <div class="sc"><b>${aar.tasks.avg_progress}%</b><small>average progress</small></div>
+  <div class="sc"><b>${aar.tasks.challenges}</b><small>challenges raised</small></div>
+  <div class="sc"><b>${aar.tasks.agencies_engaged}</b><small>agencies engaged</small></div>
+  <div class="sc"><b>${aar.injects.resolved}/${aar.injects.total}</b><small>injects resolved</small></div>
+  <div class="sc"><b>${aar.injects.avg_response_minutes} min</b><small>avg inject response</small></div>
+</div>
+<h2>Escalation &amp; decision timeline</h2>
+<table><tr><th style="width:120px">Time</th><th style="width:130px">Actor</th><th>Event</th></tr>
+${rows(aar.timeline, (e: any) => `<tr><td>${dt(e.created_at)}</td><td>${esc(e.user_name ?? 'System')}</td><td>${esc(e.message)}</td></tr>`, 'No journalled decisions.')}
+</table>
+<h2>Scenario injects</h2>
+<table><tr><th>Inject</th><th style="width:70px">Type</th><th style="width:105px">Fired</th><th style="width:105px">Resolved</th><th>Decision / response</th></tr>
+${rows(b.injects, (j: any) => `<tr><td><b>${esc(j.title)}</b>${j.detail ? '<br>' + esc(j.detail) : ''}</td><td>${esc(j.inject_type)}</td><td>${dt(j.fired_at)}</td><td>${dt(j.resolved_at)}</td><td>${esc(j.resolution ?? '—')}</td></tr>`, 'No injects were scripted.')}
+</table>
+<h2>DRF lane performance (NDPRP 2022)</h2>
+<table><tr><th style="width:40px">DRF</th><th>Function</th><th style="width:90px">Completed</th><th style="width:130px">Progress</th></tr>
+${rows(aar.drf_performance, (d: any) => `<tr><td>${d.number}</td><td>${esc(d.name)}</td><td>${d.completed}/${d.total}</td><td><div class="bar"><div class="fill" style="width:${d.progress}%"></div></div> ${d.progress}%</td></tr>`, 'No lane data.')}
+</table>
+<h2>Challenges reported</h2>
+<table><tr><th style="width:55px">DRF</th><th>Challenge</th><th style="width:170px">Agency</th></tr>
+${rows(b.challenges, (c: any) => `<tr><td>DRF ${c.drf_number}</td><td>${esc(c.challenge)}<br><small class="mut">${esc(c.title)}</small></td><td>${esc(c.stakeholder_organization ?? '—')}</td></tr>`, 'No challenges were raised.')}
+</table>
+<div class="sign">
+  <div>Exercise Director / Incident Commander<br><br>Name &amp; signature · date</div>
+  <div>Director, Disaster Management Department<br><br>Name &amp; signature · date</div>
+</div>
+<script>window.onload = function () { window.print(); };</script>
+</body></html>`;
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); }
   }
 
   deactivate(): void {
