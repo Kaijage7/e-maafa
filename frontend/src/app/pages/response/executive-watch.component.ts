@@ -23,8 +23,8 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
     .mode .clock { font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 14px; }
     .tile { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 11px 13px; }
-    .tile b { font-size: 1.45rem; display: block; color: #0f172a; }
-    .tile span { font-size: 0.64rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
+    .tile b { font-size: 1.5rem; display: block; color: #0f172a; }
+    .tile span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
     .split { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
     .card { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 13px 15px; margin-bottom: 12px; }
     .card h4 { margin: 0 0 10px; font-size: 0.78rem; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; }
@@ -35,10 +35,10 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
     .ll.yellow { background: #b45309; }
     .ll.red { background: #b91c1c; }
     .ll b { font-size: 0.82rem; display: block; }
-    .ll .st { font-size: 0.62rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; opacity: 0.95; }
-    .ll small { font-size: 0.66rem; opacity: 0.92; display: block; margin-top: 3px; }
+    .ll .st { font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; opacity: 0.95; }
+    .ll small { font-size: 0.75rem; opacity: 0.92; display: block; margin-top: 3px; }
     .row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e3e6ed; font-size: 0.82rem; }
-    .pill { font-size: 0.62rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; }
+    .pill { font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; }
     .p-disaster { background: #fee2e2; color: #b91c1c; } .p-emergency { background: #fef3c7; color: #92400e; }
     .p-monitoring { background: #d1fae5; color: #065f46; } .p-safeguard { background: #dbeafe; color: #1e40af; }
     .p-fcast { background: #e0f2fe; color: #075985; } .p-sim { background: #f3e8ff; color: #6b21a8; }
@@ -106,7 +106,7 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
                 @if (a.trigger_type === 'forecast') { <span class="pill p-fcast">ANTICIPATORY</span> }
                 <b style="flex:1">{{ a.title }}</b>
                 <span style="color:#6c757d">{{ a.completed_tasks }}/{{ a.total_tasks }} tasks</span>
-                <a [routerLink]="['/m/response/coordination']" style="font-size:0.74rem">open</a>
+                <a [routerLink]="['/m/response/coordination']" style="font-size:0.75rem">Open</a>
               </div>
             } @empty { <div class="empty">No active activations — steady state.</div> }
           </div>

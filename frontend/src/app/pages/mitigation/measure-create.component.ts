@@ -105,7 +105,7 @@ import { PanelComponent } from '../../shell/panel.component';
                   </div>
                 }
               </div>
-              @if (errors()['projectCoverage']) { <div class="text-danger" style="font-size:0.78rem;">{{ errors()['projectCoverage'] }}</div> }
+              @if (errors()['projectCoverage']) { <div class="text-danger" style="font-size:0.85rem;">{{ errors()['projectCoverage'] }}</div> }
             </div>
           </div>
         </dmis-panel>

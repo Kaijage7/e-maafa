@@ -4,7 +4,7 @@
     <img src="/images/emblem.png" alt="Emblem" style="width:110px;height:110px;object-fit:contain;animation:pulse 1.6s ease infinite;">
     <div style="color:#fff;font-weight:800;font-size:1.5rem;letter-spacing:1px;">e-MAAFA</div>
     <div style="color:rgba(255,255,255,0.55);font-size:0.9rem;">{{ L.t('lbl_disaster_management') }} {{ L.t('lbl_information_system') }}</div>
-    <button (click)="dismissIntro()" style="margin-top:1rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:20px;padding:0.4rem 1.2rem;font-size:0.8rem;cursor:pointer;">Skip <i class="fas fa-forward" style="font-size:0.6rem;"></i></button>
+    <button (click)="dismissIntro()" style="margin-top:1rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:20px;padding:0.4rem 1.2rem;font-size:0.95rem;cursor:pointer;">Skip <i class="fas fa-forward" style="font-size:0.7rem;"></i></button>
   </div>
 }
 
@@ -41,16 +41,16 @@
       <!-- Slide 0: About e-MAAFA + the four stat tiles from portal_settings -->
       <div class="hero-slide" [class.active]="slideIdx() === 0">
         <div class="slide-alert-item" style="flex-direction:column;gap:6px;">
-          <div style="font-size:0.92rem;font-weight:700;color:var(--hero-card-text);">{{ L.t('lbl_about_emaafa_title') }}</div>
-          <div style="font-size:0.85rem;color:var(--hero-card-text-muted);line-height:1.6;">{{ L.t('lbl_about_emaafa_hero') }}</div>
+          <div style="font-size:1.1rem;font-weight:700;color:var(--hero-card-text);">{{ L.t('lbl_about_emaafa_title') }}</div>
+          <div style="font-size:1rem;color:var(--hero-card-text-muted);line-height:1.6;">{{ L.t('lbl_about_emaafa_hero') }}</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
           @for (si of [0,1,2,3]; track si) {
             <div class="slide-alert-item" style="align-items:center;gap:8px;padding:10px 14px;">
               <i class="fas {{ setting('stats.item_' + si + '_icon', ['fa-building','fa-map','fa-users','fa-clock'][si]) }}" style="color:var(--blue-deep);font-size:0.85rem;"></i>
               <div>
-                <div style="font-weight:800;font-size:0.92rem;color:var(--hero-card-text);">{{ setting('stats.item_' + si + '_value', ['6','31','61M+','24/7'][si]) }}</div>
-                <div style="font-size:0.7rem;color:var(--hero-card-text-muted);">{{ L.t(['lbl_stat_agencies','lbl_stat_regions','lbl_stat_protected','lbl_stat_response'][si]) }}</div>
+                <div style="font-weight:800;font-size:1rem;color:var(--hero-card-text);">{{ setting('stats.item_' + si + '_value', ['6','31','61M+','24/7'][si]) }}</div>
+                <div style="font-size:0.8rem;color:var(--hero-card-text-muted);">{{ L.t(['lbl_stat_agencies','lbl_stat_regions','lbl_stat_protected','lbl_stat_response'][si]) }}</div>
               </div>
             </div>
           }
@@ -59,7 +59,7 @@
 
       <!-- Slide 1: Know Your Hazards grid (live hazards from the registry) -->
       <div class="hero-slide" [class.active]="slideIdx() === 1">
-        <div style="font-size:0.85rem;font-weight:700;color:var(--hero-card-text);margin-bottom:10px;">
+        <div style="font-size:1rem;font-weight:700;color:var(--hero-card-text);margin-bottom:10px;">
           <i class="fas fa-shield-alt" style="color:var(--blue-deep);margin-right:6px;"></i>{{ L.t('lbl_know_your_hazards') }}
         </div>
         <div class="hazard-grid">
@@ -111,50 +111,114 @@
   <div class="hero-right">
     <div #heroMap id="hero-map"></div>
     @if (drilled()) {
-      <button (click)="resetMap()" style="position:absolute;top:14px;left:14px;z-index:600;background:rgba(255,255,255,0.92);border:1px solid rgba(0,51,102,0.2);color:#003366;border-radius:18px;padding:0.35rem 0.9rem;font-size:0.76rem;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.12);">
+      <button (click)="resetMap()" class="hero-map-back" style="position:absolute;top:126px;left:14px;z-index:600;background:rgba(255,255,255,0.92);border:1px solid rgba(0,51,102,0.2);color:#003366;border-radius:18px;padding:0.35rem 0.9rem;font-size:0.85rem;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.12);">
         <i class="fas fa-arrow-left me-1"></i> Tanzania
       </button>
     }
-    <!-- THREATS strip — national threats under DMD watch (click → full threat page) -->
+    <!-- THREATS strip — national threats under DMD watch (hover → rich preview, click → full threat page) -->
     @if (threats().length) {
-      <div style="position:absolute;top:14px;right:14px;z-index:600;display:flex;flex-direction:column;gap:6px;max-width:250px;">
+      <!-- top offset clears the fixed emergency topbar + navbar chrome (~110px) the hero runs under -->
+      <div class="hero-threats-strip" style="position:absolute;top:126px;right:14px;z-index:600;display:flex;flex-direction:column;gap:6px;max-width:320px;">
         @for (th of threats(); track th.id) {
-          <a [routerLink]="['/threats', th.id]"
-             style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.94);border:1px solid rgba(0,51,102,0.15);border-radius:12px;padding:0.45rem 0.7rem;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+          <a [routerLink]="['/threats', th.id]" class="pp-pop-wrap"
+             style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.94);border:1px solid rgba(0,51,102,0.15);border-radius:12px;padding:0.5rem 0.75rem;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
             <span [style.background]="threatColor(th.severity)" style="width:9px;height:9px;border-radius:50%;flex-shrink:0;animation:pulse 1.6s ease infinite;"></span>
             <span style="min-width:0;">
-              <span style="display:block;font-size:0.76rem;font-weight:800;color:#2C3E50;">{{ th.name }}</span>
-              <span style="display:block;font-size:0.62rem;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ th.sourceAgency }} · {{ th.trendLabel }}</span>
+              <span style="display:block;font-size:0.9rem;font-weight:800;color:#2C3E50;">{{ th.name }}</span>
+              <span style="display:block;font-size:0.8rem;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ th.sourceAgency }} · {{ th.trendLabel }}</span>
             </span>
-            <i class="fas fa-chevron-right" style="margin-left:auto;font-size:0.55rem;color:#94a3b8;"></i>
+            <i class="fas fa-chevron-right" style="margin-left:auto;font-size:0.7rem;color:#94a3b8;"></i>
+            <div class="pp-pop pp-below-end">
+              <div class="pp-pop-title">{{ th.name }}</div>
+              <span class="pp-sev {{ sevClass(th.severity) }}">{{ sevName(th.severity) }}</span>
+              <div class="pp-pop-meta"><i class="fas fa-satellite-dish"></i> {{ th.sourceAgency }} · {{ th.trendLabel }}</div>
+              <div class="pp-pop-row"><i class="fas fa-shield-alt"></i>
+                <span>{{ L.lang() === 'sw' ? 'Tishio la kitaifa linalofuatiliwa na Idara ya Menejimenti ya Maafa (DMD) kutoka vituo vya kimataifa.' : 'National threat under DMD watch — trend tracked from global monitoring centers.' }}</span>
+              </div>
+              <div class="pp-pop-foot">{{ L.lang() === 'sw' ? 'Bofya kwa maelezo kamili na athari zilizopita Tanzania' : 'Click for full details & past impacts to Tanzania' }}</div>
+            </div>
           </a>
         }
       </div>
     }
 
-    <div class="map-status-panel" id="mapStatusPanel">
-      <div class="map-live-badge" style="cursor:pointer;" (click)="clearFilter()" [title]="L.t('lbl_live_monitoring')">
+    <!-- z-index raised above the threats strip (600) so the hover previews always sit on top -->
+    <div class="map-status-panel" id="mapStatusPanel" style="z-index:650;">
+      <div class="map-live-badge pp-pop-wrap" style="cursor:pointer;" (click)="clearFilter()">
         <div class="live-dot">{{ L.t('lbl_live_monitoring') }}</div>
+        <div class="pp-pop">
+          <div class="pp-pop-title">{{ L.t('lbl_live_monitoring') }}</div>
+          <div class="pp-pop-row"><i class="fas fa-sync-alt"></i>
+            <span>{{ L.lang() === 'sw' ? 'Takwimu na ramani husasishwa kiotomatiki kila sekunde 60 kutoka mfumo wa taifa wa ufuatiliaji.' : 'Counters and map auto-refresh every 60 seconds from the national monitoring feed.' }}</span>
+          </div>
+          @if (lastUpdated()) {
+            <div class="pp-pop-meta"><i class="far fa-clock"></i> {{ L.lang() === 'sw' ? 'Imesasishwa' : 'Updated' }} {{ lastUpdated() }}</div>
+          }
+          <div class="pp-pop-foot">{{ L.lang() === 'sw' ? 'Bofya kuonyesha kila kitu ramanini' : 'Click to show everything on the map' }}</div>
+        </div>
       </div>
+      @for (st of statDefs; track st.k) {
+        <div class="map-stat-divider"></div>
+        <div class="map-stat pp-pop-wrap" style="cursor:pointer;" [style.opacity]="statOpacity(st.k)" (click)="setFilter(st.k)">
+          <div class="map-stat-num" [style.color]="st.color">{{ statCount(st.k) }}</div>
+          <div class="map-stat-lbl">{{ L.t(st.lbl) }}</div>
+          <div class="pp-pop">
+            <div class="pp-pop-title">{{ L.t(st.lbl) }} <span class="pp-sev {{ st.sev }}">{{ statCount(st.k) }}</span></div>
+            @if (statWarnings(st.k).length) {
+              <div class="pp-pop-list">
+                @for (w of statWarnings(st.k).slice(0, 5); track w.id) {
+                  <div><b>{{ w.hazardType }}</b> — {{ w.affectedRegions }}<br>
+                    <span style="color:#64748b;">{{ (w.alertMessage || '').slice(0, 70) }}</span></div>
+                }
+              </div>
+              @if (statMore(st.k) > 0) {
+                <div class="pp-pop-row"><i class="fas fa-plus"></i>
+                  <span>{{ statMore(st.k) }} {{ L.lang() === 'sw' ? 'zaidi' : 'more' }}</span></div>
+              }
+            } @else {
+              <div class="pp-pop-row"><i class="fas fa-check-circle"></i>
+                <span>{{ L.lang() === 'sw' ? 'Hakuna kwa sasa' : 'None active right now' }}</span></div>
+            }
+            <div class="pp-pop-foot">{{ L.lang() === 'sw' ? 'Bofya kuchuja ramani' : 'Click to filter the map' }}</div>
+          </div>
+        </div>
+      }
       <div class="map-stat-divider"></div>
-      <div class="map-stat" style="cursor:pointer;" [style.opacity]="statOpacity('Emergency')" (click)="setFilter('Emergency')" [title]="L.t('lbl_emergency')">
-        <div class="map-stat-num" style="color:#ef4444;">{{ data()?.stats?.emergencyCount ?? 0 }}</div><div class="map-stat-lbl">{{ L.t('lbl_emergency') }}</div></div>
-      <div class="map-stat-divider"></div>
-      <div class="map-stat" style="cursor:pointer;" [style.opacity]="statOpacity('Warning')" (click)="setFilter('Warning')" [title]="L.t('lbl_warning')">
-        <div class="map-stat-num" style="color:#fb923c;">{{ data()?.stats?.warningCount ?? 0 }}</div><div class="map-stat-lbl">{{ L.t('lbl_warning') }}</div></div>
-      <div class="map-stat-divider"></div>
-      <div class="map-stat" style="cursor:pointer;" [style.opacity]="statOpacity('Watch')" (click)="setFilter('Watch')" [title]="L.t('lbl_watch')">
-        <div class="map-stat-num" style="color:#f59e0b;">{{ data()?.stats?.watchCount ?? 0 }}</div><div class="map-stat-lbl">{{ L.t('lbl_watch') }}</div></div>
-      <div class="map-stat-divider"></div>
-      <div class="map-stat" style="cursor:pointer;" [style.opacity]="statOpacity('Incidents')" (click)="setFilter('Incidents')" [title]="L.t('lbl_incidents')">
-        <div class="map-stat-num" style="color:#7c3aed;">{{ data()?.incidents?.length ?? 0 }}</div><div class="map-stat-lbl">{{ L.t('lbl_incidents') }}</div></div>
+      <div class="map-stat pp-pop-wrap" style="cursor:pointer;" [style.opacity]="statOpacity('Incidents')" (click)="setFilter('Incidents')">
+        <div class="map-stat-num" style="color:#7c3aed;">{{ data()?.incidents?.length ?? 0 }}</div>
+        <div class="map-stat-lbl">{{ L.t('lbl_incidents') }}</div>
+        <div class="pp-pop">
+          <div class="pp-pop-title">{{ L.t('lbl_incidents') }} <span class="pp-sev sev-incident">{{ data()?.incidents?.length ?? 0 }}</span></div>
+          @if ((data()?.incidents ?? []).length) {
+            <div class="pp-pop-list">
+              @for (inc of (data()?.incidents ?? []).slice(0, 5); track inc.id) {
+                <div><b>{{ inc.title }}</b> — {{ inc.regionName }}<br>
+                  <span [style.color]="lc(inc.status).color" style="font-weight:600;">{{ lc(inc.status).label }}</span></div>
+              }
+            </div>
+            @if (incidentsMore() > 0) {
+              <div class="pp-pop-row"><i class="fas fa-plus"></i>
+                <span>{{ incidentsMore() }} {{ L.lang() === 'sw' ? 'zaidi' : 'more' }}</span></div>
+            }
+          } @else {
+            <div class="pp-pop-row"><i class="fas fa-check-circle"></i>
+              <span>{{ L.lang() === 'sw' ? 'Hakuna kwa sasa' : 'None active right now' }}</span></div>
+          }
+          <div class="pp-pop-foot">{{ L.lang() === 'sw' ? 'Bofya kuchuja ramani' : 'Click to filter the map' }}</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Live summary: total active + people at risk; the chip clears any active filter. -->
-    <div style="position:absolute;bottom:14px;left:14px;z-index:600;display:flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.94);border:1px solid rgba(0,51,102,0.15);border-radius:14px;padding:0.4rem 0.8rem;box-shadow:0 2px 10px rgba(0,0,0,0.1);font-size:0.74rem;color:#2C3E50;">
+    <!-- Live summary: total active + people at risk + freshness; sits right-aligned ABOVE the
+         status panel (bottom:20px + ~95px tall) so the two never collide at any hero width. -->
+    <div class="hero-live-summary" style="position:absolute;bottom:132px;right:20px;z-index:600;display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:min(92%,560px);gap:0.5rem;background:rgba(255,255,255,0.94);border:1px solid rgba(0,51,102,0.15);border-radius:14px;padding:0.4rem 0.8rem;box-shadow:0 2px 10px rgba(0,0,0,0.1);font-size:0.9rem;color:#2C3E50;">
       <span><strong style="color:#dc2626;">{{ liveTotal() }}</strong> {{ L.t('lbl_active_warnings') }}</span>
       <span style="color:#94a3b8;">·</span>
       <span><strong>{{ (data()?.stats?.peopleAtRisk ?? 0) | number }}</strong> {{ L.t('lbl_people_at_risk') }}</span>
+      @if (lastUpdated()) {
+        <span style="color:#94a3b8;">·</span>
+        <span style="color:#475569;"><i class="far fa-clock" style="margin-right:3px;"></i>{{ L.lang() === 'sw' ? 'Imesasishwa' : 'Updated' }} {{ lastUpdated() }}</span>
+      }
       @if (sevFilter() !== 'all') {
         <span style="color:#94a3b8;">·</span>
         <a style="cursor:pointer;color:#1d4ed8;font-weight:700;" (click)="clearFilter()">{{ L.t('lbl_show_all') }}</a>
@@ -182,15 +246,15 @@
                     <img [src]="news.image" [alt]="nl(news.title, news.title_sw)" style="width:100%;height:100%;object-fit:cover;">
                     <div style="position:absolute;inset:0;background:linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.05) 60%);"></div>
                     <div style="position:absolute;top:10px;left:10px;">
-                      <span [style.background]="news.category === 'event' ? '#f59e0b' : '#3b82f6'" style="color:#fff;font-size:0.65rem;font-weight:700;padding:3px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;">{{ news.category }}</span>
+                      <span [style.background]="news.category === 'event' ? '#f59e0b' : '#3b82f6'" style="color:#fff;font-size:0.8rem;font-weight:700;padding:3px 10px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;">{{ news.category }}</span>
                     </div>
                   </div>
                 }
                 <div style="padding:1rem 1.1rem;flex:1;display:flex;flex-direction:column;gap:8px;">
-                  <div style="font-size:0.72rem;color:var(--text-secondary);opacity:0.7;"><i class="fas fa-clock me-1"></i>{{ news.publishedAt }}</div>
-                  <h3 style="font-size:0.95rem;font-weight:700;color:var(--text-primary);margin:0;line-height:1.35;">{{ nl(news.title, news.title_sw).slice(0, 60) }}</h3>
-                  @if (nl(news.excerpt, news.excerpt_sw)) { <p style="font-size:0.82rem;color:var(--text-secondary);margin:0;line-height:1.5;flex:1;">{{ nl(news.excerpt, news.excerpt_sw).slice(0, 100) }}</p> }
-                  <span style="font-size:0.78rem;font-weight:600;color:#60a5fa;margin-top:auto;">{{ L.t('lbl_read_more') }} <i class="fas fa-arrow-right" style="font-size:0.65rem;"></i></span>
+                  <div style="font-size:0.9rem;color:var(--text-secondary);opacity:0.7;"><i class="fas fa-clock me-1"></i>{{ news.publishedAt }}</div>
+                  <h3 style="font-size:1.1rem;font-weight:700;color:var(--text-primary);margin:0;line-height:1.35;">{{ nl(news.title, news.title_sw).slice(0, 60) }}</h3>
+                  @if (nl(news.excerpt, news.excerpt_sw)) { <p style="font-size:0.95rem;color:var(--text-secondary);margin:0;line-height:1.5;flex:1;">{{ nl(news.excerpt, news.excerpt_sw).slice(0, 100) }}</p> }
+                  <span style="font-size:0.85rem;font-weight:600;color:#60a5fa;margin-top:auto;">{{ L.t('lbl_read_more') }} <i class="fas fa-arrow-right" style="font-size:0.7rem;"></i></span>
                 </div>
               </a>
             </div>
@@ -236,15 +300,15 @@
                 <img [src]="pubThumb(idx)" [alt]="pub.documentName" style="width:100%;height:100%;object-fit:cover;">
                 <div style="position:absolute;inset:0;background:linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.02) 100%);"></div>
                 <div style="position:absolute;bottom:0;left:0;right:0;padding:0.8rem 1rem;">
-                  <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.7);margin-bottom:3px;">{{ pub.documentType }}</div>
-                  <div style="font-size:0.92rem;font-weight:700;color:#fff;line-height:1.3;text-shadow:0 1px 3px rgba(0,0,0,0.5);">{{ pub.documentName.slice(0, 45) }}</div>
+                  <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.7);margin-bottom:3px;">{{ pub.documentType }}</div>
+                  <div style="font-size:1.05rem;font-weight:700;color:#fff;line-height:1.3;text-shadow:0 1px 3px rgba(0,0,0,0.5);">{{ pub.documentName.slice(0, 45) }}</div>
                 </div>
               </div>
               <div style="padding:0.85rem 1rem;flex:1;display:flex;flex-direction:column;gap:6px;">
-                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;line-height:1.5;">{{ (pub.narrativeDescription || '').slice(0, 70) }}</p>
+                <p style="font-size:0.9rem;color:var(--text-secondary);margin:0;line-height:1.5;">{{ (pub.narrativeDescription || '').slice(0, 70) }}</p>
                 <div class="d-flex gap-2 mt-auto pt-2" style="border-top:1px solid var(--card-border);">
-                  <span style="font-size:0.8rem;color:#60a5fa;font-weight:600;"><i class="fas fa-eye me-1"></i>{{ L.t('lbl_view_details') }}</span>
-                  @if (pub.attachmentPath) { <span style="font-size:0.8rem;color:#4ade80;font-weight:600;margin-left:auto;"><i class="fas fa-download me-1"></i>{{ L.t('lbl_pdf') }}</span> }
+                  <span style="font-size:0.85rem;color:#60a5fa;font-weight:600;"><i class="fas fa-eye me-1"></i>{{ L.t('lbl_view_details') }}</span>
+                  @if (pub.attachmentPath) { <span style="font-size:0.85rem;color:#4ade80;font-weight:600;margin-left:auto;"><i class="fas fa-download me-1"></i>{{ L.t('lbl_pdf') }}</span> }
                 </div>
               </div>
             </a>
@@ -276,9 +340,9 @@
                 <i class="fas {{ hc.icon }}"></i>
               </div>
               <div style="min-width:0;">
-                <div style="font-size:0.88rem;font-weight:700;color:var(--text-primary);margin-bottom:3px;">{{ cardName(hc) }}</div>
-                <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5;">{{ cardDesc(hc).slice(0, 90) }}</div>
-                <div style="font-size:0.7rem;font-weight:600;color:#60a5fa;margin-top:5px;">{{ L.t('lbl_read_more') }} <i class="fas fa-arrow-right" style="font-size:0.58rem;"></i></div>
+                <div style="font-size:1.05rem;font-weight:700;color:var(--text-primary);margin-bottom:3px;">{{ cardName(hc) }}</div>
+                <div style="font-size:0.9rem;color:var(--text-secondary);line-height:1.5;">{{ cardDesc(hc).slice(0, 90) }}</div>
+                <div style="font-size:0.85rem;font-weight:600;color:#60a5fa;margin-top:5px;">{{ L.t('lbl_read_more') }} <i class="fas fa-arrow-right" style="font-size:0.7rem;"></i></div>
               </div>
             </a>
           </div>
@@ -299,11 +363,11 @@
                 <i class="fas {{ feat.icon }}"></i>
               </div>
               <div>
-                <div style="font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:3px;">{{ feat.title }}</div>
-                <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.55;">{{ feat.description }}</div>
-                <div style="font-size:0.7rem;font-weight:600;color:#60a5fa;margin-top:5px;">
-                  @if (feat.link) { Open <i class="fas fa-arrow-right" style="font-size:0.58rem;"></i> }
-                  @else { How it works <i class="fas fa-info-circle" style="font-size:0.62rem;"></i> }
+                <div style="font-size:1.05rem;font-weight:700;color:var(--text-primary);margin-bottom:3px;">{{ feat.title }}</div>
+                <div style="font-size:0.9rem;color:var(--text-secondary);line-height:1.55;">{{ feat.description }}</div>
+                <div style="font-size:0.85rem;font-weight:600;color:#60a5fa;margin-top:5px;">
+                  @if (feat.link) { Open <i class="fas fa-arrow-right" style="font-size:0.7rem;"></i> }
+                  @else { How it works <i class="fas fa-info-circle" style="font-size:0.7rem;"></i> }
                 </div>
               </div>
             </a>
@@ -386,7 +450,7 @@
           </select>
           @if (rReportedBy() !== 'public') {
             <input class="form-control" placeholder="Institution / sector / ministry / region name" [value]="rOrg()" (input)="rOrg.set($any($event.target).value)">
-            <div style="font-size:0.78rem;color:#1e3a5f;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.5rem 0.7rem;">
+            <div style="font-size:0.9rem;color:#1e3a5f;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.5rem 0.7rem;">
               <i class="fas fa-bolt" style="color:#2563eb;"></i> Official reports go <b>straight to the EOCC</b> for action — they skip the district/region verification a public report goes through.
             </div>
           }
@@ -395,7 +459,7 @@
             <input class="form-control" type="tel" placeholder="Phone (optional)" [value]="rPhone()" (input)="rPhone.set($any($event.target).value)">
             <input class="form-control" type="email" placeholder="Email (optional)" [value]="rEmail()" (input)="rEmail.set($any($event.target).value)">
           </div>
-          @if (reportError()) { <div style="color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.5rem 0.7rem;font-size:0.85rem;">{{ reportError() }}</div> }
+          @if (reportError()) { <div style="color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.5rem 0.7rem;font-size:0.9rem;">{{ reportError() }}</div> }
           <button class="btn-gold" style="justify-content:center;" [disabled]="!rType() || !rDesc().trim() || reportSaving()" (click)="submitReport()">
             <i class="fas" [class.fa-paper-plane]="!reportSaving()" [class.fa-spinner]="reportSaving()" [class.fa-spin]="reportSaving()"></i>
             {{ reportSaving() ? 'Submitting…' : 'Submit Report' }}
@@ -426,7 +490,7 @@
         <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0;">{{ cap.title }}</h5>
         <button (click)="capabilityDetail.set(null)" style="margin-left:auto;background:none;border:none;color:var(--text-secondary, #64748b);font-size:1.2rem;cursor:pointer;"><i class="fas fa-times"></i></button>
       </div>
-      <p style="font-size:0.9rem;color:var(--text-secondary, #475569);line-height:1.8;margin:0;">{{ cap.detail || cap.description }}</p>
+      <p style="font-size:1rem;color:var(--text-secondary, #475569);line-height:1.8;margin:0;">{{ cap.detail || cap.description }}</p>
     </div>
   </div>
 }

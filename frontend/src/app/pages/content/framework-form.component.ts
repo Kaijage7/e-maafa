@@ -106,7 +106,7 @@ import { PanelComponent } from '../../shell/panel.component';
                     </div>
                   }
                 </div>
-                @if (errors()['hazardTypes']) { <div class="text-danger" style="font-size:0.78rem;">{{ errors()['hazardTypes'] }}</div> }
+                @if (errors()['hazardTypes']) { <div class="text-danger" style="font-size:0.8rem;">{{ errors()['hazardTypes'] }}</div> }
               </div>
               <div class="row">
                 <div class="col-md-6 mb-3">

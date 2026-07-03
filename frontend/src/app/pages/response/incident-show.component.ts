@@ -21,7 +21,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
   standalone: true,
   imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
   styles: [`
-    .detail-label { font-size: 0.72rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
+    .detail-label { font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
     .detail-value { font-size: 0.85rem; color: var(--text-dark); }
     .wf-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .tl { position: relative; padding-left: 20px; }
@@ -32,7 +32,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
     .tl-dot.rolled_back { border-color: #dc3545; background: #fde2e2; }
     .tl-dot.submitted, .tl-dot.resubmitted { border-color: #0d6efd; }
     .tl-action { font-size: 0.8rem; font-weight: 600; color: var(--text-dark); }
-    .tl-meta { font-size: 0.7rem; color: var(--text-light); }
+    .tl-meta { font-size: 0.75rem; color: var(--text-light); }
     .tl-comment { font-size: 0.78rem; color: #4a5568; background: #f9fafb; border-left: 2px solid #dc3545; border-radius: 6px; padding: 4px 8px; margin-top: 4px; }
     .label-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
   `],
@@ -129,7 +129,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
                 @for (u of d.updates; track u.id) {
                   <div style="padding:0.5rem 0;border-bottom:1px solid #f1f5f9;">
                     <div style="font-size:0.82rem;color:var(--text-dark);">{{ u.update_details }}</div>
-                    <div style="font-size:0.7rem;color:var(--text-light);">{{ u.update_type ?? 'General Update' }} · {{ u.user_name }} · {{ u.created_at }}</div>
+                    <div style="font-size:0.75rem;color:var(--text-light);">{{ u.update_type ?? 'General Update' }} · {{ u.user_name }} · {{ u.created_at }}</div>
                   </div>
                 } @empty { <div class="empty-state" style="padding:1rem;">No updates logged yet.</div> }
               </div>
@@ -143,13 +143,13 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
                   <div>
                     <div class="detail-label">Resource Allocations ({{ d.allocations.length }})</div>
                     @for (a of d.allocations; track a.id) {
-                      <div style="font-size:0.8rem;padding:0.25rem 0;">{{ a.resource_name }} — {{ a.quantity_requested }} {{ a.unit_of_measure }} <span class="r-badge badge-pending" style="font-size:0.62rem;">{{ a.status }}</span></div>
+                      <div style="font-size:0.8rem;padding:0.25rem 0;">{{ a.resource_name }} — {{ a.quantity_requested }} {{ a.unit_of_measure }} <span class="r-badge badge-pending" style="font-size:0.75rem;">{{ a.status }}</span></div>
                     } @empty { <div style="font-size:0.78rem;color:var(--text-light);">None yet.</div> }
                   </div>
                   <div>
                     <div class="detail-label">Tasks ({{ d.tasks.length }})</div>
                     @for (t of d.tasks; track t.id) {
-                      <div style="font-size:0.8rem;padding:0.25rem 0;">{{ t.title }} <span class="r-badge badge-inactive" style="font-size:0.62rem;">{{ t.status }}</span></div>
+                      <div style="font-size:0.8rem;padding:0.25rem 0;">{{ t.title }} <span class="r-badge badge-inactive" style="font-size:0.75rem;">{{ t.status }}</span></div>
                     } @empty { <div style="font-size:0.78rem;color:var(--text-light);">None yet.</div> }
                   </div>
                 </div>
@@ -228,7 +228,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
                   <button class="btn btn-sm btn-outline-danger" (click)="removeNews()"><i class="fas fa-newspaper me-1"></i> Remove from news</button>
                 }
               </div>
-              <div style="font-size:0.72rem;color:var(--text-light);margin-top:0.6rem;">
+              <div style="font-size:0.75rem;color:var(--text-light);margin-top:0.6rem;">
                 Publishing shows a live snapshot (situation, response &amp; resources) on the public portal map and News &amp; Events; it updates as you update the incident.
               </div>
             </div>
@@ -241,7 +241,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
                 <div style="font-size:0.78rem;padding:0.4rem 0;border-bottom:1px solid #f1f5f9;">
                   †{{ r.deaths_total }} · inj {{ r.injured_total }} · displ {{ r.displaced }}
                   @if (r.remarks) { — {{ r.remarks }} }
-                  <div style="font-size:0.68rem;color:var(--text-light);">{{ r.reported_by_name ?? '-' }}</div>
+                  <div style="font-size:0.75rem;color:var(--text-light);">{{ r.reported_by_name ?? '-' }}</div>
                 </div>
               } @empty { <div style="font-size:0.78rem;color:var(--text-light);">None recorded.</div> }
             </div>
@@ -447,10 +447,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

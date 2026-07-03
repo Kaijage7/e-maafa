@@ -42,31 +42,34 @@ function reliabilityOpacity(rel: string | undefined): number { return rel === 'H
     .leaflet-container { background:#e8edf2; } .leaflet-control-attribution { display:none !important; }
     .mode-bar { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; padding:.8rem 1.15rem; border-bottom:1px solid rgba(0,0,0,.05); }
     .mode-bar button { font:inherit; font-size:.8rem; font-weight:700; padding:.4rem .9rem; border:1.5px solid var(--module-color,#0d6efd); background:#fff; color:var(--module-color,#0d6efd); border-radius:50px; cursor:pointer; }
+    .mode-bar button:hover:not(.on) { background:#eef4fb; }
     .mode-bar button.on { background:var(--module-color,#0d6efd); color:#fff; }
+    .mode-bar button.refresh { margin-left:auto; font-size:.78rem; font-weight:600; padding:.35rem .8rem; border:1px solid var(--line,#cbd5e1); background:#fff; color:var(--text-mid,#475569); border-radius:6px; }
+    .mode-bar button.refresh:hover { background:#f8fafc; border-color:#94a3b8; }
     .mode-bar select { font:inherit; font-size:.8rem; padding:.35rem .6rem; border:1px solid var(--line,#e2e8f0); border-radius:6px; color:var(--text-mid,#475569); }
-    .mode-bar .hint { font-size:.72rem; color:var(--text-mid,#64748b); }
-    .legend { background:#fff; padding:.5rem .65rem; border:1px solid var(--line,#e2e8f0); border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08); font-size:.65rem; line-height:1.5; }
-    .legend strong { font-size:.6rem; text-transform:uppercase; letter-spacing:.5px; color:var(--text-dark,#1e293b); }
+    .mode-bar .hint { font-size:0.75rem; color:var(--text-mid,#64748b); }
+    .legend { background:#fff; padding:.5rem .65rem; border:1px solid var(--line,#e2e8f0); border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08); font-size:0.75rem; line-height:1.5; }
+    .legend strong { font-size:0.75rem; text-transform:uppercase; letter-spacing:.5px; color:var(--text-dark,#1e293b); }
     .legend i { display:inline-block; width:11px; height:11px; border-radius:2px; margin-right:5px; vertical-align:middle; }
     .drill { position:absolute; top:12px; right:12px; width:300px; max-height:calc(60vh - 24px); overflow:auto; z-index:600;
       background:#fff; border:1px solid var(--line,#e2e8f0); border-radius:10px; box-shadow:0 4px 18px rgba(0,0,0,.14); padding:.9rem 1rem; }
     .drill-x { position:absolute; top:8px; right:10px; border:none; background:none; font-size:1.3rem; line-height:1; color:#94a3b8; cursor:pointer; }
     .drill-name { font-size:.95rem; font-weight:800; padding-right:1.2rem; }
-    .drill-code { font-size:.72rem; color:#94a3b8; font-weight:600; }
+    .drill-code { font-size:0.75rem; color:#94a3b8; font-weight:600; }
     .drill-risk { display:flex; align-items:center; gap:.5rem; margin:.6rem 0 .8rem; }
     .drill-risk-v { font-size:1.2rem; font-weight:900; color:#fff; border-radius:8px; padding:.1rem .6rem; }
     .drill-risk-l { font-size:.78rem; font-weight:700; color:var(--text-mid,#475569); }
     .drill-dim { margin:.35rem 0; }
-    .drill-dim-head { display:flex; justify-content:space-between; font-size:.74rem; font-weight:600; }
+    .drill-dim-head { display:flex; justify-content:space-between; font-size:0.75rem; font-weight:600; }
     .drill-bar { height:6px; border-radius:3px; background:#eef2f7; overflow:hidden; margin-top:.15rem; }
     .drill-bar > div { height:100%; border-radius:3px; }
-    .drill-sec { font-size:.66rem; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; font-weight:800; margin:.9rem 0 .35rem; }
+    .drill-sec { font-size:0.75rem; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; font-weight:800; margin:.9rem 0 .35rem; }
     .drill-comp { display:flex; justify-content:space-between; font-size:.76rem; padding:.18rem 0; border-bottom:1px solid #f1f5f9; }
-    .drill-ind { display:flex; justify-content:space-between; font-size:.68rem; color:#64748b; padding:.08rem 0 .08rem .9rem; }
+    .drill-ind { display:flex; justify-content:space-between; font-size:0.75rem; color:#64748b; padding:.08rem 0 .08rem .9rem; }
     .drill-ind span:last-child { font-variant-numeric:tabular-nums; }
     .drill-sig { background:#f8fafc; border:1px solid var(--line,#e2e8f0); border-radius:7px; padding:.4rem .55rem; margin-bottom:.4rem; }
     .drill-sig-head { display:flex; justify-content:space-between; font-size:.76rem; font-weight:700; }
-    .drill-sig-meta { font-size:.66rem; color:var(--text-mid,#64748b); margin-top:.1rem; }
+    .drill-sig-meta { font-size:0.75rem; color:var(--text-mid,#64748b); margin-top:.1rem; }
   `],
   template: `
     <div class="stats-row">
@@ -83,9 +86,9 @@ function reliabilityOpacity(rel: string | undefined): number { return rel === 'H
           <select (change)="onHazard($event)">@for (h of hazards(); track h) { <option [value]="h" [selected]="h===hazard()">{{ h }}</option> }</select>
         }
         <span class="hint">{{ mode()==='strategic'
-            ? 'slow, structural — the validated INFORM composite (Hazard × Vulnerability × Coping)'
-            : 'fast, decomposed — Tanzania Earth-observation; informs anticipatory action, not the headline risk. Faded = thinner basket coverage.' }}</span>
-        <button (click)="refreshNow()" title="Reload approved data" style="margin-left:auto; font:inherit; font-size:.78rem; font-weight:600; padding:.35rem .8rem; border:1px solid var(--line,#cbd5e1); background:#fff; color:var(--text-mid,#475569); border-radius:6px; cursor:pointer;"><i class="fas fa-rotate"></i> Refresh</button>
+            ? 'Slow, structural — the validated INFORM composite (Hazard × Vulnerability × Coping)'
+            : 'Fast, decomposed — Tanzania Earth-observation; informs anticipatory action, not the headline risk. Faded = thinner basket coverage.' }}</span>
+        <button class="refresh" (click)="refreshNow()" title="Reload approved data"><i class="fas fa-rotate"></i> Refresh</button>
       </div>
       <div style="position:relative;">
         <div #mapEl id="informMap"></div>
@@ -239,7 +242,7 @@ export class InformMapComponent implements AfterViewInit, OnDestroy {
           style: () => ({ color: '#ffffff', weight: 1, fillColor: NO_DATA, fillOpacity: 0.78 }),
           onEachFeature: (feature: any, lyr: any) => {
             const p = feature.properties || {};
-            lyr.bindTooltip(`<strong>${escapeHtml(p.name || p.dist || p.code || 'Council')}</strong><br>loading…`, { sticky: true });
+            lyr.bindTooltip(`<strong>${escapeHtml(p.name || p.dist || p.code || 'Council')}</strong><br>Loading…`, { sticky: true });
             lyr.on('click', () => this.openDetail(p.code, p.name || p.dist || p.code || 'Council'));
           },
         }).addTo(this.map);

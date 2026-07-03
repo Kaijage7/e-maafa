@@ -25,7 +25,7 @@ interface RequestLine { resource_id: number | null; quantity: number | null; pri
   standalone: true,
   imports: [DecimalPipe, FormsModule, PageHeaderComponent, PanelComponent],
   styles: [`
-    label { display: block; font-size: 0.74rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
+    label { display: block; font-size: 0.75rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
     input, select, textarea { width: 100%; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 9px; font-family: inherit; box-sizing: border-box; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
     .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 14px; }
@@ -33,11 +33,12 @@ interface RequestLine { resource_id: number | null; quantity: number | null; pri
     .cat-head { display: flex; justify-content: space-between; align-items: center; background: #f8f9fb; padding: 8px 12px; font-size: 0.84rem; font-weight: 700; }
     .item-row { display: grid; grid-template-columns: 1.2fr 1.6fr 80px 90px 130px 110px auto; gap: 8px; padding: 8px 12px; border-top: 1px solid #f1f5f9; align-items: end; }
     .req-row { display: grid; grid-template-columns: 1.6fr 110px 130px 1.6fr auto; gap: 8px; padding: 6px 0; align-items: end; }
-    .btn-sm { font-size: 0.72rem; padding: 4px 11px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
     .b-red { background: #dc3545; color: #fff; } .b-outline { background: #fff; border-color: #cbd5e1; color: #334155; }
+    .b-red:hover { background: #c82333; } .b-outline:hover { background: #f1f5f9; }
     .total-strip { background: #fff5f5; border: 1px solid #fecaca; color: #b91c1c; border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; margin: 12px 0; }
     .photos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    .photo-chip { font-size: 0.72rem; background: #f1f5f9; border-radius: 8px; padding: 3px 9px; }
+    .photo-chip { font-size: 0.75rem; background: #f1f5f9; border-radius: 8px; padding: 3px 9px; }
     .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
     .actions button { padding: 9px 22px; font-size: 0.85rem; }
   `],
@@ -245,10 +246,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

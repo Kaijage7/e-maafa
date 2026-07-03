@@ -23,11 +23,11 @@ const ACTIONS: Action[] = [
   imports: [PageHeaderComponent],
   styles: [`
     .qr-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.1rem; margin-top:.4rem; }
-    .qr-card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:1.3rem; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+    .qr-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.3rem; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
     .qr-card svg { width:210px; height:210px; }
     .qr-title { font-weight:800; font-size:1.02rem; margin-bottom:.5rem; }
-    .qr-url { font-size:.72rem; color:#64748b; word-break:break-all; margin-top:.55rem; font-family:monospace; }
-    .qr-desc { font-size:.76rem; color:#94a3b8; margin-top:.35rem; }
+    .qr-url { font-size:0.75rem; color:#64748b; word-break:break-all; margin-top:.55rem; font-family:monospace; }
+    .qr-desc { font-size:.8rem; color:#64748b; margin-top:.35rem; }
     @media print {
       .no-print { display:none !important; }
       .qr-card { break-inside:avoid; box-shadow:none; border:1px solid #d1d5db; }

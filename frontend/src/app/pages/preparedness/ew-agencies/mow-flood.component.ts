@@ -34,7 +34,7 @@ interface Day { day_number: number; assessments: Assessment[]; }
     .wrap { padding: 14px 18px 40px; }
     .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
     .hd .ic { width: 42px; height: 42px; border-radius: 11px; background: #e0f7fa; color: #00838f; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
-    .hd h1 { font-size: 1.18rem; margin: 0; color: #14303a; } .hd .sub { font-size: 0.78rem; color: #6c757d; }
+    .hd h1 { font-size: 1.3rem; margin: 0; color: #14303a; } .hd .sub { font-size: 0.8rem; color: #6c757d; }
     .toolbar { display: flex; align-items: center; gap: 10px; margin-left: auto; }
     .btn { font-size: 0.8rem; font-weight: 600; border-radius: 8px; padding: 8px 16px; border: 1px solid transparent; cursor: pointer; font-family: inherit; }
     .btn.primary { background: #00838f; color: #fff; } .btn.primary:disabled { opacity: 0.5; cursor: default; }
@@ -48,30 +48,30 @@ interface Day { day_number: number; assessments: Assessment[]; }
     .assess .ah { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
     .assess .ah b { font-size: 0.8rem; color: #1f2d3d; }
     .x { border: none; background: none; color: #b91c1c; cursor: pointer; font-size: 0.9rem; }
-    .lbl { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin: 8px 0 4px; letter-spacing: 0.3px; }
+    .lbl { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin: 8px 0 4px; letter-spacing: 0.3px; }
     .basin-chips { display: flex; flex-wrap: wrap; gap: 5px; }
-    .bchip { font-size: 0.68rem; font-weight: 600; border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 16px; padding: 3px 10px; cursor: pointer; font-family: inherit; }
+    .bchip { font-size: 0.8rem; font-weight: 600; border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 16px; padding: 3px 10px; cursor: pointer; font-family: inherit; }
     .bchip.on { background: #00838f; color: #fff; border-color: #00838f; }
-    select, textarea, input { font-size: 0.78rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 8px; font-family: inherit; width: 100%; box-sizing: border-box; }
+    select, textarea, input { font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 8px; font-family: inherit; width: 100%; box-sizing: border-box; }
     textarea { resize: vertical; min-height: 42px; }
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .dist-list { font-size: 0.7rem; color: #475569; margin-top: 4px; line-height: 1.6; }
+    .dist-list { font-size: 0.8rem; color: #475569; margin-top: 4px; line-height: 1.6; }
     .dchip { display: inline-block; background: #eef2f7; border-radius: 6px; padding: 1px 7px; margin: 2px 3px 0 0; }
     .dchip i { cursor: pointer; color: #94a3b8; margin-left: 4px; }
-    .add { font-size: 0.76rem; font-weight: 600; color: #00838f; background: #e0f7fa; border: 1px dashed #00838f; border-radius: 8px; padding: 7px; width: 100%; cursor: pointer; font-family: inherit; }
+    .add { font-size: 0.8rem; font-weight: 600; color: #00838f; background: #e0f7fa; border: 1px dashed #00838f; border-radius: 8px; padding: 7px; width: 100%; cursor: pointer; font-family: inherit; }
     .alvl { display: flex; gap: 5px; }
-    .alvl button { flex: 1; font-size: 0.68rem; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; border-radius: 7px; padding: 5px; cursor: pointer; font-family: inherit; color: #475569; }
+    .alvl button { flex: 1; font-size: 0.8rem; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; border-radius: 7px; padding: 5px; cursor: pointer; font-family: inherit; color: #475569; }
     .alvl button.on { color: #1a1a1a; border-color: #1a1a1a; }
     #mowmap { height: 600px; border-radius: 12px; border: 1px solid #e3e6ed; }
-    .legend { display: flex; gap: 14px; margin-top: 8px; font-size: 0.72rem; color: #475569; align-items: center; flex-wrap: wrap; }
+    .legend { display: flex; gap: 14px; margin-top: 8px; font-size: 0.8rem; color: #475569; align-items: center; flex-wrap: wrap; }
     .legend .sw { display: inline-block; width: 13px; height: 13px; border-radius: 3px; margin-right: 4px; vertical-align: -2px; border: 1px solid rgba(0,0,0,0.15); }
     .flash { padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 10px; }
     .flash.ok { background: #d1fae5; color: #065f46; } .flash.err { background: #fee2e2; color: #b91c1c; }
-    .tma-note { font-size: 0.74rem; color: #0c5460; background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+    .tma-note { font-size: 0.8rem; color: #0c5460; background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
   `],
   template: `
     <div class="wrap">
-      <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.76rem;color:#64748b;text-decoration:none;margin-bottom:10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
+      <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;color:#64748b;text-decoration:none;margin-bottom:10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
       <div class="hd">
         <div class="ic"><i class="fas fa-water"></i></div>
         <div>
@@ -86,7 +86,7 @@ interface Day { day_number: number; assessments: Assessment[]; }
             <i class="fas fa-tower-broadcast"></i> {{ submitting() ? 'Pushing…' : 'Push to EOCC' }}
           </button>
           <button class="btn" style="background:#fff;color:#b91c1c;border:1px solid #fecaca" [disabled]="clearing()" (click)="clearMine()" title="Remove MoW's current assessment from the cross-agency map and PMO-DMD">
-            <i class="fas fa-eraser"></i> {{ clearing() ? 'Clearing…' : 'Clear my warning' }}
+            <i class="fas fa-eraser"></i> {{ clearing() ? 'Clearing…' : 'Clear active warning' }}
           </button>
         </div>
       </div>
@@ -157,7 +157,7 @@ interface Day { day_number: number; assessments: Assessment[]; }
 
         <div class="panel">
           @if (crossRef().length) {
-            <label style="display:flex;align-items:center;gap:6px;font-size:0.74rem;color:#475569;margin-bottom:6px;cursor:pointer">
+            <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:#475569;margin-bottom:6px;cursor:pointer">
               <input type="checkbox" [checked]="refOn()" (change)="refOn.set($any($event.target).checked); applyRef()">
               <i class="fas fa-diagram-project" style="color:#94a3b8"></i> Show what other entities issued — reference only
             </label>

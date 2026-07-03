@@ -44,7 +44,7 @@ const TYPES = [
       <dmis-stat-card [value]="items().length" label="Total Materials" icon="fa-list" color="#e83e8c" />
       <dmis-stat-card [value]="countBy('children')" label="For Children" icon="fa-child" color="#3b82f6" />
       <dmis-stat-card [value]="countBy('adults')" label="For Adults" icon="fa-users" color="#10b981" />
-      <dmis-stat-card [value]="countBy('disabilities')" label="For Pers. w/ Disabilities" icon="fa-wheelchair" color="#a855f7" />
+      <dmis-stat-card [value]="countBy('disabilities')" label="For Persons with Disabilities" icon="fa-wheelchair" color="#a855f7" />
     </div>
 
     <div class="filter-bar">
@@ -98,7 +98,7 @@ const TYPES = [
     <!-- Editor -->
     @if (editorOpen()) {
       <div style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1500;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="editorOpen.set(false)">
-        <div style="background:#fff;border-radius:16px;max-width:680px;width:100%;padding:1.3rem 1.4rem;max-height:92vh;overflow-y:auto;" (click)="$event.stopPropagation()">
+        <div style="background:#fff;border-radius:12px;border:1px solid var(--border);max-width:680px;width:100%;padding:1.3rem 1.4rem;max-height:92vh;overflow-y:auto;" (click)="$event.stopPropagation()">
           <h5 style="font-weight:800;margin-bottom:1rem;">{{ editId() ? 'Edit Material' : 'New Material' }}</h5>
           <div style="display:grid;gap:0.75rem;">
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;">
@@ -128,9 +128,9 @@ const TYPES = [
             } @else {
               <textarea class="form-control" rows="3" placeholder="Description" [value]="fBody()" (input)="fBody.set($any($event.target).value)"></textarea>
               <div style="display:flex;gap:0.5rem;align-items:center;">
-                <input class="form-control" style="flex:1;" placeholder="File path or upload →" [value]="fFile()" (input)="fFile.set($any($event.target).value)">
+                <input class="form-control" style="flex:1;" placeholder="File path (or use Upload)" [value]="fFile()" (input)="fFile.set($any($event.target).value)">
                 <label class="btn-add" style="cursor:pointer;margin:0;white-space:nowrap;">
-                  <i class="fas" [class.fa-upload]="!uploading()" [class.fa-spinner]="uploading()" [class.fa-spin]="uploading()"></i>
+                  <i class="fas" [class.fa-upload]="!uploading()" [class.fa-spinner]="uploading()" [class.fa-spin]="uploading()"></i> Upload
                   <input type="file" accept="image/*,.pdf" hidden (change)="uploadFile($any($event.target).files)">
                 </label>
               </div>
@@ -138,7 +138,7 @@ const TYPES = [
 
             <!-- Optional Swahili authoring — public hubs fall back to English when these are empty -->
             <div style="border:1px solid var(--border);border-radius:11px;padding:0.85rem 0.9rem;background:rgba(0,51,102,0.025);display:grid;gap:0.6rem;">
-              <div style="font-size:0.78rem;font-weight:700;color:#003366;display:flex;align-items:center;gap:6px;">
+              <div style="font-size:0.8rem;font-weight:700;color:#003366;display:flex;align-items:center;gap:6px;">
                 <i class="fas fa-language"></i> Kiswahili (Swahili) <span style="font-weight:500;color:var(--text-mid);">— hiari / optional</span>
               </div>
               <input class="form-control" placeholder="Kichwa cha habari (Title in Swahili)" [value]="fTitleSw()" (input)="fTitleSw.set($any($event.target).value)">
@@ -151,7 +151,7 @@ const TYPES = [
 
             @if (error()) { <div style="color:#dc2626;font-size:0.82rem;">{{ error() }}</div> }
             <div style="display:flex;justify-content:flex-end;gap:0.6rem;">
-              <button type="button" style="border:1px solid var(--border);background:#fff;border-radius:9px;padding:0.5rem 1rem;cursor:pointer;" (click)="editorOpen.set(false)">Cancel</button>
+              <button class="btn" type="button" (click)="editorOpen.set(false)">Cancel</button>
               <button class="btn-add" type="button" [disabled]="!fHazard() || !fTitle().trim() || saving()" (click)="save()">
                 <i class="fas" [class.fa-save]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i> {{ saving() ? 'Saving…' : 'Save' }}
               </button>

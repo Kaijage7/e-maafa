@@ -85,7 +85,8 @@ import { RegionDistrictPickerComponent } from '../../shell/region-district-picke
     .fg input:focus, .fg select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,51,102,0.08); }
     .form-error { margin-top: 0.9rem; background: rgba(220,38,38,0.08); color: #dc2626; padding: 0.55rem 0.8rem; border-radius: 9px; font-size: 0.82rem; }
     .form-actions { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
-    .btn-ghost { border: 1px solid var(--border); background: #fff; color: var(--text-mid); border-radius: 9px; padding: 0.5rem 1.1rem; font-size: 0.84rem; cursor: pointer; }
+    .btn-ghost { border: 1px solid var(--border); background: #fff; color: var(--text-mid); border-radius: 8px; padding: 0.5rem 1.1rem; font-size: 0.84rem; cursor: pointer; }
+    .btn-ghost:hover { background: #f7f9fb; }
     .btn-add[disabled] { opacity: 0.55; cursor: not-allowed; }
   `],
 })

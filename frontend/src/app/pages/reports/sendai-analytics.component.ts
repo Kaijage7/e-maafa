@@ -41,7 +41,7 @@ const TARGET_COLORS: Record<string, string> = {
 
     <!-- Data-quality ribbon: how trustworthy the national numbers are right now -->
     <div class="panel-row">
-      <div style="display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;background:#003366;border-radius:14px;padding:0.9rem 1.2rem;color:#fff;">
+      <div style="display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;background:#003366;border-radius:12px;padding:0.9rem 1.2rem;color:#fff;">
         <i class="fas fa-shield-halved" style="font-size:1.4rem;opacity:0.85;"></i>
         <div style="font-size:0.86rem;">
           <strong>{{ quality()['counted'] ?? 0 }}</strong> validated event cards feed these figures ·
@@ -49,7 +49,7 @@ const TARGET_COLORS: Record<string, string> = {
           <strong>{{ quality()['effectsRecords'] ?? 0 }}</strong> effects records ·
           <strong>{{ quality()['links'] ?? 0 }}</strong> operational links
         </div>
-        <a routerLink="/m/reports-analytics/repository" style="margin-left:auto;color:#fff;font-size:0.8rem;font-weight:700;text-decoration:none;border:1px solid rgba(255,255,255,0.4);border-radius:9px;padding:0.35rem 0.9rem;">
+        <a routerLink="/m/reports-analytics/repository" style="margin-left:auto;color:#fff;font-size:0.8rem;font-weight:700;text-decoration:none;border:1px solid rgba(255,255,255,0.4);border-radius:8px;padding:0.35rem 0.9rem;">
           <i class="fas fa-database me-1"></i> Open the repository
         </a>
       </div>
@@ -59,21 +59,21 @@ const TARGET_COLORS: Record<string, string> = {
     <div class="panel-row" style="animation-delay:.05s;">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0.8rem;">
         @for (t of targets(); track t.letter) {
-          <div style="border:1px solid var(--border);border-radius:14px;background:var(--card-bg,#fff);padding:1rem 1.1rem;border-top:4px solid;" [style.border-top-color]="color(t.letter)">
+          <div style="border:1px solid var(--border);border-radius:12px;background:var(--card-bg,#fff);padding:1rem 1.1rem;border-top:4px solid;" [style.border-top-color]="color(t.letter)">
             <div style="display:flex;align-items:center;gap:10px;">
               <span [style.background]="color(t.letter)" style="width:34px;height:34px;border-radius:9px;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;">{{ t.letter }}</span>
-              <div style="font-size:0.74rem;font-weight:700;color:var(--text-mid);line-height:1.3;">{{ t.title }}</div>
+              <div style="font-size:0.75rem;font-weight:700;color:var(--text-mid);line-height:1.3;">{{ t.title }}</div>
             </div>
             <div style="font-size:1.55rem;font-weight:800;color:var(--text-dark);margin-top:0.55rem;">{{ t.value | number:'1.0-0' }}</div>
-            <div style="font-size:0.68rem;color:var(--text-light);">{{ t.valueLabel }}</div>
+            <div style="font-size:0.75rem;color:var(--text-light);">{{ t.valueLabel }}</div>
             @if (t.normalized !== null) {
               <div style="margin-top:0.4rem;font-size:0.8rem;font-weight:700;" [style.color]="color(t.letter)">
-                {{ t.normalized | number:'1.0-2' }} <span style="font-weight:500;color:var(--text-light);font-size:0.68rem;">{{ t.normalizedLabel }}</span>
+                {{ t.normalized | number:'1.0-2' }} <span style="font-weight:500;color:var(--text-light);font-size:0.75rem;">{{ t.normalizedLabel }}</span>
               </div>
             }
             <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:0.55rem;">
               @for (c of t.indicators; track c) {
-                <span style="font-size:0.58rem;font-weight:700;border:1px solid var(--border);border-radius:7px;padding:1px 6px;color:var(--text-mid);" [title]="indicatorTitle(c)">{{ c }}</span>
+                <span style="font-size:0.75rem;font-weight:700;border:1px solid var(--border);border-radius:7px;padding:1px 6px;color:var(--text-mid);" [title]="indicatorTitle(c)">{{ c }}</span>
               }
             </div>
           </div>
@@ -102,7 +102,7 @@ const TARGET_COLORS: Record<string, string> = {
               </span>
               <div>
                 <div style="font-size:0.8rem;font-weight:800;color:var(--text-dark);">{{ ins.title }}</div>
-                <div style="font-size:0.78rem;color:var(--text-mid);line-height:1.55;margin-top:2px;">{{ ins.body }}</div>
+                <div style="font-size:0.8rem;color:var(--text-mid);line-height:1.55;margin-top:2px;">{{ ins.body }}</div>
               </div>
             </div>
           } @empty {
@@ -136,10 +136,10 @@ const TARGET_COLORS: Record<string, string> = {
         <div class="panel-body" style="max-height:420px;overflow-y:auto;display:grid;gap:0.4rem;">
           @for (i of indicators(); track i.code) {
             <div style="display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:9px;padding:0.5rem 0.7rem;">
-              <span [style.background]="color(i.target)" style="flex-shrink:0;color:#fff;font-size:0.62rem;font-weight:800;border-radius:7px;padding:2px 8px;margin-top:2px;">{{ i.code }}</span>
+              <span [style.background]="color(i.target)" style="flex-shrink:0;color:#fff;font-size:0.75rem;font-weight:800;border-radius:7px;padding:2px 8px;margin-top:2px;">{{ i.code }}</span>
               <div>
-                <div style="font-size:0.74rem;font-weight:700;color:var(--text-dark);line-height:1.35;">{{ i.title }}</div>
-                <div style="font-size:0.64rem;color:var(--text-light);margin-top:1px;"><i class="fas fa-plug me-1"></i>{{ i.computedFrom }}</div>
+                <div style="font-size:0.8rem;font-weight:700;color:var(--text-dark);line-height:1.35;">{{ i.title }}</div>
+                <div style="font-size:0.8rem;color:var(--text-light);margin-top:1px;"><i class="fas fa-plug me-1"></i>{{ i.computedFrom }}</div>
               </div>
             </div>
           }
@@ -225,7 +225,7 @@ export class SendaiAnalyticsComponent implements AfterViewInit, OnDestroy {
           options: {
             responsive: true, maintainAspectRatio: false,
             scales: { y: { beginAtZero: true }, y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } },
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } },
           },
         }));
       }
@@ -240,7 +240,7 @@ export class SendaiAnalyticsComponent implements AfterViewInit, OnDestroy {
           },
           options: {
             responsive: true, maintainAspectRatio: false, cutout: '55%',
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 12 } } } },
           },
         }));
       }
@@ -256,7 +256,7 @@ function ensureChartJs(): Promise<void> {
       return;
     }
     const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    script.src = '/vendor/chartjs/chart.umd.min.js';
     script.onload = () => resolve();
     document.head.appendChild(script);
   });

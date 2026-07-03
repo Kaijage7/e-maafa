@@ -78,7 +78,7 @@ const STATUS_BADGE: Record<string, string> = {
                   <td style="text-align:right;">{{ e.lossTzs | number:'1.0-0' }}</td>
                   <td><span class="r-badge" style="background:rgba(13,110,253,0.1);color:#0d6efd;">{{ e.linkCount }}</span></td>
                   <td><span class="r-badge {{ statusBadge(e.status) }}">{{ e.status }}</span></td>
-                  <td><button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.74rem;" (click)="open(e.id)">Open card</button></td>
+                  <td><button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.8rem;" (click)="open(e.id)">Open card</button></td>
                 </tr>
               } @empty {
                 <tr><td colspan="10" style="text-align:center;color:var(--text-light);padding:2rem;">
@@ -94,7 +94,7 @@ const STATUS_BADGE: Record<string, string> = {
     <!-- Register Event modal -->
     @if (drawerOpen()) {
       <div style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1500;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="drawerOpen.set(false)">
-        <div style="background:#fff;border-radius:16px;max-width:680px;width:100%;max-height:92vh;overflow-y:auto;padding:1.3rem 1.4rem;display:grid;gap:0.8rem;" (click)="$event.stopPropagation()">
+        <div style="background:#fff;border-radius:12px;max-width:680px;width:100%;max-height:92vh;overflow-y:auto;padding:1.3rem 1.4rem;display:grid;gap:0.8rem;" (click)="$event.stopPropagation()">
           <h5 style="font-weight:800;margin:0;"><i class="fas fa-database me-2"></i>Register Disaster Event</h5>
           <div>
             <label class="form-label">Event name <span class="text-danger">*</span></label>
@@ -135,7 +135,7 @@ const STATUS_BADGE: Record<string, string> = {
             <i class="fas" [class.fa-save]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i>
             {{ saving() ? 'Saving…' : 'Register event card' }}
           </button>
-          <p style="font-size:0.74rem;color:var(--text-light);margin:0;">
+          <p style="font-size:0.8rem;color:var(--text-light);margin:0;">
             The card gets a DE-{{ currentYear }}-NNNN code. Add per-district effects and link the related
             warnings/incidents on the card page, then validate it to feed the Sendai analytics.
           </p>

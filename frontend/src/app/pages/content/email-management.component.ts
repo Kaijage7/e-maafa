@@ -70,11 +70,11 @@ const STATUS_BADGE: Record<string, string> = {
             @if (aud === 'agency') {
               <div style="display:flex;flex-wrap:wrap;gap:6px;max-width:560px;align-items:center;">
                 @for (a of agencies(); track a.id) {
-                  <label style="display:inline-flex;align-items:center;gap:4px;font-size:0.76rem;border:1px solid var(--border,#d1d5db);border-radius:6px;padding:3px 8px;cursor:pointer;" [style.background]="agencySel.includes(a.id) ? '#dbeafe' : '#fff'">
+                  <label style="display:inline-flex;align-items:center;gap:4px;font-size:0.8rem;border:1px solid var(--border,#d1d5db);border-radius:6px;padding:3px 8px;cursor:pointer;" [style.background]="agencySel.includes(a.id) ? '#dbeafe' : '#fff'">
                     <input type="checkbox" [checked]="agencySel.includes(a.id)" (change)="toggleAgency(a.id)"> {{ a.acronym || a.name }}
                   </label>
                 }
-                @if (!agencies().length) { <span style="font-size:0.76rem;color:var(--text-light);">No active agencies.</span> }
+                @if (!agencies().length) { <span style="font-size:0.8rem;color:var(--text-light);">No active agencies.</span> }
               </div>
             }
             <label class="btn-add" style="background:#64748b;cursor:pointer;" title="Import addresses from a CSV/text file">
@@ -124,7 +124,7 @@ const STATUS_BADGE: Record<string, string> = {
             <span style="color:var(--text-light);font-size:0.8rem;">to</span>
             <input type="date" class="form-control" style="max-width:160px;" [(ngModel)]="fTo" (change)="reload()">
             <input class="form-control" style="max-width:220px;" placeholder="Search address / subject…" [(ngModel)]="fSearch" (keyup.enter)="reload()">
-            <button class="btn-add" style="background:#64748b;" (click)="reload()"><i class="fas fa-magnifying-glass"></i></button>
+            <button class="btn-add" style="background:#64748b;" (click)="reload()"><i class="fas fa-magnifying-glass"></i> Search</button>
             @if (fStatus || fFrom || fTo || fSearch) { <button class="btn-add" style="background:#94a3b8;" (click)="clearFilters()"><i class="fas fa-xmark"></i> Clear</button> }
           }
         </div>
@@ -139,10 +139,10 @@ const STATUS_BADGE: Record<string, string> = {
                     <td><span class="r-badge" style="background:rgba(124,58,237,0.08);color:#7c3aed;">{{ r.notification_type || 'other' }}</span></td>
                     <td style="font-size:0.8rem;max-width:380px;color:var(--text-mid);">
                       <div style="font-weight:600;color:var(--text-dark);">{{ r.subject || '—' }}</div>{{ text(r.message) }}
-                      @if (r.status === 'failed' && r.error_message) { <div style="color:#dc2626;font-size:0.72rem;">{{ r.error_message }}</div> }</td>
+                      @if (r.status === 'failed' && r.error_message) { <div style="color:#dc2626;font-size:0.8rem;">{{ r.error_message }}</div> }</td>
                     <td><span class="r-badge {{ badge(r.status) }}">{{ r.status }}</span>
-                      @if (r.retry_count > 0) { <div style="font-size:0.7rem;color:var(--text-light);">{{ r.retry_count }} retries</div> }</td>
-                    <td style="font-size:0.78rem;color:var(--text-mid);">{{ (r.sent_at || r.created_at) | date:'dd MMM, HH:mm' }}</td>
+                      @if (r.retry_count > 0) { <div style="font-size:0.8rem;color:var(--text-light);">{{ r.retry_count }} retries</div> }</td>
+                    <td style="font-size:0.8rem;color:var(--text-mid);">{{ (r.sent_at || r.created_at) | date:'dd MMM, HH:mm' }}</td>
                   </tr>
                 } @empty { <tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:2.5rem;">No emails logged for this filter.</td></tr> }
               </tbody>
@@ -238,7 +238,7 @@ export class EmailManagementComponent {
         next: r => {
           this.sending.set(false);
           this.sendOk.set(!!r?.success);
-          this.sendMsg.set(r?.success ? `Sent: ${r.sent} ok, ${r.failed} failed.` : (r?.message || 'Send failed.'));
+          this.sendMsg.set(r?.success ? `Sent: ${r.sent} successful, ${r.failed} failed.` : (r?.message || 'Send failed.'));
           if (r?.success) { this.cMessage = ''; this.clearAttach(); }
           this.reload();
         },

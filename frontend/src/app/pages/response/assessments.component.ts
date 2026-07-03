@@ -24,17 +24,17 @@ interface AssessmentRow {
   styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
-    .stat b { font-size: 1.25rem; display: block; }
-    .stat span { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat b { font-size: 1.5rem; display: block; }
+    .stat span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
     .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
     .mini { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 12px 14px; }
     .mini h4 { margin: 0 0 8px; font-size: 0.78rem; text-transform: uppercase; color: #6c757d; }
     .bar-row { display: grid; grid-template-columns: 130px 1fr auto; gap: 8px; align-items: center; font-size: 0.78rem; padding: 3px 0; }
     .bar { height: 10px; border-radius: 5px; background: #dc3545; min-width: 2px; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
-    .chip { display: inline-block; font-size: 0.66rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; }
+    .chip { display: inline-block; font-size: 0.75rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; }
     .c-Draft { background: #e2e8f0; color: #334155; }
     .c-PendingVerification { background: #fef3c7; color: #92400e; }
     .c-Completed { background: #d1fae5; color: #065f46; }

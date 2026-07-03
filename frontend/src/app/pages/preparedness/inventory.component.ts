@@ -75,7 +75,7 @@ interface InvResponse {
                       <td style="font-size:0.82rem;color:var(--text-mid);">{{ it.warehouse || '-' }}</td>
                       <td>
                         <span style="font-weight:700;" [style.color]="it.quantity === 0 ? '#dc2626' : (it.lowStock ? '#d97706' : 'var(--text-dark)')">{{ it.quantity | number }}</span>
-                        @if (it.lowStock) { <span style="font-size:0.6rem;color:#d97706;display:block;"><i class="fas fa-exclamation-triangle"></i> Low</span> }
+                        @if (it.lowStock) { <span style="font-size:0.75rem;color:#d97706;display:block;"><i class="fas fa-exclamation-triangle"></i> Low</span> }
                       </td>
                       <td><span class="r-badge {{ statusClass(it.status) }}">{{ it.status }}</span></td>
                       <td style="font-size:0.78rem;">
@@ -114,7 +114,7 @@ interface InvResponse {
     .alert-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     .alert-tab:not(.active) { background: rgba(255,255,255,0.55); color: var(--text-mid); }
     .alert-tab:not(.active):hover { background: rgba(255,255,255,0.8); color: var(--text-dark); }
-    .alert-tab .tab-count { background: rgba(255,255,255,0.25); padding: 0.1rem 0.4rem; border-radius: 50px; font-size: 0.68rem; }
+    .alert-tab .tab-count { background: rgba(255,255,255,0.25); padding: 0.1rem 0.4rem; border-radius: 50px; font-size: 0.75rem; }
     .alert-tab:not(.active) .tab-count { background: rgba(0,0,0,0.06); }
     .badge-good { background: rgba(16,185,129,0.12); color: #059669; }
     .badge-good-condition { background: rgba(16,185,129,0.12); color: #059669; }

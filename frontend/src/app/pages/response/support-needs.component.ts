@@ -23,18 +23,22 @@ interface PledgeRow { id: number; target_type: string; measure_title: string | n
   styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background:#fff; border:1px solid #e3e6ed; border-radius:10px; padding:10px 14px; }
-    .stat b { font-size:1.3rem; display:block; } .stat span { font-size:0.72rem; color:#6c757d; text-transform:uppercase; letter-spacing:.4px; }
+    .stat b { font-size:1.3rem; display:block; } .stat span { font-size:0.75rem; color:#6c757d; text-transform:uppercase; letter-spacing:.4px; }
     .queue-tabs { display:flex; gap:4px; background:#fff; border-bottom:2px solid #e3e6ed; border-radius:12px 12px 0 0; padding:0 4px; margin-bottom:12px; }
     .queue-tabs button { font-size:.82rem; font-weight:600; color:#6c757d; border:none; background:none; padding:10px 16px; border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer; font-family:inherit; }
     .queue-tabs button.active { color:#6f42c1; border-bottom-color:#6f42c1; }
-    table { width:100%; border-collapse:collapse; font-size:.82rem; } th { text-align:left; font-size:.7rem; text-transform:uppercase; color:#6c757d; padding:8px 10px; border-bottom:2px solid #e3e6ed; }
+    table { width:100%; border-collapse:collapse; font-size:.82rem; } th { text-align:left; font-size:0.75rem; text-transform:uppercase; color:#6c757d; padding:8px 10px; border-bottom:2px solid #e3e6ed; }
     td { padding:8px 10px; border-bottom:1px solid #f1f5f9; vertical-align:middle; } .num { text-align:right; font-variant-numeric:tabular-nums; }
-    .chip { display:inline-block; font-size:.66rem; font-weight:600; border-radius:10px; padding:1px 8px; background:#e2e8f0; color:#334155; text-transform:capitalize; }
+    td small { font-size:0.75rem; }
+    .chip { display:inline-block; font-size:0.75rem; font-weight:600; border-radius:10px; padding:1px 8px; background:#e2e8f0; color:#334155; text-transform:capitalize; }
     .chip.High { background:#fee2e2; color:#991b1b; } .chip.Medium { background:#fef3c7; color:#92400e; } .chip.Low { background:#ecfeff; color:#155e75; }
     .chip.pledged { background:#ede9fe; color:#5b21b6; } .chip.accepted { background:#dcfce7; color:#166534; } .chip.declined { background:#fee2e2; color:#991b1b; }
-    .btn-pri { font-size:.74rem; font-weight:700; padding:5px 12px; border-radius:7px; border:1px solid #6f42c1; background:#6f42c1; color:#fff; cursor:pointer; font-family:inherit; }
-    .btn-sm { font-size:.72rem; padding:5px 12px; border-radius:7px; border:1px solid #cbd5e1; background:#fff; color:#334155; cursor:pointer; font-family:inherit; font-weight:600; }
+    .btn-pri { font-size:0.78rem; font-weight:700; padding:6px 12px; border-radius:7px; border:1px solid #6f42c1; background:#6f42c1; color:#fff; cursor:pointer; font-family:inherit; }
+    .btn-pri:hover:not(:disabled) { background:#5a32a3; border-color:#5a32a3; }
+    .btn-sm { font-size:0.78rem; padding:6px 12px; border-radius:7px; border:1px solid #cbd5e1; background:#fff; color:#334155; cursor:pointer; font-family:inherit; font-weight:600; }
+    .btn-sm:hover { background:#f1f5f9; }
     .btn-ok { border-color:#198754; color:#fff; background:#198754; } .btn-no { border-color:#dc3545; color:#dc3545; }
+    .btn-ok:hover { background:#146c43; border-color:#146c43; } .btn-no:hover { background:#fde2e2; }
     .empty { text-align:center; color:#94a3b8; padding:26px 0; font-size:.85rem; } .muted { color:#6c757d; }
     .dn-overlay { position:fixed; inset:0; background:rgba(15,23,42,.45); display:flex; align-items:center; justify-content:center; z-index:1000; }
     .dn-modal { background:#fff; border-radius:14px; padding:1.2rem 1.3rem; width:min(460px,92vw); box-shadow:0 12px 40px rgba(0,0,0,.25); }

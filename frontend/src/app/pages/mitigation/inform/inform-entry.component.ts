@@ -20,11 +20,12 @@ type Mode = 'actual' | 'scores' | 'paste';
     :host { display:block; }
     .mode-row { display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:1rem; }
     .mode-row button { font:inherit; font-size:.78rem; font-weight:700; padding:.35rem .85rem; border-radius:50px; border:1.5px solid var(--line,#cbd5e1); background:#fff; color:var(--text-mid,#475569); cursor:pointer; }
+    .mode-row button:hover:not(.on) { border-color:#94a3b8; background:#f8fafc; }
     .mode-row button.on { background:var(--module-color,#0d6efd); border-color:var(--module-color,#0d6efd); color:#fff; }
     textarea.paste { width:100%; min-height:160px; font:13px/1.5 ui-monospace,monospace; padding:.6rem .7rem; border:1px solid var(--line,#cbd5e1); border-radius:8px; }
   `],
   template: `
-    <p class="muted">Pick your sector and an area, then key INFORM values. Submissions land pending PMO approval.</p>
+    <p class="muted">Select a sector and an area, then key INFORM values. Submissions are queued for PMO approval.</p>
 
     <div class="mode-row">
       <button [class.on]="mode()==='actual'" (click)="mode.set('actual')">Enter actual values → standardised</button>
@@ -46,7 +47,7 @@ type Mode = 'actual' | 'scores' | 'paste';
         </select>
       </div>
       <div class="field"><label for="by">Entered by</label>
-        <input id="by" type="text" [(ngModel)]="enteredBy" placeholder="your name / username">
+        <input id="by" type="text" [(ngModel)]="enteredBy" placeholder="Name or username">
       </div>
     </div>
 
@@ -82,9 +83,9 @@ type Mode = 'actual' | 'scores' | 'paste';
                   <td>{{ r.indicator.component || '—' }}</td>
                   <td class="muted">{{ r.indicator.unit || '—' }}</td>
                   @if (mode()==='actual') {
-                    <td><input class="cell" style="width:120px;" type="number" step="any" [(ngModel)]="r.raw" placeholder="raw"></td>
+                    <td><input class="cell" style="width:120px;" type="number" step="any" [(ngModel)]="r.raw" placeholder="Raw value"></td>
                     @if (anyDenominator()) {
-                      <td>@if (needsDenom(r.indicator)) { <input class="cell" style="width:120px;" type="number" step="any" [(ngModel)]="r.denom" placeholder="denom"> } @else { <span class="muted">—</span> }</td>
+                      <td>@if (needsDenom(r.indicator)) { <input class="cell" style="width:120px;" type="number" step="any" [(ngModel)]="r.denom" placeholder="Denominator"> } @else { <span class="muted">—</span> }</td>
                     }
                     <td class="num">@if (preview(r) != null) { <span class="score">{{ preview(r) }}</span> } @else { <span class="score empty">—</span> }</td>
                   } @else {
@@ -195,7 +196,7 @@ export class InformEntryComponent implements OnInit {
     if (done + failed < total) return;
     this.submitting.set(false);
     if (failed === 0) this.success.set(`Submitted ${done} value(s) for ${this.areaCode} — pending PMO approval.`);
-    else if (done === 0) this.error.set(`All ${failed} submission(s) failed. Check the backend.`);
+    else if (done === 0) this.error.set(`All ${failed} submission(s) failed. Please try again.`);
     else { this.success.set(`Submitted ${done} value(s) — pending PMO approval.`); this.error.set(`${failed} submission(s) failed.`); }
   }
 }

@@ -44,20 +44,21 @@ interface Movement {
     .wh-card { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 12px 14px; cursor: pointer; font-size: 0.82rem; }
     .wh-card.sel { border-color: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,0.15); }
     .wh-card b { display: block; margin-bottom: 2px; }
-    .wh-meta { font-size: 0.72rem; color: #6c757d; }
-    .tag { font-size: 0.64rem; font-weight: 700; border-radius: 8px; padding: 1px 7px; background: #e2e8f0; color: #334155; }
+    .wh-meta { font-size: 0.75rem; color: #6c757d; }
+    .tag { font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 1px 7px; background: #e2e8f0; color: #334155; }
     .tag.temp { background: #ede9fe; color: #5b21b6; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; }
     .low { color: #b91c1c; font-weight: 700; }
-    .btn-sm { font-size: 0.72rem; padding: 4px 11px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
     .b-red { background: #dc3545; color: #fff; } .b-outline { background: #fff; border-color: #cbd5e1; color: #334155; }
+    .b-red:hover { background: #bb2d3b; } .b-outline:hover { background: #f1f5f9; }
     .toolbar { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
-    .mv-type { font-size: 0.66rem; font-weight: 700; border-radius: 8px; padding: 1px 7px; }
+    .mv-type { font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 1px 7px; }
     .mv-Intake { background: #d1fae5; color: #065f46; } .mv-Dispatch, .mv-Removal, .mv-Deduction { background: #fee2e2; color: #b91c1c; }
     .mv-Transfer { background: #e0f2fe; color: #075985; }
     .mv-Adjustment_Increase, .mv-Adjustment_Decrease { background: #fef3c7; color: #92400e; }
@@ -68,7 +69,7 @@ interface Movement {
     .util-bar .fill { display: block; height: 100%; border-radius: 6px; }
     .util-bar .fill.ok { background: #16a34a; } .util-bar .fill.high { background: #d97706; } .util-bar .fill.full { background: #dc2626; }
     .util-num { font-size: 0.76rem; font-weight: 700; color: #334155; }
-    .press { font-size: 0.64rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; text-transform: uppercase; }
+    .press { font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; text-transform: uppercase; }
     .press.ok { background: #dcfce7; color: #166534; } .press.high { background: #fef3c7; color: #92400e; }
     .press.full { background: #fee2e2; color: #b91c1c; } .press.unknown { background: #e2e8f0; color: #475569; }
     .mv-Borrow { background: #ede9fe; color: #5b21b6; } .mv-Return { background: #d1fae5; color: #065f46; }
@@ -161,7 +162,7 @@ interface Movement {
                   @if (w.utilisation_pct != null) {
                     <div class="util-bar"><span class="fill {{ w.space_pressure }}" [style.width.%]="w.utilisation_pct > 100 ? 100 : w.utilisation_pct"></span></div>
                     <span class="util-num">{{ w.utilisation_pct }}%</span>
-                  } @else { <span class="wh-meta">no capacity set</span> }
+                  } @else { <span class="wh-meta">No capacity set</span> }
                 </td>
                 <td><span class="press {{ w.space_pressure }}">{{ w.space_pressure }}</span></td>
               </tr>
@@ -227,7 +228,7 @@ interface Movement {
                 <td>{{ m.quantity }}</td>
                 <td>{{ m.from_warehouse_name ?? m.from_temp_warehouse_name ?? '—' }}</td>
                 <td>{{ m.to_warehouse_name ?? m.to_temp_warehouse_name ?? '—' }}</td>
-                <td>{{ m.incident_title ? '🔗 ' + m.incident_title : '—' }}</td>
+                <td>@if (m.incident_title) { <i class="fas fa-link" style="font-size:0.7rem;color:var(--text-light);"></i> {{ m.incident_title }} } @else { — }</td>
                 <td>{{ m.user_name ?? '—' }}</td>
                 <td style="max-width:240px">{{ m.notes ?? '—' }}</td>
               </tr>
@@ -588,10 +589,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

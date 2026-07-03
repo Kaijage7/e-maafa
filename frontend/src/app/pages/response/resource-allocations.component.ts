@@ -35,9 +35,9 @@ interface FormData {
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
-    .q-badge { background: rgba(220,53,69,0.1); color: #dc3545; border-radius: 10px; padding: 0 6px; font-size: 0.68rem; margin-left: 4px; }
-    .stock-pill { font-size: 0.68rem; color: var(--text-light); }
-    .actions button { font-size: 0.7rem; padding: 2px 8px; border-radius: 6px; }
+    .q-badge { background: rgba(220,53,69,0.1); color: #dc3545; border-radius: 10px; padding: 0 6px; font-size: 0.75rem; margin-left: 4px; }
+    .stock-pill { font-size: 0.75rem; color: var(--text-light); }
+    .actions button { font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; }
     .req-modal { display: none; position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.5); overflow-y: auto; }
     .req-modal.open { display: block; }
     .req-card { background: #fff; border-radius: 0.5rem; margin: 1.75rem auto; max-width: 880px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
@@ -116,7 +116,7 @@ interface FormData {
           @for (w of warehouses(); track w.id) {
             <div style="border:1px solid #e3e6ed;border-radius:10px;padding:0.6rem 0.8rem;">
               <div class="r-title" style="font-size:0.8rem;">{{ w.name }}</div>
-              <div style="font-size:0.72rem;color:var(--text-mid);">{{ w.total_items }} items
+              <div style="font-size:0.75rem;color:var(--text-mid);">{{ w.total_items }} items
                 @if (w.critical_items > 0) { · <span style="color:#dc3545;">{{ w.critical_items }} low</span> }
               </div>
             </div>
@@ -305,13 +305,13 @@ export class ResourceAllocationsComponent implements OnInit {
   track(a: AllocationRow): void {
     this.http.get<any>(`/api/v1/response/allocations/${a.id}/track`).subscribe(d => {
       const steps = ['requested', 'forwarded', 'approved', 'dispatched', 'deployed', 'delivered']
-          .map(k => `<div style="padding:2px 0;">${d.timeline[k] ? '✅' : '⬜'} ${k[0].toUpperCase() + k.slice(1)}</div>`).join('');
+          .map(k => `<div style="padding:2px 0;">${d.timeline[k] ? '<i class="fas fa-check-circle" style="color:#198754;"></i>' : '<i class="fas fa-circle" style="color:#cbd5e1;"></i>'} ${k[0].toUpperCase() + k.slice(1)}</div>`).join('');
       const history = (d.history as any[]).map(h =>
           `<div style="font-size:0.78rem;color:#4a5568;">• ${h.action} — ${h.remarks ?? ''} <span style="color:#9ca3af;">(${h.user_name ?? ''})</span></div>`).join('');
       ensureSweetAlert().then(() => Swal.fire({
         title: `${d.resource_name} → ${d.status}`,
         html: `<div class="text-start" style="font-size:0.85rem;">
-                 <b>Incident:</b> ${d.incident_title}<br><b>From:</b> ${d.warehouse_name ?? 'TBD'}<br><br>
+                 <b>Incident:</b> ${d.incident_title}<br><b>From:</b> ${d.warehouse_name ?? 'Not yet assigned'}<br><br>
                  ${steps}<hr style="margin:8px 0;">${history || '<i>No history.</i>'}</div>`,
         width: 520, confirmButtonColor: '#dc3545',
       }));
@@ -365,10 +365,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

@@ -14,7 +14,7 @@ import { AuthService } from '../../core/auth.service';
   imports: [RouterLink],
   styles: [`
     :host { display: block; }
-    .flow { padding: 4px 2px 18px; max-width: 1100px; }
+    .flow { padding: 4px 2px 18px; }
     .lead { display: flex; align-items: flex-start; gap: 0.6rem; background: var(--surface, #f8fafc);
       border: 1px solid var(--border, #e3e6ed); border-left: 3px solid var(--primary, #003366);
       border-radius: 10px; padding: 0.7rem 0.95rem; font-size: 0.8rem; color: var(--text-mid, #475569);
@@ -30,7 +30,7 @@ import { AuthService } from '../../core/auth.service';
       background: var(--primary, #003366); color: #fff; font-size: 0.82rem; font-weight: 700;
       display: flex; align-items: center; justify-content: center; z-index: 1; }
     .stage-hd h3 { margin: 0; font-size: 0.95rem; color: var(--text-dark, #14303a); font-weight: 700; line-height: 1.7; }
-    .stage-hd .sub { font-size: 0.76rem; color: var(--text-light, #6c757d); margin-top: 1px; line-height: 1.4; }
+    .stage-hd .sub { font-size: 0.8rem; color: var(--text-light, #6c757d); margin-top: 1px; line-height: 1.4; }
     .cards { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 13px; }
     .card { flex: 1 1 234px; max-width: 322px; min-width: 0; display: flex; align-items: center; gap: 12px;
       background: #fff; border: 1px solid var(--border, #e3e6ed); border-left: 3px solid var(--c, #003366);
@@ -40,8 +40,8 @@ import { AuthService } from '../../core/auth.service';
     .card .ic { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; display: flex;
       align-items: center; justify-content: center; font-size: 1.02rem;
       background: #f1f5f9; background: color-mix(in srgb, var(--c, #003366) 12%, #fff); color: var(--c, #003366); }
-    .card .nm { font-size: 0.83rem; font-weight: 700; color: var(--text-dark, #1f2d3d); line-height: 1.25; }
-    .card .ds { font-size: 0.71rem; color: var(--text-light, #64748b); margin-top: 2px; line-height: 1.35; }
+    .card .nm { font-size: 0.88rem; font-weight: 700; color: var(--text-dark, #1f2d3d); line-height: 1.25; }
+    .card .ds { font-size: 0.8rem; color: var(--text-light, #64748b); margin-top: 2px; line-height: 1.35; }
   `],
   template: `
     <div class="flow">

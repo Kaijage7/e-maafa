@@ -23,11 +23,13 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-    .btn-sm { font-size: 0.72rem; padding: 4px 11px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
+    td small { font-size: 0.75rem; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
     .b-red { background: #dc3545; color: #fff; } .b-outline { background: #fff; border-color: #cbd5e1; color: #334155; }
-    .chip { font-size: 0.64rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; background: #e2e8f0; color: #334155; }
+    .b-red:hover { background: #bb2d3b; } .b-outline:hover { background: #f1f5f9; }
+    .chip { font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; background: #e2e8f0; color: #334155; }
     .on { background: #d1fae5; color: #065f46; } .off { background: #fee2e2; color: #b91c1c; }
     .step-row { display: grid; grid-template-columns: 30px 1.4fr 1.2fr auto auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
     .step-row input, .step-row select { font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px; padding: 5px 8px; font-family: inherit; width: 100%; box-sizing: border-box; }
@@ -38,7 +40,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1500; display: flex; align-items: flex-start; justify-content: center; padding: 6vh 1rem; }
     .modal-card { background: #fff; border: 1px solid #e3e6ed; border-radius: 12px; max-width: 560px; width: 100%; padding: 1.3rem 1.4rem; box-sizing: border-box; }
     .modal-title { font-weight: 800; margin: 0 0 1rem; font-size: 1rem; }
-    .f-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; display: block; margin: 0.7rem 0 3px; }
+    .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; display: block; margin: 0.7rem 0 3px; }
     .ff { width: 100%; box-sizing: border-box; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 6px; padding: 7px 9px; font-family: inherit; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
     .form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.1rem; }
@@ -90,7 +92,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
               <select [(ngModel)]="s.role_required">
                 @for (r of editingModule().roles ?? []; track r.name) { <option [value]="r.name ?? r">{{ r.name ?? r }}</option> }
               </select>
-              <label style="font-size:0.74rem; white-space:nowrap"><input type="checkbox" [(ngModel)]="s.can_skip"> can skip</label>
+              <label style="font-size:0.75rem; white-space:nowrap"><input type="checkbox" [(ngModel)]="s.can_skip"> Can skip</label>
               <button class="btn-sm b-outline" (click)="editSteps.splice(i, 1)">✕</button>
             </div>
           }
@@ -213,7 +215,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
             </div>
             <label class="f-lbl">Description</label>
             <input class="ff" [(ngModel)]="m.description">
-            @if (m.icon_class) { <div class="icon-preview"><i class="fas {{ m.icon_class }}"></i> icon preview</div> }
+            @if (m.icon_class) { <div class="icon-preview"><i class="fas {{ m.icon_class }}"></i> Icon preview</div> }
           }
           <div class="form-actions">
             <button class="btn-sm b-outline" (click)="formOpen.set(false)">Cancel</button>
@@ -381,10 +383,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

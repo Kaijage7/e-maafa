@@ -38,7 +38,7 @@ interface FormData {
     .section-title:first-child { margin-top: 0; }
     .form-label { font-size: 0.78rem; font-weight: 600; }
     .check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.25rem 1rem; }
-    .photo-chip { display: inline-flex; align-items: center; gap: 0.4rem; background: #f1f5f9; border-radius: 8px; padding: 0.25rem 0.6rem; font-size: 0.72rem; margin: 0 0.3rem 0.3rem 0; }
+    .photo-chip { display: inline-flex; align-items: center; gap: 0.4rem; background: #f1f5f9; border-radius: 8px; padding: 0.25rem 0.6rem; font-size: 0.75rem; margin: 0 0.3rem 0.3rem 0; }
     .photo-chip button { border: none; background: none; color: #dc3545; cursor: pointer; }
   `],
   template: `
@@ -477,10 +477,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

@@ -10,17 +10,17 @@ import { SafeResourceUrl } from '@angular/platform-browser';
   standalone: true,
   styles: [`
     .pm-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(2px); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 24px; }
-    .pm-panel { width: min(960px, 96vw); height: min(92vh, 1000px); background: #fff; border-radius: 14px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); display: flex; flex-direction: column; overflow: hidden; }
+    .pm-panel { width: min(960px, 96vw); height: min(92vh, 1000px); background: #fff; border-radius: 12px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); display: flex; flex-direction: column; overflow: hidden; }
     .pm-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #e8ebf0; background: #f8fafc; }
     .pm-head .ic { width: 36px; height: 36px; border-radius: 9px; background: #003366; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
     .pm-head b { font-size: 0.95rem; color: #14303a; display: block; line-height: 1.2; }
-    .pm-head .sub { font-size: 0.74rem; color: #64748b; }
+    .pm-head .sub { font-size: 0.75rem; color: #64748b; }
     .pm-x { margin-left: auto; border: none; background: #eef2f7; color: #475569; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; }
     .pm-x:hover { background: #e2e8f0; }
     .pm-frame { flex: 1; width: 100%; border: none; background: #525659; }
     .pm-foot { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid #e8ebf0; background: #fff; }
     .pm-note { font-size: 0.76rem; color: #64748b; margin-right: auto; }
-    .pm-btn { display: inline-flex; align-items: center; gap: 7px; font-size: 0.82rem; font-weight: 700; border-radius: 9px; padding: 9px 16px; cursor: pointer; font-family: inherit; text-decoration: none; border: 1px solid transparent; }
+    .pm-btn { display: inline-flex; align-items: center; gap: 7px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; padding: 9px 16px; cursor: pointer; font-family: inherit; text-decoration: none; border: 1px solid transparent; }
     .pm-btn.ghost { background: #fff; color: #1f2d3d; border-color: #cbd5e1; }
     .pm-btn.ghost:hover { background: #f1f5f9; }
     .pm-btn.primary { background: #4527a0; color: #fff; }

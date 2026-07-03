@@ -130,9 +130,14 @@ function safeName(name: string): string {
 export type RegionFill = (regionName: string) => string | null;
 /** District choropleth: a fill colour for a specific district (within its region), or null. */
 export type DistrictFill = (regionName: string, districtName: string) => string | null;
+/** Optional rich hover tooltip HTML for a region polygon (null → plain region name). */
+export type RegionTip = (regionName: string) => string | null;
+/** Optional rich hover tooltip HTML for a district polygon, keyed by its region (null → plain name). */
+export type DistrictTip = (regionName: string, districtName: string) => string | null;
 
 export function addAdminDrilldown(map: any, http: HttpClient, regionFill?: RegionFill,
-                                  opts?: { districtFill?: DistrictFill; districtRegions?: string[] }): { reset: () => void } {
+                                  opts?: { districtFill?: DistrictFill; districtRegions?: string[];
+                                           regionTip?: RegionTip; districtTip?: DistrictTip }): { reset: () => void } {
   let districtLayer: any = null;
   let wardLayer: any = null;
 
@@ -170,7 +175,13 @@ export function addAdminDrilldown(map: any, http: HttpClient, regionFill?: Regio
           style: () => ({ fillColor: '#1565C0', fillOpacity: 0.03, color: '#003366', weight: 1, opacity: 0.5, dashArray: '4 3' }),
           onEachFeature: (f: any, layer: any) => {
             const district = f.properties.dist_name || 'District';
-            layer.bindTooltip(district, { sticky: true });
+            const dTip = opts?.districtTip;
+            if (dTip) {
+              // Content is a FUNCTION so each hover re-reads the caller's current data (live refresh).
+              layer.bindTooltip(() => dTip(region, district) ?? district, { className: 'map-tip', sticky: true });
+            } else {
+              layer.bindTooltip(district, { sticky: true });
+            }
             layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.12, weight: 2, opacity: 0.8, dashArray: '' }));
             layer.on('mouseout', () => layer.setStyle({ fillOpacity: 0.03, weight: 1, opacity: 0.5, dashArray: '4 3' }));
             layer.on('click', (e: any) => {
@@ -197,7 +208,13 @@ export function addAdminDrilldown(map: any, http: HttpClient, regionFill?: Regio
         const region = f.properties.reg_name;
         const fill = regionFill?.(region) ?? null;
         const baseOpacity = fill ? 0.55 : (regionFill ? 0.04 : 0);
-        layer.bindTooltip(region, { sticky: true });
+        const rTip = opts?.regionTip;
+        if (rTip) {
+          // Content is a FUNCTION so each hover re-reads the caller's current data (live refresh).
+          layer.bindTooltip(() => rTip(region) ?? region, { className: 'map-tip', sticky: true });
+        } else {
+          layer.bindTooltip(region, { sticky: true });
+        }
         layer.on('mouseover', () => layer.setStyle({ fillOpacity: Math.min(baseOpacity + 0.15, 0.8) }));
         layer.on('mouseout', () => layer.setStyle({ fillOpacity: baseOpacity }));
         layer.on('click', () => {

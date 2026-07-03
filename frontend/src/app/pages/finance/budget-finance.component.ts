@@ -35,17 +35,17 @@ interface Opt { id: number; name: string; }
     .stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.25rem; display: block; color: #0f5132; }
-    .stat span { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
-    .stat small { font-size: 0.68rem; color: #94a3b8; }
+    .stat span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat small { font-size: 0.75rem; color: #94a3b8; }
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #0d6efd; border-bottom-color: #0d6efd; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     tr.clickable:hover { background: #f8fafc; cursor: pointer; }
     .num { text-align: right; font-variant-numeric: tabular-nums; }
-    .chip { display: inline-block; font-size: 0.66rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; background: #e2e8f0; color: #334155; text-transform: capitalize; }
+    .chip { display: inline-block; font-size: 0.75rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; background: #e2e8f0; color: #334155; text-transform: capitalize; }
     .chip.active, .chip.acknowledged, .chip.received { background: #dcfce7; color: #166534; }
     .chip.draft, .chip.pending { background: #fef3c7; color: #92400e; }
     .chip.scope { background: #e0e7ff; color: #3730a3; }
@@ -58,8 +58,10 @@ interface Opt { id: number; name: string; }
     .bar > span.c { background: #f59e0b; }
     .bar > span.d { background: #198754; }
     .toolbar { display: flex; gap: 6px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
-    .btn-sm { font-size: 0.72rem; padding: 5px 12px; border-radius: 7px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; font-family: inherit; font-weight: 600; }
-    .btn-pri { font-size: 0.74rem; font-weight: 700; padding: 5px 12px; border-radius: 7px; border: 1px solid #0d6efd; background: #0d6efd; color: #fff; cursor: pointer; font-family: inherit; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 12px; border-radius: 7px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-pri { font-size: 0.78rem; font-weight: 700; padding: 6px 12px; border-radius: 7px; border: 1px solid #0d6efd; background: #0d6efd; color: #fff; cursor: pointer; font-family: inherit; }
+    .btn-sm:hover { background: #f1f5f9; }
+    .btn-pri:hover:not(:disabled) { filter: brightness(0.92); }
     .btn-pri:disabled { opacity: 0.55; cursor: default; }
     .empty { text-align: center; color: #94a3b8; padding: 30px 0; font-size: 0.85rem; }
     .muted { color: #6c757d; }

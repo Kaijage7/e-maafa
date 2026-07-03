@@ -34,7 +34,7 @@ interface DissDetail {
   standalone: true,
   imports: [RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
   styles: [`
-    .detail-label { font-size: 0.72rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
+    .detail-label { font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
     .detail-value { font-size: 0.85rem; color: var(--text-dark); }
   `],
   template: `
@@ -88,7 +88,7 @@ interface DissDetail {
                     <div style="grid-column:1/-1;">
                       <div class="detail-label">Target Audience</div>
                       <div style="display:flex;flex-wrap:wrap;gap:0.3rem;">
-                        @for (a of d.target_audience; track a) { <span class="r-badge badge-active" style="font-size:0.7rem;">{{ ucfirst(a) }}</span> }
+                        @for (a of d.target_audience; track a) { <span class="r-badge badge-active" style="font-size:0.75rem;">{{ ucfirst(a) }}</span> }
                       </div>
                     </div>
                   }
@@ -112,7 +112,7 @@ interface DissDetail {
                 <div style="margin-top:0.8rem;">
                   <div class="detail-label">Channels</div>
                   <div style="display:flex;flex-wrap:wrap;gap:0.3rem;">
-                    @for (c of d.channels; track c) { <span class="r-badge badge-inactive" style="font-size:0.7rem;">{{ ucfirst(c) }}</span> }
+                    @for (c of d.channels; track c) { <span class="r-badge badge-inactive" style="font-size:0.75rem;">{{ ucfirst(c) }}</span> }
                     @empty { <span style="font-size:0.82rem;color:var(--text-mid);">-</span> }
                   </div>
                 </div>
@@ -165,10 +165,10 @@ interface DissDetail {
                       <tbody>
                         @for (log of d.logs; track $index) {
                           <tr class="data-row">
-                            <td><span class="r-badge badge-inactive" style="font-size:0.7rem;">{{ ucfirst(log.channel) }}</span></td>
+                            <td><span class="r-badge badge-inactive" style="font-size:0.75rem;">{{ ucfirst(log.channel) }}</span></td>
                             <td style="font-size:0.82rem;color:var(--text-dark);">{{ log.recipient }}</td>
                             <td><span class="r-badge" [class]="'r-badge ' + logBadge(log.status)">{{ ucfirst(log.status) }}</span></td>
-                            <td style="font-size:0.78rem;color:var(--text-mid);">{{ log.created_at }}</td>
+                            <td style="font-size:0.8rem;color:var(--text-mid);">{{ log.created_at }}</td>
                           </tr>
                         }
                       </tbody>
@@ -332,10 +332,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

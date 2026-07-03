@@ -114,8 +114,8 @@ interface Group { module: string; permissions: Permission[]; }
     .rnode { display:flex; gap:8px; border:1px solid var(--border); border-radius:9px; padding:0.55rem 0.7rem; cursor:pointer; }
     .rnode:hover { background:rgba(13,110,253,0.03); } .rnode.sel { border-color:#0d6efd; background:rgba(13,110,253,0.06); }
     .rnode .nm { font-weight:700; font-size:0.86rem; color:var(--text-dark); }
-    .rnode .sub { font-size:0.7rem; color:var(--text-light); }
-    .rnode .desc { font-size:0.72rem; color:var(--text-mid); margin-top:2px; }
+    .rnode .sub { font-size:0.8rem; color:var(--text-light); }
+    .rnode .desc { font-size:0.8rem; color:var(--text-mid); margin-top:2px; }
     .rnode .acts { align-items:flex-start; }
     /* Anchor the row action menu under its trigger (the global .ctx-menu is position:fixed and detaches). */
     .ctx-menu { position:absolute; top:100%; right:0; }
@@ -124,14 +124,14 @@ interface Group { module: string; permissions: Permission[]; }
     .mmod { font-size:0.8rem; font-weight:600; color:var(--text-dark); }
     .modtoggle { display:flex; align-items:center; gap:6px; cursor:pointer; }
     .mperms { display:flex; gap:6px; flex-wrap:wrap; }
-    .perm { font-size:0.74rem; border:1px solid var(--border); border-radius:7px; padding:2px 9px; display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--text-mid); text-transform:capitalize; }
+    .perm { font-size:0.78rem; border:1px solid var(--border); border-radius:7px; padding:2px 9px; display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--text-mid); text-transform:capitalize; }
     .perm.on { background:rgba(5,150,105,0.1); border-color:#059669; color:#059669; font-weight:600; }
     .muted { color:var(--text-light); font-size:0.84rem; padding:0.6rem 0; }
-    .btn-mini { font-size:0.72rem; padding:0.25rem 0.7rem; border-radius:7px; border:1px solid var(--border); background:#fff; cursor:pointer; margin-left:4px; color:var(--text-dark); }
-    .f-lbl { font-size:0.68rem; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-light); display:block; margin:0.7rem 0 3px; }
+    .btn-mini { font-size:0.78rem; padding:0.35rem 0.8rem; border-radius:7px; border:1px solid var(--border); background:#fff; cursor:pointer; margin-left:4px; color:var(--text-dark); }
+    .f-lbl { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-light); display:block; margin:0.7rem 0 3px; }
     .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1500; display:flex; align-items:flex-start; justify-content:center; padding:8vh 1rem; }
-    .modal-card { background:var(--card-bg,#fff); border-radius:16px; max-width:460px; width:100%; padding:1.4rem 1.5rem; }
-    .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:9px; padding:0.5rem 1rem; cursor:pointer; }
+    .modal-card { background:var(--card-bg,#fff); border-radius:12px; max-width:460px; width:100%; padding:1.4rem 1.5rem; }
+    .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:8px; padding:0.5rem 1rem; cursor:pointer; }
   `],
 })
 export class RolesPermissionsComponent {

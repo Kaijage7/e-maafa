@@ -107,14 +107,14 @@ interface User {
     }
   `,
   styles: [`
-    .f-lbl { font-size:0.68rem; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-light); display:block; margin:0.7rem 0 3px; }
-    .role-chip { font-size:0.66rem; font-weight:700; background:rgba(13,110,253,0.1); color:#0d6efd; border-radius:7px; padding:1px 8px; margin:0 4px 2px 0; display:inline-block; }
+    .f-lbl { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-light); display:block; margin:0.7rem 0 3px; }
+    .role-chip { font-size:0.78rem; font-weight:700; background:rgba(13,110,253,0.1); color:#0d6efd; border-radius:7px; padding:1px 8px; margin:0 4px 2px 0; display:inline-block; }
     .ctx-menu { position:absolute; top:100%; right:0; }
     .roles-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.3rem 0.8rem; margin-top:4px; }
     .role-opt { font-size:0.82rem; display:flex; align-items:center; gap:6px; cursor:pointer; }
     .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1500; display:flex; align-items:flex-start; justify-content:center; padding:6vh 1rem; }
-    .modal-card { background:var(--card-bg,#fff); border-radius:16px; max-width:560px; width:100%; padding:1.4rem 1.5rem; }
-    .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:9px; padding:0.5rem 1rem; cursor:pointer; }
+    .modal-card { background:var(--card-bg,#fff); border-radius:12px; max-width:560px; width:100%; padding:1.4rem 1.5rem; }
+    .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:8px; padding:0.5rem 1rem; cursor:pointer; }
   `],
 })
 export class UserManagementComponent {

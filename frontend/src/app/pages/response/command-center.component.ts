@@ -37,15 +37,16 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
   styles: [`
     :host { display: block; background: #0f172a; margin: -16px; padding: 16px; min-height: calc(100vh - 60px); }
     .card { background: #1c2536; border: 1px solid #2c3a50; border-radius: 6px; padding: 13px 15px; color: #e2e8f0; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }
-    .card h4 { margin: 0 0 9px; font-size: 0.7rem; text-transform: uppercase; color: #93a7c4; letter-spacing: 0.9px; font-weight: 800; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .card h4 { margin: 0 0 9px; font-size: 0.75rem; text-transform: uppercase; color: #93a7c4; letter-spacing: 0.9px; font-weight: 800; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
     .card h4 i { color: #557092; }
     .row-item { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px dashed #334155; font-size: 0.82rem; }
-    .badge { font-size: 0.62rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; }
+    .badge { font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; }
     .b-live { background: #14532d; color: #4ade80; } .b-sim { background: #4c1d95; color: #c4b5fd; }
     .b-sev { background: #7f1d1d; color: #fecaca; } .b-fcast { background: #0c4a6e; color: #7dd3fc; }
-    .btn { font-size: 0.74rem; padding: 5px 14px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 700; }
+    .btn { font-size: 0.78rem; padding: 6px 14px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 700; }
     .b-red { background: #dc3545; color: #fff; } .b-outline { background: transparent; border-color: #475569; color: #cbd5e1; }
     .b-amber { background: #d97706; color: #fff; } .b-blue { background: #2563eb; color: #fff; } .b-green { background: #16a34a; color: #fff; }
+    .b-red:hover { background: #c82333; } .b-outline:hover { background: #1e293b; } .b-amber:hover { background: #b45309; } .b-blue:hover { background: #1d4ed8; } .b-green:hover { background: #15803d; }
     .clockbar { display: grid; grid-template-columns: 1fr auto auto auto; gap: 18px; align-items: center;
       background: #17263d; border-color: #33485f; padding: 12px 18px; }
     .clock { font-size: 1.75rem; font-weight: 800; color: #4ade80; font-variant-numeric: tabular-nums; }
@@ -56,7 +57,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
     .lane { background: #1c2536; border: 1px solid #2c3a50; border-left: 4px solid var(--drf, #dc3545); border-radius: 6px; padding: 10px 12px; color: #e2e8f0; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.25); transition: border-color .14s ease; }
     .lane:hover { border-color: var(--drf, #dc3545); background: #222d40; }
     .lane b { font-size: 0.8rem; display: block; }
-    .lane small { color: #94a3b8; font-size: 0.68rem; }
+    .lane small { color: #94a3b8; font-size: 0.75rem; }
     .lane .mini-rail { background: #334155; border-radius: 4px; height: 7px; margin-top: 6px; overflow: hidden; }
     .lane .mini-fill { background: #4ade80; height: 100%; }
     .split { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
@@ -67,22 +68,24 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
     .drawer-head { background: #1e293b; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; border-bottom: 1px solid #334155; }
     .drawer-body { padding: 14px 18px; }
     .task { border: 1px solid #334155; border-radius: 8px; padding: 9px 11px; margin-bottom: 8px; font-size: 0.8rem; }
-    .task .meta { color: #94a3b8; font-size: 0.7rem; margin: 3px 0; }
+    .task .meta { color: #94a3b8; font-size: 0.75rem; margin: 3px 0; }
     select, input { background: #1e293b; border: 1px solid #475569; color: #e2e8f0; border-radius: 6px; font-size: 0.76rem; padding: 4px 8px; font-family: inherit; }
     .crit { border-left: 3px solid #f87171; background: #1e293b; border-radius: 6px; padding: 7px 10px; margin-bottom: 6px; font-size: 0.78rem; }
     .empty { color: #64748b; font-size: 0.8rem; text-align: center; padding: 18px 0; }
     .aar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 8px 0 12px; }
     .aar-stat { background: #1e293b; border-radius: 9px; padding: 8px 10px; text-align: center; }
     .aar-stat b { display: block; font-size: 1.15rem; color: #c4b5fd; }
-    .aar-stat small { color: #94a3b8; font-size: 0.66rem; }
+    .aar-stat small { color: #94a3b8; font-size: 0.75rem; }
     .aar-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .aar-cols h5 { font-size: 0.72rem; color: #a78bfa; text-transform: uppercase; margin: 0 0 4px; }
+    .aar-cols h5 { font-size: 0.75rem; color: #a78bfa; text-transform: uppercase; margin: 0 0 4px; }
     @media (max-width: 900px) { .aar-cols { grid-template-columns: 1fr; } }
-    .inj-st { font-size: 0.58rem; font-weight: 800; text-transform: uppercase; border-radius: 6px; padding: 1px 6px; background: #334155; color: #cbd5e1; }
+    .inj-st { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; border-radius: 6px; padding: 1px 6px; background: #334155; color: #cbd5e1; }
     .inj-st[data-s=fired] { background: #7c2d12; color: #fdba74; }
     .inj-st[data-s=resolved] { background: #14532d; color: #4ade80; }
-    .btn-xs { font-size: 0.66rem; font-weight: 700; border: 1px solid #475569; background: #1e293b; color: #cbd5e1; border-radius: 6px; padding: 2px 9px; cursor: pointer; }
+    .btn-xs { font-size: 0.75rem; font-weight: 700; border: 1px solid #475569; background: #1e293b; color: #cbd5e1; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+    .btn-xs:hover { background: #334155; }
     .btn-xs.go { background: #16a34a; border-color: #16a34a; color: #fff; }
+    .btn-xs.go:hover { background: #15803d; }
     .inj-form { border-top: 1px dashed #334155; margin-top: 8px; padding-top: 8px; display: flex; flex-direction: column; gap: 5px; }
     .inj-form input, .inj-form select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 7px; padding: 5px 8px; font-size: 0.76rem; }
     .inj-row { display: flex; gap: 5px; align-items: center; }
@@ -91,7 +94,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
     .ops-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
     .ops-stat { background: #1c2536; border: 1px solid #2c3a50; border-radius: 6px; padding: 11px 14px; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }
     .ops-n { font-size: 1.55rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
-    .ops-l { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.5px; color: #8aa0bd; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+    .ops-l { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #8aa0bd; font-weight: 700; display: flex; align-items: center; gap: 5px; }
     .ops-l i { color: #557092; }
     .act-row { background: #1c2536; border: 1px solid #2c3a50; border-left: 3px solid #dc3545; border-radius: 6px; padding: 10px 13px; margin-bottom: 8px; }
     .act-head { display: flex; align-items: center; gap: 9px; }
@@ -99,29 +102,29 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
     .act-foot { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
     .act-bar { flex: 1; max-width: 340px; height: 7px; background: #334155; border-radius: 4px; overflow: hidden; }
     .act-fill { display: block; height: 100%; border-radius: 4px; transition: width .3s ease; }
-    .act-num { font-size: 0.72rem; color: #cbd5e1; font-variant-numeric: tabular-nums; }
-    .act-by { font-size: 0.72rem; color: #64748b; margin-left: auto; }
+    .act-num { font-size: 0.75rem; color: #cbd5e1; font-variant-numeric: tabular-nums; }
+    .act-by { font-size: 0.75rem; color: #64748b; margin-left: auto; }
     /* Command Post doctrine */
     .doctrine { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
     .doc-step { border: 1px solid #334155; border-radius: 10px; padding: 9px 11px; position: relative; }
     .doc-step .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-    .doc-step b { font-size: 0.74rem; } .doc-step small { color: #94a3b8; font-size: 0.66rem; display: block; margin-top: 2px; }
+    .doc-step b { font-size: 0.75rem; } .doc-step small { color: #94a3b8; font-size: 0.75rem; display: block; margin-top: 2px; }
     .ladder { display: flex; gap: 6px; align-items: stretch; flex-wrap: wrap; }
     .rung { flex: 1; min-width: 150px; border: 1px solid #334155; border-radius: 9px; padding: 8px 10px; opacity: 0.45; transition: opacity .2s, box-shadow .2s, background .2s; }
-    .rung.on { opacity: 1; border-width: 2px; background: color-mix(in srgb, currentColor 12%, transparent); box-shadow: 0 0 0 1px currentColor inset, 0 0 22px -6px currentColor; }
-    .rung b { font-size: 0.78rem; } .rung small { color: #94a3b8; font-size: 0.64rem; display: block; }
-    .countdown { font-size: 2.3rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 1px; line-height: 1.1; text-shadow: 0 0 18px currentColor; }
+    .rung.on { opacity: 1; border-width: 2px; background: color-mix(in srgb, currentColor 12%, transparent); box-shadow: 0 0 0 1px currentColor inset; }
+    .rung b { font-size: 0.78rem; } .rung small { color: #94a3b8; font-size: 0.75rem; display: block; }
+    .countdown { font-size: 2.3rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 1px; line-height: 1.1; }
     .stormmap { height: 500px; border-radius: 10px; overflow: hidden; border: 1px solid #334155; }
     .leaflet-container { background: #0b1220; }
-    .ready-grp { margin-bottom: 10px; } .ready-grp .lbl { font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; }
+    .ready-grp { margin-bottom: 10px; } .ready-grp .lbl { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; }
     .ready-item { font-size: 0.76rem; padding: 4px 0; border-bottom: 1px dashed #334155; display: flex; justify-content: space-between; gap: 8px; }
-    .pill { font-size: 0.6rem; font-weight: 700; padding: 1px 7px; border-radius: 7px; background: #334155; color: #cbd5e1; }
-    .area-chip { font-size: 0.7rem; background: #0c4a6e; color: #7dd3fc; border-radius: 8px; padding: 2px 10px; margin: 0 4px 4px 0; display: inline-block; }
+    .pill { font-size: 0.75rem; font-weight: 700; padding: 1px 7px; border-radius: 7px; background: #334155; color: #cbd5e1; }
+    .area-chip { font-size: 0.75rem; background: #0c4a6e; color: #7dd3fc; border-radius: 8px; padding: 2px 10px; margin: 0 4px 4px 0; display: inline-block; }
     .plan-card { border: 1px solid #334155; border-left: 3px solid #38bdf8; border-radius: 8px; padding: 7px 10px; margin-bottom: 6px; font-size: 0.76rem; }
     .plan-card .acts { margin: 4px 0; padding-left: 16px; color: #cbd5e1; }
     .plan-card .acts li { margin: 1px 0; }
-    label.fld { display: block; font-size: 0.68rem; color: #94a3b8; margin: 8px 0 3px; }
-    .track-pt { font-size: 0.66rem; color: #7dd3fc; }
+    label.fld { display: block; font-size: 0.75rem; color: #94a3b8; margin: 8px 0 3px; }
+    .track-pt { font-size: 0.75rem; color: #7dd3fc; }
   `],
   template: `
     <dmis-page-header title="Command Post — Disaster Response Coordination" icon="fa-tower-broadcast"
@@ -259,7 +262,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
             } @else if (b.activation.posture === 'disaster') {
               <button class="btn b-blue" (click)="setPosture('safeguard')">De-escalate → SAFEGUARD</button>
             } @else if (b.activation.posture === 'safeguard') {
-              <span style="color:#94a3b8; font-size:0.74rem">Post-passage watch — close the response when residual risk clears.</span>
+              <span style="color:#94a3b8; font-size:0.75rem">Post-passage watch — close the response when residual risk clears.</span>
             }
           </div>
         </div>
@@ -300,7 +303,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
                   <div class="lbl"><i class="fas fa-house-flag"></i> Evacuation centres ({{ r.evacuation_centers.length }})</div>
                   @for (e of r.evacuation_centers; track e.centre_name) {
                     <div class="ready-item"><span>{{ e.centre_name }} <small style="color:#64748b">{{ e.district }}{{ e.council ? ' · ' + e.council : '' }}</small></span>
-                      <span class="pill">{{ e.capacity_people }} ppl</span></div>
+                      <span class="pill">{{ e.capacity_people }} people</span></div>
                   } @empty { <div class="ready-item" style="color:#64748b">none mapped in these areas</div> }
                 </div>
                 <div class="ready-grp">
@@ -325,7 +328,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
                     <div class="plan-card">
                       <div style="display:flex; justify-content:space-between; gap:8px">
                         <b style="color:#7dd3fc">{{ p.hazard_type }} · {{ p.district_council }}</b>
-                        <span class="pill">{{ p.affected_people | number }} ppl</span>
+                        <span class="pill">{{ p.affected_people | number }} people</span>
                       </div>
                       <ul class="acts">
                         @for (act of p.action_activities_type ?? []; track act) { <li>{{ act }}</li> }
@@ -364,7 +367,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
                   <div class="lbl"><i class="fas fa-house-flag"></i> Evacuation centres ({{ r.evacuation_centers.length }})</div>
                   @for (e of r.evacuation_centers.slice(0, 6); track e.centre_name) {
                     <div class="ready-item"><span>{{ e.centre_name }} <small style="color:#64748b">{{ e.district }}{{ e.council ? ' · ' + e.council : '' }}</small></span>
-                      <span class="pill">{{ e.capacity_people }} ppl</span></div>
+                      <span class="pill">{{ e.capacity_people }} people</span></div>
                   } @empty { <div class="ready-item" style="color:#64748b">none mapped in this region</div> }
                 </div>
                 <div class="ready-grp">
@@ -396,7 +399,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
             <span class="badge" style="background:#7c2d12;color:#fdba74;margin-left:4px" title="This exercise may run real operations — its communications are [DRILL]-marked">REAL OPS ENABLED</span>
           }
           <b style="font-size:1rem; margin-left:8px">{{ b.activation.incident_title }}</b>
-          <div style="color:#94a3b8; font-size:0.74rem; margin-top:2px">
+          <div style="color:#94a3b8; font-size:0.75rem; margin-top:2px">
             {{ b.activation.region_name ?? '' }} · activated {{ b.activation.activated_at?.substring(0, 16)?.replace('T', ' ') }}
             by {{ b.activation.activated_by_name }} · {{ b.summary.assigned_stakeholders }} agencies engaged</div>
         </div>
@@ -405,7 +408,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
           <small style="color:#94a3b8">72-HOUR CLOCK</small>
         </div>
         <div style="min-width:180px">
-          <div style="font-size:0.72rem; color:#94a3b8">Overall progress — {{ b.summary.overall_progress }}%
+          <div style="font-size:0.75rem; color:#94a3b8">Overall progress — {{ b.summary.overall_progress }}%
             ({{ b.summary.completed_tasks }}/{{ b.summary.total_tasks }})</div>
           <div class="progress-rail"><div class="progress-fill" [style.width.%]="b.summary.overall_progress"></div></div>
         </div>
@@ -471,7 +474,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
           <div class="card"><h4><i class="fas fa-stopwatch"></i> 72-Hour Critical Tasks</h4>
             @for (t of b.critical_tasks; track t.id) {
               <div class="crit"><b>DRF {{ t.drf_number }}</b> · {{ t.title }}
-                <div style="color:#94a3b8; font-size:0.7rem">{{ t.status }} · {{ t.progress_percent }}% · {{ t.stakeholder_organization ?? 'Unassigned' }}</div></div>
+                <div style="color:#94a3b8; font-size:0.75rem">{{ t.status }} · {{ t.progress_percent }}% · {{ t.stakeholder_organization ?? 'Unassigned' }}</div></div>
             } @empty { <div class="empty">No 72-hour critical tasks.</div> }
           </div>
           <div class="card"><h4><i class="fas fa-triangle-exclamation"></i> Challenges Reported</h4>
@@ -524,7 +527,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
         <div class="drawer" (click)="$event.stopPropagation()">
           <div class="drawer-head">
             <div><b>DRF {{ ln.drf.number }} — {{ ln.drf.name }}</b>
-              <div style="color:#94a3b8; font-size:0.72rem">Lead: {{ ln.drf.lead_agency_name ?? '—' }}</div></div>
+              <div style="color:#94a3b8; font-size:0.75rem">Lead: {{ ln.drf.lead_agency_name ?? '—' }}</div></div>
             <button class="btn b-outline" (click)="lane.set(null)">✕</button>
           </div>
           <div class="drawer-body">
@@ -549,7 +552,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
                   <button class="btn b-outline" (click)="reportChallenge(t)">Challenge</button>
                   <button class="btn b-outline" (click)="removeTask(t)">✕</button>
                 </div>
-                @if (t.challenge) { <div class="meta" style="color:#fca5a5">⚠ {{ t.challenge }}</div> }
+                @if (t.challenge) { <div class="meta" style="color:#fca5a5"><i class="fas fa-triangle-exclamation"></i> {{ t.challenge }}</div> }
               </div>
             } @empty { <div class="empty">No tasks in this lane.</div> }
           </div>
@@ -1212,10 +1215,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

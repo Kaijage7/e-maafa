@@ -30,7 +30,7 @@ import { PortalLabels } from './portal-i18n';
 
     /* ===== HEADER ===== */
     .gcourse-header { text-align:left; background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:24px 28px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
-    .ui-eyebrow { font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#1976d2; margin-bottom:6px; }
+    .ui-eyebrow { font-size:0.8rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#1976d2; margin-bottom:6px; }
     .ui-h1 { font-size:30px; font-weight:800; margin:0; color:#1a1a2e; }
 
     /* ===== PROGRESS TRACKER ===== */
@@ -76,7 +76,7 @@ import { PortalLabels } from './portal-i18n';
 
     /* ===== SHARED SECTION STYLES ===== */
     .section-header { text-align:center; margin-bottom:40px; }
-    .section-number { font-size:12px; font-weight:700; color:#1976d2; letter-spacing:1px; margin-bottom:12px; }
+    .section-number { font-size:0.8rem; font-weight:700; color:#1976d2; letter-spacing:1px; margin-bottom:12px; }
     .section-title { font-size:36px; font-weight:700; color:#1a1a2e; margin:0 0 16px 0; }
     .section-header h1 { font-size:36px; font-weight:bold; color:#1976d2; margin:0 0 8px 0; }
     .section-subtitle { font-size:20px; color:#666; font-weight:500; }
@@ -92,7 +92,7 @@ import { PortalLabels } from './portal-i18n';
     /* SECTION 1 */
     .inform-definition { background:#e3f2fd; border:3px solid #1976d2; border-radius:12px; padding:0; margin:30px 0; overflow:hidden; }
     .definition-header { background:#1976d2; color:#fff; padding:12px 24px; }
-    .definition-label { font-size:13px; font-weight:700; letter-spacing:.5px; }
+    .definition-label { font-size:0.8rem; font-weight:700; letter-spacing:.5px; }
     .definition-content { padding:24px 28px; }
     .definition-content h3 { margin:0 0 16px 0; font-size:24px; color:#0d47a1; }
     .definition-content p { margin:0 0 12px 0; font-size:18px; line-height:1.8; color:#333; }
@@ -174,7 +174,7 @@ import { PortalLabels } from './portal-i18n';
     .overlay-visualization { background:#fff; border:3px solid #e0e0e0; border-radius:16px; padding:32px; margin:32px 0; box-shadow:0 4px 16px rgba(0,0,0,.08); }
     .overlay-controls { display:flex; gap:16px; margin-bottom:32px; justify-content:center; flex-wrap:wrap; }
     .overlay-step-button { display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 24px; border:3px solid #ddd; border-radius:12px; background:#fff; cursor:pointer; transition:all .3s ease; font:inherit; font-size:14px; font-weight:600; min-width:140px; }
-    .overlay-step-button .step-title-s { font-size:13px; text-align:center; }
+    .overlay-step-button .step-title-s { font-size:0.8rem; text-align:center; }
     .overlay-step-button:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.15); }
     .overlay-step-button.active { box-shadow:0 6px 20px rgba(0,0,0,.2); }
     .overlay-display { position:relative; height:300px; background:#f5f5f5; border-radius:12px; overflow:hidden; margin-bottom:24px; }
@@ -202,10 +202,10 @@ import { PortalLabels } from './portal-i18n';
     .district-card.selected { border-color:#f57c00; background:#fff3e0; box-shadow:0 6px 24px rgba(245,124,0,.2); }
     .district-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
     .district-header h4 { font-size:18px; font-weight:bold; color:#333; margin:0; }
-    .hazard-badge { color:#fff; padding:4px 12px; border-radius:6px; font-size:12px; font-weight:bold; text-transform:uppercase; }
+    .hazard-badge { color:#fff; padding:4px 12px; border-radius:6px; font-size:0.8rem; font-weight:bold; text-transform:uppercase; }
     .district-metric { margin:16px 0; }
     .metric-value { font-size:28px; font-weight:bold; color:#f57c00; }
-    .metric-label { font-size:13px; color:#666; text-transform:uppercase; letter-spacing:.5px; margin-top:4px; }
+    .metric-label { font-size:0.8rem; color:#666; text-transform:uppercase; letter-spacing:.5px; margin-top:4px; }
     .district-percentage { margin-top:16px; }
     .percentage-bar { width:100%; height:12px; background:#e0e0e0; border-radius:6px; overflow:hidden; margin-bottom:8px; }
     .percentage-fill { height:100%; transition:width .5s ease; border-radius:6px; background:#f57c00; }
@@ -214,7 +214,7 @@ import { PortalLabels } from './portal-i18n';
     .district-details h3 { font-size:22px; color:#e65100; margin-bottom:20px; font-weight:bold; }
     .details-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; margin-bottom:20px; }
     .details-grid .detail-item { background:#fff; padding:16px; border-radius:8px; border-left:4px solid #f57c00; }
-    .details-grid .detail-label { font-size:13px; color:#666; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+    .details-grid .detail-label { font-size:0.8rem; color:#666; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
     .details-grid .detail-value { font-size:22px; font-weight:bold; color:#f57c00; }
     .detail-description { background:#fff; padding:16px; border-radius:8px; font-size:15px; line-height:1.6; color:#333; }
     .tanzania-challenge { background:#fff9c4; border:4px solid #ffc107; box-shadow:0 6px 20px rgba(255,193,7,.2); margin:50px 0; }
@@ -349,7 +349,7 @@ import { PortalLabels } from './portal-i18n';
     .group-header { display:flex; align-items:center; gap:16px; margin-bottom:12px; }
     .group-info { flex:1; }
     .group-info h4 { font-size:18px; color:#333; margin:0 0 6px 0; font-weight:bold; }
-    .group-stats { display:flex; gap:8px; align-items:center; font-size:13px; color:#666; }
+    .group-stats { display:flex; gap:8px; align-items:center; font-size:0.8rem; color:#666; }
     .stat-divider { color:#ddd; }
     .group-details { margin-top:16px; padding-top:16px; border-top:2px solid #e0e0e0; animation:slideDown .3s ease; }
     .why-vulnerable { margin-bottom:16px; }
@@ -485,7 +485,7 @@ import { PortalLabels } from './portal-i18n';
     .formula-highlights-complete .highlight-arrow { font-size:28px; margin-bottom:8px; color:inherit; }
     .formula-highlights-complete .highlight-arrow::before { content:"\\25BC"; }
     .highlight-label { font-size:16px; font-weight:bold; color:#333; margin-bottom:8px; }
-    .highlight-description { font-size:13px; color:#666; line-height:1.4; }
+    .highlight-description { font-size:0.9rem; color:#666; line-height:1.4; }
     .formula-explanation.complete { background:#fff; padding:32px; border-radius:12px; margin-top:32px; }
     .formula-explanation.complete h4 { font-size:22px; color:#6a1b9a; margin-bottom:24px; font-weight:bold; text-align:center; }
     .geometric-comparison { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin:24px 0; }
@@ -584,7 +584,7 @@ import { PortalLabels } from './portal-i18n';
     .scenario-preset-btn:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(123,31,162,.2); background:#f3e5f5; }
     .scenario-preset-btn.reset { border-color:#9e9e9e; color:#616161; }
     .scenario-preset-btn.reset:hover { background:#f5f5f5; }
-    .preset-hint { font-size:12px; color:#999; font-weight:normal; }
+    .preset-hint { font-size:0.8rem; color:#999; font-weight:normal; }
     .risk-manageable { background:#e8f5e9; border:4px solid #43a047; box-shadow:0 8px 24px rgba(67,160,71,.2); padding:40px; display:block; }
     .risk-manageable .teaching-content h3 { font-size:28px; color:#2e7d32; margin-bottom:32px; font-weight:bold; text-align:center; }
     .manageable-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:24px; margin:32px 0; }
@@ -598,7 +598,7 @@ import { PortalLabels } from './portal-i18n';
     .pathway { background:#f1f8e9; padding:20px; border-radius:10px; border:2px solid #aed581; text-align:center; transition:all .3s ease; }
     .pathway:hover { transform:translateY(-4px); box-shadow:0 4px 16px rgba(67,160,71,.15); border-color:#7cb342; }
     .pathway strong { display:block; font-size:16px; color:#2e7d32; margin-bottom:8px; }
-    .pathway p { font-size:13px; line-height:1.5; color:#666; margin:0; }
+    .pathway p { font-size:0.9rem; line-height:1.5; color:#666; margin:0; }
     .manageable-conclusion { background:#fff9c4; padding:24px; border-radius:12px; border-left:6px solid #fbc02d; font-size:16px; line-height:1.7; color:#333; margin-top:24px; }
     .risk-summary { background:#e3f2fd; border:4px solid #1976d2; border-radius:16px; padding:40px; margin:50px 0; box-shadow:0 6px 20px rgba(25,118,210,.15); }
     .risk-summary h3 { font-size:26px; color:#0d47a1; margin-bottom:24px; font-weight:bold; text-align:center; }
@@ -658,7 +658,7 @@ import { PortalLabels } from './portal-i18n';
       .progress-tracker { flex-wrap:wrap; gap:20px; }
       .progress-step { flex-basis:calc(33.333% - 14px); }
       .step-circle { width:40px; height:40px; font-size:16px; }
-      .step-title { font-size:14px; } .step-subtitle { font-size:12px; }
+      .step-title { font-size:14px; } .step-subtitle { font-size:0.8rem; }
       .section-content { padding:24px; }
       .gcourse-footer { flex-wrap:wrap; }
       .nav-button { font-size:14px; padding:12px 20px; }

@@ -19,8 +19,8 @@ declare const Swal: any;
   imports: [PageHeaderComponent, PanelComponent, RouterLink],
   styles: [`
     .nav-tabs .nav-link { font-weight: 600; color: var(--primary); border-radius: 0.5rem 0.5rem 0 0; cursor: pointer; }
-    .lake-label { background: transparent !important; border: none !important; box-shadow: none !important; color: #1565C0; font-size: 0.5rem; font-weight: 600; font-style: italic; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.8); }
-    .region-tooltip { background: rgba(0,51,102,0.85); color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 0.7rem; font-weight: 600; }
+    .lake-label { background: transparent !important; border: none !important; box-shadow: none !important; color: #1565C0; font-size: 0.75rem; font-weight: 600; font-style: italic; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.8); }
+    .region-tooltip { background: rgba(0,51,102,0.85); color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; }
   `],
   template: `
     <dmis-page-header [title]="pageTitle" icon="fa-plus"
@@ -641,10 +641,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

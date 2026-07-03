@@ -34,27 +34,29 @@ interface NdmfRow {
     .stat-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.3rem; display: block; }
-    .stat span { font-size: 0.72rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-    .chip { display: inline-block; font-size: 0.66rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; }
+    td small { font-size: 0.75rem; }
+    .chip { display: inline-block; font-size: 0.75rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; }
     .c-Pending { background: #fef3c7; color: #92400e; } .c-Accepted { background: #d1fae5; color: #065f46; }
     .c-Received { background: #dbeafe; color: #1e40af; } .c-Rejected, .c-Withdrawn { background: #e2e8f0; color: #334155; }
     .c-pending { background: #fef3c7; color: #92400e; } .c-received { background: #d1fae5; color: #065f46; }
     .c-acknowledged { background: #dbeafe; color: #1e40af; }
-    .btn-sm { font-size: 0.72rem; padding: 3px 10px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
     .b-red { background: #dc3545; color: #fff; } .b-green { background: #198754; color: #fff; }
     .b-outline { background: #fff; border-color: #cbd5e1; color: #334155; }
+    .b-red:hover { background: #bb2d3b; } .b-green:hover { background: #146c43; } .b-outline:hover { background: #f1f5f9; }
     .toolbar { display: flex; gap: 6px; margin-bottom: 10px; align-items: center; }
     .toolbar select, .toolbar input { font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 5px 9px; font-family: inherit; }
     .empty { text-align: center; color: #94a3b8; padding: 30px 0; font-size: 0.85rem; }
     .fund-bal { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
     .fb { background: #fff; border: 1px solid #e3e6ed; border-radius: 12px; padding: 10px 16px; min-width: 180px; }
-    .fb-cur { font-size: 0.72rem; font-weight: 800; color: #003366; text-transform: uppercase; letter-spacing: 0.5px; }
+    .fb-cur { font-size: 0.75rem; font-weight: 800; color: #003366; text-transform: uppercase; letter-spacing: 0.5px; }
     .fb-row { display: flex; justify-content: space-between; gap: 18px; font-size: 0.8rem; color: #6c757d; margin-top: 3px; }
     .fb-row b { color: #334155; } .fb-row.bal { border-top: 1px dashed #e3e6ed; margin-top: 5px; padding-top: 5px; }
     .fb-row.bal b { color: #0f5132; font-size: 0.95rem; }
@@ -388,10 +390,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

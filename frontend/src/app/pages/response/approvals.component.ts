@@ -30,8 +30,8 @@ interface ApprovalRow {
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
-    .q-badge { background: rgba(220,53,69,0.1); color: #dc3545; border-radius: 10px; padding: 0 6px; font-size: 0.68rem; margin-left: 4px; }
-    .actions button { font-size: 0.7rem; padding: 2px 8px; border-radius: 6px; }
+    .q-badge { background: rgba(220,53,69,0.1); color: #dc3545; border-radius: 10px; padding: 0 6px; font-size: 0.75rem; margin-left: 4px; }
+    .actions button { font-size: 0.8rem; padding: 0.4rem 0.75rem; border-radius: 6px; }
     /* Detail drawer */
     .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1090; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
     .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
@@ -40,11 +40,11 @@ interface ApprovalRow {
     .drawer-head { background: #dc3545; color: #fff; padding: 1rem 1.25rem; }
     .drawer-body { flex: 1; overflow-y: auto; padding: 1rem 1.25rem; }
     .step { display: flex; gap: 0.6rem; padding: 0.45rem 0; border-bottom: 1px solid #f1f5f9; align-items: flex-start; }
-    .step-dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.6rem; flex-shrink: 0; margin-top: 2px; }
+    .step-dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.75rem; flex-shrink: 0; margin-top: 2px; }
     .step-dot.approved { background: #198754; }
     .step-dot.pending { background: #adb5bd; }
     .step-dot.rejected { background: #dc3545; }
-    .notif { font-size: 0.78rem; padding: 0.4rem 0; border-bottom: 1px solid #f1f5f9; }
+    .notif { font-size: 0.8rem; padding: 0.4rem 0; border-bottom: 1px solid #f1f5f9; }
     .notif.unread { font-weight: 600; }
   `],
   template: `
@@ -83,10 +83,10 @@ interface ApprovalRow {
                       </td>
                       <td><div class="r-title" style="font-size:0.8rem;">{{ a.resource_name }}</div><div class="r-subtitle">{{ a.resource_category }}</div></td>
                       <td style="font-size:0.82rem;">{{ a.quantity_requested }} {{ a.unit_of_measure }}</td>
-                      <td style="font-size:0.78rem;color:var(--text-mid);">{{ a.current_step_name ?? '—' }}</td>
+                      <td style="font-size:0.8rem;color:var(--text-mid);">{{ a.current_step_name ?? '—' }}</td>
                       <td><span class="r-badge" [class]="'r-badge ' + statusBadge(a)">{{ wfLabel(a) }}</span></td>
-                      <td style="font-size:0.78rem;color:var(--text-mid);">{{ a.requested_by_name ?? '-' }}</td>
-                      <td><button class="r-view" style="font-size:0.72rem;padding:0.3rem 0.6rem;" (click)="open(a)"><i class="fas fa-eye"></i> Review</button></td>
+                      <td style="font-size:0.8rem;color:var(--text-mid);">{{ a.requested_by_name ?? '-' }}</td>
+                      <td><button class="r-view" style="font-size:0.8rem;padding:0.3rem 0.65rem;" (click)="open(a)"><i class="fas fa-eye"></i> Review</button></td>
                     </tr>
                   } @empty {
                     <tr><td colspan="8"><div class="empty-state"><i class="fas fa-clipboard-check"></i> No requests here.</div></td></tr>
@@ -113,9 +113,9 @@ interface ApprovalRow {
                       <td><span class="r-badge" [class]="'r-badge ' + statusBadge(a)">{{ wfLabel(a) }}</span></td>
                       <td>
                         @if (a.workflow_status === 'requires_revision') {
-                          <button class="btn btn-sm btn-outline-primary" style="font-size:0.7rem;" (click)="resubmit(a)"><i class="fas fa-redo me-1"></i>Resubmit</button>
+                          <button class="btn btn-sm btn-outline-primary" style="font-size:0.8rem;" (click)="resubmit(a)"><i class="fas fa-redo me-1"></i>Resubmit</button>
                         } @else {
-                          <button class="r-view" style="font-size:0.72rem;padding:0.3rem 0.6rem;" (click)="open(a)"><i class="fas fa-eye"></i></button>
+                          <button class="r-view" style="font-size:0.8rem;padding:0.3rem 0.65rem;" (click)="open(a)"><i class="fas fa-eye"></i></button>
                         }
                       </td>
                     </tr>
@@ -145,9 +145,9 @@ interface ApprovalRow {
     <div class="drawer" [class.open]="drawerOpen()">
       @if (detail(); as d) {
         <div class="drawer-head">
-          <div style="font-size:0.7rem;text-transform:uppercase;opacity:0.75;">Request #{{ d.id }}</div>
+          <div style="font-size:0.75rem;text-transform:uppercase;opacity:0.75;">Request #{{ d.id }}</div>
           <div style="font-weight:700;">{{ d.resource_name }} — {{ d.quantity_requested }} {{ d.unit_of_measure }}</div>
-          <div style="font-size:0.75rem;opacity:0.85;">{{ d.incident_title }}</div>
+          <div style="font-size:0.8rem;opacity:0.85;">{{ d.incident_title }}</div>
         </div>
         <div class="drawer-body">
           <div style="font-size:0.8rem;margin-bottom:0.75rem;">
@@ -155,7 +155,7 @@ interface ApprovalRow {
             <strong>Requested by:</strong> {{ d.requested_by_name ?? '-' }} ·
             <strong>Source:</strong> {{ d.warehouse_name ?? d.source_details ?? 'TBD' }}
           </div>
-          <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.4rem;">
+          <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.4rem;">
             Approval Chain — {{ d.workflow.progress }}%
           </div>
           @for (s of d.workflow.steps; track s.step_number) {
@@ -167,7 +167,7 @@ interface ApprovalRow {
               </div>
               <div style="flex:1;">
                 <div style="font-size:0.8rem;font-weight:600;">{{ s.step_name }} <span style="font-weight:400;color:var(--text-light);">({{ s.approver_role }})</span></div>
-                @if (s.actioned_by) { <div style="font-size:0.7rem;color:var(--text-light);">{{ s.actioned_by }} · {{ s.remarks ?? s.rejection_reason ?? '' }}</div> }
+                @if (s.actioned_by) { <div style="font-size:0.75rem;color:var(--text-light);">{{ s.actioned_by }} · {{ s.remarks ?? s.rejection_reason ?? '' }}</div> }
               </div>
             </div>
           }
@@ -300,10 +300,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

@@ -92,8 +92,8 @@ interface IndexResponse {
                   @for (d of disasters(); track d.id) {
                     <tr class="disaster-row" [style.display]="rowVisible(d) ? '' : 'none'">
                       <td><div class="r-title">{{ limit(d.eventName, 40) }}</div></td>
-                      <td style="color:var(--text-mid);font-size:0.72rem;">{{ d.eventDate || '-' }}</td>
-                      <td style="color:var(--text-mid);font-size:0.72rem;">{{ limit(d.locationDescription, 25) || '-' }}</td>
+                      <td style="color:var(--text-mid);">{{ d.eventDate || '-' }}</td>
+                      <td style="color:var(--text-mid);">{{ limit(d.locationDescription, 25) || '-' }}</td>
                       <td>
                         @if (d.hazardName) {
                           <span class="r-badge" style="background:rgba(212,160,23,0.12);color:#b8860b;">{{ d.hazardName }}</span>
@@ -101,8 +101,8 @@ interface IndexResponse {
                       </td>
                       <td>
                         @if (d.reportDocumentPath) {
-                          <a [href]="'/api/storage/' + d.reportDocumentPath" target="_blank" class="r-view download"><i class="fas fa-download" style="font-size:0.55rem;"></i> PDF</a>
-                        } @else { <span style="color:var(--text-light);font-size:0.65rem;">None</span> }
+                          <a [href]="'/api/storage/' + d.reportDocumentPath" target="_blank" class="r-view download"><i class="fas fa-download" style="font-size:0.7rem;"></i> PDF</a>
+                        } @else { <span style="color:var(--text-light);">None</span> }
                       </td>
                       <td>
                         <div class="ctx-wrap">
@@ -168,25 +168,25 @@ interface IndexResponse {
         <div class="v2-modal-body">
           @if (detail(); as d) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-              <div style="grid-column:1/-1;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Event Name</div><div style="font-weight:600;">{{ d.eventName || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Date</div><div style="color:var(--text-mid);">{{ formatDate(d.eventDate) }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Hazard</div><div>
+              <div style="grid-column:1/-1;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Event Name</div><div style="font-weight:600;">{{ d.eventName || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Date</div><div style="color:var(--text-mid);">{{ formatDate(d.eventDate) }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Hazard</div><div>
                 @if (d.hazardName) { <span class="r-badge" style="background:rgba(212,160,23,0.12);color:#b8860b;">{{ d.hazardName }}</span> } @else { N/A }
               </div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Location</div><div style="color:var(--text-mid);">{{ d.locationDescription || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Source</div><div style="color:var(--text-mid);">{{ d.sourceOfInformation || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Location</div><div style="color:var(--text-mid);">{{ d.locationDescription || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Source</div><div style="color:var(--text-mid);">{{ d.sourceOfInformation || 'N/A' }}</div></div>
             </div>
             @if (d.descriptionOfEvent) {
-              <div style="margin-top:0.8rem;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Description</div>
-                <div style="font-size:0.78rem;color:var(--text-mid);line-height:1.5;">{{ d.descriptionOfEvent }}</div></div>
+              <div style="margin-top:0.8rem;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Description</div>
+                <div style="font-size:0.85rem;color:var(--text-mid);line-height:1.5;">{{ d.descriptionOfEvent }}</div></div>
             }
             @if (d.impactDescription) {
-              <div style="margin-top:0.6rem;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Impact</div>
-                <div style="font-size:0.78rem;color:var(--text-mid);line-height:1.5;">{{ d.impactDescription }}</div></div>
+              <div style="margin-top:0.6rem;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Impact</div>
+                <div style="font-size:0.85rem;color:var(--text-mid);line-height:1.5;">{{ d.impactDescription }}</div></div>
             }
             @if (d.lessonsLearned) {
-              <div style="margin-top:0.6rem;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Lessons Learned</div>
-                <div style="font-size:0.78rem;color:var(--text-mid);line-height:1.5;">{{ d.lessonsLearned }}</div></div>
+              <div style="margin-top:0.6rem;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Lessons Learned</div>
+                <div style="font-size:0.85rem;color:var(--text-mid);line-height:1.5;">{{ d.lessonsLearned }}</div></div>
             }
           }
         </div>
@@ -402,7 +402,7 @@ export class PastDisastersComponent implements AfterViewInit, OnDestroy {
         responsive: true, maintainAspectRatio: false, cutout: '60%',
         plugins: {
           tooltip: this.tooltipStyle,
-          legend: { position: 'bottom', labels: { padding: 12, font: { size: 10, weight: '600' }, usePointStyle: true, pointStyle: 'circle' } },
+          legend: { position: 'bottom', labels: { padding: 12, font: { size: 12, weight: '600' }, usePointStyle: true, pointStyle: 'circle' } },
         },
       },
     }));
@@ -428,8 +428,8 @@ export class PastDisastersComponent implements AfterViewInit, OnDestroy {
         responsive: true, maintainAspectRatio: false,
         plugins: { tooltip: this.tooltipStyle, legend: { display: false } },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9ca3af' } },
-          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 1, font: { size: 10 }, color: '#9ca3af' } },
+          x: { grid: { display: false }, ticks: { font: { size: 12 }, color: '#9ca3af' } },
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 1, font: { size: 12 }, color: '#9ca3af' } },
         },
       },
     }));
@@ -445,7 +445,7 @@ function ensureChartJs(): Promise<void> {
   if (!chartJsPromise) {
     chartJsPromise = new Promise(resolve => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      script.src = '/vendor/chartjs/chart.umd.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

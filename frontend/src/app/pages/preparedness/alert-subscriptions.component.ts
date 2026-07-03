@@ -54,7 +54,7 @@ interface AsResponse {
                   @for (s of filtered(); track s.subscriptionId) {
                     <tr class="data-row">
                       <td><div class="r-title">{{ s.fullName }}</div><div class="r-subtitle">{{ s.location || s.subscriptionId }}</div></td>
-                      <td style="font-size:0.78rem;color:var(--text-mid);">
+                      <td style="font-size:0.8rem;color:var(--text-mid);">
                         @if (s.phone) { <div>{{ s.phone }}</div> }
                         @if (s.email) { <div class="r-subtitle">{{ s.email }}</div> }
                         @if (!s.phone && !s.email) { - }</td>

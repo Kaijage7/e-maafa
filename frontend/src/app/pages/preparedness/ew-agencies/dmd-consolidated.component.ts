@@ -28,28 +28,29 @@ declare const L: any;
     .wrap { padding: 14px 18px 40px; }
     .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
     .hd .ic { width: 44px; height: 44px; border-radius: 11px; background: #ede7f6; color: #4527a0; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; }
-    .hd h1 { font-size: 1.2rem; margin: 0; color: #14303a; } .hd .sub { font-size: 0.78rem; color: #6c757d; }
-    .src { margin-left: auto; font-size: 0.74rem; color: #475569; text-align: right; }
-    .src .chip { display: inline-block; font-size: 0.62rem; font-weight: 700; border-radius: 6px; padding: 1px 7px; margin: 2px 0 0 4px; color: #fff; }
+    .hd h1 { font-size: 1.3rem; margin: 0; color: #14303a; } .hd .sub { font-size: 0.8rem; color: #6c757d; }
+    .src { margin-left: auto; font-size: 0.8rem; color: #475569; text-align: right; }
+    .src .chip { display: inline-block; font-size: 0.8rem; font-weight: 700; border-radius: 6px; padding: 1px 7px; margin: 2px 0 0 4px; color: #fff; }
     .grid { display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }
     @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
     .panel { background: #fff; border: 1px solid #e3e6ed; border-radius: 12px; padding: 12px 14px; }
     .day-tabs { display: flex; gap: 5px; margin-bottom: 10px; }
-    .day-tabs button { flex: 1; font-size: 0.78rem; font-weight: 600; color: #607089; border: 1px solid #e3e6ed; background: #f8fafc; padding: 8px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+    .day-tabs button { flex: 1; font-size: 0.8rem; font-weight: 600; color: #607089; border: 1px solid #e3e6ed; background: #f8fafc; padding: 8px; border-radius: 8px; cursor: pointer; font-family: inherit; }
     .day-tabs button.on { background: #4527a0; color: #fff; border-color: #4527a0; }
     #dmdmap { height: 560px; border-radius: 12px; border: 1px solid #e3e6ed; }
-    .legend { display: flex; gap: 14px; margin-top: 8px; font-size: 0.72rem; color: #475569; flex-wrap: wrap; }
+    .legend { display: flex; gap: 14px; margin-top: 8px; font-size: 0.8rem; color: #475569; flex-wrap: wrap; }
     .legend .sw { display: inline-block; width: 13px; height: 13px; border-radius: 3px; margin-right: 4px; vertical-align: -2px; }
     .tier-counts { display: flex; gap: 8px; margin-bottom: 10px; }
     .tc { flex: 1; text-align: center; border-radius: 9px; padding: 8px; color: #1a1a1a; }
-    .tc b { display: block; font-size: 1.2rem; } .tc span { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; }
+    .tc b { display: block; font-size: 1.5rem; } .tc span { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
     .cmt { border-left: 3px solid #ccc; padding: 6px 10px; margin-bottom: 8px; background: #fbfcfe; border-radius: 0 8px 8px 0; }
-    .cmt .ch { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 700; color: #1f2d3d; }
-    .cmt .ch .pill { font-size: 0.58rem; font-weight: 800; border-radius: 6px; padding: 1px 6px; margin-left: auto; }
-    .cmt .cd { font-size: 0.72rem; color: #475569; margin-top: 3px; }
-    .cmt .ca { font-size: 0.66rem; color: #94a3b8; margin-top: 2px; }
-    h3 { font-size: 0.82rem; color: #1f2d3d; margin: 4px 0 8px; }
+    .cmt .ch { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: #1f2d3d; }
+    .cmt .ch .pill { font-size: 0.75rem; font-weight: 800; border-radius: 6px; padding: 1px 6px; margin-left: auto; }
+    .cmt .cd { font-size: 0.85rem; color: #475569; margin-top: 3px; }
+    .cmt .ca { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
+    h3 { font-size: 0.9rem; color: #1f2d3d; margin: 4px 0 8px; }
     .pushbtn { font-size: 0.8rem; font-weight: 700; border-radius: 8px; padding: 9px 16px; border: none; cursor: pointer; font-family: inherit; color: #fff; background: #4527a0; }
+    .pushbtn:hover:not(:disabled) { filter: brightness(0.94); }
     .pushbtn:disabled { opacity: 0.55; cursor: default; }
     .pushflash { padding: 9px 13px; border-radius: 9px; font-size: 0.82rem; margin-bottom: 12px; }
     .pushflash.ok { background: #ede7f6; color: #4527a0; border: 1px solid #b39ddb; }
@@ -57,7 +58,7 @@ declare const L: any;
   `],
   template: `
     <div class="wrap">
-      <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.76rem;color:#64748b;text-decoration:none;margin-bottom:10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
+      <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;color:#64748b;text-decoration:none;margin-bottom:10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
       <div class="hd">
         <div class="ic"><i class="fas fa-layer-group"></i></div>
         <div><h1>PMO-DMD — Consolidated Impact Overlay</h1>
@@ -65,7 +66,7 @@ declare const L: any;
         <div class="src">
           <div>Contributing entities</div>
           @for (s of sources(); track s) { <span class="chip" [style.background]="agColor(s)">{{ agName(s) }}</span> }
-          @if (!sources().length) { <span style="color:#94a3b8">none yet — entities submit first</span> }
+          @if (!sources().length) { <span style="color:#94a3b8">None yet — awaiting entity submissions</span> }
           <div style="margin-top:9px">
             <button class="pushbtn" [disabled]="pushing() || !layerReady()" (click)="generateImpact()">
               <i class="fas" [ngClass]="(pushing() || !layerReady()) ? 'fa-circle-notch fa-spin' : 'fa-file-export'"></i>
@@ -108,11 +109,11 @@ declare const L: any;
               <div class="tc" style="background:#FFFF00"><b>{{ curEffTiers().advisory.length }}</b><span>Advisory</span></div>
             </div>
           }
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.74rem;color:#475569">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.8rem;color:#475569">
             <i class="fas fa-fill-drip" style="color:#4527a0"></i> <b>Impact level</b> — click a district to set/reduce its impact, or draw zones with the toolbar (top-left):
             @for (lv of levels; track lv.key) {
               <button (click)="drawLevel.set(lv.key)" [style.background]="drawLevel()===lv.key ? lv.color : '#fff'"
-                [style.border]="'1px solid '+lv.color" style="border-radius:6px;padding:2px 9px;font-size:0.68rem;font-weight:700;cursor:pointer;color:#1a1a1a">{{ lv.label }}</button>
+                [style.border]="'1px solid '+lv.color" style="border-radius:6px;padding:2px 9px;font-size:0.8rem;font-weight:700;cursor:pointer;color:#1a1a1a">{{ lv.label }}</button>
             }
             @if (pmoShapes().length) { <span style="color:#4527a0;font-weight:700">· {{ pmoShapes().length }} drawn</span> }
           </div>
@@ -128,13 +129,13 @@ declare const L: any;
 
         <div class="panel">
           <h3><i class="fas fa-clipboard-list"></i> PMO directives and instructions · Day {{ activeDay() }}
-            <span style="font-weight:500;color:#94a3b8;font-size:0.72rem">— shown beside the map</span></h3>
+            <span style="font-weight:500;color:#94a3b8;font-size:0.8rem">— shown beside the map</span></h3>
           <textarea rows="4" [value]="pmoDirectives()[activeDay()] || ''" (input)="setDirectives($any($event.target).value)"
             placeholder="PMO directives and instructions for this day — one per line (e.g. evacuate low-lying wards, pre-position relief stocks, activate district EOCs). Shown beside the map in the impact bulletin."
             style="width:100%;box-sizing:border-box;border:1px solid #e3e6ed;border-radius:8px;padding:8px 10px;font-family:inherit;font-size:0.8rem;color:#1f2d3d;resize:vertical;margin-bottom:4px"></textarea>
 
           <h3 style="margin-top:10px"><i class="fas fa-feather-pointed"></i> PMO impact narrative · Day {{ activeDay() }}
-            <span style="font-weight:500;color:#94a3b8;font-size:0.72rem">— shown as the comment below</span></h3>
+            <span style="font-weight:500;color:#94a3b8;font-size:0.8rem">— shown as the comment below</span></h3>
           <textarea rows="4" [value]="pmoNarratives()[activeDay()] || ''" (input)="setNarrative($any($event.target).value)"
             placeholder="PMO-DMD's consolidated impact assessment for this day — one impact / guidance point per line. Appears as the DMD comment in the impact bulletin."
             style="width:100%;box-sizing:border-box;border:1px solid #e3e6ed;border-radius:8px;padding:8px 10px;font-family:inherit;font-size:0.8rem;color:#1f2d3d;resize:vertical;margin-bottom:4px"></textarea>
@@ -149,7 +150,7 @@ declare const L: any;
                 @if (c.areas?.length) { <div class="ca"><i class="fas fa-map-marker-alt"></i> {{ join(c.areas) }}</div> }
               </div>
             }
-          } @else { <div style="font-size:0.78rem;color:#94a3b8">No narratives for this day.</div> }
+          } @else { <div style="font-size:0.8rem;color:#94a3b8">No narratives for this day.</div> }
         </div>
       </div>
     </div>

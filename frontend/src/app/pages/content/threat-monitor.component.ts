@@ -55,7 +55,7 @@ interface ThreatPlan {
                   <td style="font-size:0.85rem;">{{ t.updateCount }}</td>
                   <td style="font-size:0.85rem;">{{ t.planCount }}</td>
                   <td><span class="r-badge {{ t.isActive ? 'badge-approved' : 'badge-rejected' }}">{{ t.isActive ? 'Live' : 'Hidden' }}</span></td>
-                  <td><button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.74rem;" (click)="open(t)">Manage</button></td>
+                  <td><button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.8rem;" (click)="open(t)">Manage</button></td>
                 </tr>
               }
             </tbody>
@@ -72,14 +72,14 @@ interface ThreatPlan {
             @if (graphicUrl()) {
               <img [src]="graphicUrl()" alt="Threat graphic" style="height:90px;border-radius:10px;border:1px solid var(--border);object-fit:cover;">
             } @else {
-              <div style="height:90px;width:150px;border:1px dashed var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:0.75rem;">No graphic yet</div>
+              <div style="height:90px;width:150px;border:1px dashed var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:0.8rem;">No graphic yet</div>
             }
             <label class="btn-add" style="cursor:pointer;margin:0;">
               <i class="fas" [class.fa-upload]="!uploading()" [class.fa-spinner]="uploading()" [class.fa-spin]="uploading()"></i>
               {{ uploading() ? 'Uploading…' : 'Upload graphic' }}
               <input type="file" accept="image/*" hidden (change)="uploadGraphic($any($event.target).files)">
             </label>
-            <span style="font-size:0.76rem;color:var(--text-mid);">Shown on the public threat page (e.g. the TMA El Niño outlook graphic — replace any time).</span>
+            <span style="font-size:0.8rem;color:var(--text-mid);">Shown on the public threat page (e.g. the TMA El Niño outlook graphic — replace any time).</span>
           </div>
         </dmis-panel>
       </div>
@@ -89,13 +89,13 @@ interface ThreatPlan {
             <div style="display:grid;gap:0.55rem;margin-bottom:1rem;">
               @for (u of updates(); track u.id) {
                 <div style="display:grid;grid-template-columns:110px 1.4fr 2fr auto;gap:0.6rem;align-items:center;border:1px solid var(--border);border-radius:10px;padding:0.55rem 0.75rem;">
-                  <select style="font-size:0.72rem;border:1px solid var(--border);border-radius:7px;padding:0.25rem;font-weight:700;"
+                  <select style="font-size:0.75rem;border:1px solid var(--border);border-radius:7px;padding:0.25rem;font-weight:700;"
                           [value]="u.status" (change)="setUpdateStatus(u, $any($event.target).value)">
                     <option value="UPCOMING">UPCOMING</option><option value="NEW">NEW</option><option value="ONGOING">ONGOING</option><option value="COMPLETED">COMPLETED</option><option value="POSTPONED">POSTPONED</option>
                   </select>
                   <div style="font-size:0.84rem;font-weight:700;color:var(--text-dark);">{{ u.title }}</div>
-                  <div style="font-size:0.76rem;color:var(--text-mid);">{{ u.detail }}</div>
-                  <div style="font-size:0.7rem;color:var(--text-light);white-space:nowrap;">{{ u.startsOn || '' }}{{ u.endsOn ? ' — ' + u.endsOn : '' }}</div>
+                  <div style="font-size:0.8rem;color:var(--text-mid);">{{ u.detail }}</div>
+                  <div style="font-size:0.8rem;color:var(--text-light);white-space:nowrap;">{{ u.startsOn || '' }}{{ u.endsOn ? ' — ' + u.endsOn : '' }}</div>
                 </div>
               }
             </div>
@@ -123,7 +123,7 @@ interface ThreatPlan {
                       <td><div class="r-title">{{ p.planTitle }}</div></td>
                       <td style="font-size:0.82rem;color:var(--text-mid);">{{ p.stakeholderName }} <span class="r-badge" style="background:rgba(0,51,102,0.08);color:#003366;margin-left:4px;">{{ p.stakeholderType }}</span></td>
                       <td style="font-size:0.82rem;color:var(--text-mid);">{{ p.region || '-' }}</td>
-                      <td style="font-size:0.78rem;color:var(--text-mid);">{{ p.submittedOn }}</td>
+                      <td style="font-size:0.8rem;color:var(--text-mid);">{{ p.submittedOn }}</td>
                       <td>
                         <select style="font-size:0.76rem;border:1px solid var(--border);border-radius:7px;padding:0.3rem;"
                                 [value]="p.status" (change)="reviewPlan(p, $any($event.target).value)">
@@ -143,7 +143,7 @@ interface ThreatPlan {
     <!-- Register threat drawer -->
     @if (newThreatOpen()) {
       <div style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1500;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="newThreatOpen.set(false)">
-        <div style="background:#fff;border-radius:16px;max-width:640px;width:100%;padding:1.3rem 1.4rem;" (click)="$event.stopPropagation()">
+        <div style="background:#fff;border-radius:12px;border:1px solid var(--border);max-width:640px;width:100%;padding:1.3rem 1.4rem;" (click)="$event.stopPropagation()">
           <h5 style="font-weight:800;margin-bottom:1rem;">Register Threat</h5>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
             <input class="form-control" placeholder="Threat name * (e.g. Super El Niño)" [value]="tName()" (input)="tName.set($any($event.target).value)">
@@ -156,7 +156,7 @@ interface ThreatPlan {
           <textarea class="form-control" rows="3" placeholder="Description (English)" style="margin-top:0.75rem;width:100%;" [value]="tDescEn()" (input)="tDescEn.set($any($event.target).value)"></textarea>
           <textarea class="form-control" rows="3" placeholder="Maelezo (Kiswahili)" style="margin-top:0.5rem;width:100%;" [value]="tDescSw()" (input)="tDescSw.set($any($event.target).value)"></textarea>
           <div style="display:flex;justify-content:flex-end;gap:0.6rem;margin-top:1rem;">
-            <button type="button" style="border:1px solid var(--border);background:#fff;border-radius:9px;padding:0.5rem 1rem;cursor:pointer;" (click)="newThreatOpen.set(false)">Cancel</button>
+            <button class="btn" type="button" (click)="newThreatOpen.set(false)">Cancel</button>
             <button class="btn-add" type="button" [disabled]="!tName().trim()" (click)="createThreat()"><i class="fas fa-save"></i> Register</button>
           </div>
         </div>

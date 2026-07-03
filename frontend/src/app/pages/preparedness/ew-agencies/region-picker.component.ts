@@ -16,7 +16,7 @@ declare const L: any;
   standalone: true,
   styles: [`
     .rp { height: 540px; border-radius: 12px; border: 1px solid #e3e6ed; }
-    .hint { font-size: 0.72rem; color: #94a3b8; margin-top: 6px; }
+    .hint { font-size: 0.8rem; color: #94a3b8; margin-top: 6px; }
   `],
   template: `<div [id]="mapId" class="rp"></div>
     <div class="hint"><i class="fas fa-hand-pointer"></i> Click a region to paint it, or use the draw tools (top-left) to delineate a circle/polygon — each keeps the active level's colour + your hazard icon. Click a region again to remove it.</div>`,
@@ -167,7 +167,7 @@ export class RegionPickerComponent implements OnInit, OnChanges, OnDestroy {
       if (!ly) { continue; }
       const c = ly.getBounds().getCenter();
       const m = L.marker([c.lat, c.lng], { icon: L.divIcon({ className: 'rp-ref',
-        html: '<div style="width:18px;height:18px;border-radius:50%;border:1.5px solid ' + r.color + ';background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.2)"><i class="fas ' + r.faIcon + '" style="color:' + r.color + ';font-size:8px"></i></div>',
+        html: '<div style="width:18px;height:18px;border-radius:50%;border:1.5px solid ' + r.color + ';background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.2)"><i class="fas ' + r.faIcon + '" style="color:' + r.color + ';font-size:12px"></i></div>',
         iconSize: [18, 18], iconAnchor: [9, 9] }) });
       m.bindTooltip(r.entity + (r.level ? ' · ' + String(r.level).replace('_', ' ') : ''), { sticky: true });
       this.refGroup.addLayer(m);

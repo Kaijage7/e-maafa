@@ -19,27 +19,28 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
   styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
-    .stat b { font-size: 1.25rem; display: block; }
-    .stat span { font-size: 0.68rem; color: #6c757d; text-transform: uppercase; }
+    .stat b { font-size: 1.5rem; display: block; }
+    .stat span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; }
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
-    label { display: block; font-size: 0.74rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
+    label { display: block; font-size: 0.75rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
     input, select, textarea { width: 100%; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 9px; font-family: inherit; box-sizing: border-box; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
     .check-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
     .check { display: flex; gap: 6px; align-items: center; font-size: 0.8rem; border: 1px solid #e3e6ed; border-radius: 8px; padding: 7px 10px; cursor: pointer; }
     .check.sel { border-color: #dc3545; background: #fff5f5; }
     .check input { width: auto; }
-    .reach { font-size: 0.68rem; color: #6c757d; }
+    .reach { font-size: 0.75rem; color: #6c757d; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-    .chip { font-size: 0.66rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; background: #e2e8f0; color: #334155; }
+    .chip { font-size: 0.75rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; background: #e2e8f0; color: #334155; }
     .c-sent { background: #d1fae5; color: #065f46; } .c-scheduled { background: #fef3c7; color: #92400e; }
     .sev-critical { color: #b91c1c; font-weight: 700; } .sev-high { color: #c2410c; font-weight: 600; }
-    .btn-sm { font-size: 0.74rem; padding: 5px 14px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 14px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
     .b-red { background: #dc3545; color: #fff; } .b-outline { background: #fff; border-color: #cbd5e1; color: #334155; }
+    .b-red:hover { background: #c82333; } .b-outline:hover { background: #f1f5f9; }
     .empty { text-align: center; color: #94a3b8; padding: 26px 0; font-size: 0.85rem; }
     .preview { background: #f8f9fb; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; margin-top: 8px; }
   `],
@@ -231,7 +232,7 @@ export class CommunicationComponent implements OnInit {
         title: d.alert.title, width: 620,
         html: `<p style="font-size:0.85rem; text-align:left">${d.alert.message}</p>
                <table style="margin:auto; font-size:0.82rem"><tbody>${rows}</tbody></table>
-               <p style="font-size:0.74rem; color:#6c757d">${d.recipients.length} recipient deliveries logged</p>`,
+               <p style="font-size:0.75rem; color:#6c757d">${d.recipients.length} recipient deliveries logged</p>`,
         confirmButtonColor: '#dc3545',
       }));
     });
@@ -305,10 +306,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

@@ -41,40 +41,40 @@ interface DashboardPayload {
     #heroMap { width: 100%; height: 100%; min-height: 500px; background: #e8edf2; }
     .map-label { position: absolute; top: 0.8rem; left: 0.9rem; z-index: 500; display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; background: #fff; border-radius: 6px; border: 1px solid var(--line, #e2e8f0); box-shadow: 0 1px 3px rgba(0,0,0,0.08); pointer-events: none; }
     .map-label i { color: var(--primary); font-size: 0.65rem; }
-    .map-label span { color: var(--text-dark); font-size: 0.74rem; font-weight: 600; }
+    .map-label span { color: var(--text-dark); font-size: 0.75rem; font-weight: 600; }
     .map-legend { position: absolute; bottom: 0.8rem; right: 0.9rem; z-index: 500; padding: 0.5rem 0.7rem; background: #fff; border-radius: 6px; border: 1px solid var(--line, #e2e8f0); box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; gap: 0.65rem; align-items: center; }
-    .legend-item { display: flex; align-items: center; gap: 0.25rem; font-size: 0.66rem; font-weight: 600; color: var(--text-mid); }
+    .legend-item { display: flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; font-weight: 600; color: var(--text-mid); }
     .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .map-live { position: absolute; top: 0.8rem; right: 0.9rem; z-index: 500; display: flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; background: #fff; border-radius: 50px; border: 1px solid rgba(16,185,129,0.25); font-size: 0.58rem; font-weight: 700; color: #059669; }
+    .map-live { position: absolute; top: 0.8rem; right: 0.9rem; z-index: 500; display: flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.6rem; background: #fff; border-radius: 50px; border: 1px solid rgba(16,185,129,0.25); font-size: 0.75rem; font-weight: 700; color: #059669; }
     .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; }
-    .map-back-btn { position: absolute; top: 0.8rem; left: 50%; transform: translateX(-50%); z-index: 500; display: none; align-items: center; gap: 0.35rem; padding: 0.4rem 0.85rem; background: #fff; border-radius: 50px; border: 1px solid rgba(0,51,102,0.18); box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.65rem; font-weight: 700; color: var(--primary); }
+    .map-back-btn { position: absolute; top: 0.8rem; left: 50%; transform: translateX(-50%); z-index: 500; display: none; align-items: center; gap: 0.35rem; padding: 0.4rem 0.85rem; background: #fff; border-radius: 8px; border: 1px solid rgba(0,51,102,0.18); box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--primary); }
     .map-back-btn.visible { display: flex; }
-    .map-back-btn:hover { background: #f8fafc; }
-    .map-back-btn i { font-size: 0.55rem; }
-    .map-breadcrumb { position: absolute; top: 2.8rem; left: 0.9rem; z-index: 500; display: none; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; background: #fff; border-radius: 6px; border: 1px solid var(--line, #e2e8f0); box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 0.6rem; font-weight: 600; color: var(--text-mid); }
+    .map-back-btn:hover { background: #f1f5f9; }
+    .map-back-btn i { font-size: 0.7rem; }
+    .map-breadcrumb { position: absolute; top: 2.8rem; left: 0.9rem; z-index: 500; display: none; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; background: #fff; border-radius: 6px; border: 1px solid var(--line, #e2e8f0); box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 0.75rem; font-weight: 600; color: var(--text-mid); }
     .map-breadcrumb.visible { display: flex; }
     .map-breadcrumb .bc-link { color: var(--primary); cursor: pointer; }
     .map-breadcrumb .bc-link:hover { text-decoration: underline; }
-    .map-breadcrumb .bc-sep { opacity: 0.4; font-size: 0.4rem; }
+    .map-breadcrumb .bc-sep { opacity: 0.4; font-size: 0.7rem; }
     .map-breadcrumb .bc-current { color: var(--text-dark); font-weight: 700; }
     .region-info-panel { position: absolute; bottom: 0.8rem; left: 0.9rem; z-index: 500; width: 240px; background: #fff; border-radius: 6px; border: 1px solid var(--line, #e2e8f0); box-shadow: 0 2px 10px rgba(0,0,0,0.12); opacity: 0; pointer-events: none; transition: opacity 0.2s ease; overflow: hidden; }
     .region-info-panel.visible { opacity: 1; pointer-events: auto; }
     .rip-header { padding: 10px 12px 8px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); }
     .rip-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .rip-name { font-size: 12px; font-weight: 800; color: #111827; letter-spacing: -0.3px; flex: 1; }
-    .rip-level { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; }
-    .rip-close { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.04); border: none; cursor: pointer; font-size: 10px; color: #9ca3af; transition: all 0.15s; margin-left: 4px; }
+    .rip-name { font-size: 13px; font-weight: 800; color: #111827; letter-spacing: -0.3px; flex: 1; }
+    .rip-level { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; }
+    .rip-close { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.04); border: none; cursor: pointer; font-size: 12px; color: #9ca3af; transition: all 0.15s; margin-left: 4px; }
     .rip-close:hover { background: rgba(0,0,0,0.08); color: #111827; }
     .rip-body { padding: 8px 12px 10px; }
     .rip-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
     .rip-row + .rip-row { border-top: 1px solid rgba(0,0,0,0.03); }
-    .rip-label { font-size: 10px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 5px; }
-    .rip-label i { font-size: 8px; opacity: 0.5; width: 12px; text-align: center; }
-    .rip-val { font-size: 11px; font-weight: 700; color: #111827; }
+    .rip-label { font-size: 12px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+    .rip-label i { font-size: 12px; opacity: 0.5; width: 12px; text-align: center; }
+    .rip-val { font-size: 12px; font-weight: 700; color: #111827; }
     .rip-bar { height: 4px; border-radius: 2px; background: rgba(0,0,0,0.04); margin-top: 8px; overflow: hidden; }
     .rip-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
     .region-tooltip { background: #fff !important; border: 1px solid rgba(0,0,0,0.1) !important; border-radius: 6px !important; padding: 6px 12px !important; font-size: 12px !important; font-weight: 700 !important; color: var(--primary) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important; letter-spacing: -0.2px !important; }
-    .lake-label { background: transparent !important; border: none !important; box-shadow: none !important; color: #1565C0; font-size: 0.55rem; font-weight: 600; font-style: italic; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.8); }
+    .lake-label { background: transparent !important; border: none !important; box-shadow: none !important; color: #1565C0; font-size: 0.75rem; font-weight: 600; font-style: italic; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.8); }
     .lake-label::before { display: none !important; }
     .leaflet-container { background: #e8edf2; }
     .leaflet-container path:focus, .leaflet-interactive:focus { outline: none !important; }
@@ -82,7 +82,7 @@ interface DashboardPayload {
     .panel-row.two-col { grid-template-columns: repeat(2, 1fr); }
     .panel-body { padding: 1.15rem; }
     .chart-wrap { position: relative; width: 100%; height: 260px; }
-    .r-time { color: var(--text-light); font-size: 0.78rem; }
+    .r-time { color: var(--text-light); font-size: 0.8rem; }
     @media (max-width: 991px) { .hero-split { grid-template-columns: 1fr; } .hero-right { min-height: 350px; } .panel-row.two-col { grid-template-columns: 1fr; } }
   `],
   template: `
@@ -274,7 +274,7 @@ interface DashboardPayload {
                     <td style="color:var(--text-mid);">{{ limit(t.implementing_institution, 22) }}</td>
                     <td class="r-time">{{ fmtDate(t.training_start_date) }}</td>
                     <td class="r-time">{{ fmtDate(t.training_end_date) }}</td>
-                    <td style="font-size:0.72rem;color:var(--text-mid);">{{ limit(audience(t.targeted_audience), 18) }}</td>
+                    <td style="color:var(--text-mid);">{{ limit(audience(t.targeted_audience), 18) }}</td>
                     <td><span class="r-badge" style="background:rgba(245,158,11,0.1);color:#f59e0b;">Upcoming</span></td>
                   </tr>
                 }
@@ -643,10 +643,10 @@ export class MitigationDashboardComponent implements AfterViewInit, OnDestroy {
       ] },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        plugins: { tooltip: this.tooltipStyle, legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 10, weight: '600' }, color: '#4b5563', usePointStyle: true, pointStyle: 'circle' } } },
+        plugins: { tooltip: this.tooltipStyle, legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 12, weight: '600' }, color: '#4b5563', usePointStyle: true, pointStyle: 'circle' } } },
         scales: {
-          x: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false }, ticks: { stepSize: 1, font: { size: 10 }, color: '#9ca3af', callback: (v: number) => Number.isInteger(v) ? v : '' } },
-          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11, weight: '600' }, color: '#4b5563' } },
+          x: { stacked: true, beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false }, ticks: { stepSize: 1, font: { size: 12 }, color: '#9ca3af', callback: (v: number) => Number.isInteger(v) ? v : '' } },
+          y: { stacked: true, grid: { display: false }, ticks: { font: { size: 12, weight: '600' }, color: '#4b5563' } },
         },
       },
     }));
@@ -671,7 +671,7 @@ export class MitigationDashboardComponent implements AfterViewInit, OnDestroy {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { tooltip: this.tooltipStyle, legend: { position: 'right', labels: { boxWidth: 8, padding: 8, font: { size: 10, weight: '500' }, color: '#4b5563', usePointStyle: true, pointStyle: 'circle' } } },
+        plugins: { tooltip: this.tooltipStyle, legend: { position: 'right', labels: { boxWidth: 8, padding: 8, font: { size: 12, weight: '500' }, color: '#4b5563', usePointStyle: true, pointStyle: 'circle' } } },
         scales: { r: { ticks: { stepSize: 1, display: false }, grid: { color: 'rgba(0,0,0,0.06)' } } },
       },
     }));
@@ -692,8 +692,8 @@ export class MitigationDashboardComponent implements AfterViewInit, OnDestroy {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { ...this.tooltipStyle, callbacks: { label: (ctx: any) => ctx.parsed.x.toLocaleString() + ' people' } } },
         scales: {
-          x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false }, ticks: { font: { size: 10 }, color: '#9ca3af', callback: (v: number) => v >= 1000 ? (v / 1000) + 'K' : v } },
-          y: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' }, color: '#4b5563' } },
+          x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false }, ticks: { font: { size: 12 }, color: '#9ca3af', callback: (v: number) => v >= 1000 ? (v / 1000) + 'K' : v } },
+          y: { grid: { display: false }, ticks: { font: { size: 12, weight: '600' }, color: '#4b5563' } },
         },
       },
     }));
@@ -715,8 +715,8 @@ export class MitigationDashboardComponent implements AfterViewInit, OnDestroy {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { ...this.tooltipStyle, callbacks: { label: (ctx: any) => 'TZS ' + ctx.parsed.y.toFixed(1) + ' Billion' } } },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 10, weight: '600' }, color: '#4b5563', maxRotation: 45 } },
-          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false }, ticks: { font: { size: 10 }, color: '#9ca3af', callback: (v: number) => 'TZS ' + v + 'B' } },
+          x: { grid: { display: false }, ticks: { font: { size: 12, weight: '600' }, color: '#4b5563', maxRotation: 45 } },
+          y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false }, ticks: { font: { size: 12 }, color: '#9ca3af', callback: (v: number) => 'TZS ' + v + 'B' } },
         },
       },
     }));
@@ -752,10 +752,10 @@ export class MitigationDashboardComponent implements AfterViewInit, OnDestroy {
           } },
         },
         scales: {
-          x: { min: 0.5, max: 5.5, grid: { color: 'rgba(0,0,0,0.04)' }, title: { display: true, text: 'Likelihood →', font: { size: 11, weight: '700' }, color: '#6b7280' },
-            ticks: { stepSize: 1, font: { size: 9 }, color: '#9ca3af', callback: (v: number) => ['', 'Rare', 'Unlikely', 'Possible', 'Likely', 'Almost Certain'][v] || '' } },
-          y: { min: 0.5, max: 5.5, grid: { color: 'rgba(0,0,0,0.04)' }, title: { display: true, text: '← Impact', font: { size: 11, weight: '700' }, color: '#6b7280' },
-            ticks: { stepSize: 1, font: { size: 9 }, color: '#9ca3af', callback: (v: number) => ['', 'Negligible', 'Minor', 'Moderate', 'Major', 'Catastrophic'][v] || '' } },
+          x: { min: 0.5, max: 5.5, grid: { color: 'rgba(0,0,0,0.04)' }, title: { display: true, text: 'Likelihood →', font: { size: 12, weight: '700' }, color: '#6b7280' },
+            ticks: { stepSize: 1, font: { size: 12 }, color: '#9ca3af', callback: (v: number) => ['', 'Rare', 'Unlikely', 'Possible', 'Likely', 'Almost Certain'][v] || '' } },
+          y: { min: 0.5, max: 5.5, grid: { color: 'rgba(0,0,0,0.04)' }, title: { display: true, text: '← Impact', font: { size: 12, weight: '700' }, color: '#6b7280' },
+            ticks: { stepSize: 1, font: { size: 12 }, color: '#9ca3af', callback: (v: number) => ['', 'Negligible', 'Minor', 'Moderate', 'Major', 'Catastrophic'][v] || '' } },
         },
       },
     }));
@@ -773,7 +773,7 @@ export class MitigationDashboardComponent implements AfterViewInit, OnDestroy {
       type: 'doughnut',
       data: { labels, datasets: [{ data: values, backgroundColor: colors.map(c => c + 'cc'), borderWidth: 3, borderColor: 'rgba(255,255,255,0.9)', hoverOffset: 8 }] },
       options: { responsive: true, maintainAspectRatio: false, cutout: '55%',
-        plugins: { tooltip: this.tooltipStyle, legend: { position: 'right', labels: { boxWidth: 8, padding: 8, font: { size: 10, weight: '500' }, color: '#4b5563', usePointStyle: true, pointStyle: 'circle' } } } },
+        plugins: { tooltip: this.tooltipStyle, legend: { position: 'right', labels: { boxWidth: 8, padding: 8, font: { size: 12, weight: '500' }, color: '#4b5563', usePointStyle: true, pointStyle: 'circle' } } } },
     }));
   }
 }
@@ -787,7 +787,7 @@ function ensureChartJs(): Promise<void> {
   if (!chartJsPromise) {
     chartJsPromise = new Promise(resolve => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      script.src = '/vendor/chartjs/chart.umd.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

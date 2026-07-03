@@ -27,10 +27,10 @@ const LANGUAGE_PARTS: { code: 'en' | 'sw'; label: string; flagColor: string }[] 
   standalone: true,
   imports: [RouterLink],
   template: `
-    <div class="v2-page-content" style="max-width: 1100px; margin: 0 auto; padding: 7rem 1.5rem 4rem;">
-      <a routerLink="/" style="color:#60a5fa;text-decoration:none;font-size:0.85rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
+    <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 1.5rem 4rem;">
+      <a routerLink="/" style="color:#60a5fa;text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
       <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0.8rem 0 0.3rem;">{{ L.t('lbl_publication') }}</h1>
-      <p style="color:var(--text-secondary, #64748b);font-size:0.88rem;margin-bottom:1.4rem;">
+      <p style="color:var(--text-secondary, #64748b);font-size:1.05rem;margin-bottom:1.4rem;">
         {{ L.t('pubs_subtitle') }}
       </p>
 
@@ -40,7 +40,7 @@ const LANGUAGE_PARTS: { code: 'en' | 'sw'; label: string; flagColor: string }[] 
           <a [routerLink]="['/publications', t]"
              [style.background]="t === activeType() ? '#003366' : 'transparent'"
              [style.color]="t === activeType() ? '#fff' : '#475569'"
-             style="border:1px solid rgba(0,51,102,0.25);border-radius:20px;padding:0.4rem 1rem;font-size:0.82rem;font-weight:600;text-decoration:none;">
+             style="border:1px solid rgba(0,51,102,0.25);border-radius:21px;padding:0 1.1rem;min-height:42px;display:inline-flex;align-items:center;font-size:0.95rem;font-weight:600;text-decoration:none;">
             {{ t }} <span style="opacity:0.7;">({{ counts()[t] }})</span>
           </a>
         }
@@ -51,7 +51,7 @@ const LANGUAGE_PARTS: { code: 'en' | 'sw'; label: string; flagColor: string }[] 
         <div style="display:flex;align-items:center;gap:10px;margin:0.4rem 0 0.9rem;">
           <span [style.background]="part.flagColor" style="width:5px;height:22px;border-radius:3px;display:inline-block;"></span>
           <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0;">{{ part.label }}</h5>
-          <span style="font-size:0.72rem;color:#94a3b8;">{{ part.docs.length }} {{ L.lang() === 'sw' ? 'nyaraka' : (part.docs.length === 1 ? 'document' : 'documents') }}</span>
+          <span style="font-size:0.9rem;color:#94a3b8;">{{ part.docs.length }} {{ L.lang() === 'sw' ? 'nyaraka' : (part.docs.length === 1 ? 'document' : 'documents') }}</span>
         </div>
         <div class="row g-3" style="margin-bottom:1.8rem;">
           @for (pub of part.docs; track pub.id) {
@@ -59,17 +59,17 @@ const LANGUAGE_PARTS: { code: 'en' | 'sw'; label: string; flagColor: string }[] 
               <div style="border:1px solid rgba(0,0,0,0.08);border-radius:14px;background:var(--card-bg, #fff);padding:1.1rem 1.2rem;height:100%;display:flex;flex-direction:column;gap:8px;">
                 <div style="display:flex;align-items:center;gap:10px;">
                   <div style="width:38px;height:38px;border-radius:10px;background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;"><i class="fas fa-file-pdf"></i></div>
-                  <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">{{ pub.documentType }} @if (pub.yearOfApproval) { · {{ pub.yearOfApproval }} }</div>
-                  <span [style.background]="part.flagColor" style="margin-left:auto;color:#fff;font-size:0.6rem;font-weight:800;padding:2px 9px;border-radius:9px;">{{ part.code.toUpperCase() }}</span>
+                  <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">{{ pub.documentType }} @if (pub.yearOfApproval) { · {{ pub.yearOfApproval }} }</div>
+                  <span [style.background]="part.flagColor" style="margin-left:auto;color:#fff;font-size:0.8rem;font-weight:800;padding:2px 9px;border-radius:9px;">{{ part.code.toUpperCase() }}</span>
                 </div>
-                <div style="font-size:0.95rem;font-weight:700;color:var(--text-primary, #2C3E50);line-height:1.35;">{{ pub.documentName }}</div>
-                @if (pub.narrativeDescription) { <p style="font-size:0.82rem;color:var(--text-secondary, #64748b);line-height:1.55;margin:0;flex:1;">{{ pub.narrativeDescription.slice(0, 160) }}</p> }
+                <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary, #2C3E50);line-height:1.35;">{{ pub.documentName }}</div>
+                @if (pub.narrativeDescription) { <p style="font-size:0.9rem;color:var(--text-secondary, #64748b);line-height:1.55;margin:0;flex:1;">{{ pub.narrativeDescription.slice(0, 160) }}</p> }
                 <div style="display:flex;align-items:center;gap:1rem;margin-top:auto;">
                   @if (pub.attachmentPath) {
-                    <a [href]="'/api/storage/' + pub.attachmentPath" target="_blank" style="font-size:0.8rem;color:#059669;font-weight:700;text-decoration:none;"><i class="fas fa-download me-1"></i>{{ L.t('lbl_pdf') }}</a>
+                    <a [href]="'/api/storage/' + pub.attachmentPath" target="_blank" style="font-size:0.9rem;color:#059669;font-weight:700;text-decoration:none;"><i class="fas fa-download me-1"></i>{{ L.t('lbl_pdf') }}</a>
                   }
                   @if (pub.externalLink) {
-                    <a [href]="pub.externalLink" target="_blank" rel="noopener" style="font-size:0.74rem;color:#94a3b8;text-decoration:none;"><i class="fas fa-external-link-alt me-1"></i>{{ L.t('pubs_source') }}</a>
+                    <a [href]="pub.externalLink" target="_blank" rel="noopener" style="font-size:0.9rem;color:#94a3b8;text-decoration:none;"><i class="fas fa-external-link-alt me-1"></i>{{ L.t('pubs_source') }}</a>
                   }
                 </div>
               </div>

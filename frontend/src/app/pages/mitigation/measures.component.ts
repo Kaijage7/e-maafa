@@ -100,14 +100,14 @@ interface IndexResponse {
                         <div class="r-title">{{ limit(m.projectProgrammeName, 45) }}</div>
                         <div class="r-subtitle">{{ m.implementingInstitution || '' }}</div>
                       </td>
-                      <td style="color:var(--text-mid);font-size:0.72rem;">{{ limit(m.hazardRiskAddressed, 25) || '-' }}</td>
+                      <td style="color:var(--text-mid);">{{ limit(m.hazardRiskAddressed, 25) || '-' }}</td>
                       <td><span class="r-badge {{ statusClass(m.projectStatus) }}">{{ m.projectStatus || '-' }}</span></td>
                       <td>
                         @if (m.priority) {
                           <span class="r-badge priority-{{ m.priority }}">{{ ucfirst(m.priority) }}</span>
                         } @else { <span style="color:var(--text-light);">-</span> }
                       </td>
-                      <td style="color:var(--text-mid);font-size:0.68rem;">
+                      <td style="color:var(--text-mid);">
                         @if (m.periodStart) {
                           {{ m.periodStart }} - {{ m.periodEnd || 'Ongoing' }}
                         } @else { - }
@@ -174,17 +174,17 @@ interface IndexResponse {
         <div class="v2-modal-body">
           @if (detail(); as d) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-              <div style="grid-column:1/-1;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Project/Programme</div><div style="font-weight:600;">{{ d.projectProgrammeName || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Status</div><div><span class="r-badge {{ statusClass(d.projectStatus) }}">{{ d.projectStatus || 'N/A' }}</span></div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Priority</div><div>
+              <div style="grid-column:1/-1;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Project/Programme</div><div style="font-weight:600;">{{ d.projectProgrammeName || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Status</div><div><span class="r-badge {{ statusClass(d.projectStatus) }}">{{ d.projectStatus || 'N/A' }}</span></div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Priority</div><div>
                 @if (d.priority) { <span class="r-badge priority-{{ d.priority }}">{{ ucfirst(d.priority) }}</span> } @else { N/A }
               </div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Entity</div><div style="color:var(--text-mid);">{{ d.implementingEntity || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Institution</div><div style="color:var(--text-mid);">{{ d.implementingInstitution || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Entity</div><div style="color:var(--text-mid);">{{ d.implementingEntity || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Institution</div><div style="color:var(--text-mid);">{{ d.implementingInstitution || 'N/A' }}</div></div>
             </div>
             @if (d.narrativeDescription) {
-              <div style="margin-top:0.8rem;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Description</div>
-                <div style="font-size:0.78rem;color:var(--text-mid);line-height:1.5;">{{ d.narrativeDescription }}</div></div>
+              <div style="margin-top:0.8rem;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Description</div>
+                <div style="font-size:0.85rem;color:var(--text-mid);line-height:1.5;">{{ d.narrativeDescription }}</div></div>
             }
           }
         </div>
@@ -405,7 +405,7 @@ export class MeasuresComponent implements AfterViewInit, OnDestroy {
         responsive: true, maintainAspectRatio: false, cutout: '60%',
         plugins: {
           tooltip: this.tooltipStyle,
-          legend: { position: 'bottom', labels: { padding: 12, font: { size: 10, weight: '600' }, usePointStyle: true, pointStyle: 'circle' } },
+          legend: { position: 'bottom', labels: { padding: 12, font: { size: 12, weight: '600' }, usePointStyle: true, pointStyle: 'circle' } },
         },
       },
     }));
@@ -432,7 +432,7 @@ export class MeasuresComponent implements AfterViewInit, OnDestroy {
         responsive: true, maintainAspectRatio: false, cutout: '60%',
         plugins: {
           tooltip: this.tooltipStyle,
-          legend: { position: 'bottom', labels: { padding: 12, font: { size: 10, weight: '600' }, usePointStyle: true, pointStyle: 'circle' } },
+          legend: { position: 'bottom', labels: { padding: 12, font: { size: 12, weight: '600' }, usePointStyle: true, pointStyle: 'circle' } },
         },
       },
     }));
@@ -448,7 +448,7 @@ function ensureChartJs(): Promise<void> {
   if (!chartJsPromise) {
     chartJsPromise = new Promise(resolve => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      script.src = '/vendor/chartjs/chart.umd.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

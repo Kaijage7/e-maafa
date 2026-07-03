@@ -61,19 +61,20 @@ import { qrcodegen } from '../shared/qrcodegen';
   `,
   styles: [`
     .module-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .hub-qr { position:fixed; left:18px; bottom:18px; z-index:50; display:flex; flex-direction:column; align-items:center; gap:.45rem;
-      background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:.7rem .7rem .55rem; text-decoration:none;
-      box-shadow:0 12px 30px rgba(0,51,102,0.18); transition:transform .2s ease, box-shadow .2s ease; }
-    .hub-qr:hover { transform:translateY(-3px); box-shadow:0 18px 40px rgba(0,51,102,0.24); }
+    /* In-flow outreach card after the grid (was position:fixed, which floated over the module cards) */
+    .hub-qr { margin:1.5rem 0 0.5rem; display:inline-flex; flex-direction:column; align-items:center; gap:.45rem;
+      background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:.7rem .7rem .55rem; text-decoration:none;
+      box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:transform .2s ease, box-shadow .2s ease; }
+    .hub-qr:hover { transform:translateY(-2px); box-shadow:0 10px 26px rgba(0,51,102,0.18); }
     .hub-qr svg { width:112px; height:112px; display:block; }
-    .hub-qr-cap { font-size:.62rem; font-weight:800; letter-spacing:.05em; color:#0d3b66; }
+    .hub-qr-cap { font-size:0.75rem; font-weight:800; letter-spacing:.05em; color:#0d3b66; }
     @media (max-width:575px){ .hub-qr svg { width:88px; height:88px; } }
     .module-card-link {
-      background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border-radius: 18px; padding: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.7); cursor: pointer;
+      background: #fff;
+      border-radius: 8px; padding: 1.5rem; border: 1px solid #e2e8f0; cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden;
       text-decoration: none; color: inherit; display: flex; flex-direction: column;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03); animation: cardIn 0.5s ease-out both;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); animation: cardIn 0.5s ease-out both;
     }
     @keyframes cardIn { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
     .module-card-link:nth-child(1) { animation-delay: 0.06s; } .module-card-link:nth-child(2) { animation-delay: 0.12s; }
@@ -82,15 +83,15 @@ import { qrcodegen } from '../shared/qrcodegen';
     .module-card-link:nth-child(7) { animation-delay: 0.42s; } .module-card-link:nth-child(8) { animation-delay: 0.48s; }
     .module-card-link:nth-child(9) { animation-delay: 0.54s; }
     .module-card-link:hover {
-      background: rgba(255, 255, 255, 0.78); transform: translateY(-5px);
-      box-shadow: 0 20px 50px rgba(0, 51, 102, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.8); border-color: rgba(255, 255, 255, 0.9);
+      background: #fff; transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 51, 102, 0.10); border-color: #c8d2dd;
     }
     .card-icon-wrap { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; color: var(--primary); margin-bottom: 1.15rem; transition: transform 0.3s; }
     .module-card-link:hover .card-icon-wrap { transform: scale(1.1); }
     .card-title { font-size: 1.05rem; font-weight: 700; color: var(--text-dark); margin-bottom: 0.35rem; letter-spacing: -0.2px; }
     .card-desc { font-size: 0.86rem; color: var(--text-mid); line-height: 1.55; margin-bottom: 1.15rem; flex: 1; }
     .card-footer { display: flex; align-items: center; justify-content: space-between; }
-    .item-count { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.22rem 0.6rem; border-radius: 50px; font-size: 0.76rem; font-weight: 600; background: rgba(255, 255, 255, 0.5); color: var(--text-light); border: 1px solid rgba(0, 0, 0, 0.04); }
+    .item-count { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.22rem 0.6rem; border-radius: 50px; font-size: 0.76rem; font-weight: 600; background: #f8fafc; color: var(--text-light); border: 1px solid #e2e8f0; }
     .card-arrow { color: var(--text-light); font-size: 0.8rem; transition: all 0.25s; }
     .module-card-link:hover .card-arrow { color: var(--text-dark); transform: translateX(4px); }
     @media (max-width: 991px) { .module-grid { grid-template-columns: repeat(2, 1fr); } }

@@ -42,31 +42,32 @@ export interface ConsoleConfig {
     .wrap { padding: 14px 18px 40px; }
     .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
     .hd .ic { width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff; }
-    .hd h1 { font-size: 1.18rem; margin: 0; color: #14303a; } .hd .sub { font-size: 0.78rem; color: #6c757d; }
+    .hd h1 { font-size: 1.3rem; margin: 0; color: #14303a; } .hd .sub { font-size: 0.8rem; color: #6c757d; }
     .toolbar { margin-left: auto; display: flex; gap: 8px; }
     .btn { font-size: 0.8rem; font-weight: 600; border-radius: 8px; padding: 8px 16px; border: 1px solid transparent; cursor: pointer; font-family: inherit; color: #fff; }
     .btn.ghost { background: #fff; color: #1f2d3d; border-color: #cbd5e1; }
+    .btn:hover:not(:disabled) { filter: brightness(0.94); }
     .btn:disabled { opacity: 0.5; cursor: default; }
     .grid { display: grid; grid-template-columns: 440px 1fr; gap: 14px; align-items: start; }
     @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
     .panel { background: #fff; border: 1px solid #e3e6ed; border-radius: 12px; padding: 12px 14px; }
     .tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-    .tabs button { font-size: 0.76rem; font-weight: 600; color: #607089; border: 1px solid #e3e6ed; background: #f8fafc; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+    .tabs button { font-size: 0.8rem; font-weight: 600; color: #607089; border: 1px solid #e3e6ed; background: #f8fafc; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-family: inherit; }
     .tabs button.on { color: #fff; }
     .tabs .add { color: #0f766e; background: #ccfbf1; border-color: #0f766e; }
-    .lbl { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin: 9px 0 4px; letter-spacing: 0.3px; }
-    select, textarea, input { font-size: 0.78rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 8px; font-family: inherit; width: 100%; box-sizing: border-box; }
+    .lbl { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin: 9px 0 4px; letter-spacing: 0.3px; }
+    select, textarea, input { font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 8px; font-family: inherit; width: 100%; box-sizing: border-box; }
     textarea { resize: vertical; min-height: 42px; }
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .alvl { display: flex; gap: 5px; } .alvl button { flex: 1; font-size: 0.68rem; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; border-radius: 7px; padding: 5px; cursor: pointer; font-family: inherit; color: #475569; }
+    .alvl { display: flex; gap: 5px; } .alvl button { flex: 1; font-size: 0.8rem; font-weight: 700; border: 1px solid #cbd5e1; background: #fff; border-radius: 7px; padding: 5px; cursor: pointer; font-family: inherit; color: #475569; }
     .alvl button.on { color: #1a1a1a; border-color: #1a1a1a; }
     .types { display: flex; flex-wrap: wrap; gap: 6px; }
-    .tbtn { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 600; border: 1px solid #cbd5e1; background: #fff; border-radius: 9px; padding: 5px 10px; cursor: pointer; font-family: inherit; color: #475569; }
+    .tbtn { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; border: 1px solid #cbd5e1; background: #fff; border-radius: 9px; padding: 5px 10px; cursor: pointer; font-family: inherit; color: #475569; }
     .tbtn.on { border-color: #1f2d3d; background: #eef2f7; color: #1f2d3d; }
     .tbtn img { width: 20px; height: 20px; }
-    .ms { display: flex; flex-wrap: wrap; gap: 5px; } .mschip { font-size: 0.68rem; font-weight: 600; border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 14px; padding: 3px 10px; cursor: pointer; font-family: inherit; }
+    .ms { display: flex; flex-wrap: wrap; gap: 5px; } .mschip { font-size: 0.8rem; font-weight: 600; border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 14px; padding: 3px 10px; cursor: pointer; font-family: inherit; }
     .mschip.on { background: #0f766e; color: #fff; border-color: #0f766e; }
-    .sel-regions { font-size: 0.72rem; color: #475569; margin-top: 6px; }
+    .sel-regions { font-size: 0.8rem; color: #475569; margin-top: 6px; }
     .rchip { display: inline-block; background: #eef2f7; border-radius: 6px; padding: 1px 7px; margin: 2px 3px 0 0; }
     .flash { padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 10px; }
     .flash.ok { background: #d1fae5; color: #065f46; } .flash.err { background: #fee2e2; color: #b91c1c; }
@@ -74,7 +75,7 @@ export interface ConsoleConfig {
   `],
   template: `
     <div class="wrap">
-      <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.76rem;color:#64748b;text-decoration:none;margin-bottom:10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
+      <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;color:#64748b;text-decoration:none;margin-bottom:10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
       <div class="hd">
         <div class="ic" [style.background]="def.color"><i class="fas" [ngClass]="def.icon"></i></div>
         <div><h1>{{ def.name }} — {{ def.bulletin }}</h1><div class="sub">{{ def.fullName }}</div></div>
@@ -86,7 +87,7 @@ export interface ConsoleConfig {
             <i class="fas fa-tower-broadcast"></i> {{ submitting() ? 'Pushing…' : 'Push to EOCC' }}
           </button>
           <button class="btn" style="background:#fff;color:#b91c1c;border:1px solid #fecaca" [disabled]="clearing()" (click)="clearMine()" title="Remove this entity's current warning from the cross-agency map and PMO-DMD">
-            <i class="fas fa-eraser"></i> {{ clearing() ? 'Clearing…' : 'Clear my warning' }}
+            <i class="fas fa-eraser"></i> {{ clearing() ? 'Clearing…' : 'Clear active warning' }}
           </button>
         </div>
       </div>
@@ -178,14 +179,14 @@ export interface ConsoleConfig {
               @if (!(it.regions ?? []).length && !(it.delineations ?? []).length) { <span style="color:#94a3b8">Click regions or draw on the map →</span> }
             </div>
             @if (items().length > 1) {
-              <button class="x" style="margin-top:10px; font-size:0.76rem" (click)="removeItem(active())"><i class="fas fa-trash"></i> Remove this {{ def.unit.toLowerCase() }}</button>
+              <button class="x" style="margin-top:10px; font-size:0.8rem" (click)="removeItem(active())"><i class="fas fa-trash"></i> Remove this {{ def.unit.toLowerCase() }}</button>
             }
           }
         </div>
 
         <div class="panel">
           @if (crossRef().length) {
-            <label style="display:flex;align-items:center;gap:6px;font-size:0.76rem;color:#475569;margin-bottom:8px;cursor:pointer">
+            <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:#475569;margin-bottom:8px;cursor:pointer">
               <input type="checkbox" [checked]="refOn()" (change)="refOn.set($any($event.target).checked)">
               <i class="fas fa-diagram-project" style="color:#94a3b8"></i> Show what other entities issued ({{ crossRef().length }} area(s)) — reference only
             </label>

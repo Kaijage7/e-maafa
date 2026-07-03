@@ -20,10 +20,10 @@ import { moduleBySlug } from '../core/modules';
           <h1>{{ item()?.name || module()?.name }}</h1>
           <div class="breadcrumb-trail">
             <a routerLink="/home">Home</a>
-            <span class="sep"><i class="fas fa-chevron-right" style="font-size:0.4rem;"></i></span>
+            <span class="sep"><i class="fas fa-chevron-right" style="font-size:0.7rem;"></i></span>
             <span>{{ module()?.name }}</span>
             @if (item()) {
-              <span class="sep"><i class="fas fa-chevron-right" style="font-size:0.4rem;"></i></span>
+              <span class="sep"><i class="fas fa-chevron-right" style="font-size:0.7rem;"></i></span>
               <span style="color:var(--module-color);font-weight:600;">{{ item()?.name }}</span>
             }
           </div>
@@ -31,8 +31,8 @@ import { moduleBySlug } from '../core/modules';
       </div>
     </div>
 
-    <div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.7);border-radius:18px;padding:2.4rem;text-align:center;">
-      <div style="width:54px;height:54px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;background:var(--module-color);margin-bottom:1rem;">
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:2.4rem;text-align:center;">
+      <div style="width:54px;height:54px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;background:var(--module-color);margin-bottom:1rem;">
         <i class="fas {{ item()?.icon || module()?.icon }}"></i>
       </div>
       <div style="font-weight:700;color:var(--text-dark);margin-bottom:0.3rem;">{{ item()?.name || module()?.name }}</div>

@@ -35,7 +35,7 @@ interface IndexResponse {
   standalone: true,
   imports: [PageHeaderComponent, PanelComponent, StatCardComponent, SlicePipe],
   styles: [`
-    .filter-bar select { padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.78rem; background: #fff; color: var(--text-dark); }
+    .filter-bar select { padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: #fff; color: var(--text-dark); }
     .ra-modal-backdrop { display: none; position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.5); overflow-y: auto; }
     .ra-modal-backdrop.open { display: block; }
     .ra-modal { background: #fff; border-radius: 0.5rem; margin: 1.75rem auto; max-width: 1140px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
@@ -107,7 +107,7 @@ interface IndexResponse {
                 <tbody>
                   @for (a of rows(); track a.id) {
                     <tr class="data-row" [style.display]="rowVisible(a) ? '' : 'none'">
-                      <td style="font-size:0.78rem;">
+                      <td>
                         @if (a.priorityLevel) {
                           <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(245,158,11,0.15);color:#d97706;font-weight:700;font-size:0.75rem;">{{ a.priorityLevel }}</span>
                         } @else { <span style="color:var(--text-light);">-</span> }
@@ -118,16 +118,16 @@ interface IndexResponse {
                         @if (a.planType) { <div class="r-subtitle">{{ ucfirst(a.planType) }} Plan</div> }
                       </td>
                       <td><span class="r-badge" style="background:rgba(59,130,246,0.1);color:#2563eb;">{{ a.hazardName || 'N/A' }}</span></td>
-                      <td style="font-size:0.78rem;color:var(--text-mid);max-width:130px;">
+                      <td style="color:var(--text-mid);max-width:130px;">
                         {{ a.locationName }}
                         @if (a.districtCouncil) { <div class="r-subtitle">{{ a.districtCouncil }}</div> }
                       </td>
                       <td><span class="r-badge {{ riskBadge(a.riskLevel) }}">{{ a.riskLevel }}</span></td>
                       <td>
                         <span class="r-badge {{ statusBadge(a.assessmentStatus) }}">{{ statusLabel(a.assessmentStatus) }}</span>
-                        @if (a.isPublished) { <i class="fas fa-globe" style="color:#059669;font-size:0.55rem;margin-left:0.2rem;" title="Published"></i> }
+                        @if (a.isPublished) { <i class="fas fa-globe" style="color:#059669;font-size:0.7rem;margin-left:0.2rem;" title="Published"></i> }
                       </td>
-                      <td style="font-size:0.78rem;color:var(--text-mid);">
+                      <td style="color:var(--text-mid);">
                         <div style="font-weight:600;">{{ a.assessmentDate }}</div>
                         <div class="r-subtitle">{{ a.assessmentDateRelative }}</div>
                       </td>
@@ -204,7 +204,7 @@ interface IndexResponse {
             </div>
 
             <div class="text-center mb-4">
-              <div style="display:inline-block;background:white;padding:1.5rem;border-radius:15px;box-shadow:0 5px 15px rgba(0,0,0,0.1);">
+              <div style="display:inline-block;background:white;padding:1.5rem;border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,0.1);">
                 <h5 style="margin-bottom:1rem;color:#003366;">Risk Assessment Matrix</h5>
                 <div class="row g-3">
                   <div class="col-md-4"><div style="padding:1rem;border-radius:10px;background:#f8f9fa;"><small class="text-muted">Likelihood</small><h4 style="color:#003366;margin:0.5rem 0;">{{ d['likelihood'] || 'N/A' }}</h4></div></div>
@@ -460,7 +460,7 @@ export class RiskAssessmentsComponent {
           this.viewTab.set('details');
           this.viewOpen.set(true);
         },
-        error: () => Swal.fire({ icon: 'error', title: 'Oops...', text: 'Failed to load assessment details!' }),
+        error: () => Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load assessment details.' }),
       });
     });
   }
@@ -478,8 +478,8 @@ export class RiskAssessmentsComponent {
   deleteAssessment(id: number): void {
     ensureSweetAlert().then(() => {
       Swal.fire({
-        title: 'Are you sure?', text: 'This risk assessment will be permanently deleted!', icon: 'warning',
-        showCancelButton: true, confirmButtonText: 'Yes, delete it!', cancelButtonText: 'Cancel', reverseButtons: true,
+        title: 'Confirm Deletion', text: 'This risk assessment will be permanently deleted.', icon: 'warning',
+        showCancelButton: true, confirmButtonText: 'Yes, delete', cancelButtonText: 'Cancel', reverseButtons: true,
       }).then((result: any) => {
         if (result.isConfirmed) {
           this.http.delete(`/api/v1/risk-assessments/${id}`).subscribe({
@@ -495,7 +495,7 @@ export class RiskAssessmentsComponent {
     ensureSweetAlert().then(() => {
       Swal.fire({
         title: 'Approve Assessment?', text: 'You are about to approve this risk assessment.', icon: 'question',
-        showCancelButton: true, confirmButtonText: 'Yes, approve it!', cancelButtonText: 'Cancel', reverseButtons: true,
+        showCancelButton: true, confirmButtonText: 'Yes, approve', cancelButtonText: 'Cancel', reverseButtons: true,
       }).then((result: any) => {
         if (result.isConfirmed) {
           this.http.post(`/api/v1/risk-assessments/${id}/approve`, {}).subscribe({
@@ -511,7 +511,7 @@ export class RiskAssessmentsComponent {
     ensureSweetAlert().then(() => {
       Swal.fire({
         title: 'Publish Assessment?', text: 'This will make the assessment publicly visible.', icon: 'info',
-        showCancelButton: true, confirmButtonText: 'Yes, publish it!', cancelButtonText: 'Cancel', reverseButtons: true,
+        showCancelButton: true, confirmButtonText: 'Yes, publish', cancelButtonText: 'Cancel', reverseButtons: true,
       }).then((result: any) => {
         if (result.isConfirmed) {
           this.http.post(`/api/v1/risk-assessments/${id}/publish`, {}).subscribe({
@@ -545,10 +545,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

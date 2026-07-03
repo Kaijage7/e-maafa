@@ -98,6 +98,17 @@ const PUB_THUMBS = [
   'images/events/photo_04.jpg', 'images/events/rufiji_aerial_destruction.jpg', 'images/events/photo_08.jpg',
 ];
 
+/* Shared severity metadata + name normalisers — one source for the choropleth, the hover
+ * tooltips and the rich map popups so all three always agree on colour and ranking. */
+const SEV_COLOR: Record<string, string> = { Emergency: '#ef4444', Warning: '#f59e0b', Watch: '#3b82f6',
+  Major: '#ef4444', Moderate: '#f59e0b', Minor: '#3b82f6' };
+const SEV_RANK: Record<string, number> = { Emergency: 3, Major: 3, Warning: 2, Moderate: 2, Watch: 1, Minor: 1 };
+const norm = (n: string) => n.toLowerCase().replace(/[^a-z]/g, '');
+// District names from the registry often carry an admin-type suffix the GIS layer omits
+// ("Dodoma Urban" vs "Dodoma"); strip it so the affected district still matches its polygon.
+const normDist = (n: string) => norm(n.replace(/\s+(urban|rural|municipal|city|town|dc|mc|tc)\b/gi, ''));
+const cleanName = (n: string) => n.replace(/\(.*\)/, '').trim();
+
 /**
  * Public landing page ("/") — 1:1 reproduction of portal/landing/v2.blade.php:
  * hero (brand + 3-slide slider + CTAs | live Tanzania map + status panel), then
@@ -116,8 +127,21 @@ const PUB_THUMBS = [
       box-shadow:0 12px 30px rgba(0,51,102,0.20); transition:transform .2s ease, box-shadow .2s ease; }
     .ll-qr:hover { transform:translateY(-3px); box-shadow:0 18px 40px rgba(0,51,102,0.26); }
     .ll-qr svg { width:108px; height:108px; display:block; }
-    .ll-qr-cap { font-size:.6rem; font-weight:800; letter-spacing:.05em; color:#0d3b66; }
+    .ll-qr-cap { font-size:.8rem; font-weight:800; letter-spacing:.05em; color:#0d3b66; }
     @media (max-width:575px){ .ll-qr { left:12px; bottom:12px; } .ll-qr svg { width:86px; height:86px; } }
+    /* Landing-only placement for the shared popovers (classes live in portal-landing.css):
+       the Live-Monitoring panel hugs the map's bottom edge, so its previews open UPWARD and
+       right-align to stay inside .hero-right (overflow:hidden would clip any overhang). */
+    .map-status-panel .pp-pop { top:auto; bottom:calc(100% + 12px); left:auto; right:-6px; }
+    .map-status-panel .map-live-badge .pp-pop { left:-6px; right:auto; }
+    /* ≤767px the hero restacks: .hero-right becomes a 45vh map BELOW .hero-left, no longer running
+       under the fixed navbar (the 126px offsets would strand these mid-map), and .map-status-panel
+       spans the full width and wraps taller. Re-anchor the top overlays and retire the summary chip
+       (its totals + freshness are carried by the status-panel popovers) to avoid overlap. */
+    @media (max-width: 767px) {
+      .hero-map-back, .hero-threats-strip { top: 14px !important; }
+      .hero-live-summary { display: none !important; }
+    }
   `],
 })
 export class LandingComponent implements OnDestroy {
@@ -203,6 +227,40 @@ export class LandingComponent implements OnDestroy {
   /** Active map filter driven by the Live-Monitoring counters. */
   sevFilter = signal<'all' | 'Emergency' | 'Warning' | 'Watch' | 'Incidents'>('all');
   private alertMarkers: any[] = [];
+  /** "HH:MM" of the last live payload — freshness chip + LIVE badge popover. */
+  lastUpdated = signal('');
+  /** Live per-area tallies feeding the map hover tooltips; renderAlerts() rebuilds them. */
+  private regionTally = new Map<string, { sev: string | null; warnings: number; incidents: number }>();
+  private districtTally = new Map<string, { sev: string | null; warnings: number }>();
+
+  /** Live-Monitoring severity counters — drives the stat chips and their hover previews. */
+  readonly statDefs: { k: 'Emergency' | 'Warning' | 'Watch'; lbl: string; color: string; sev: string }[] = [
+    { k: 'Emergency', lbl: 'lbl_emergency', color: '#ef4444', sev: 'sev-emergency' },
+    { k: 'Warning', lbl: 'lbl_warning', color: '#fb923c', sev: 'sev-warning' },
+    { k: 'Watch', lbl: 'lbl_watch', color: '#f59e0b', sev: 'sev-watch' },
+  ];
+  lc = incidentLifecycle;
+
+  statCount(k: 'Emergency' | 'Warning' | 'Watch'): number {
+    const s = this.data()?.stats;
+    return k === 'Emergency' ? (s?.emergencyCount ?? 0) : k === 'Warning' ? (s?.warningCount ?? 0) : (s?.watchCount ?? 0);
+  }
+  /** The REAL warnings behind a Live-Monitoring counter (the popover previews the first 5). */
+  statWarnings(k: 'Emergency' | 'Warning' | 'Watch'): PortalWarning[] {
+    return (this.data()?.warnings ?? []).filter(w => w.severityLevel === k);
+  }
+  /** Items behind the counter that the 5-row preview cannot show ("+N more"). */
+  statMore(k: 'Emergency' | 'Warning' | 'Watch'): number {
+    return Math.max(0, this.statCount(k) - Math.min(5, this.statWarnings(k).length));
+  }
+  incidentsMore(): number { return Math.max(0, (this.data()?.incidents?.length ?? 0) - 5); }
+
+  /** Severity name in the visitor's language (popovers, tooltips, map popups). */
+  sevName(sev: string): string {
+    if (this.L.lang() !== 'sw') { return sev; }
+    return sev === 'Emergency' ? 'Dharura' : sev === 'Warning' ? 'Onyo' : sev === 'Watch' ? 'Angalizo' : sev;
+  }
+  sevClass = (sev: string) => sev === 'Emergency' ? 'sev-emergency' : sev === 'Warning' ? 'sev-warning' : 'sev-watch';
 
   constructor() {
     document.title = 'e-MAAFA — Disaster Management Information System';
@@ -213,6 +271,7 @@ export class LandingComponent implements OnDestroy {
       .subscribe(r => this.threats.set(r.threats));
     this.portalData.landing$.subscribe((d: LandingPayload) => {
       this.data.set(d);
+      this.stampUpdated();
       setTimeout(() => this.initMap(d), 0);
     });
     // Hero background crossfade + slider auto-advance (same cadence as the source page)
@@ -305,7 +364,10 @@ export class LandingComponent implements OnDestroy {
     // each region is filled with the colour of the highest active alert affecting it.
     const fills = this.buildAlertFills(d);
     this.drill = addAdminDrilldown(this.map, this.http, fills.regionFill,
-      { districtFill: fills.districtFill, districtRegions: fills.districtRegions });
+      { districtFill: fills.districtFill, districtRegions: fills.districtRegions,
+        // Rich hover tooltips over the same live data as the choropleth (re-read on every hover).
+        regionTip: (r: string) => this.regionTipHtml(r),
+        districtTip: (r: string, dd: string) => this.districtTipHtml(r, dd) });
     this.map.on('zoomend', () => this.drilled.set(this.map.getZoom() > 6));
     this.renderAlerts();
   }
@@ -319,15 +381,16 @@ export class LandingComponent implements OnDestroy {
     if (!this.map || typeof L === 'undefined') { return; }
     this.alertMarkers.forEach(m => this.map.removeLayer(m));
     this.alertMarkers = [];
+    this.rebuildAreaTallies();
     const d = this.data();
     if (!d) { return; }
     const f = this.sevFilter();
-    const sevColor: Record<string, string> = { Emergency: '#ef4444', Warning: '#f59e0b', Watch: '#3b82f6' };
+    const popOpts = { className: 'map-pop', maxWidth: 360 };
     if (f === 'all' || f === 'Emergency' || f === 'Warning' || f === 'Watch') {
       for (const w of d.warnings) {
         if (w.latitude == null || w.longitude == null) { continue; }
         if (f !== 'all' && w.severityLevel !== f) { continue; }
-        const color = sevColor[w.severityLevel] ?? '#3b82f6';
+        const color = SEV_COLOR[w.severityLevel] ?? '#3b82f6';
         const icon = L.divIcon({
           className: 'warning-divicon', iconSize: [18, 18], iconAnchor: [9, 9],
           html: `<div class="warning-marker-icon" style="width:18px;height:18px;background:${color};color:${color};">`
@@ -336,28 +399,16 @@ export class LandingComponent implements OnDestroy {
         });
         this.alertMarkers.push(L.marker([w.latitude, w.longitude], { icon })
           .addTo(this.map)
-          .bindPopup(`<strong>${this.escHtml(w.severityLevel)}: ${this.escHtml(w.hazardType)}</strong><br>${this.escHtml(w.alertMessage ?? '')}`
-            + `<br><small>${this.escHtml(w.affectedRegions ?? '')}</small>`
-            + (w.bulletinDescription ? `<div style="margin-top:6px;font-size:0.82rem;color:#334155;">${this.escHtml(w.bulletinDescription)}</div>` : '')
-            + (w.bulletinUrl ? `<br><a href="${w.bulletinUrl}" target="_blank" rel="noopener">View bulletin (PDF)</a>` : '')));
+          .bindPopup(this.popWarning(w, color), popOpts));
       }
     }
     if (f === 'all' || f === 'Incidents') {
       for (const inc of d.incidents ?? []) {
         if (inc.latitude == null || inc.longitude == null) { continue; }
-        const lc = incidentLifecycle(inc.status);
-        const wf = (inc.workflowStatus || '').toLowerCase();
-        const vf = wf === 'draft' ? { t: 'Unverified', c: '#b45309' }
-          : wf === 'approved' ? { t: 'Verified', c: '#059669' }
-          : { t: 'Being verified', c: '#2563eb' };
         this.alertMarkers.push(L.circleMarker([inc.latitude, inc.longitude],
             { radius: 7, fillColor: '#7c3aed', color: '#fff', weight: 2, fillOpacity: 0.85, dashArray: '3' })
           .addTo(this.map)
-          .bindPopup(`<strong>INCIDENT: ${this.escHtml(inc.title)}</strong>`
-            + `<br>${this.escHtml(inc.severityLevel ?? '')} · <span style="color:${lc.color};font-weight:700;">${lc.label}</span>`
-            + ` · <span style="color:${vf.c};font-weight:700;">${vf.t}</span>`
-            + `<br><small>${this.escHtml(inc.regionName ?? '')}</small>`
-            + (inc.pinnedToMap ? `<br><a href="/incident/${inc.id}">View live status, response &amp; resources →</a>` : '')));
+          .bindPopup(this.popIncident(inc), popOpts));
       }
     }
     if (f === 'all') {
@@ -374,9 +425,7 @@ export class LandingComponent implements OnDestroy {
           });
           this.alertMarkers.push(L.marker([a.lat, a.lng], { icon: pulse })
             .addTo(this.map)
-            .bindPopup(`<strong>${this.escHtml(b.title)}</strong>`
-              + `<br><small>${this.escHtml(a.name)} · ${this.escHtml((a.level ?? '').replace('_', ' '))}</small>`
-              + `<br><a href="${b.pdfUrl}" target="_blank" rel="noopener">View bulletin (PDF)</a>`));
+            .bindPopup(this.popBulletin(b, ac, a), popOpts));
         }
         if (b.centroidLat == null || b.centroidLng == null) { continue; }
         const color = bSev[b.severity] ?? '#0d6efd';
@@ -384,14 +433,145 @@ export class LandingComponent implements OnDestroy {
           className: 'bulletin-divicon', iconSize: [22, 22], iconAnchor: [11, 11],
           html: `<div style="width:22px;height:22px;border-radius:6px;background:#fff;border:2px solid ${color};`
               + `display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.3);">`
-              + `<i class="fas fa-file-pdf" style="color:${color};font-size:11px;"></i></div>`,
+              + `<i class="fas fa-file-pdf" style="color:${color};font-size:12px;"></i></div>`,
         });
         this.alertMarkers.push(L.marker([b.centroidLat, b.centroidLng], { icon })
           .addTo(this.map)
-          .bindPopup(`<strong>${this.escHtml(b.title)}</strong>`
-            + `<br><a href="${b.pdfUrl}" target="_blank" rel="noopener">View bulletin (PDF)</a>`));
+          .bindPopup(this.popBulletin(b, color), popOpts));
       }
     }
+  }
+
+  /* --------------------- rich map popups (.map-pop cards) --------------------- */
+
+  private fmtNum(n: number): string { return (n ?? 0).toLocaleString('en-US'); }
+
+  /** Warning marker popup — severity-tinted banner, detail rows, bulletin action. */
+  private popWarning(w: PortalWarning, color: string): string {
+    const sw = this.L.lang() === 'sw';
+    const esc = (s: string | null | undefined) => this.escHtml(s);
+    const rows: string[] = [];
+    const area = (w.affectedRegions ?? '') + (w.affectedDistricts ? ' · ' + w.affectedDistricts : '');
+    if (area.trim()) { rows.push(`<div class="mp-row"><i class="fas fa-map-marker-alt"></i><span>${esc(area)}</span></div>`); }
+    if ((w.peopleAtRisk ?? 0) > 0) {
+      rows.push(`<div class="mp-row"><i class="fas fa-users"></i><span><b>${this.fmtNum(w.peopleAtRisk)}</b> ${sw ? 'watu hatarini' : 'people at risk'}</span></div>`);
+    }
+    if (w.alertMessage) { rows.push(`<div class="mp-row"><i class="fas fa-info-circle"></i><span>${esc(w.alertMessage)}</span></div>`); }
+    if (w.bulletinDescription) { rows.push(`<div class="mp-row"><i class="fas fa-file-alt"></i><span>${esc(w.bulletinDescription)}</span></div>`); }
+    const actions = w.bulletinUrl
+      ? `<div class="mp-actions"><a class="mp-btn" href="${esc(w.bulletinUrl)}" target="_blank" rel="noopener">`
+        + `<i class="fas fa-file-pdf"></i> ${sw ? 'Taarifa (PDF)' : 'Bulletin (PDF)'}</a></div>`
+      : '';
+    return `<div class="mp-head" style="background:${color};"><i class="fas fa-exclamation-triangle"></i> `
+      + `${esc(this.sevName(w.severityLevel))} · ${esc(w.hazardType)}</div>`
+      + `<div class="mp-body">${rows.join('')}</div>` + actions;
+  }
+
+  /** Incident marker popup — lifecycle + verification status, live-page action when pinned. */
+  private popIncident(inc: PortalIncident): string {
+    const sw = this.L.lang() === 'sw';
+    const esc = (s: string | null | undefined) => this.escHtml(s);
+    const lc = incidentLifecycle(inc.status);
+    const wf = (inc.workflowStatus || '').toLowerCase();
+    const vf = wf === 'draft' ? { t: sw ? 'Haijathibitishwa' : 'Unverified', c: '#b45309' }
+      : wf === 'approved' ? { t: sw ? 'Imethibitishwa' : 'Verified', c: '#059669' }
+      : { t: sw ? 'Inathibitishwa' : 'Being verified', c: '#2563eb' };
+    const rows: string[] = [];
+    if (inc.regionName) { rows.push(`<div class="mp-row"><i class="fas fa-map-marker-alt"></i><span>${esc(inc.regionName)}</span></div>`); }
+    if (inc.severityLevel) {
+      rows.push(`<div class="mp-row"><i class="fas fa-exclamation-triangle"></i><span>${esc(this.sevName(inc.severityLevel))}</span></div>`);
+    }
+    rows.push(`<div class="mp-row"><i class="fas fa-tasks"></i><span>`
+      + `<span style="color:${lc.color};font-weight:700;">${lc.label}</span> · `
+      + `<span style="color:${vf.c};font-weight:700;">${vf.t}</span></span></div>`);
+    const actions = inc.pinnedToMap
+      ? `<div class="mp-actions"><a class="mp-btn" href="/incident/${inc.id}">`
+        + `<i class="fas fa-satellite-dish"></i> ${sw ? 'Hali ya sasa na majibu' : 'Live status & response'}</a></div>`
+      : '';
+    return `<div class="mp-head" style="background:#7c3aed;"><i class="fas fa-bullhorn"></i> `
+      + `${sw ? 'TUKIO' : 'INCIDENT'} · ${esc(inc.title)}</div>`
+      + `<div class="mp-body">${rows.join('')}</div>` + actions;
+  }
+
+  /** EOCC bulletin popup (centroid PDF pin or a blinking area point). */
+  private popBulletin(b: PortalBulletin, color: string, area?: PortalAreaPoint): string {
+    const sw = this.L.lang() === 'sw';
+    const esc = (s: string | null | undefined) => this.escHtml(s);
+    const rows: string[] = [];
+    if (area) {
+      rows.push(`<div class="mp-row"><i class="fas fa-map-marker-alt"></i><span>${esc(area.name)}`
+        + ` · ${esc((area.level ?? '').replace('_', ' '))}</span></div>`);
+    }
+    if (b.hazardType) { rows.push(`<div class="mp-row"><i class="fas fa-exclamation-triangle"></i><span>${esc(b.hazardType)}</span></div>`); }
+    rows.push(`<div class="mp-row"><i class="fas fa-broadcast-tower"></i><span>`
+      + `${sw ? 'Taarifa rasmi ya EOCC/PMO' : 'Official EOCC/PMO bulletin'}</span></div>`);
+    const actions = b.pdfUrl
+      ? `<div class="mp-actions"><a class="mp-btn" href="${esc(b.pdfUrl)}" target="_blank" rel="noopener">`
+        + `<i class="fas fa-file-pdf"></i> ${sw ? 'Taarifa (PDF)' : 'Bulletin (PDF)'}</a></div>`
+      : '';
+    return `<div class="mp-head" style="background:${color};"><i class="fas fa-file-pdf"></i> ${esc(b.title)}</div>`
+      + `<div class="mp-body">${rows.join('')}</div>` + actions;
+  }
+
+  /* ---------------- choropleth hover tooltips (region / district) ---------------- */
+
+  /** Recount active warnings/incidents per region + district for the hover tooltips. */
+  private rebuildAreaTallies(): void {
+    this.regionTally.clear();
+    this.districtTally.clear();
+    const d = this.data();
+    if (!d) { return; }
+    const bumpRegion = (name: string | null, sev: string | null, kind: 'warning' | 'incident') => {
+      const key = norm(name ?? '');
+      if (!key) { return; }
+      const t = this.regionTally.get(key) ?? { sev: null, warnings: 0, incidents: 0 };
+      if (kind === 'warning') { t.warnings++; } else { t.incidents++; }
+      if (sev && (SEV_RANK[sev] ?? 0) > (t.sev ? (SEV_RANK[t.sev] ?? 0) : 0)) { t.sev = sev; }
+      this.regionTally.set(key, t);
+    };
+    for (const w of d.warnings ?? []) {
+      for (const r of (w.affectedRegions ?? '').split(/[,;]/)) {
+        if (cleanName(r)) { bumpRegion(cleanName(r), w.severityLevel, 'warning'); }
+      }
+      const district = cleanName(w.affectedDistricts ?? '');
+      if (district) {
+        const key = norm(cleanName(w.affectedRegions ?? '')) + '|' + normDist(district);
+        const t = this.districtTally.get(key) ?? { sev: null, warnings: 0 };
+        t.warnings++;
+        if (w.severityLevel && (SEV_RANK[w.severityLevel] ?? 0) > (t.sev ? (SEV_RANK[t.sev] ?? 0) : 0)) { t.sev = w.severityLevel; }
+        this.districtTally.set(key, t);
+      }
+    }
+    for (const inc of d.incidents ?? []) { bumpRegion(inc.regionName, inc.severityLevel, 'incident'); }
+  }
+
+  /** Bilingual "2 warnings · 1 incident" (or empty when nothing is active). */
+  private tallyLine(warnings: number, incidents: number): string {
+    const sw = this.L.lang() === 'sw';
+    const parts: string[] = [];
+    if (warnings) { parts.push(sw ? (warnings === 1 ? 'onyo 1' : `maonyo ${warnings}`) : `${warnings} warning${warnings === 1 ? '' : 's'}`); }
+    if (incidents) { parts.push(sw ? (incidents === 1 ? 'tukio 1' : `matukio ${incidents}`) : `${incidents} incident${incidents === 1 ? '' : 's'}`); }
+    return parts.join(' · ');
+  }
+
+  private tipHtml(name: string, sev: string | null, warnings: number, incidents: number): string {
+    const sw = this.L.lang() === 'sw';
+    const head = `<b style="font-size:0.95rem;">${this.escHtml(name)}</b>`;
+    if (!warnings && !incidents) {
+      return `${head}<br><span style="color:#64748b;font-weight:500;">${sw ? 'Hakuna tahadhari kwa sasa' : 'No active alerts'}</span>`;
+    }
+    const dot = sev ? `<span style="color:${SEV_COLOR[sev] ?? '#64748b'};">●</span> ${this.escHtml(this.sevName(sev))} · ` : '';
+    return `${head}<br>${dot}${this.tallyLine(warnings, incidents)}`;
+  }
+
+  private regionTipHtml(region: string): string {
+    const t = this.regionTally.get(norm(region));
+    return this.tipHtml(region, t?.sev ?? null, t?.warnings ?? 0, t?.incidents ?? 0);
+  }
+
+  private districtTipHtml(region: string, district: string): string {
+    const t = this.districtTally.get(norm(region) + '|' + normDist(district));
+    return this.tipHtml(district, t?.sev ?? null, t?.warnings ?? 0, 0);
   }
 
   /** Click a Live-Monitoring counter to filter the map; click the active one again to clear. */
@@ -416,8 +596,15 @@ export class LandingComponent implements OnDestroy {
   private refreshLive(): void {
     this.http.get<LandingPayload>('/api/v1/portal/landing').subscribe(d => {
       this.data.set(d);
+      this.stampUpdated();
       this.renderAlerts();
     });
+  }
+
+  /** Records the live payload's arrival time as "HH:MM" for the freshness chip / LIVE popover. */
+  private stampUpdated(): void {
+    const now = new Date();
+    this.lastUpdated.set(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
   }
 
   dismissIntro(): void {
@@ -435,14 +622,7 @@ export class LandingComponent implements OnDestroy {
    * by several alerts takes the most severe colour (Emergency > Warning > Watch).
    */
   private buildAlertFills(d: LandingPayload): { regionFill: RegionFill; districtFill: DistrictFill; districtRegions: string[] } {
-    const SEV_COLOR: Record<string, string> = { Emergency: '#ef4444', Warning: '#f59e0b', Watch: '#3b82f6',
-      Major: '#ef4444', Moderate: '#f59e0b', Minor: '#3b82f6' };
-    const SEV_RANK: Record<string, number> = { Emergency: 3, Major: 3, Warning: 2, Moderate: 2, Watch: 1, Minor: 1 };
-    const norm = (n: string) => n.toLowerCase().replace(/[^a-z]/g, '');
-    // District names from the registry often carry an admin-type suffix the GIS layer omits
-    // ("Dodoma Urban" vs "Dodoma"); strip it so the affected district still matches its polygon.
-    const normDist = (n: string) => norm(n.replace(/\s+(urban|rural|municipal|city|town|dc|mc|tc)\b/gi, ''));
-    const clean = (n: string) => n.replace(/\(.*\)/, '').trim();
+    const clean = cleanName;
     const bestRegion = new Map<string, string>();        // normRegion -> severity (region-level only)
     const bestDistrict = new Map<string, string>();      // normRegion|normDistrict -> severity
     const districtRegions = new Set<string>();           // region names that carry a district-level alert

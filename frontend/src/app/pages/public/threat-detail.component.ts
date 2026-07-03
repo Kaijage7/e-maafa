@@ -37,8 +37,8 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
   standalone: true,
   imports: [RouterLink],
   template: `
-    <div class="v2-page-content" style="max-width: 1080px; margin: 0 auto; padding: 7rem 1.5rem 4rem;">
-      <a routerLink="/portal" style="color:#60a5fa;text-decoration:none;font-size:0.85rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_portal') }}</a>
+    <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 1.5rem 4rem;">
+      <a routerLink="/portal" style="color:#60a5fa;text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_portal') }}</a>
 
       @if (threat(); as t) {
         <!-- ===== Threat header ===== -->
@@ -49,15 +49,19 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
           <div style="flex:1;min-width:240px;">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0;">{{ t.name }}</h1>
-              <span [style.background]="sevColor(t.severity)" style="color:#fff;font-size:0.66rem;font-weight:800;padding:3px 12px;border-radius:12px;text-transform:uppercase;">{{ t.severity }}</span>
+              <span [style.background]="sevColor(t.severity)" style="color:#fff;font-size:0.8rem;font-weight:800;padding:3px 12px;border-radius:12px;text-transform:uppercase;">{{ t.severity }}</span>
             </div>
-            <p style="color:var(--text-secondary, #64748b);margin:0.25rem 0 0;font-size:0.88rem;">
+            <p style="color:var(--text-secondary, #64748b);margin:0.25rem 0 0;font-size:0.9rem;">
               <i class="fas fa-broadcast-tower me-1"></i>{{ L.t('threat_source') }}: <strong>{{ t.sourceAgency }}</strong>
               <span class="ms-3"><i class="fas fa-chart-line me-1"></i>{{ t.trendLabel }}</span>
             </p>
           </div>
+          <button type="button" (click)="printPage()"
+                  style="display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 1.1rem;background:#0d3b66;color:#fff;border:none;border-radius:8px;font-size:0.95rem;font-weight:700;cursor:pointer;">
+            <i class="fas fa-print"></i> {{ L.lang() === 'sw' ? 'Chapisha / Hifadhi' : 'Print / Save' }}
+          </button>
         </div>
-        <p style="font-size:0.95rem;color:var(--text-secondary, #475569);line-height:1.8;max-width:820px;">
+        <p style="font-size:1.05rem;color:var(--text-secondary, #475569);line-height:1.8;max-width:820px;">
           {{ L.lang() === 'sw' ? t.descriptionSw : t.descriptionEn }}
         </p>
 
@@ -66,7 +70,7 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
           <figure style="margin:1rem 0 0;max-width:680px;">
             <img [src]="'/api/storage/' + t.graphicPath" [alt]="t.name + ' outlook graphic'"
                  style="width:100%;border-radius:14px;border:1px solid rgba(0,0,0,0.08);">
-            <figcaption style="font-size:0.72rem;color:#94a3b8;margin-top:4px;">{{ L.t('threat_source') }}: {{ t.sourceAgency }}</figcaption>
+            <figcaption style="font-size:0.9rem;color:#94a3b8;margin-top:4px;">{{ L.t('threat_source') }}: {{ t.sourceAgency }}</figcaption>
           </figure>
         }
 
@@ -77,17 +81,17 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
         <div style="display:grid;gap:0.7rem;">
           @for (u of updates(); track u.title) {
             <div style="display:flex;gap:14px;align-items:flex-start;border:1px solid rgba(0,0,0,0.08);border-radius:14px;background:var(--card-bg, #fff);padding:1rem 1.1rem;">
-              <span [style.background]="updateColor(u.status)" style="flex-shrink:0;color:#fff;font-size:0.62rem;font-weight:800;padding:3px 10px;border-radius:10px;margin-top:2px;">{{ u.status }}</span>
+              <span [style.background]="updateColor(u.status)" style="flex-shrink:0;color:#fff;font-size:0.8rem;font-weight:800;padding:3px 10px;border-radius:10px;margin-top:2px;">{{ u.status }}</span>
               <div>
-                <div style="font-size:0.95rem;font-weight:700;color:var(--text-primary, #2C3E50);">{{ u.title }}</div>
-                @if (u.detail) { <div style="font-size:0.84rem;color:var(--text-secondary, #64748b);line-height:1.6;margin-top:3px;">{{ u.detail }}</div> }
+                <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary, #2C3E50);">{{ u.title }}</div>
+                @if (u.detail) { <div style="font-size:0.9rem;color:var(--text-secondary, #64748b);line-height:1.6;margin-top:3px;">{{ u.detail }}</div> }
                 @if (u.startsOn) {
-                  <div style="font-size:0.74rem;color:#94a3b8;margin-top:4px;"><i class="fas fa-calendar me-1"></i>{{ u.startsOn }}@if (u.endsOn) { — {{ u.endsOn }} }</div>
+                  <div style="font-size:0.9rem;color:#94a3b8;margin-top:4px;"><i class="fas fa-calendar me-1"></i>{{ u.startsOn }}@if (u.endsOn) { — {{ u.endsOn }} }</div>
                 }
               </div>
             </div>
           } @empty {
-            <p style="color:var(--text-secondary, #64748b);font-size:0.88rem;">{{ L.t('threat_interventions_announced_here') }}</p>
+            <p style="color:var(--text-secondary, #64748b);font-size:0.95rem;">{{ L.t('threat_interventions_announced_here') }}</p>
           }
         </div>
 
@@ -95,7 +99,7 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
         <h4 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:2rem 0 0.4rem;">
           <i class="fas fa-map-marked-alt me-2" style="color:#003366;"></i>{{ L.t('threat_stakeholder_plans') }}
         </h4>
-        <p style="color:var(--text-secondary, #64748b);font-size:0.85rem;margin-bottom:1rem;">
+        <p style="color:var(--text-secondary, #64748b);font-size:1.05rem;margin-bottom:1rem;">
           {{ L.t('threat_stakeholder_plans_intro') }}
         </p>
         <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:1rem;align-items:start;">
@@ -104,14 +108,14 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
             @for (p of plans(); track p.planTitle + p.stakeholderName) {
               <div style="border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:var(--card-bg, #fff);padding:0.8rem 0.9rem;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <span style="background:rgba(0,51,102,0.08);color:#003366;font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:8px;text-transform:uppercase;">{{ p.stakeholderType }}</span>
-                  <span [style.color]="planStatusColor(p.status)" style="font-size:0.68rem;font-weight:700;margin-left:auto;">{{ p.status }}</span>
+                  <span style="background:rgba(0,51,102,0.08);color:#003366;font-size:0.8rem;font-weight:700;padding:2px 8px;border-radius:8px;text-transform:uppercase;">{{ p.stakeholderType }}</span>
+                  <span [style.color]="planStatusColor(p.status)" style="font-size:0.8rem;font-weight:700;margin-left:auto;">{{ p.status }}</span>
                 </div>
-                <div style="font-size:0.86rem;font-weight:700;color:var(--text-primary, #2C3E50);margin:0.35rem 0 0.1rem;">{{ p.planTitle }}</div>
-                <div style="font-size:0.75rem;color:var(--text-secondary, #64748b);">{{ p.stakeholderName }}{{ p.region ? ' · ' + p.region : '' }} — {{ p.submittedOn }}</div>
+                <div style="font-size:1rem;font-weight:700;color:var(--text-primary, #2C3E50);margin:0.35rem 0 0.1rem;">{{ p.planTitle }}</div>
+                <div style="font-size:0.9rem;color:var(--text-secondary, #64748b);">{{ p.stakeholderName }}{{ p.region ? ' · ' + p.region : '' }} — {{ p.submittedOn }}</div>
               </div>
             } @empty {
-              <div style="text-align:center;color:var(--text-secondary, #64748b);padding:1.6rem;border:1px dashed rgba(0,0,0,0.12);border-radius:12px;font-size:0.85rem;">
+              <div style="text-align:center;color:var(--text-secondary, #64748b);padding:1.6rem;border:1px dashed rgba(0,0,0,0.12);border-radius:12px;font-size:0.95rem;">
                 {{ L.t('threat_no_plans_yet') }}
               </div>
             }
@@ -140,7 +144,7 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
                 </label>
               </div>
             </div>
-            @if (planError()) { <div style="color:#dc2626;font-size:0.82rem;margin-top:0.6rem;">{{ planError() }}</div> }
+            @if (planError()) { <div style="color:#dc2626;font-size:0.9rem;margin-top:0.6rem;">{{ planError() }}</div> }
             <button class="btn-gold" style="margin-top:0.9rem;" [disabled]="!fTitle().trim() || !fName().trim() || planSaving()" (click)="submitPlan()">
               <i class="fas" [class.fa-paper-plane]="!planSaving()" [class.fa-spinner]="planSaving()" [class.fa-spin]="planSaving()"></i>
               {{ planSaving() ? L.t('threat_submitting') : L.t('threat_submit_to_pmo') }}
@@ -148,7 +152,7 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
           } @else {
             <div style="display:flex;align-items:center;gap:12px;color:#059669;">
               <i class="fas fa-check-circle" style="font-size:1.6rem;"></i>
-              <div style="font-size:0.9rem;font-weight:600;">{{ L.t('threat_plan_received') }}</div>
+              <div style="font-size:1rem;font-weight:600;">{{ L.t('threat_plan_received') }}</div>
             </div>
           }
         </div>
@@ -159,10 +163,10 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
             <i class="fas fa-history me-2" style="color:#003366;"></i>{{ L.t('threat_past_impacts') }}
           </h4>
           <!-- white-space:pre-line keeps the episode paragraphs (1997/98, 2023/24, financing) separated -->
-          <div style="border-left:4px solid #003366;background:rgba(0,51,102,0.04);border-radius:0 14px 14px 0;padding:1.1rem 1.3rem;font-size:0.9rem;color:var(--text-secondary, #475569);line-height:1.8;white-space:pre-line;">
+          <div style="border-left:4px solid #003366;background:rgba(0,51,102,0.04);border-radius:0 14px 14px 0;padding:1.1rem 1.3rem;font-size:1rem;color:var(--text-secondary, #475569);line-height:1.8;white-space:pre-line;">
             {{ L.lang() === 'sw' ? (t.pastImpactsSw || t.pastImpactsEn) : t.pastImpactsEn }}
           </div>
-          <a routerLink="/education" style="display:inline-block;margin-top:0.8rem;color:#60a5fa;font-size:0.85rem;text-decoration:none;">
+          <a routerLink="/education" style="display:inline-block;margin-top:0.8rem;color:#60a5fa;font-size:0.9rem;text-decoration:none;">
             {{ L.t('lbl_education') }} <i class="fas fa-arrow-right ms-1" style="font-size:0.7rem;"></i>
           </a>
         }
@@ -220,6 +224,9 @@ export class ThreatDetailComponent {
         window.scrollTo(0, 0);
       });
   }
+
+  /** Print / save the threat page (browser print-to-PDF). */
+  printPage(): void { window.print(); }
 
   sevColor = (sev: string) => SEVERITY_COLORS[sev] ?? '#2563eb';
   updateColor = (status: string) => UPDATE_COLORS[status] ?? '#6b7280';

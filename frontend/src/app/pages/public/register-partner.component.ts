@@ -16,28 +16,31 @@ const TYPES = ['Government Institution', 'Non-Governmental Organization (NGO)', 
   standalone: true,
   imports: [RouterLink],
   styles: [`
-    .rp-wrap { max-width: 780px; margin: 0 auto; padding: 6.5rem 1.25rem 4rem; }
-    .rp-head { background: linear-gradient(135deg, #0d3b66 0%, #08243f 100%); color: #fff; border-radius: 18px 18px 0 0; padding: 1.6rem 1.6rem 1.4rem; position: relative; overflow: hidden; }
+    .rp-wrap { max-width: min(1560px, 94vw); margin: 0 auto; padding: 6.5rem 1.25rem 4rem; }
+    .rp-inner { max-width: 860px; margin: 0 auto; }
+    .rp-head { background: #0d3b66; color: #fff; border-radius: 18px 18px 0 0; padding: 1.6rem 1.6rem 1.4rem; position: relative; overflow: hidden; }
     .rp-head .seal { position:absolute; right:-18px; top:-18px; font-size:7rem; opacity:.08; }
-    .rp-eyebrow { font-size:.68rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:#f0b429; }
+    .rp-eyebrow { font-size:.8rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase; color:#f0b429; }
     .rp-title { font-size:1.5rem; font-weight:800; margin:.35rem 0 .3rem; line-height:1.15; }
-    .rp-sub { font-size:.86rem; opacity:.9; max-width:36rem; }
+    .rp-sub { font-size:1rem; opacity:.9; max-width:40rem; }
     .rp-card { background:#fff; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 18px 18px; padding:1.5rem 1.6rem 1.7rem; box-shadow:0 10px 30px rgba(13,59,102,.08); }
-    .rp-section { font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#0d3b66; margin:.4rem 0 .65rem; padding-bottom:.35rem; border-bottom:2px solid #eef2f7; }
+    .rp-section { font-size:.8rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#0d3b66; margin:.4rem 0 .65rem; padding-bottom:.35rem; border-bottom:2px solid #eef2f7; }
     .rp-grid { display:grid; grid-template-columns:1fr 1fr; gap:.85rem; }
     @media (max-width:560px){ .rp-grid { grid-template-columns:1fr; } }
-    .rp-field label { display:block; font-size:.74rem; font-weight:700; color:#334155; margin-bottom:.28rem; }
+    .rp-field label { display:block; font-size:.9rem; font-weight:700; color:#334155; margin-bottom:.28rem; }
     .rp-field label .req { color:#dc2626; }
     .rp-field .form-control, .rp-field select.form-control { width:100%; }
-    .rp-submit { width:100%; justify-content:center; margin-top:1.1rem; font-size:.95rem; padding:.7rem; }
-    .rp-note { font-size:.72rem; color:#94a3b8; text-align:center; margin:.7rem 0 0; }
+    .rp-submit { width:100%; justify-content:center; margin-top:1.1rem; font-size:.95rem; padding:.7rem; min-height:42px; }
+    .rp-note { font-size:.8rem; color:#94a3b8; text-align:center; margin:.7rem 0 0; }
     .rp-steps { display:flex; gap:.5rem; justify-content:center; margin:1.2rem 0 .2rem; flex-wrap:wrap; }
-    .rp-step { font-size:.74rem; color:#475569; background:#f1f5f9; border-radius:30px; padding:.3rem .8rem; }
+    .rp-step { font-size:.9rem; color:#475569; background:#f1f5f9; border-radius:30px; padding:.3rem .8rem; }
     .rp-done { text-align:center; background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:2.6rem 1.6rem; box-shadow:0 10px 30px rgba(13,59,102,.08); }
   `],
   template: `
     <div class="rp-wrap">
-      <a routerLink="/" style="color:#0d3b66;text-decoration:none;font-size:.82rem;font-weight:600;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
+      <!-- Full-width band; the form itself stays at a readable width -->
+      <div class="rp-inner">
+      <a routerLink="/" style="color:#0d3b66;text-decoration:none;font-size:.9rem;font-weight:600;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
 
       @if (!done()) {
         <div class="rp-head" style="margin-top:.7rem;">
@@ -89,7 +92,7 @@ const TYPES = ['Government Institution', 'Non-Governmental Organization (NGO)', 
             </div>
           </div>
 
-          @if (error()) { <div style="color:#dc2626;font-size:.84rem;margin-top:.9rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:.55rem .75rem;"><i class="fas fa-circle-exclamation me-1"></i>{{ error() }}</div> }
+          @if (error()) { <div style="color:#dc2626;font-size:.9rem;margin-top:.9rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:.55rem .75rem;"><i class="fas fa-circle-exclamation me-1"></i>{{ error() }}</div> }
           <button class="btn-gold rp-submit" [disabled]="!valid() || saving()" (click)="submit()">
             <i class="fas" [class.fa-paper-plane]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i>
             {{ saving() ? 'Submitting registration…' : 'Submit registration' }}
@@ -114,6 +117,7 @@ const TYPES = ['Government Institution', 'Non-Governmental Organization (NGO)', 
           <a routerLink="/" class="btn-outline-gold" style="margin-top:1.3rem;justify-content:center;display:inline-flex;"><i class="fas fa-house me-1"></i> Back to home</a>
         </div>
       }
+      </div>
     </div>
   `,
 })

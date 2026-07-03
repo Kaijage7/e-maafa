@@ -44,7 +44,7 @@ interface IndexResponse {
     .ctx-item.warning { color: #b45309; }
     .ctx-item i { width: 14px; font-size: 0.7rem; }
     .ctx-divider { height: 1px; background: rgba(0,0,0,0.05); margin: 3px 6px; }
-    .pagination-wrap { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; font-size: 0.78rem; color: var(--text-light); }
+    .pagination-wrap { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; font-size: 0.8rem; color: var(--text-light); }
     .page-links { display: flex; gap: 0.25rem; }
     .page-links a, .page-links span { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 8px; text-decoration: none; color: var(--text-mid); cursor: pointer; }
     .page-links span.active { background: #0891b2; color: #fff; font-weight: 700; }
@@ -275,10 +275,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

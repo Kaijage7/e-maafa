@@ -46,7 +46,7 @@ interface Agency {
                       <td><div class="r-title">{{ a.name }}</div>@if (a.acronym) { <div class="r-subtitle">{{ a.acronym }}</div> }</td>
                       <td><span class="r-badge" style="background:rgba(0,51,102,0.08);color:#003366;">{{ a.agencyType }}</span></td>
                       <td style="font-size:0.8rem;color:var(--text-mid);max-width:340px;">{{ (a.mandate || '-').slice(0, 90) }}</td>
-                      <td style="font-size:0.78rem;">@if (a.website) { <a [href]="a.website" target="_blank" style="color:#2563eb;">{{ a.website.replace('https://','') }}</a> } @else { - }</td>
+                      <td style="font-size:0.8rem;">@if (a.website) { <a [href]="a.website" target="_blank" style="color:#2563eb;">{{ a.website.replace('https://','') }}</a> } @else { - }</td>
                       <td><span class="r-badge {{ a.isActive ? 'badge-approved' : 'badge-rejected' }}">{{ a.isActive ? 'Active' : 'Inactive' }}</span></td>
                       <td>
                         <div class="ctx-wrap">
@@ -69,7 +69,7 @@ interface Agency {
 
     @if (editorOpen()) {
       <div style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1500;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="editorOpen.set(false)">
-        <div style="background:#fff;border-radius:16px;max-width:640px;width:100%;padding:1.3rem 1.4rem;" (click)="$event.stopPropagation()">
+        <div style="background:#fff;border-radius:12px;border:1px solid var(--border);max-width:640px;width:100%;padding:1.3rem 1.4rem;" (click)="$event.stopPropagation()">
           <h5 style="font-weight:800;margin-bottom:1rem;">{{ editId() ? 'Edit Agency' : 'New Agency' }}</h5>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
             <input class="form-control" placeholder="Agency name *" [value]="fName()" (input)="fName.set($any($event.target).value)">
@@ -84,7 +84,7 @@ interface Agency {
           <textarea class="form-control" rows="3" placeholder="Mandate description" style="margin-top:0.75rem;width:100%;" [value]="fMandate()" (input)="fMandate.set($any($event.target).value)"></textarea>
           @if (error()) { <div style="color:#dc2626;font-size:0.82rem;margin-top:0.6rem;">{{ error() }}</div> }
           <div style="display:flex;justify-content:flex-end;gap:0.6rem;margin-top:1rem;">
-            <button type="button" style="border:1px solid var(--border);background:#fff;border-radius:9px;padding:0.5rem 1rem;cursor:pointer;" (click)="editorOpen.set(false)">Cancel</button>
+            <button class="btn" type="button" (click)="editorOpen.set(false)">Cancel</button>
             <button class="btn-add" type="button" [disabled]="!fName().trim() || saving()" (click)="save()">
               <i class="fas" [class.fa-save]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i> {{ saving() ? 'Saving…' : 'Save' }}
             </button>

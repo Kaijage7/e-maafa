@@ -135,17 +135,17 @@ interface Ward { id: number; name: string; wardCode: string | null; isActive: bo
     .node { border:1px solid var(--border); border-radius:9px; padding:0.5rem 0.7rem; cursor:pointer; position:relative; }
     .node:hover { background:rgba(13,110,253,0.03); } .node.sel { border-color:#0d6efd; background:rgba(13,110,253,0.06); }
     .node .nm { font-weight:600; font-size:0.86rem; color:var(--text-dark); }
-    .node .sub { font-size:0.72rem; color:var(--text-light); margin-top:1px; }
-    .code { font-size:0.6rem; font-weight:700; background:rgba(124,58,237,0.1); color:#7c3aed; border-radius:6px; padding:1px 6px; margin-left:4px; }
+    .node .sub { font-size:0.8rem; color:var(--text-light); margin-top:1px; }
+    .code { font-size:0.78rem; font-weight:700; background:rgba(124,58,237,0.1); color:#7c3aed; border-radius:6px; padding:1px 6px; margin-left:4px; }
     .node .acts { position:absolute; right:8px; top:8px; display:flex; gap:2px; }
     /* Anchor the row action menu under its trigger (the global .ctx-menu is position:fixed and detaches). */
     .ctx-menu { position:absolute; top:100%; right:0; }
     .addbtn { border:1px dashed var(--border); background:transparent; border-radius:9px; padding:0.45rem; cursor:pointer; color:var(--text-mid); font-size:0.8rem; margin-top:4px; }
     .muted { color:var(--text-light); font-size:0.82rem; padding:0.6rem 0; }
-    .f-lbl { font-size:0.68rem; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-light); display:block; margin:0.7rem 0 3px; }
+    .f-lbl { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-light); display:block; margin:0.7rem 0 3px; }
     .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1500; display:flex; align-items:flex-start; justify-content:center; padding:8vh 1rem; }
-    .modal-card { background:var(--card-bg,#fff); border-radius:16px; max-width:440px; width:100%; padding:1.4rem 1.5rem; }
-    .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:9px; padding:0.5rem 1rem; cursor:pointer; }
+    .modal-card { background:var(--card-bg,#fff); border-radius:12px; max-width:440px; width:100%; padding:1.4rem 1.5rem; }
+    .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:8px; padding:0.5rem 1rem; cursor:pointer; }
   `],
 })
 export class LocationManagementComponent {

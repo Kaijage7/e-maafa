@@ -84,7 +84,7 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
 
     <dmis-entity-taskings agency="tma"></dmis-entity-taskings>
 
-    <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.76rem;color:#64748b;text-decoration:none;margin:4px 0 10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
+    <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;color:#64748b;text-decoration:none;margin:4px 0 10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
 
     <!-- TMA also sees what every other warning entity has pushed -->
     <ew-cross-agency-panel current="tma"></ew-cross-agency-panel>
@@ -165,7 +165,7 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
 
       <div class="map-wrap">
         @if (crossRef().length) {
-          <label style="display:flex;align-items:center;gap:6px;font-size:0.74rem;color:#475569;margin-bottom:6px;cursor:pointer">
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:#475569;margin-bottom:6px;cursor:pointer">
             <input type="checkbox" [checked]="refOn()" (change)="refOn.set($any($event.target).checked); applyRef()">
             <i class="fas fa-diagram-project" style="color:#94a3b8"></i> Show what other entities issued — reference only
           </label>
@@ -196,12 +196,12 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
     .day-tab { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; border: 1px solid var(--border); background: #fff; border-radius: 10px; padding: 0.4rem 0.8rem; cursor: pointer; position: relative; min-width: 96px; }
     .day-tab.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0,51,102,0.1); }
     .day-n { font-weight: 700; font-size: 0.8rem; color: var(--text-dark); }
-    .day-d { font-size: 0.7rem; color: var(--text-mid); }
-    .day-badge { position: absolute; top: -6px; right: -6px; background: var(--primary); color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 0.66rem; display: flex; align-items: center; justify-content: center; }
+    .day-d { font-size: 0.75rem; color: var(--text-mid); }
+    .day-badge { position: absolute; top: -6px; right: -6px; background: var(--primary); color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; }
     .ew-grid { display: grid; grid-template-columns: 360px 1fr; gap: 1rem; align-items: start; }
     .haz-panel { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 0.9rem; max-height: calc(100vh - 230px); overflow-y: auto; }
     .haz-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--text-dark); margin-bottom: 0.7rem; font-size: 0.9rem; }
-    .haz-add { border: 0; background: var(--primary); color: #fff; border-radius: 8px; padding: 0.3rem 0.6rem; font-size: 0.76rem; cursor: pointer; }
+    .haz-add { border: 0; background: var(--primary); color: #fff; border-radius: 8px; padding: 0.3rem 0.6rem; font-size: 0.78rem; cursor: pointer; }
     .haz-card { border: 1px solid var(--border); border-radius: 12px; padding: 0.6rem; margin-bottom: 0.6rem; cursor: pointer; }
     .haz-card.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0,51,102,0.1); }
     .haz-card-top { display: flex; align-items: center; gap: 0.4rem; }
@@ -211,27 +211,27 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
     .haz-ico img { width: 100%; height: 100%; object-fit: contain; }
     .haz-map-icon { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); pointer-events: none; }
     .haz-del { border: 0; background: transparent; color: var(--text-light); cursor: pointer; }
-    .haz-foot { font-size: 0.74rem; color: var(--text-mid); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.35rem; }
-    .haz-active-tag { background: rgba(0,51,102,0.08); color: var(--primary); padding: 0.1rem 0.4rem; border-radius: 20px; font-size: 0.66rem; margin-left: auto; }
+    .haz-foot { font-size: 0.75rem; color: var(--text-mid); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.35rem; }
+    .haz-active-tag { background: rgba(0,51,102,0.08); color: var(--primary); padding: 0.1rem 0.4rem; border-radius: 20px; font-size: 0.75rem; margin-left: auto; }
     .haz-regions { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem; }
-    .haz-region { border-radius: 6px; padding: 0.12rem 0.4rem; font-size: 0.7rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+    .haz-region { border-radius: 6px; padding: 0.12rem 0.4rem; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.3rem; }
     .haz-region i { cursor: pointer; color: var(--text-light); font-size: 0.6rem; }
-    .haz-input { width: 100%; border: 1px solid var(--border); border-radius: 7px; padding: 0.35rem 0.5rem; font-size: 0.76rem; margin-top: 0.5rem; font-family: inherit; resize: vertical; }
+    .haz-input { width: 100%; border: 1px solid var(--border); border-radius: 7px; padding: 0.35rem 0.5rem; font-size: 0.8rem; margin-top: 0.5rem; font-family: inherit; resize: vertical; }
     .haz-two { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
-    .haz-two label { flex: 1; font-size: 0.68rem; color: var(--text-mid); display: flex; flex-direction: column; gap: 0.2rem; }
-    .haz-two select { border: 1px solid var(--border); border-radius: 7px; padding: 0.3rem; font-size: 0.76rem; }
-    .haz-empty { font-size: 0.78rem; color: var(--text-mid); padding: 0.6rem; background: rgba(0,0,0,0.02); border-radius: 8px; }
+    .haz-two label { flex: 1; font-size: 0.75rem; color: var(--text-mid); display: flex; flex-direction: column; gap: 0.2rem; }
+    .haz-two select { border: 1px solid var(--border); border-radius: 7px; padding: 0.3rem; font-size: 0.78rem; }
+    .haz-empty { font-size: 0.8rem; color: var(--text-mid); padding: 0.6rem; background: rgba(0,0,0,0.02); border-radius: 8px; }
     .legend { border-top: 1px solid var(--border); margin-top: 0.6rem; padding-top: 0.6rem; }
-    .legend-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.76rem; color: var(--text-mid); padding: 0.15rem 0; }
+    .legend-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-mid); padding: 0.15rem 0; }
     .legend-swatch { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.12); }
     .map-wrap { position: relative; }
     .paint-bar { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 0.4rem 0.6rem; margin-bottom: 0.5rem; }
-    .paint-lbl { font-size: 0.74rem; color: var(--text-mid); font-weight: 600; }
-    .paint-btn { border: 1.5px solid; border-radius: 7px; padding: 0.28rem 0.7rem; font-size: 0.74rem; font-weight: 700; cursor: pointer; background: transparent; }
+    .paint-lbl { font-size: 0.75rem; color: var(--text-mid); font-weight: 600; }
+    .paint-btn { border: 1.5px solid; border-radius: 7px; padding: 0.28rem 0.7rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; background: transparent; }
     .paint-sep { width: 1px; height: 20px; background: var(--border); margin: 0 0.3rem; }
-    .paint-select { border: 1px solid var(--border); border-radius: 7px; padding: 0.25rem 0.4rem; font-size: 0.74rem; }
+    .paint-select { border: 1px solid var(--border); border-radius: 7px; padding: 0.25rem 0.4rem; font-size: 0.78rem; }
     .alert-map { height: calc(100vh - 285px); min-height: 480px; border-radius: 16px; border: 1px solid var(--border); background: #eef2f5; z-index: 1; }
-    .map-hint { position: absolute; bottom: 12px; left: 12px; background: rgba(255,255,255,0.92); border-radius: 10px; padding: 0.5rem 0.8rem; font-size: 0.76rem; color: var(--text-mid); z-index: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 70%; }
+    .map-hint { position: absolute; bottom: 12px; left: 12px; background: rgba(255,255,255,0.92); border-radius: 10px; padding: 0.5rem 0.8rem; font-size: 0.8rem; color: var(--text-mid); z-index: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 70%; }
     .map-status { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 0.45rem 0.9rem; border-radius: 20px; font-size: 0.78rem; z-index: 600; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
     .map-status.err { background: #dc2626; }
     .leaflet-pane.delineation-pane { z-index: 650; }

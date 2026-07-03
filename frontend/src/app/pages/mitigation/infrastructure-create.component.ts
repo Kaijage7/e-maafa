@@ -110,7 +110,7 @@ import { PanelComponent } from '../../shell/panel.component';
             </div>
 
             <div class="mb-3">
-              <label for="additional_info" class="form-label">Additional Info</label>
+              <label for="additional_info" class="form-label">Additional Information</label>
               <textarea id="additional_info" class="form-control" rows="3"
                         [value]="additionalInfo()" (input)="additionalInfo.set($any($event.target).value)"></textarea>
             </div>

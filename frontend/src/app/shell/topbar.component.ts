@@ -48,7 +48,7 @@ import { AuthService } from '../core/auth.service';
           <button class="user-menu-btn" id="userMenuBtn" (click)="toggleMenu($event)">
             <div class="user-avatar">{{ auth.initials() }}</div>
             <span>{{ auth.user()?.name }}</span>
-            <i class="fas fa-chevron-down" style="font-size:0.45rem;opacity:0.4;"></i>
+            <i class="fas fa-chevron-down" style="font-size:0.7rem;opacity:0.4;"></i>
           </button>
           <div class="user-menu-dropdown" id="userMenuDropdown" [class.show]="menuOpen()">
             <a routerLink="/home"><i class="fas fa-th-large" style="width:14px;text-align:center;opacity:0.5;"></i> Module Hub</a>
@@ -63,11 +63,11 @@ import { AuthService } from '../core/auth.service';
     .bell-wrap { position: relative; display: flex; align-items: center; }
     .bell-btn { position: relative; background: none; border: none; color: inherit; cursor: pointer; font-size: 1.05rem; padding: 6px 9px; opacity: 0.85; }
     .bell-btn:hover { opacity: 1; }
-    .bell-badge { position: absolute; top: -1px; right: 0; background: #dc2626; color: #fff; font-size: 0.58rem; font-weight: 700; min-width: 15px; height: 15px; line-height: 15px; border-radius: 9px; padding: 0 4px; text-align: center; }
+    .bell-badge { position: absolute; top: -3px; right: -2px; background: #dc2626; color: #fff; font-size: 0.75rem; font-weight: 700; min-width: 18px; height: 18px; line-height: 18px; border-radius: 10px; padding: 0 5px; text-align: center; }
     .bell-dropdown { position: absolute; right: 0; top: calc(100% + 8px); width: 360px; max-width: 92vw; background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.16); display: none; z-index: 1200; overflow: hidden; }
     .bell-dropdown.show { display: block; }
     .bell-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid #eef1f5; color: #1f2937; font-size: 0.86rem; }
-    .bell-readall { font-size: 0.72rem; color: #2563eb; cursor: pointer; font-weight: 600; }
+    .bell-readall { font-size: 0.78rem; color: #2563eb; cursor: pointer; font-weight: 600; }
     .bell-list { max-height: 380px; overflow-y: auto; }
     .bell-item { display: flex; gap: 10px; padding: 10px 14px; border-bottom: 1px dashed #eef1f5; text-decoration: none; color: #1f2937; cursor: pointer; }
     .bell-item:hover { background: #f8fafc; }
@@ -75,9 +75,9 @@ import { AuthService } from '../core/auth.service';
     .bell-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; background: #94a3b8; }
     .bell-dot.sev-warning { background: #f59e0b; } .bell-dot.sev-critical, .bell-dot.sev-danger { background: #dc2626; } .bell-dot.sev-success { background: #16a34a; } .bell-dot.sev-info { background: #2563eb; }
     .bell-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .bell-title { font-size: 0.82rem; font-weight: 600; }
-    .bell-msg { font-size: 0.76rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .bell-time { font-size: 0.68rem; color: #9ca3af; }
+    .bell-title { font-size: 0.85rem; font-weight: 600; }
+    .bell-msg { font-size: 0.78rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .bell-time { font-size: 0.75rem; color: #9ca3af; }
     .bell-empty { padding: 26px 14px; text-align: center; color: #9ca3af; font-size: 0.82rem; }
   `],
 })

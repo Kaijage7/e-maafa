@@ -55,13 +55,13 @@ interface JsonItem { [k: string]: any; }
               <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;" [style.opacity]="g.isActive ? 1 : 0.45">
                 <img [src]="g.imagePath.startsWith('images/') ? '/' + g.imagePath : '/api/storage/' + g.imagePath" [alt]="g.caption" style="width:100%;height:96px;object-fit:cover;">
                 <div style="padding:0.5rem 0.6rem;display:grid;gap:0.35rem;">
-                  <div style="font-size:0.72rem;color:var(--text-mid);line-height:1.3;">{{ g.caption }}</div>
+                  <div style="font-size:0.8rem;color:var(--text-mid);line-height:1.3;">{{ g.caption }}</div>
                   <div style="display:flex;align-items:center;gap:0.5rem;">
-                    <select style="font-size:0.72rem;border:1px solid var(--border);border-radius:6px;padding:0.15rem 0.3rem;"
+                    <select style="font-size:0.75rem;border:1px solid var(--border);border-radius:6px;padding:0.15rem 0.3rem;"
                             [value]="g.marqueeRow" (change)="setRow(g, $any($event.target).value)">
                       <option [value]="1">Row 1</option><option [value]="2">Row 2</option>
                     </select>
-                    <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.72rem;color:var(--text-mid);cursor:pointer;margin-left:auto;">
+                    <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.75rem;color:var(--text-mid);cursor:pointer;margin-left:auto;">
                       <input type="checkbox" [checked]="g.isActive" (change)="toggleGallery(g, $any($event.target).checked)"> Show
                     </label>
                   </div>
@@ -81,7 +81,7 @@ interface JsonItem { [k: string]: any; }
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem 1rem;">
             @for (s of settings(); track s.key) {
               <div style="display:flex;align-items:center;gap:0.6rem;">
-                <code style="font-size:0.72rem;color:var(--text-mid);flex:1;">{{ s.key }}</code>
+                <code style="font-size:0.75rem;color:var(--text-mid);flex:1;">{{ s.key }}</code>
                 <input style="border:1px solid var(--border);border-radius:8px;padding:0.3rem 0.5rem;font-size:0.8rem;width:130px;"
                        [value]="s.value" (change)="saveSetting(s.key, $any($event.target).value)">
               </div>
@@ -101,12 +101,12 @@ interface JsonItem { [k: string]: any; }
             @for (c of hazardCards(); track c.id) {
               <div style="display:grid;grid-template-columns:34px 1.1fr 1.1fr 2fr 2fr 1fr auto;gap:0.5rem;align-items:center;border:1px solid var(--border);border-radius:10px;padding:0.5rem 0.7rem;" [style.opacity]="c.isActive ? 1 : 0.5">
                 <div style="width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;" [style.background]="c.color + '1f'" [style.color]="c.color"><i class="fas {{ c.icon }}"></i></div>
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.78rem;" [value]="c.name" (change)="patchHazardCard(c, { name: $any($event.target).value })" placeholder="Name (English)">
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.78rem;" [value]="c.nameSw || ''" (change)="patchHazardCard(c, { nameSw: $any($event.target).value })" placeholder="Jina (Kiswahili)">
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.74rem;" [value]="c.descriptionEn" (change)="patchHazardCard(c, { descriptionEn: $any($event.target).value })" placeholder="English description">
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.74rem;" [value]="c.descriptionSw" (change)="patchHazardCard(c, { descriptionSw: $any($event.target).value })" placeholder="Maelezo (Kiswahili)">
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.74rem;" [value]="c.link" (change)="patchHazardCard(c, { link: $any($event.target).value })" placeholder="/education">
-                <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.72rem;color:var(--text-mid);cursor:pointer;">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;" [value]="c.name" (change)="patchHazardCard(c, { name: $any($event.target).value })" placeholder="Name (English)">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;" [value]="c.nameSw || ''" (change)="patchHazardCard(c, { nameSw: $any($event.target).value })" placeholder="Jina (Kiswahili)">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;" [value]="c.descriptionEn" (change)="patchHazardCard(c, { descriptionEn: $any($event.target).value })" placeholder="English description">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;" [value]="c.descriptionSw" (change)="patchHazardCard(c, { descriptionSw: $any($event.target).value })" placeholder="Maelezo (Kiswahili)">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;" [value]="c.link" (change)="patchHazardCard(c, { link: $any($event.target).value })" placeholder="/education">
+                <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.75rem;color:var(--text-mid);cursor:pointer;">
                   <input type="checkbox" [checked]="c.isActive" (change)="patchHazardCard(c, { isActive: $any($event.target).checked })"> Show
                 </label>
               </div>
@@ -124,9 +124,9 @@ interface JsonItem { [k: string]: any; }
           <div style="display:grid;gap:0.55rem;">
             @for (cap of capabilities(); track $index) {
               <div style="display:grid;grid-template-columns:1fr 2.4fr 0.9fr;gap:0.5rem;border:1px solid var(--border);border-radius:10px;padding:0.5rem 0.7rem;">
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.78rem;font-weight:600;" [value]="cap['title'] ?? ''" (input)="patchItem('capabilities', $index, 'title', $any($event.target).value)">
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.74rem;" [value]="cap['description'] ?? ''" (input)="patchItem('capabilities', $index, 'description', $any($event.target).value)">
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.74rem;" [value]="cap['link'] ?? ''" (input)="patchItem('capabilities', $index, 'link', $any($event.target).value)" placeholder="/portal">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;font-weight:600;" [value]="cap['title'] ?? ''" (input)="patchItem('capabilities', $index, 'title', $any($event.target).value)">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;" [value]="cap['description'] ?? ''" (input)="patchItem('capabilities', $index, 'description', $any($event.target).value)">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;" [value]="cap['link'] ?? ''" (input)="patchItem('capabilities', $index, 'link', $any($event.target).value)" placeholder="/portal">
               </div>
             }
           </div>
@@ -145,9 +145,9 @@ interface JsonItem { [k: string]: any; }
             @for (n of emergencyNumbers(); track $index) {
               <div style="display:grid;grid-template-columns:0.7fr 1.3fr 1fr 0.8fr;gap:0.5rem;border:1px solid var(--border);border-radius:10px;padding:0.5rem 0.7rem;">
                 <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.82rem;font-weight:700;" [value]="n['number'] ?? ''" (input)="patchItem('emergencyNumbers', $index, 'number', $any($event.target).value)">
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.78rem;" [value]="n['label'] ?? ''" (input)="patchItem('emergencyNumbers', $index, 'label', $any($event.target).value)">
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.74rem;" [value]="n['icon'] ?? ''" (input)="patchItem('emergencyNumbers', $index, 'icon', $any($event.target).value)" placeholder="fa-fire">
-                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.74rem;" [value]="n['color'] ?? ''" (input)="patchItem('emergencyNumbers', $index, 'color', $any($event.target).value)" placeholder="#ef4444">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;" [value]="n['label'] ?? ''" (input)="patchItem('emergencyNumbers', $index, 'label', $any($event.target).value)">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;" [value]="n['icon'] ?? ''" (input)="patchItem('emergencyNumbers', $index, 'icon', $any($event.target).value)" placeholder="fa-fire">
+                <input style="border:1px solid var(--border);border-radius:7px;padding:0.3rem 0.45rem;font-size:0.8rem;" [value]="n['color'] ?? ''" (input)="patchItem('emergencyNumbers', $index, 'color', $any($event.target).value)" placeholder="#ef4444">
               </div>
             }
           </div>
@@ -162,7 +162,7 @@ interface JsonItem { [k: string]: any; }
     <div class="panel-row" style="animation-delay:.7s;">
       <dmis-panel title="Unsubscribe Reasons (alert subscriptions)" icon="fa-bell-slash" [badge]="unsubscribeReasons().length + ' reasons'">
         <div class="panel-body">
-          <p style="font-size:0.78rem;color:var(--text-secondary);margin:0 0 0.6rem;">Citizens pick one of these when they unsubscribe from alerts. Edit in both languages.</p>
+          <p style="font-size:0.82rem;color:var(--text-mid);margin:0 0 0.6rem;">Citizens pick one of these when they unsubscribe from alerts. Edit in both languages.</p>
           <div style="display:grid;gap:0.55rem;">
             @for (r of unsubscribeReasons(); track $index) {
               <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:0.5rem;align-items:center;border:1px solid var(--border);border-radius:10px;padding:0.5rem 0.7rem;">

@@ -28,22 +28,23 @@ interface TaskRow {
     .stat-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.25rem; display: block; }
-    .stat span { font-size: 0.68rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-    .pr { font-size: 0.66rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; }
+    .pr { font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; }
     .pr-Critical { background: #fee2e2; color: #b91c1c; } .pr-High { background: #ffedd5; color: #c2410c; }
     .pr-Medium { background: #fef3c7; color: #92400e; } .pr-Low { background: #d1fae5; color: #065f46; }
-    .st { font-size: 0.66rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; background: #e2e8f0; color: #334155; }
+    .st { font-size: 0.75rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; background: #e2e8f0; color: #334155; }
     .st-InProgress { background: #dbeafe; color: #1e40af; } .st-Completed { background: #d1fae5; color: #065f46; }
     .st-OnHold { background: #fef3c7; color: #92400e; } .st-Cancelled { background: #f3e8ff; color: #6b21a8; }
     .overdue { color: #b91c1c; font-weight: 700; }
-    .btn-sm { font-size: 0.72rem; padding: 4px 11px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
     .b-red { background: #dc3545; color: #fff; } .b-outline { background: #fff; border-color: #cbd5e1; color: #334155; }
+    .b-red:hover { background: #bb2d3b; } .b-outline:hover { background: #f1f5f9; }
     .toolbar { display: flex; gap: 6px; margin-bottom: 10px; }
     .toolbar select { font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 5px 9px; font-family: inherit; }
     .cal-day { border: 1px solid #e3e6ed; border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
@@ -55,9 +56,10 @@ interface TaskRow {
     .drawer-head { background: #dc3545; color: #fff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; }
     .drawer-body { padding: 16px 18px; }
     .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; font-size: 0.8rem; margin-bottom: 12px; }
-    .meta b { display: block; font-size: 0.7rem; color: #6c757d; text-transform: uppercase; }
+    .meta b { display: block; font-size: 0.75rem; color: #6c757d; text-transform: uppercase; }
     .log { font-size: 0.78rem; padding: 7px 0; border-bottom: 1px dashed #e3e6ed; }
-    label { display: block; font-size: 0.74rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
+    .log small { font-size: 0.75rem; }
+    label { display: block; font-size: 0.75rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
     input, select, textarea { width: 100%; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 9px; font-family: inherit; box-sizing: border-box; }
     .empty { text-align: center; color: #94a3b8; padding: 28px 0; font-size: 0.85rem; }
     .modal-back { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; overflow-y: auto; }
@@ -350,10 +352,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

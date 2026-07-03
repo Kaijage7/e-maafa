@@ -44,10 +44,10 @@ interface FormData {
   styles: [`
     :host { display: block; }
     /* Breadcrumb */
-    .ohe-breadcrumb { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--text-light); margin-bottom: 0.75rem; }
+    .ohe-breadcrumb { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.75rem; }
     .ohe-breadcrumb a { color: var(--text-mid); text-decoration: none; }
     .ohe-breadcrumb a:hover { color: var(--primary); }
-    .ohe-breadcrumb .sep { font-size: 0.55rem; }
+    .ohe-breadcrumb .sep { font-size: 0.75rem; }
     .ohe-breadcrumb .current { color: var(--text-dark); font-weight: 600; }
     /* Page Header */
     .ohe-page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap; }
@@ -65,7 +65,7 @@ interface FormData {
     .ohe-kpi.active .ohe-kpi-icon { background: var(--kpi-color); color: #fff; box-shadow: 0 3px 10px color-mix(in srgb, var(--kpi-color) 30%, transparent); }
     .ohe-kpi-body { display: flex; flex-direction: column; min-width: 0; }
     .ohe-kpi-val { font-size: 1.35rem; font-weight: 800; color: var(--text-dark); line-height: 1; letter-spacing: -0.3px; }
-    .ohe-kpi-label { font-size: 0.68rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ohe-kpi-label { font-size: 0.75rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ohe-kpi-accent { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--kpi-color); transform: scaleX(0); transform-origin: left; transition: transform 0.3s ease; }
     .ohe-kpi.active .ohe-kpi-accent { transform: scaleX(1); }
     .ohe-kpi:hover .ohe-kpi-accent { transform: scaleX(0.5); }
@@ -78,26 +78,26 @@ interface FormData {
     .ohe-search i { font-size: 0.78rem; color: var(--text-light); flex-shrink: 0; }
     .ohe-search input { border: none; background: transparent; outline: none; width: 100%; font-size: 0.82rem; font-family: inherit; color: var(--text-dark); }
     .ohe-search input::placeholder { color: var(--text-light); }
-    .ohe-search-clear { color: var(--text-light); font-size: 0.7rem; display: flex; align-items: center; padding: 2px; border-radius: 50%; transition: all 0.15s; cursor: pointer; background: none; border: none; }
+    .ohe-search-clear { color: var(--text-light); font-size: 0.75rem; display: flex; align-items: center; padding: 2px; border-radius: 50%; transition: all 0.15s; cursor: pointer; background: none; border: none; }
     .ohe-search-clear:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
     .ohe-filter-toggle { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.85rem; border-radius: 10px; background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06); font-size: 0.78rem; font-weight: 600; color: var(--text-mid); cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap; }
     .ohe-filter-toggle:hover { background: rgba(0,0,0,0.06); color: var(--text-dark); }
     .ohe-filter-toggle.has-filters { color: #0891b2; border-color: rgba(8,145,178,0.2); background: rgba(8,145,178,0.05); }
     .ohe-filter-toggle i { font-size: 0.75rem; }
-    .ohe-filter-badge { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #0891b2; color: #fff; font-size: 0.6rem; font-weight: 700; }
-    .ohe-reset-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600; color: #ef4444; text-decoration: none; border: 1px solid rgba(239,68,68,0.15); background: rgba(239,68,68,0.04); transition: all 0.15s; white-space: nowrap; cursor: pointer; font-family: inherit; }
+    .ohe-filter-badge { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #0891b2; color: #fff; font-size: 0.75rem; font-weight: 700; }
+    .ohe-reset-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 0.78rem; font-weight: 600; color: #ef4444; text-decoration: none; border: 1px solid rgba(239,68,68,0.15); background: rgba(239,68,68,0.04); transition: all 0.15s; white-space: nowrap; cursor: pointer; font-family: inherit; }
     .ohe-reset-btn:hover { background: rgba(239,68,68,0.1); }
     .ohe-reset-btn i { font-size: 0.65rem; }
     .ohe-advanced { max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.35s ease; border-top: 1px solid transparent; padding: 0 0.85rem; }
     .ohe-advanced.open { max-height: 200px; padding: 0.65rem 0.85rem; border-top-color: rgba(0,0,0,0.05); }
     .ohe-filter-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; }
     .ohe-filter-group { display: flex; flex-direction: column; gap: 0.2rem; }
-    .ohe-filter-group label { font-size: 0.65rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.3px; display: flex; align-items: center; gap: 0.3rem; }
-    .ohe-filter-group label i { font-size: 0.55rem; }
+    .ohe-filter-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.3px; display: flex; align-items: center; gap: 0.3rem; }
+    .ohe-filter-group label i { font-size: 0.7rem; }
     .ohe-filter-group select, .ohe-filter-group input[type="date"] { padding: 0.38rem 0.55rem; border-radius: 8px; background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.08); font-size: 0.78rem; font-family: inherit; color: var(--text-dark); transition: border-color 0.2s; width: 100%; }
     .ohe-filter-group select:focus, .ohe-filter-group input[type="date"]:focus { outline: none; border-color: #0891b2; box-shadow: 0 0 0 2px rgba(8,145,178,0.1); }
     .ohe-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0 0.85rem 0.65rem; }
-    .ohe-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.6rem; border-radius: 50px; background: rgba(8,145,178,0.08); border: 1px solid rgba(8,145,178,0.15); color: #0e7490; font-size: 0.72rem; font-weight: 600; text-decoration: none; transition: all 0.15s; cursor: pointer; font-family: inherit; }
+    .ohe-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.6rem; border-radius: 50px; background: rgba(8,145,178,0.08); border: 1px solid rgba(8,145,178,0.15); color: #0e7490; font-size: 0.75rem; font-weight: 600; text-decoration: none; transition: all 0.15s; cursor: pointer; font-family: inherit; }
     .ohe-chip:hover { background: rgba(8,145,178,0.15); }
     .ohe-chip i { font-size: 0.6rem; opacity: 0.6; }
     .ohe-chip .chip-x { font-size: 0.85rem; font-weight: 400; opacity: 0.5; margin-left: 0.15rem; transition: opacity 0.15s; }
@@ -109,14 +109,14 @@ interface FormData {
     .panel-head { display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--border, #e5e9f0); }
     .panel-head .ph-title { font-size: 0.92rem; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem; }
     .panel-head .ph-title i { color: #0891b2; font-size: 0.85rem; }
-    .panel-badge { font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 50px; background: rgba(8,145,178,0.1); color: #0891b2; }
+    .panel-badge { font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 50px; background: rgba(8,145,178,0.1); color: #0891b2; }
     .r-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    .r-table thead th { text-align: left; padding: 0.6rem 0.9rem; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); border-bottom: 1px solid var(--border, #e5e9f0); background: #f8fafc; white-space: nowrap; }
+    .r-table thead th { text-align: left; padding: 0.6rem 0.9rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); border-bottom: 1px solid var(--border, #e5e9f0); background: #f8fafc; white-space: nowrap; }
     .r-table tbody td { padding: 0.65rem 0.9rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     .r-table tbody tr:hover { background: #f8fafc; }
     .r-title { font-weight: 600; color: var(--text-dark); font-size: 0.83rem; }
-    .r-subtitle { font-size: 0.72rem; color: var(--text-light); }
-    .r-badge { display: inline-block; padding: 0.22rem 0.55rem; border-radius: 50px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+    .r-subtitle { font-size: 0.75rem; color: var(--text-light); }
+    .r-badge { display: inline-block; padding: 0.22rem 0.55rem; border-radius: 50px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
     .badge-active { background: rgba(6,182,212,0.12); color: #0e7490; }
     .badge-pending { background: rgba(245,158,11,0.12); color: #b45309; }
     .badge-published { background: rgba(59,130,246,0.12); color: #1d4ed8; }
@@ -134,7 +134,7 @@ interface FormData {
     .ctx-menu { display: none; position: absolute; right: 0; top: 100%; z-index: 50; min-width: 200px; background: #fff; border-radius: 12px; border: 1px solid var(--border, #e5e9f0); box-shadow: 0 12px 36px rgba(0,0,0,0.12); padding: 4px; }
     .ctx-menu.open { display: block; }
     .ctx-menu-header { display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.75rem; margin-bottom: 2px; border-bottom: 1px solid rgba(0,0,0,0.05); }
-    .ctx-menu-label { font-size: 0.65rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
+    .ctx-menu-label { font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
     .ctx-item { display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; padding: 0.45rem 0.75rem; border: none; background: none; font-size: 0.78rem; font-family: inherit; color: var(--text-mid); border-radius: 8px; cursor: pointer; text-decoration: none; }
     .ctx-item:hover { background: rgba(8,145,178,0.06); color: var(--text-dark); }
     .ctx-item.warning { color: #b45309; }
@@ -142,7 +142,7 @@ interface FormData {
     .ctx-item i { width: 14px; font-size: 0.7rem; }
     .ctx-divider { height: 1px; background: rgba(0,0,0,0.05); margin: 3px 6px; }
     /* Pagination */
-    .pagination-wrap { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; font-size: 0.78rem; color: var(--text-light); }
+    .pagination-wrap { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; font-size: 0.8rem; color: var(--text-light); }
     .page-links { display: flex; gap: 0.25rem; }
     .page-links a, .page-links span { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 8px; text-decoration: none; color: var(--text-mid); cursor: pointer; }
     .page-links a:hover { background: rgba(8,145,178,0.08); }
@@ -155,13 +155,13 @@ interface FormData {
     .ohe-offcanvas.open { transform: translateX(0); }
     .ohe-oc-header { background: #0e7490; padding: 1.15rem 1.25rem 0.85rem; color: #fff; }
     .ohe-oc-header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
-    .ohe-oc-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; font-weight: 600; }
+    .ohe-oc-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; font-weight: 600; }
     .ohe-oc-title { font-size: 1rem; font-weight: 700; margin: 0.25rem 0 0; line-height: 1.3; }
     .ohe-oc-close { width: 32px; height: 32px; border-radius: 8px; border: none; background: rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
     .ohe-oc-close:hover { background: rgba(255,255,255,0.3); }
     .ohe-oc-badges { display: flex; gap: 0.4rem; margin-top: 0.6rem; flex-wrap: wrap; }
-    .ohe-oc-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.55rem; border-radius: 50px; font-size: 0.68rem; font-weight: 600; background: rgba(255,255,255,0.22); color: #fff; }
-    .ohe-oc-badge i { font-size: 0.55rem; }
+    .ohe-oc-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.55rem; border-radius: 50px; font-size: 0.75rem; font-weight: 600; background: rgba(255,255,255,0.22); color: #fff; }
+    .ohe-oc-badge i { font-size: 0.7rem; }
     .ohe-oc-badge.priority-critical { background: rgba(239,68,68,0.7); }
     .ohe-oc-badge.priority-high { background: rgba(245,158,11,0.7); }
     .ohe-oc-badge.priority-medium { background: rgba(59,130,246,0.5); }
@@ -169,33 +169,34 @@ interface FormData {
     .ohe-oc-body { flex: 1; overflow-y: auto; }
     .ohe-oc-section { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(0,0,0,0.05); }
     .ohe-oc-section:last-child { border-bottom: none; }
-    .ohe-oc-section-head { font-size: 0.72rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.4px; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.65rem; }
+    .ohe-oc-section-head { font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.4px; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.65rem; }
     .ohe-oc-section-head i { font-size: 0.65rem; color: #0891b2; }
     .ohe-oc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-    .ohe-oc-info-label { font-size: 0.62rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.3px; display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.15rem; }
-    .ohe-oc-info-label i { font-size: 0.55rem; color: #0891b2; }
+    .ohe-oc-info-label { font-size: 0.75rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.3px; display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.15rem; }
+    .ohe-oc-info-label i { font-size: 0.7rem; color: #0891b2; }
     .ohe-oc-info-val { font-size: 0.82rem; font-weight: 600; color: var(--text-dark); }
-    .ohe-oc-desc { font-size: 0.82rem; color: var(--text-mid); line-height: 1.65; max-height: 6em; overflow: hidden; position: relative; }
-    .ohe-oc-desc.clamped::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2em; background: linear-gradient(transparent, #fff); }
+    .ohe-oc-desc { font-size: 0.82rem; color: var(--text-mid); line-height: 1.65; }
+    /* flat clamp (line-clamp ellipsis) — replaces the former gradient fade per DMIS-DESIGN-STANDARD.md §3 */
+    .ohe-oc-desc.clamped { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
     .ohe-oc-progress-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; margin-bottom: 0.65rem; }
     .ohe-oc-ring-wrap { position: relative; width: 60px; height: 60px; flex-shrink: 0; }
     .ohe-oc-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
     .ohe-oc-ring-bg { fill: none; stroke: #e2e8f0; stroke-width: 6; }
     .ohe-oc-ring-fg { fill: none; stroke: #0891b2; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 213.6; stroke-dashoffset: 213.6; transition: stroke-dashoffset 0.8s ease; }
     .ohe-oc-ring-val { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.75rem; font-weight: 800; color: var(--text-dark); }
-    .ohe-oc-ring-label { font-size: 0.78rem; font-weight: 600; color: var(--text-mid); }
+    .ohe-oc-ring-label { font-size: 0.8rem; font-weight: 600; color: var(--text-mid); }
     .ohe-oc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
     .ohe-oc-stat { text-align: center; padding: 0.55rem 0.4rem; border-radius: 10px; background: rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.04); }
     .ohe-oc-stat-val { font-size: 1.15rem; font-weight: 800; color: var(--text-dark); line-height: 1; }
-    .ohe-oc-stat-label { font-size: 0.6rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 0.2rem; }
-    .ohe-oc-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; border-radius: 50px; background: rgba(8,145,178,0.1); color: #0891b2; font-size: 0.6rem; font-weight: 700; padding: 0 5px; }
+    .ohe-oc-stat-label { font-size: 0.75rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 0.2rem; }
+    .ohe-oc-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; border-radius: 50px; background: rgba(8,145,178,0.1); color: #0891b2; font-size: 0.75rem; font-weight: 700; padding: 0 5px; }
     .ohe-oc-list { display: flex; flex-direction: column; gap: 0.45rem; }
     .ohe-oc-list-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.65rem; border-radius: 10px; background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.04); text-decoration: none; transition: all 0.2s; cursor: pointer; }
     .ohe-oc-list-item:hover { background: rgba(8,145,178,0.04); border-color: rgba(8,145,178,0.12); }
     .ohe-oc-list-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; flex-shrink: 0; }
     .ohe-oc-list-body { flex: 1; min-width: 0; }
-    .ohe-oc-list-title { font-size: 0.78rem; font-weight: 600; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ohe-oc-list-meta { font-size: 0.65rem; color: var(--text-light); display: flex; align-items: center; gap: 0.4rem; }
+    .ohe-oc-list-title { font-size: 0.8rem; font-weight: 600; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ohe-oc-list-meta { font-size: 0.8rem; color: var(--text-light); display: flex; align-items: center; gap: 0.4rem; }
     .ohe-oc-list-overdue { color: #ef4444; font-weight: 600; }
     .ohe-oc-minibar { width: 50px; height: 4px; border-radius: 2px; background: #e2e8f0; overflow: hidden; flex-shrink: 0; }
     .ohe-oc-minibar-fill { height: 100%; border-radius: 2px; background: #0891b2; transition: width 0.4s ease; }
@@ -208,9 +209,9 @@ interface FormData {
     .ohe-oc-tl-dot.under_review { border-color: #8b5cf6; background: #ede9fe; }
     .ohe-oc-tl-dot.directive_issued { border-color: #f59e0b; background: #fef3c7; }
     .ohe-oc-tl-dot.closed { border-color: #10b981; background: #d1fae5; }
-    .ohe-oc-tl-action { font-size: 0.78rem; font-weight: 600; color: var(--text-dark); }
-    .ohe-oc-tl-by { font-size: 0.68rem; color: var(--text-light); }
-    .ohe-oc-tl-time { font-size: 0.62rem; color: var(--text-light); margin-top: 0.1rem; }
+    .ohe-oc-tl-action { font-size: 0.8rem; font-weight: 600; color: var(--text-dark); }
+    .ohe-oc-tl-by { font-size: 0.8rem; color: var(--text-light); }
+    .ohe-oc-tl-time { font-size: 0.8rem; color: var(--text-light); margin-top: 0.1rem; }
     .ohe-oc-footer { display: flex; gap: 0.5rem; padding: 0.85rem 1.25rem; border-top: 1px solid rgba(0,0,0,0.06); background: rgba(248,250,252,0.8); }
     .ohe-oc-btn-full { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.55rem 1rem; border-radius: 10px; background: #0891b2; color: #fff; font-size: 0.78rem; font-weight: 600; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; }
     .ohe-oc-btn-full:hover { background: #0e7490; color: #fff; }
@@ -407,7 +408,7 @@ interface FormData {
                     <div class="ctx-menu" [class.open]="openMenuId() === event.id">
                       <div class="ctx-menu-header">
                         <span class="ctx-menu-label">{{ event.event_id }}</span>
-                        <span class="r-badge" [class]="'r-badge ' + statusBadge(event.status)" style="font-size:0.6rem;padding:0.15rem 0.4rem;">{{ event.status_label }}</span>
+                        <span class="r-badge" [class]="'r-badge ' + statusBadge(event.status)" style="font-size:0.75rem;padding:0.15rem 0.4rem;">{{ event.status_label }}</span>
                       </div>
                       <button class="ctx-item" type="button" (click)="openQuickView(event)"><i class="fas fa-bolt"></i> Quick Preview</button>
                       <a class="ctx-item" [routerLink]="['/m/one-health/events', event.id]"><i class="fas fa-external-link-alt"></i> View Full Details</a>
@@ -1002,10 +1003,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

@@ -45,7 +45,7 @@ interface DirectiveDetail {
   imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
   styles: [`
     .progress { background: #e9ecef; border-radius: 0.375rem; overflow: hidden; display: flex; }
-    .progress-bar { background: #0d6efd; color: #fff; font-size: 0.62rem; display: flex; align-items: center; justify-content: center; white-space: nowrap; transition: width 0.6s ease; }
+    .progress-bar { background: #0d6efd; color: #fff; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; white-space: nowrap; transition: width 0.6s ease; }
     .progress-bar.bg-success { background: #198754; }
     .oh-modal-backdrop { display: none; position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.5); overflow-y: auto; }
     .oh-modal-backdrop.open { display: block; }
@@ -56,7 +56,7 @@ interface DirectiveDetail {
     .oh-modal-close { background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; line-height: 1; }
     .oh-modal-body { padding: 1.25rem; overflow-y: auto; }
     .oh-modal-footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.85rem 1.25rem; border-top: 1px solid #e9ecef; flex-shrink: 0; }
-    .detail-label { font-size: 0.72rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
+    .detail-label { font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
     .detail-value { font-size: 0.85rem; color: var(--text-dark); }
     .form-range { width: 100%; }
   `],
@@ -151,16 +151,16 @@ interface DirectiveDetail {
                         <tr class="data-row">
                           <td><div class="r-title">{{ s.organization }}</div><div class="r-subtitle">{{ s.name }}</div></td>
                           <td>
-                            <div style="font-size:0.78rem;color:var(--text-mid);">{{ s.email }}</div>
-                            <div style="font-size:0.78rem;color:var(--text-mid);">{{ s.phone }}</div>
+                            <div style="font-size:0.8rem;color:var(--text-mid);">{{ s.email }}</div>
+                            <div style="font-size:0.8rem;color:var(--text-mid);">{{ s.phone }}</div>
                           </td>
                           <td>
                             @if (s.acknowledgement_status === 'acknowledged') { <span class="r-badge badge-published">Acknowledged</span> }
                             @else if (s.acknowledgement_status === 'declined') { <span class="r-badge badge-rejected">Declined</span> }
                             @else { <span class="r-badge badge-pending">Pending</span> }
                           </td>
-                          <td style="font-size:0.78rem;color:var(--text-mid);">{{ s.acknowledged_at ?? '-' }}</td>
-                          <td style="font-size:0.78rem;color:var(--text-mid);">{{ s.response_notes ?? '-' }}</td>
+                          <td style="font-size:0.8rem;color:var(--text-mid);">{{ s.acknowledged_at ?? '-' }}</td>
+                          <td style="font-size:0.8rem;color:var(--text-mid);">{{ s.response_notes ?? '-' }}</td>
                         </tr>
                       }
                     </tbody>
@@ -188,8 +188,8 @@ interface DirectiveDetail {
                               <div class="progress-bar" [class.bg-success]="(s.implementation_percentage ?? 0) >= 100" [style.width.%]="s.implementation_percentage ?? 0">{{ s.implementation_percentage ?? 0 }}%</div>
                             </div>
                           </td>
-                          <td style="font-size:0.78rem;color:var(--text-mid);">{{ s.last_update_at ?? '-' }}</td>
-                          <td style="font-size:0.78rem;color:var(--text-mid);">{{ limit(s.implementation_notes ?? '-', 50) }}</td>
+                          <td style="font-size:0.8rem;color:var(--text-mid);">{{ s.last_update_at ?? '-' }}</td>
+                          <td style="font-size:0.8rem;color:var(--text-mid);">{{ limit(s.implementation_notes ?? '-', 50) }}</td>
                         </tr>
                       }
                     </tbody>
@@ -216,7 +216,7 @@ interface DirectiveDetail {
                                 <div class="progress-bar" [style.width.%]="a.completion_percentage">{{ a.completion_percentage }}%</div>
                               </div>
                             </td>
-                            <td style="font-size:0.78rem;color:var(--text-mid);">{{ a.target_date ?? '-' }}</td>
+                            <td style="font-size:0.8rem;color:var(--text-mid);">{{ a.target_date ?? '-' }}</td>
                           </tr>
                         }
                       </tbody>
@@ -253,15 +253,15 @@ interface DirectiveDetail {
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;text-align:center;">
                 <div style="padding:0.6rem;background:rgba(16,185,129,0.06);border-radius:8px;">
                   <div style="font-size:1.1rem;font-weight:700;color:#10b981;">{{ d.acknowledgement.acknowledged }}</div>
-                  <div style="font-size:0.7rem;color:var(--text-light);">Acknowledged</div>
+                  <div style="font-size:0.75rem;color:var(--text-light);">Acknowledged</div>
                 </div>
                 <div style="padding:0.6rem;background:rgba(245,158,11,0.06);border-radius:8px;">
                   <div style="font-size:1.1rem;font-weight:700;color:#f59e0b;">{{ d.acknowledgement.pending }}</div>
-                  <div style="font-size:0.7rem;color:var(--text-light);">Pending</div>
+                  <div style="font-size:0.75rem;color:var(--text-light);">Pending</div>
                 </div>
                 <div style="padding:0.6rem;background:rgba(239,68,68,0.06);border-radius:8px;">
                   <div style="font-size:1.1rem;font-weight:700;color:#ef4444;">{{ d.acknowledgement.declined }}</div>
-                  <div style="font-size:0.7rem;color:var(--text-light);">Declined</div>
+                  <div style="font-size:0.75rem;color:var(--text-light);">Declined</div>
                 </div>
               </div>
             </div>
@@ -690,10 +690,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

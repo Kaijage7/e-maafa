@@ -68,11 +68,11 @@ const STATUS_BADGE: Record<string, string> = {
                   <td><span class="r-badge" style="background:rgba(220,53,69,0.1);color:#dc3545;">{{ r.hazard_type }}</span></td>
                   <td style="font-size:0.82rem;max-width:200px;">{{ r.location_description || '—' }}</td>
                   <td style="font-size:0.8rem;color:var(--text-mid);">{{ r.reporter_name || 'Anonymous' }}<br>
-                    <span style="font-size:0.74rem;color:var(--text-light);">{{ r.reporter_phone || '' }}</span></td>
+                    <span style="font-size:0.75rem;color:var(--text-light);">{{ r.reporter_phone || '' }}</span></td>
                   <td style="text-align:center;"><span class="r-badge" [class.badge-pending]="r.urgency_level==='High'||r.urgency_level==='Critical'">{{ r.urgency_level || '—' }}</span></td>
                   <td style="font-size:0.78rem;color:var(--text-mid);">{{ r.created_at | date:'dd MMM, HH:mm' }}</td>
                   <td><span class="r-badge {{ badge(r.status) }}">{{ r.status }}</span>
-                    @if (r.linked_incident_id) { <div style="font-size:0.72rem;color:#059669;margin-top:2px;">→ incident #{{ r.linked_incident_id }}</div> }</td>
+                    @if (r.linked_incident_id) { <div style="font-size:0.75rem;color:#059669;margin-top:2px;">→ incident #{{ r.linked_incident_id }}</div> }</td>
                   <td style="text-align:right;">
                     <div class="ctx-wrap">
                       <button class="ctx-trigger" type="button" (click)="toggleMenu(r.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
@@ -144,11 +144,12 @@ const STATUS_BADGE: Record<string, string> = {
     }
   `,
   styles: [`
-    .f-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
-    .btn-mini { font-size: 0.72rem; padding: 0.25rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; cursor: pointer; margin-left: 4px; color: var(--text-dark); }
+    .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
+    .btn-mini { font-size: 0.78rem; padding: 0.35rem 0.8rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; cursor: pointer; margin-left: 4px; color: var(--text-dark); }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1500; display: flex; align-items: flex-start; justify-content: center; padding: 3vh 1rem; overflow-y: auto; }
     .modal-card { background: var(--card-bg, #fff); border-radius: 16px; max-width: 640px; width: 100%; padding: 1.4rem 1.5rem; }
-    .btn-cancel { border: 1px solid var(--border); background: #fff; border-radius: 9px; padding: 0.5rem 1rem; cursor: pointer; }
+    .btn-cancel { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; }
+    .btn-cancel:hover { background: #f1f5f9; }
     .badge-muted { background: rgba(100,116,139,0.14); color: #64748b; }
   `],
 })

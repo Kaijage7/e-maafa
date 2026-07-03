@@ -76,7 +76,7 @@ interface EduItem {
 
     @if (editorOpen()) {
       <div style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1500;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="editorOpen.set(false)">
-        <div style="background:#fff;border-radius:16px;max-width:680px;width:100%;padding:1.3rem 1.4rem;max-height:90vh;overflow-y:auto;" (click)="$event.stopPropagation()">
+        <div style="background:#fff;border-radius:12px;border:1px solid var(--border);max-width:680px;width:100%;padding:1.3rem 1.4rem;max-height:90vh;overflow-y:auto;" (click)="$event.stopPropagation()">
           <h5 style="font-weight:800;margin-bottom:1rem;">{{ editId() ? 'Edit Content' : 'New Content' }}</h5>
           <div style="display:grid;gap:0.75rem;">
             <input class="form-control" placeholder="Title *" [value]="fTitle()" (input)="fTitle.set($any($event.target).value)">
@@ -108,7 +108,7 @@ interface EduItem {
             </div>
             @if (error()) { <div style="color:#dc2626;font-size:0.82rem;">{{ error() }}</div> }
             <div style="display:flex;justify-content:flex-end;gap:0.6rem;">
-              <button type="button" style="border:1px solid var(--border);background:#fff;border-radius:9px;padding:0.5rem 1rem;cursor:pointer;" (click)="editorOpen.set(false)">Cancel</button>
+              <button class="btn" type="button" (click)="editorOpen.set(false)">Cancel</button>
               <button class="btn-add" type="button" [disabled]="!fTitle().trim() || saving()" (click)="save()">
                 <i class="fas" [class.fa-save]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i> {{ saving() ? 'Saving…' : 'Save' }}
               </button>

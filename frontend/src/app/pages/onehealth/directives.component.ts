@@ -31,7 +31,7 @@ interface IndexResponse {
   styles: [`
     .filter-bar select, .filter-bar input[type="date"] { padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.78rem; background: #fff; color: var(--text-dark); font-family: inherit; }
     .progress { background: #e9ecef; border-radius: 0.375rem; overflow: hidden; display: flex; }
-    .progress-bar { background: #0d6efd; color: #fff; font-size: 0.62rem; display: flex; align-items: center; justify-content: center; white-space: nowrap; transition: width 0.6s ease; }
+    .progress-bar { background: #0d6efd; color: #fff; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; white-space: nowrap; transition: width 0.6s ease; }
     .progress-bar.bg-success { background: #198754; }
     .ctx-wrap { position: relative; display: inline-block; }
     .ctx-trigger { width: 28px; height: 28px; border: none; background: transparent; border-radius: 8px; color: var(--text-light); cursor: pointer; }
@@ -44,7 +44,7 @@ interface IndexResponse {
     .ctx-item.warning { color: #b45309; }
     .ctx-item i { width: 14px; font-size: 0.7rem; }
     .ctx-divider { height: 1px; background: rgba(0,0,0,0.05); margin: 3px 6px; }
-    .pagination-wrap { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; font-size: 0.78rem; color: var(--text-light); }
+    .pagination-wrap { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; font-size: 0.8rem; color: var(--text-light); }
     .page-links { display: flex; gap: 0.25rem; }
     .page-links a, .page-links span { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 8px; text-decoration: none; color: var(--text-mid); cursor: pointer; }
     .page-links a:hover { background: rgba(8,145,178,0.08); }
@@ -118,7 +118,7 @@ interface IndexResponse {
                     <td><span class="r-badge" [class]="'r-badge ' + priorityBadge(d.priority_level)">{{ ucfirst(d.priority_level) }}</span></td>
                     <td>
                       <div style="font-size:0.82rem;color:var(--text-mid);">{{ d.deadline ?? '-' }}</div>
-                      @if (d.is_overdue) { <span class="r-badge badge-rejected" style="font-size:0.65rem;">OVERDUE</span> }
+                      @if (d.is_overdue) { <span class="r-badge badge-rejected" style="font-size:0.75rem;">OVERDUE</span> }
                     </td>
                     <td><span class="r-badge" [class]="'r-badge ' + statusBadge(d.status)">{{ ucfirst(d.status) }}</span></td>
                     <td>
@@ -126,7 +126,7 @@ interface IndexResponse {
                       <span style="color:var(--text-light);font-size:0.82rem;">/</span>
                       <span style="color:var(--text-mid);font-size:0.82rem;">{{ d.ack_total }}</span>
                       @if (d.ack_pending > 0) {
-                        <div style="font-size:0.7rem;color:#f59e0b;">({{ d.ack_pending }} pending)</div>
+                        <div style="font-size:0.75rem;color:#f59e0b;">({{ d.ack_pending }} pending)</div>
                       }
                     </td>
                     <td>
@@ -134,7 +134,7 @@ interface IndexResponse {
                         <div class="progress-bar" [class.bg-success]="d.impl_avg_percentage >= 100" [style.width.%]="d.impl_avg_percentage">{{ d.impl_avg_percentage }}%</div>
                       </div>
                     </td>
-                    <td><div class="r-title" style="font-size:0.78rem;">{{ d.issued_by_name ?? '-' }}</div></td>
+                    <td><div class="r-title" style="font-size:0.8rem;">{{ d.issued_by_name ?? '-' }}</div></td>
                     <td>
                       <div class="ctx-wrap">
                         <button class="ctx-trigger" type="button" (click)="toggleMenu(d.id, $event)"><i class="fas fa-ellipsis-v"></i></button>

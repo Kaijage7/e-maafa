@@ -15,8 +15,8 @@ import { ABOUT_LABELS } from './about-i18n';
   standalone: true,
   imports: [RouterLink],
   template: `
-    <div class="v2-page-content" style="max-width: 1000px; margin: 0 auto; padding: 7rem 1.5rem 4rem;">
-      <a routerLink="/" style="color:#60a5fa;text-decoration:none;font-size:0.85rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
+    <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 1.5rem 4rem;">
+      <a routerLink="/" style="color:#60a5fa;text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
 
       <!-- ===== Background ===== -->
       <section id="background" style="margin-top:1rem;">
@@ -32,7 +32,7 @@ import { ABOUT_LABELS } from './about-i18n';
             <div style="display:flex;gap:14px;align-items:flex-start;">
               <div style="flex-shrink:0;width:64px;text-align:right;font-weight:800;color:#003366;">{{ m.year }}</div>
               <div style="flex-shrink:0;width:12px;height:12px;border-radius:50%;background:#60a5fa;margin-top:5px;"></div>
-              <div style="font-size:0.96rem;color:var(--text-secondary, #475569);line-height:1.6;">{{ a(m.key) }}</div>
+              <div style="font-size:1rem;color:var(--text-secondary, #475569);line-height:1.6;">{{ a(m.key) }}</div>
             </div>
           }
         </div>
@@ -59,14 +59,14 @@ import { ABOUT_LABELS } from './about-i18n';
           <div style="width:2px;height:18px;background:rgba(0,51,102,0.3);"></div>
           <div style="display:flex;gap:0.7rem;flex-wrap:wrap;justify-content:center;">
             @for (s of sectionKeys; track s.key) {
-              <div style="border:1px solid rgba(26,111,196,0.35);color:#1a6fc4;border-radius:12px;padding:0.55rem 1rem;font-weight:600;font-size:0.84rem;background:var(--card-bg, #fff);">
+              <div style="border:1px solid rgba(26,111,196,0.35);color:#1a6fc4;border-radius:12px;padding:0.55rem 1rem;font-weight:600;font-size:0.9rem;background:var(--card-bg, #fff);">
                 <i class="fas {{ s.icon }} me-1"></i>{{ a(s.key) }}
               </div>
             }
           </div>
           <div style="margin-top:0.8rem;display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;">
             @for (u of unitKeys; track u) {
-              <div style="border:1px dashed rgba(75,101,132,0.4);color:#4b6584;border-radius:10px;padding:0.45rem 0.9rem;font-size:0.78rem;background:var(--card-bg, #fff);">{{ a(u) }}</div>
+              <div style="border:1px dashed rgba(75,101,132,0.4);color:#4b6584;border-radius:10px;padding:0.45rem 0.9rem;font-size:0.85rem;background:var(--card-bg, #fff);">{{ a(u) }}</div>
             }
           </div>
         </div>

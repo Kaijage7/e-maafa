@@ -28,21 +28,21 @@ const POLL_MS = 30_000; // verbatim source cadence
   styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
-    .stat b { font-size: 1.3rem; display: block; }
-    .stat span { font-size: 0.66rem; color: #6c757d; text-transform: uppercase; }
+    .stat b { font-size: 1.5rem; display: block; }
+    .stat span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; }
     .split { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
     .map { height: 500px; border-radius: 10px; }
     .feed-item { padding: 7px 0; border-bottom: 1px dashed #e3e6ed; font-size: 0.8rem; }
-    .sev { font-size: 0.64rem; font-weight: 700; border-radius: 8px; padding: 1px 7px; color: #fff; }
+    .sev { font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 1px 7px; color: #fff; }
     .bar-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 8px; align-items: center; font-size: 0.78rem; padding: 3px 0; }
     .bar { height: 10px; border-radius: 5px; background: #dc3545; min-width: 2px; }
     .crit { background: #fee2e2; border-left: 3px solid #dc2626; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 0.8rem; }
-    .pill { font-size: 0.7rem; color: #16a34a; font-weight: 700; }
+    .pill { font-size: 0.75rem; color: #16a34a; font-weight: 700; }
   `],
   template: `
     <dmis-page-header title="Response Dashboard" icon="fa-tachometer-alt"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Dashboard'}]">
-      <span class="pill" [style.color]="live() ? '#16a34a' : '#dc2626'"><i class="fas fa-circle" style="font-size:0.5rem"></i> {{ live() ? 'System Online' : 'Reconnecting…' }} — {{ clock() }}</span>
+      <span class="pill" [style.color]="live() ? '#16a34a' : '#dc2626'"><i class="fas fa-circle" style="font-size:0.7rem"></i> {{ live() ? 'System Online' : 'Reconnecting…' }} — {{ clock() }}</span>
     </dmis-page-header>
 
     <div class="stat-strip">
@@ -166,18 +166,20 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
     .tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 12px; }
     .tile { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px 14px; color: #e2e8f0; }
     .tile b { font-size: 1.5rem; display: block; }
-    .tile span { font-size: 0.64rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+    .tile span { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
     .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
     .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px 14px; color: #e2e8f0; margin-bottom: 12px; }
-    .card h4 { margin: 0 0 8px; font-size: 0.74rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; }
+    .card h4 { margin: 0 0 8px; font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; }
     .map { height: 500px; border-radius: 8px; }
     .bar-row { display: grid; grid-template-columns: 100px 1fr auto; gap: 8px; align-items: center; font-size: 0.78rem; padding: 3px 0; }
     .bar { height: 10px; border-radius: 5px; min-width: 2px; }
     .feed-item { padding: 6px 0; border-bottom: 1px dashed #334155; font-size: 0.78rem; }
-    .sev { font-size: 0.62rem; font-weight: 700; border-radius: 8px; padding: 1px 7px; color: #fff; }
+    .sev { font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 1px 7px; color: #fff; }
     .qa { display: flex; gap: 8px; }
-    .qa button { flex: 1; background: #dc3545; color: #fff; border: none; border-radius: 8px; padding: 10px; font-family: inherit; font-weight: 700; font-size: 0.76rem; cursor: pointer; }
-    .qa a { flex: 1; background: #334155; color: #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; font-weight: 700; font-size: 0.76rem; text-decoration: none; }
+    .qa button { flex: 1; background: #dc3545; color: #fff; border: none; border-radius: 8px; padding: 10px; font-family: inherit; font-weight: 700; font-size: 0.78rem; cursor: pointer; }
+    .qa button:hover { background: #c82333; }
+    .qa a { flex: 1; background: #334155; color: #e2e8f0; border-radius: 8px; padding: 10px; text-align: center; font-weight: 700; font-size: 0.78rem; text-decoration: none; }
+    .qa a:hover { background: #475569; }
     .activation { background: #14532d; border: 1px solid #16a34a; border-radius: 10px; padding: 10px 14px; color: #dcfce7; font-size: 0.82rem; margin-bottom: 12px; }
     .clock { color: #4ade80; font-weight: 700; font-size: 0.8rem; }
   `],
@@ -225,7 +227,7 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
           @for (i of d().recent_incidents ?? []; track i.id) {
             <div class="feed-item"><span class="sev" [style.background]="color(i.severity_level)">{{ i.severity_level }}</span>
               <a [routerLink]="['/m/response/incidents', i.id]" style="color:#e2e8f0; font-weight:600; margin-left:6px">{{ i.title }}</a></div>
-          } @empty { <div style="color:#64748b; font-size:0.78rem">Quiet — no incidents in 24h.</div> }
+          } @empty { <div style="color:#64748b; font-size:0.78rem">No incidents reported in the last 24 hours.</div> }
         </div>
         <div class="card"><h4>Quick Actions</h4>
           <div class="qa">
@@ -339,10 +341,10 @@ function ensureLeaflet(): Promise<void> {
     leafletPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.href = '/vendor/leaflet/leaflet.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.src = '/vendor/leaflet/leaflet.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });
@@ -377,10 +379,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

@@ -46,36 +46,37 @@ interface ProcurementRow {
   styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
-    .stat b { font-size: 1.3rem; display: block; }
-    .stat span { font-size: 0.72rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat b { font-size: 1.5rem; display: block; }
+    .stat span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
-    .q-badge { background: rgba(220,53,69,0.1); color: #dc3545; border-radius: 10px; padding: 0 6px; font-size: 0.68rem; margin-left: 4px; }
+    .q-badge { background: rgba(220,53,69,0.1); color: #dc3545; border-radius: 10px; padding: 0 6px; font-size: 0.75rem; margin-left: 4px; }
     .incident-card { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
     .incident-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #f8f9fb; border-bottom: 1px solid #e3e6ed; font-size: 0.85rem; }
     .res-row { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1.2fr auto; gap: 10px; align-items: center; padding: 9px 14px; border-bottom: 1px solid #f1f5f9; font-size: 0.82rem; }
     .res-row:last-child { border-bottom: none; }
-    .chip { display: inline-block; font-size: 0.66rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; margin-right: 3px; }
+    .chip { display: inline-block; font-size: 0.75rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; margin-right: 3px; }
     .c-approved { background: #d1fae5; color: #065f46; } .c-sourcing { background: #fef3c7; color: #92400e; }
     .c-waiting { background: #ede9fe; color: #5b21b6; } .c-other { background: #e2e8f0; color: #334155; }
-    .sev { font-size: 0.66rem; font-weight: 700; border-radius: 10px; padding: 1px 8px; background: #fee2e2; color: #b91c1c; }
+    .sev { font-size: 0.75rem; font-weight: 700; border-radius: 10px; padding: 1px 8px; background: #fee2e2; color: #b91c1c; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-    .btn-sm { font-size: 0.72rem; padding: 3px 10px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
     .b-red { background: #dc3545; color: #fff; } .b-green { background: #198754; color: #fff; }
     .b-outline { background: #fff; border-color: #cbd5e1; color: #334155; }
+    .b-red:hover { background: #c82333; } .b-green:hover { background: #157347; } .b-outline:hover { background: #f1f5f9; }
     .drawer-back { position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1100; display: flex; justify-content: flex-end; }
     .drawer { width: 560px; max-width: 95vw; background: #fff; height: 100%; overflow-y: auto; box-shadow: -12px 0 40px rgba(0,0,0,0.25); }
     .drawer-head { background: #dc3545; color: #fff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1; }
     .drawer-body { padding: 16px 18px; }
     .src-item { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; font-size: 0.82rem; }
     .src-item.sel { border-color: #dc3545; background: #fff5f5; }
-    .src-meta { font-size: 0.72rem; color: #6c757d; }
-    .gate { font-size: 0.64rem; background: #ede9fe; color: #5b21b6; border-radius: 8px; padding: 1px 7px; font-weight: 700; }
-    .direct { font-size: 0.64rem; background: #d1fae5; color: #065f46; border-radius: 8px; padding: 1px 7px; font-weight: 700; }
-    label { display: block; font-size: 0.74rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
+    .src-meta { font-size: 0.75rem; color: #6c757d; }
+    .gate { font-size: 0.75rem; background: #ede9fe; color: #5b21b6; border-radius: 8px; padding: 1px 7px; font-weight: 700; }
+    .direct { font-size: 0.75rem; background: #d1fae5; color: #065f46; border-radius: 8px; padding: 1px 7px; font-weight: 700; }
+    label { display: block; font-size: 0.75rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
     input, select, textarea { width: 100%; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 9px; font-family: inherit; box-sizing: border-box; }
     .empty { text-align: center; color: #94a3b8; padding: 34px 0; font-size: 0.85rem; }
     .urg-critical { color: #b91c1c; font-weight: 700; } .urg-high { color: #c2410c; font-weight: 600; }
@@ -194,7 +195,7 @@ interface ProcurementRow {
         <div class="drawer" (click)="$event.stopPropagation()">
           <div class="drawer-head">
             <div><b>Dispatch — {{ drawer()!.allocation.resource_name ?? ('Allocation #' + drawer()!.allocation.id) }}</b>
-              <div style="font-size:0.74rem; opacity:0.85">Quantity needed: {{ drawer()!.quantity_needed }} {{ drawer()!.allocation.unit_of_measure }}</div></div>
+              <div style="font-size:0.75rem; opacity:0.85">Quantity needed: {{ drawer()!.quantity_needed }} {{ drawer()!.allocation.unit_of_measure }}</div></div>
             <button class="btn-sm b-outline" (click)="drawer.set(null)">✕</button>
           </div>
           <div class="drawer-body">
@@ -285,7 +286,7 @@ interface ProcurementRow {
         <div class="drawer" (click)="$event.stopPropagation()">
           <div class="drawer-head">
             <div><b>Bidding Pool — {{ pool()!.allocation.resource_name }}</b>
-              <div style="font-size:0.74rem; opacity:0.85">
+              <div style="font-size:0.75rem; opacity:0.85">
                 Needed {{ pool()!.quantity_needed }} · accepted {{ pool()!.accepted_quantity }} ·
                 pending {{ pool()!.pending_quantity }} · remaining {{ pool()!.remaining_quantity }}</div></div>
             <button class="btn-sm b-outline" (click)="pool.set(null)">✕</button>
@@ -298,7 +299,7 @@ interface ProcurementRow {
                   <span class="chip" [class]="b.status === 'Pending' ? 'c-waiting' : b.status === 'Accepted' ? 'c-sourcing' : b.status === 'Received' ? 'c-approved' : 'c-other'">{{ b.status }}</span>
                   <div class="src-meta">{{ b.quantity_offered }} &#64; {{ b.unit_price }} · delivery {{ b.delivery_date?.substring(0, 10) }}
                     @if (b.notes) { · {{ b.notes.substring(0, 50) }} }</div>
-                  @if (b.recorded_by_name) { <div class="src-meta" style="font-size:.72rem;opacity:.8;"><i class="fas fa-user-pen"></i> Recorded by {{ b.recorded_by_name }}@if (b.accepted_by_name) { · accepted by {{ b.accepted_by_name }} }</div> }
+                  @if (b.recorded_by_name) { <div class="src-meta" style="font-size:0.75rem;opacity:.8;"><i class="fas fa-user-pen"></i> Recorded by {{ b.recorded_by_name }}@if (b.accepted_by_name) { · accepted by {{ b.accepted_by_name }} }</div> }
                   <div style="margin-top:6px">
                     @if (b.status === 'Pending') {
                       <button class="btn-sm b-green" (click)="acceptBid(b)">Accept</button>
@@ -558,10 +559,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

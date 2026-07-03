@@ -19,18 +19,19 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
   styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
-    .stat b { font-size: 1.3rem; display: block; }
-    .stat span { font-size: 0.68rem; color: #6c757d; text-transform: uppercase; }
+    .stat b { font-size: 1.5rem; display: block; }
+    .stat span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-    .chip { font-size: 0.64rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; }
+    .chip { font-size: 0.75rem; font-weight: 700; border-radius: 8px; padding: 1px 8px; }
     .s-proposed { background: #e2e8f0; color: #334155; } .s-technical_review { background: #fef3c7; color: #92400e; }
     .s-steering_endorsed { background: #dbeafe; color: #1e40af; } .s-declared { background: #fee2e2; color: #b91c1c; }
     .s-revoked, .s-expired { background: #f3f4f6; color: #6b7280; }
-    .btn-sm { font-size: 0.72rem; padding: 4px 11px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
     .b-red { background: #dc3545; color: #fff; } .b-outline { background: #fff; border-color: #cbd5e1; color: #334155; }
-    .chain { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; font-size: 0.66rem; }
+    .b-red:hover { background: #c82333; } .b-outline:hover { background: #f1f5f9; }
+    .chain { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; font-size: 0.75rem; }
     .step { padding: 1px 7px; border-radius: 6px; background: #e2e8f0; color: #475569; }
     .step.done { background: #d1fae5; color: #065f46; } .step.now { background: #dc3545; color: #fff; }
     .empty { text-align: center; color: #94a3b8; padding: 26px 0; font-size: 0.85rem; }
@@ -96,7 +97,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
               @if (x.gazette_reference) { <b>Gazette:</b> {{ x.gazette_reference }}<br> }
               @if (x.effective_from) { <b>Effective:</b> {{ x.effective_from }} → {{ x.effective_until ?? 'further notice' }} }</p>
             @if (x.justification) { <p style="font-size:0.8rem; color:#475569"><b>Justification:</b> {{ x.justification }}</p> }
-            <h4 style="font-size:0.74rem; text-transform:uppercase; color:#475569; margin:14px 0 6px">Chain journal</h4>
+            <h4 style="font-size:0.75rem; text-transform:uppercase; color:#475569; margin:14px 0 6px">Chain journal</h4>
             @for (e of x.events; track e.id) {
               <div class="ev"><b>{{ e.action.replace('_', ' ') }}</b> — {{ e.actor_role }}
                 @if (e.note) { <br><span style="color:#6c757d">{{ e.note }}</span> }
@@ -225,10 +226,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

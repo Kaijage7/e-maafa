@@ -123,14 +123,14 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
     .left-brand .mini-seal .s-ring { fill:none; stroke:rgba(255,255,255,0.7); stroke-width:6; }
     .lb-text { display:flex; flex-direction:column; }
     .lb-text .lb-title { font-size:0.78rem; font-weight:800; color:#fff; }
-    .lb-text .lb-sub { font-size:0.5rem; font-weight:600; color:rgba(255,255,255,0.6); letter-spacing:1px; text-transform:uppercase; }
+    .lb-text .lb-sub { font-size:0.75rem; font-weight:600; color:rgba(255,255,255,0.7); letter-spacing:1px; text-transform:uppercase; }
     .showcase-captions { position:absolute; bottom:0; left:0; right:0; z-index:10; padding:0 1.25rem 3rem; }
     .cap-item { position:absolute; bottom:2.6rem; left:1.25rem; right:1.25rem; opacity:0; transition:opacity .5s ease; }
     .cap-item.active { opacity:1; }
-    .cap-tag { display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.25); border-radius:4px; padding:3px 9px; font-size:0.52rem; font-weight:700; color:#fff; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:0.5rem; }
-    .cap-tag i { font-size:0.45rem; }
-    .cap-title { font-size:0.9rem; font-weight:700; color:#fff; line-height:1.3; margin-bottom:0.25rem; }
-    .cap-desc { font-size:0.74rem; color:rgba(255,255,255,0.72); line-height:1.45; }
+    .cap-tag { display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.25); border-radius:4px; padding:3px 9px; font-size:0.75rem; font-weight:700; color:#fff; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:0.5rem; }
+    .cap-tag i { font-size:0.7rem; }
+    .cap-title { font-size:0.95rem; font-weight:700; color:#fff; line-height:1.3; margin-bottom:0.25rem; }
+    .cap-desc { font-size:0.8rem; color:rgba(255,255,255,0.78); line-height:1.45; }
     .slide-dots { position:absolute; bottom:1.1rem; left:1.25rem; z-index:10; display:flex; gap:6px; }
     .slide-dots .dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.3); transition:background .2s; cursor:pointer; }
     .slide-dots .dot.active { background:#fff; }
@@ -142,19 +142,19 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
     .card-seal .seal-inner { fill:none; stroke:var(--navy); stroke-width:2.5; opacity:0.4; }
     .card-seal .seal-text { fill:var(--navy); stroke:none; opacity:0.9; }
     .brand-text { text-align:center; margin-bottom:0.15rem; }
-    .brand-org { font-size:0.55rem; font-weight:800; color:var(--navy); letter-spacing:2px; text-transform:uppercase; }
-    .brand-office { font-size:0.5rem; color:var(--muted); letter-spacing:1.2px; text-transform:uppercase; font-weight:700; }
+    .brand-org { font-size:0.75rem; font-weight:800; color:var(--navy); letter-spacing:2px; text-transform:uppercase; }
+    .brand-office { font-size:0.75rem; color:var(--muted); letter-spacing:1.2px; text-transform:uppercase; font-weight:700; }
     .brand-divider { width:40px; height:2px; background:var(--navy); opacity:0.5; margin:0.5rem auto; }
     .brand-title { text-align:center; font-size:1.2rem; font-weight:800; color:var(--navy); margin-bottom:0.05rem; }
     .brand-subtitle { text-align:center; font-size:0.78rem; color:var(--muted); font-weight:400; margin-bottom:0.1rem; }
     .status-row { display:flex; justify-content:center; gap:0.4rem; margin:0.6rem 0 0.8rem; }
-    .s-pill { display:flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; font-size:0.68rem; font-weight:650; }
+    .s-pill { display:flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; font-size:0.75rem; font-weight:650; }
     .s-pill .dot { width:6px; height:6px; border-radius:50%; }
     .s-pill.emergency { background:#fde3e3; color:#b51c1c; } .s-pill.emergency .dot { background:var(--emergency); }
     .s-pill.warning { background:#ffeede; color:#a85607; } .s-pill.warning .dot { background:var(--warning); }
     .s-pill.watch { background:#fff7d6; color:#8a6d00; } .s-pill.watch .dot { background:var(--watch); }
     .card-divider { height:1px; background:var(--line); margin-bottom:1rem; }
-    .alert-card { padding:0.55rem 0.75rem; background:#fde3e3; border:1px solid #f3c4c4; border-left:3px solid var(--emergency); border-radius:6px; margin-bottom:0.85rem; display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; color:#b51c1c; }
+    .alert-card { padding:0.55rem 0.75rem; background:#fde3e3; border:1px solid #f3c4c4; border-left:3px solid var(--emergency); border-radius:6px; margin-bottom:0.85rem; display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; color:#b51c1c; }
 
     .field-group { position:relative; margin-bottom:0.85rem; }
     .field-group input { width:100%; padding:0.6rem 0.85rem 0.6rem 2.4rem; background:var(--surface); border:1px solid var(--line); border-radius:6px; font-size:0.9rem; font-weight:500; color:var(--ink); outline:none; transition:border-color .15s, box-shadow .15s; }
@@ -164,7 +164,7 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
     .field-group .f-icon { position:absolute; left:0.8rem; top:50%; transform:translateY(-50%); color:var(--muted); font-size:0.75rem; pointer-events:none; }
     .field-group input:focus ~ .f-icon { color:var(--navy); }
     .field-group .f-label { position:absolute; left:2.4rem; top:50%; transform:translateY(-50%); font-size:0.9rem; font-weight:500; color:var(--muted); pointer-events:none; transition:all .15s ease; }
-    .field-group input:focus ~ .f-label, .field-group input:not(:placeholder-shown) ~ .f-label { top:-7px; left:0.7rem; font-size:0.55rem; font-weight:700; color:var(--navy); background:var(--surface); padding:0 6px; letter-spacing:0.4px; text-transform:uppercase; }
+    .field-group input:focus ~ .f-label, .field-group input:not(:placeholder-shown) ~ .f-label { top:-9px; left:0.7rem; font-size:0.75rem; font-weight:700; color:var(--navy); background:var(--surface); padding:0 6px; letter-spacing:0.4px; text-transform:uppercase; }
     .pwd-toggle { position:absolute; right:0.65rem; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; padding:0.3rem; border-radius:4px; }
     .pwd-toggle:hover { color:var(--navy); background:#f0f3f7; }
     .options-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
@@ -184,7 +184,7 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
     .register-row span { font-size:0.8rem; color:var(--muted); }
     .register-row a { font-size:0.8rem; font-weight:600; color:var(--navy); text-decoration:none; margin-left:4px; }
     .register-row a:hover { text-decoration:underline; }
-    .card-footer-text { text-align:center; margin-top:0.85rem; padding-top:0.65rem; border-top:1px solid var(--line); font-size:0.68rem; color:var(--muted); }
+    .card-footer-text { text-align:center; margin-top:0.85rem; padding-top:0.65rem; border-top:1px solid var(--line); font-size:0.75rem; color:var(--muted); }
     @media (max-width:780px) { .login-card { flex-direction:column; max-width:440px; } .card-left { width:100%; min-width:unset; height:200px; } .card-right { padding:1.5rem 1.75rem; } }
   `],
 })

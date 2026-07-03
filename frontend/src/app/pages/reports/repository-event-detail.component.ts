@@ -137,8 +137,8 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
             @for (t of totalTiles(); track t.label) {
               <div style="border:1px solid var(--border);border-radius:12px;padding:0.7rem 0.85rem;text-align:center;">
                 <div style="font-size:1.25rem;font-weight:800;" [style.color]="t.color">{{ t.value | number:'1.0-0' }}</div>
-                <div style="font-size:0.68rem;color:var(--text-light);text-transform:uppercase;letter-spacing:0.4px;">{{ t.label }}</div>
-                <div style="font-size:0.62rem;color:#94a3b8;">{{ t.indicator }}</div>
+                <div style="font-size:0.75rem;color:var(--text-light);text-transform:uppercase;letter-spacing:0.4px;">{{ t.label }}</div>
+                <div style="font-size:0.8rem;color:#94a3b8;">{{ t.indicator }}</div>
               </div>
             }
           </div>
@@ -163,7 +163,7 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
                     <td style="text-align:right;">{{ x.displaced | number }}</td>
                     <td style="text-align:right;">{{ x.houses_destroyed + x.houses_damaged | number }}</td>
                     <td style="text-align:right;">{{ x.total_loss_tzs | number:'1.0-0' }}</td>
-                    <td style="font-size:0.74rem;color:var(--text-light);">{{ x.source || '—' }}</td>
+                    <td style="font-size:0.8rem;color:var(--text-light);">{{ x.source || '—' }}</td>
                     <td style="white-space:nowrap;">
                       @if (e.status === 'Open') {
                         <button class="btn-icon" title="Edit" (click)="editEffects(x)"><i class="fas fa-pen"></i></button>
@@ -185,10 +185,10 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
             <div class="panel-body" style="border-top:1px solid var(--border);">
               <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;margin-bottom:0.9rem;">
                 <h6 style="margin:0;font-weight:800;">{{ form()['id'] ? 'Edit effects — ' + form()['region'] : 'Add effects record' }}</h6>
-                <button class="btn-add" style="background:#7c3aed;padding:0.35rem 0.9rem;font-size:0.76rem;" (click)="pull()">
+                <button class="btn-add" style="background:#7c3aed;padding:0.35rem 0.9rem;font-size:0.8rem;" (click)="pull()">
                   <i class="fas fa-wand-magic-sparkles"></i> Pre-fill from linked records
                 </button>
-                @if (pullNote()) { <span style="font-size:0.74rem;color:#7c3aed;">{{ pullNote() }}</span> }
+                @if (pullNote()) { <span style="font-size:0.8rem;color:#7c3aed;">{{ pullNote() }}</span> }
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:0.6rem;margin-bottom:0.8rem;">
                 <input class="form-control" placeholder="Region *" [value]="form()['region'] || ''" (input)="setF('region', $any($event.target).value)">
@@ -198,11 +198,11 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
               @for (g of formGroups; track g.title) {
                 <div style="margin-bottom:0.8rem;">
                   <div style="font-size:0.76rem;font-weight:800;color:var(--text-dark);">{{ g.title }}</div>
-                  <div style="font-size:0.68rem;color:var(--text-light);margin-bottom:0.45rem;">{{ g.hint }}</div>
+                  <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:0.45rem;">{{ g.hint }}</div>
                   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.5rem;">
                     @for (f of g.fields; track f.key) {
                       <div>
-                        <label style="font-size:0.66rem;color:var(--text-mid);display:block;margin-bottom:2px;">{{ f.label }}</label>
+                        <label style="font-size:0.75rem;color:var(--text-mid);display:block;margin-bottom:2px;">{{ f.label }}</label>
                         <input type="number" min="0" class="form-control" style="font-size:0.8rem;"
                                [value]="form()[f.key] ?? ''" (input)="setF(f.key, $any($event.target).value)">
                       </div>
@@ -212,7 +212,7 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
               }
               <div style="display:grid;grid-template-columns:2fr 1fr;gap:0.6rem;align-items:end;">
                 <div>
-                  <label style="font-size:0.66rem;color:var(--text-mid);display:block;margin-bottom:2px;">Services disrupted (comma-separated: Education, Health, Water, Power, Transport, Telecoms)</label>
+                  <label style="font-size:0.75rem;color:var(--text-mid);display:block;margin-bottom:2px;">Services disrupted (comma-separated: Education, Health, Water, Power, Transport, Telecoms)</label>
                   <input class="form-control" [value]="form()['servicesDisrupted'] || ''" (input)="setF('servicesDisrupted', $any($event.target).value)">
                 </div>
                 <div style="display:flex;gap:0.5rem;">
@@ -220,7 +220,7 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
                     <i class="fas fa-save"></i> {{ form()['id'] ? 'Update record' : 'Save record' }}
                   </button>
                   @if (form()['id']) {
-                    <button type="button" style="border:1px solid var(--border);background:#fff;border-radius:9px;padding:0.5rem 0.9rem;cursor:pointer;" (click)="resetForm()">Cancel</button>
+                    <button type="button" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:0.5rem 0.9rem;font-size:0.8rem;cursor:pointer;" (click)="resetForm()">Cancel</button>
                   }
                 </div>
               </div>
@@ -231,7 +231,7 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
 
       <!-- Linked records: the event's operational story across the whole system -->
       <div class="panel-row" style="animation-delay:.15s;">
-        <dmis-panel title="Linked records — everything around this disaster" icon="fa-link" [badge]="links().length + ' linked'">
+        <dmis-panel title="Linked records — all system records related to this disaster" icon="fa-link" [badge]="links().length + ' linked'">
           <div class="panel-body">
             <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.1rem;align-items:start;">
               <!-- linked list -->
@@ -239,11 +239,11 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
                 @for (l of links(); track l.id) {
                   <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;padding:0.55rem 0.75rem;">
                     <span [style.background]="meta(l.entityType).color" style="width:30px;height:30px;border-radius:8px;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                      <i class="fas {{ meta(l.entityType).icon }}" style="font-size:0.72rem;"></i>
+                      <i class="fas {{ meta(l.entityType).icon }}" style="font-size:0.75rem;"></i>
                     </span>
                     <div style="flex:1;min-width:0;">
                       <div style="font-size:0.82rem;font-weight:700;color:var(--text-dark);">{{ l.label || (meta(l.entityType).title + ' #' + l.entityId) }}</div>
-                      <div style="font-size:0.68rem;color:var(--text-light);">{{ meta(l.entityType).title }} · linked {{ l.linkedOn }} by {{ l.linkedBy }}</div>
+                      <div style="font-size:0.8rem;color:var(--text-light);">{{ meta(l.entityType).title }} · linked {{ l.linkedOn }} by {{ l.linkedBy }}</div>
                     </div>
                     @if (e.status === 'Open') {
                       <button class="btn-icon" title="Unlink" (click)="unlink(l.id)"><i class="fas fa-link-slash" style="color:#dc2626;"></i></button>
@@ -251,7 +251,7 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
                   </div>
                 } @empty {
                   <div style="border:1px dashed var(--border);border-radius:10px;padding:1.4rem;text-align:center;color:var(--text-light);font-size:0.82rem;">
-                    Nothing linked yet — pick from the system's suggestions →
+                    No records linked yet — select from the suggestions found in the system.
                   </div>
                 }
               </div>
@@ -264,18 +264,18 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
                   @for (group of suggestionGroups(); track group.type) {
                     @for (s of group.items; track s.id) {
                       <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:9px;padding:0.45rem 0.6rem;background:rgba(13,110,253,0.02);">
-                        <i class="fas {{ meta(group.type).icon }}" [style.color]="meta(group.type).color" style="font-size:0.72rem;width:16px;"></i>
+                        <i class="fas {{ meta(group.type).icon }}" [style.color]="meta(group.type).color" style="font-size:0.75rem;width:16px;"></i>
                         <div style="flex:1;min-width:0;">
-                          <div style="font-size:0.76rem;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.label }}</div>
-                          <div style="font-size:0.64rem;color:var(--text-light);">{{ s.when }}{{ s.detail ? ' · ' + s.detail : '' }}</div>
+                          <div style="font-size:0.8rem;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.label }}</div>
+                          <div style="font-size:0.8rem;color:var(--text-light);">{{ s.when }}{{ s.detail ? ' · ' + s.detail : '' }}</div>
                         </div>
                         @if (e.status === 'Open') {
-                          <button class="btn-add" style="padding:0.2rem 0.6rem;font-size:0.68rem;" (click)="link(group.type, s.id)">Link</button>
+                          <button class="btn-add" style="padding:0.2rem 0.6rem;font-size:0.8rem;" (click)="link(group.type, s.id)">Link</button>
                         }
                       </div>
                     }
                   } @empty {
-                    <div style="font-size:0.74rem;color:var(--text-light);">No unlinked candidates in this event's window.</div>
+                    <div style="font-size:0.8rem;color:var(--text-light);">No unlinked candidates in this event's window.</div>
                   }
                 </div>
               </div>
@@ -287,7 +287,7 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
               <div class="f-label">DMD response investment (linked dispatches)</div>
               <div style="font-size:1.3rem;font-weight:800;color:#059669;">TZS {{ investment()['valueTzs'] | number:'1.0-0' }}</div>
             </div>
-            <div style="font-size:0.78rem;color:var(--text-mid);">
+            <div style="font-size:0.8rem;color:var(--text-mid);">
               {{ investment()['allocations'] }} allocations · {{ investment()['resourceTypes'] }} resource types —
               computed from the resource allocations of the linked incidents.
             </div>
@@ -297,7 +297,7 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
     }
   `,
   styles: [`
-    .f-label { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); }
+    .f-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); }
     .f-value { font-size: 0.86rem; font-weight: 700; color: var(--text-dark); }
     .btn-icon { border: none; background: transparent; cursor: pointer; padding: 4px 7px; color: var(--text-mid); }
   `],

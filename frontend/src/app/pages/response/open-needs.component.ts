@@ -35,27 +35,30 @@ interface UnfundedTrainingRow {
     .stat-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.3rem; display: block; }
-    .stat span { font-size: 0.72rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #198754; border-bottom-color: #198754; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-    .chip { display: inline-block; font-size: 0.66rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; background: #e2e8f0; color: #334155; }
+    td small { font-size: 0.75rem; }
+    .chip { display: inline-block; font-size: 0.75rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; background: #e2e8f0; color: #334155; }
     .chip.sev { background: #fee2e2; color: #991b1b; }
     .chip.urgent { background: #fef3c7; color: #92400e; }
-    .tag { display: inline-block; font-size: 0.66rem; background: rgba(0,0,0,0.05); border-radius: 6px; padding: 1px 7px; margin: 1px 2px 1px 0; color: #475569; }
+    .tag { display: inline-block; font-size: 0.75rem; background: rgba(0,0,0,0.05); border-radius: 6px; padding: 1px 7px; margin: 1px 2px 1px 0; color: #475569; }
     .bar { height: 6px; border-radius: 4px; background: #e9eef3; overflow: hidden; margin-top: 4px; max-width: 160px; }
     .bar > span { display: block; height: 100%; background: #198754; }
     .needed { font-weight: 700; color: #0f5132; }
     .toolbar { display: flex; gap: 6px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
     .toolbar input { font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 5px 9px; font-family: inherit; }
-    .btn-sm { font-size: 0.72rem; padding: 5px 12px; border-radius: 7px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 12px; border-radius: 7px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-sm:hover { background: #f1f5f9; }
     .empty { text-align: center; color: #94a3b8; padding: 30px 0; font-size: 0.85rem; }
     .muted { color: #6c757d; }
     .link-hint { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; border-radius: 10px; padding: 8px 12px; font-size: 0.8rem; margin-bottom: 12px; }
-    .btn-donate { font-size: 0.74rem; font-weight: 700; padding: 5px 12px; border-radius: 7px; border: 1px solid #198754; background: #198754; color: #fff; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .btn-donate { font-size: 0.78rem; font-weight: 700; padding: 6px 12px; border-radius: 7px; border: 1px solid #198754; background: #198754; color: #fff; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .btn-donate:hover:not(:disabled) { background: #146c43; border-color: #146c43; }
     .btn-donate:disabled { opacity: 0.55; cursor: default; }
     .dn-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .dn-modal { background: #fff; border-radius: 14px; padding: 1.2rem 1.3rem; width: min(440px, 92vw); box-shadow: 0 12px 40px rgba(0,0,0,0.25); }
@@ -77,7 +80,7 @@ interface UnfundedTrainingRow {
       <div class="stat"><b>{{ stats().urgent ?? 0 }}</b><span>Closing soon</span></div>
     </div>
     @if (stats().canPledge === false) {
-      <div class="link-hint"><i class="fas fa-circle-info"></i> Your login isn't a linked partner, so "Record pledge" logs an offer <b>on a partner's behalf</b> (you choose the organisation). Partners who log in with a linked account donate as themselves.</div>
+      <div class="link-hint"><i class="fas fa-circle-info"></i> Your login is not a linked partner, so "Record pledge" logs an offer <b>on a partner's behalf</b> (you choose the organisation). Partners who log in with a linked account donate as themselves.</div>
     }
 
     <div class="queue-tabs">

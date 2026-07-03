@@ -39,7 +39,7 @@ interface Module {
                     [badge]="m.levels.length + ' levels'">
           <div class="panel-body">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:0.8rem;">
-              <div style="font-size:0.78rem;color:var(--text-light);">
+              <div style="font-size:0.8rem;color:var(--text-light);">
                 <code style="color:var(--text-mid);">{{ m.moduleCode }}</code>
                 @if (m.modelClass) { · <span title="bound model">{{ m.modelClass }}</span> }
                 @if (m.description) { · {{ m.description }} }
@@ -105,7 +105,7 @@ interface Module {
     .lvl.off { opacity:0.55; }
     .ord { width:30px; height:30px; border-radius:50%; background:#003366; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.82rem; }
     .lvl .nm { font-weight:600; } .lvl select.rl { font-size:0.82rem; }
-    .chk { font-size:0.74rem; color:var(--text-mid); display:flex; align-items:center; gap:4px; white-space:nowrap; cursor:pointer; }
+    .chk { font-size:0.8rem; color:var(--text-mid); display:flex; align-items:center; gap:4px; white-space:nowrap; cursor:pointer; }
     .ctl { display:flex; gap:2px; justify-content:flex-end; }
     /* Anchor the row action menu under its trigger (the global .ctx-menu is position:fixed and detaches). */
     .ctx-menu { position: absolute; top: 100%; right: 0; }

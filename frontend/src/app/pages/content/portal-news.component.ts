@@ -79,7 +79,7 @@ interface NewsItem {
     <!-- Editor drawer (create + edit share it) -->
     @if (editorOpen()) {
       <div style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1500;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="editorOpen.set(false)">
-        <div style="background:#fff;border-radius:16px;max-width:640px;width:100%;padding:1.3rem 1.4rem;max-height:90vh;overflow-y:auto;" (click)="$event.stopPropagation()">
+        <div style="background:#fff;border-radius:12px;border:1px solid var(--border);max-width:640px;width:100%;padding:1.3rem 1.4rem;max-height:90vh;overflow-y:auto;" (click)="$event.stopPropagation()">
           <h5 style="font-weight:800;margin-bottom:1rem;">{{ editId() ? 'Edit Article' : 'New Article' }}</h5>
           <div style="display:grid;gap:0.75rem;">
             <input class="form-control" placeholder="Title *" [value]="fTitle()" (input)="fTitle.set($any($event.target).value)">
@@ -101,7 +101,7 @@ interface NewsItem {
             <!-- Optional Swahili translation: the public portal shows it for Swahili visitors, else falls back to English -->
             <div style="border:1px solid var(--border);border-radius:10px;padding:0.85rem 0.9rem;display:grid;gap:0.75rem;background:#fafafa;">
               <div style="font-weight:700;font-size:0.85rem;color:var(--text-mid);display:flex;align-items:center;gap:0.4rem;">
-                <i class="fas fa-language"></i> Kiswahili (Swahili) <span style="font-weight:500;font-size:0.75rem;opacity:0.7;">— optional, falls back to English</span>
+                <i class="fas fa-language"></i> Kiswahili (Swahili) <span style="font-weight:500;font-size:0.8rem;opacity:0.7;">— optional, falls back to English</span>
               </div>
               <input class="form-control" placeholder="Kichwa cha habari (Title)" [value]="fTitleSw()" (input)="fTitleSw.set($any($event.target).value)">
               <textarea class="form-control" rows="2" placeholder="Muhtasari (Excerpt)" [value]="fExcerptSw()" (input)="fExcerptSw.set($any($event.target).value)"></textarea>
@@ -113,7 +113,7 @@ interface NewsItem {
             </label>
             @if (error()) { <div style="color:#dc2626;font-size:0.82rem;">{{ error() }}</div> }
             <div style="display:flex;justify-content:flex-end;gap:0.6rem;">
-              <button class="btn-ghost" type="button" style="border:1px solid var(--border);background:#fff;border-radius:9px;padding:0.5rem 1rem;cursor:pointer;" (click)="editorOpen.set(false)">Cancel</button>
+              <button class="btn" type="button" (click)="editorOpen.set(false)">Cancel</button>
               <button class="btn-add" type="button" [disabled]="!fTitle().trim() || saving()" (click)="save()">
                 <i class="fas" [class.fa-save]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i> {{ saving() ? 'Saving…' : 'Save' }}
               </button>

@@ -101,7 +101,7 @@ const STATUS_BADGE: Record<string, string> = {
     </div>
   `,
   styles: [`
-    .f-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
+    .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
     .bar-row { display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px solid var(--border); font-size:0.86rem; }
     .bar-val { font-weight:700; color: var(--text-dark); }
     .empty-line { font-size:0.84rem; color: var(--text-light); font-style: italic; }

@@ -60,7 +60,7 @@ interface Stakeholder {
                       <td><div class="r-title">{{ s.organization || s.name }}</div>
                         <div class="r-subtitle">{{ s.contactPersonName || s.name }}{{ s.contactPersonTitle ? ' · ' + s.contactPersonTitle : '' }}</div></td>
                       <td><span class="r-badge" style="background:rgba(0,51,102,0.08);color:#003366;">{{ s.type || '-' }}</span></td>
-                      <td style="font-size:0.78rem;color:var(--text-mid);">
+                      <td style="font-size:0.82rem;color:var(--text-mid);">
                         @if (s.phone) { <div>{{ s.phone }}</div> } @if (s.email) { <div class="r-subtitle">{{ s.email }}</div> }
                       </td>
                       <td style="font-size:0.82rem;color:var(--text-mid);">{{ s.region || '-' }}{{ s.district ? ' · ' + s.district : '' }}</td>
@@ -93,7 +93,7 @@ interface Stakeholder {
     <!-- Register drawer -->
     @if (createOpen()) {
       <div style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1500;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="createOpen.set(false)">
-        <div style="background:#fff;border-radius:16px;max-width:620px;width:100%;padding:1.3rem 1.4rem;" (click)="$event.stopPropagation()">
+        <div style="background:#fff;border-radius:12px;max-width:620px;width:100%;padding:1.3rem 1.4rem;" (click)="$event.stopPropagation()">
           <h5 style="font-weight:800;margin-bottom:1rem;">Register Stakeholder</h5>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
             <input class="form-control" placeholder="Organization *" [value]="fOrg()" (input)="fOrg.set($any($event.target).value)">

@@ -22,16 +22,16 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
     <div class="emergency-topbar" id="emergencyTopbar">
       <div class="emergency-topbar-inner">
         <div class="emergency-label">
-          <i class="fas fa-circle" style="color: var(--status-danger); font-size: 0.5rem;"></i>
-          <span>{{ L.t('lbl_emergency_hotlines') }}</span>
+          <i class="fas fa-circle" style="color: var(--status-danger); font-size: 0.7rem;"></i>
+          <span style="font-size: 0.8rem;">{{ L.t('lbl_emergency_hotlines') }}</span>
         </div>
         <div class="emergency-divider"></div>
         <div class="emergency-numbers">
           @for (n of emergencyNumbers(); track n.number) {
             <a [href]="'tel:' + n.number" class="emergency-num" [title]="n.label" [style.--em-color]="n.color">
               <i class="fas {{ n.icon }}"></i>
-              <span class="num-digits">{{ n.number }}</span>
-              <span class="num-label">{{ n.label }}</span>
+              <span class="num-digits" style="font-size: 0.9rem;">{{ n.number }}</span>
+              <span class="num-label" style="font-size: 0.8rem;">{{ n.label }}</span>
             </a>
           }
         </div>
@@ -64,14 +64,14 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
             <div class="brand-info"><div class="brand-title">e-MAAFA</div></div>
           </a>
           <div class="nav-links">
-            <a routerLink="/" [class.active]="active === 'home'"><i class="fas fa-home me-1"></i> {{ L.t('lbl_home') }}</a>
-            <a routerLink="/about" [class.active]="active === 'about'"><i class="fas fa-info-circle me-1"></i> {{ L.t('lbl_about') }}</a>
-            <a routerLink="/portal" [class.active]="active === 'portal'"><i class="fas fa-globe-africa me-1"></i> {{ L.t('lbl_portal') }}</a>
-            <a routerLink="/publications/Policies" [class.active]="active === 'publications'"><i class="fas fa-book-open me-1"></i> {{ L.t('lbl_publication') }}</a>
-            <a routerLink="/education" [class.active]="active === 'education'"><i class="fas fa-graduation-cap me-1"></i> {{ L.t('lbl_education') }}</a>
-            <button (click)="L.toggle()"><i class="fas fa-language me-1"></i> {{ L.lang() === 'en' ? 'Swahili' : 'English' }}</button>
+            <a routerLink="/" [class.active]="active === 'home'" style="font-size: 1rem;"><i class="fas fa-home me-1"></i> {{ L.t('lbl_home') }}</a>
+            <a routerLink="/about" [class.active]="active === 'about'" style="font-size: 1rem;"><i class="fas fa-info-circle me-1"></i> {{ L.t('lbl_about') }}</a>
+            <a routerLink="/portal" [class.active]="active === 'portal'" style="font-size: 1rem;"><i class="fas fa-globe-africa me-1"></i> {{ L.t('lbl_portal') }}</a>
+            <a routerLink="/publications/Policies" [class.active]="active === 'publications'" style="font-size: 1rem;"><i class="fas fa-book-open me-1"></i> {{ L.t('lbl_publication') }}</a>
+            <a routerLink="/education" [class.active]="active === 'education'" style="font-size: 1rem;"><i class="fas fa-graduation-cap me-1"></i> {{ L.t('lbl_education') }}</a>
+            <button (click)="L.toggle()" style="font-size: 1rem;"><i class="fas fa-language me-1"></i> {{ L.lang() === 'en' ? 'Swahili' : 'English' }}</button>
             <button (click)="toggleTheme()" class="theme-toggle" title="Toggle dark mode"><i class="fas" [class.fa-moon]="!dark()" [class.fa-sun]="dark()"></i></button>
-            <a routerLink="/login" class="btn-glass"><i class="fas fa-sign-in-alt me-1"></i> {{ L.t('lbl_login') }}</a>
+            <a routerLink="/login" class="btn-glass" style="font-size: 1rem;"><i class="fas fa-sign-in-alt me-1"></i> {{ L.t('lbl_login') }}</a>
           </div>
           <button class="mobile-toggle btn p-0" (click)="mobileOpen.set(true)" style="color: var(--navbar-text); font-size: 1.4rem; border: none; background: none;">
             <i class="fas fa-bars"></i>
@@ -82,7 +82,7 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
 
     <!-- Sitewide live-alert banner (every public page; links to the live portal) -->
     @if (alertBanner(); as ab) {
-      <a routerLink="/portal" style="display:flex;align-items:center;gap:10px;padding:0.5rem 1.2rem;text-decoration:none;color:#fff;font-size:0.85rem;" [style.background]="ab.color">
+      <a routerLink="/portal" style="display:flex;align-items:center;gap:10px;padding:0.5rem 1.2rem;text-decoration:none;color:#fff;font-size:0.95rem;" [style.background]="ab.color">
         <i class="fas fa-exclamation-triangle"></i>
         <strong>{{ ab.severity.toUpperCase() }}</strong>
         <span style="opacity:0.95;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">{{ ab.message }}</span>
@@ -111,6 +111,16 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
     <!-- Routed public page -->
     <router-outlet></router-outlet>
 
+    <!-- Back-to-top (appears after scrolling; flat, per the design standard) -->
+    @if (showTop()) {
+      <button type="button" (click)="scrollTop()"
+              [attr.aria-label]="L.lang() === 'sw' ? 'Rudi juu' : 'Back to top'"
+              [title]="L.lang() === 'sw' ? 'Rudi juu' : 'Back to top'"
+              style="position:fixed;bottom:24px;right:24px;z-index:2500;width:44px;height:44px;border-radius:8px;background:#0d3b66;color:#fff;border:1px solid rgba(255,255,255,0.18);box-shadow:0 4px 14px rgba(9,30,58,0.35);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">
+        <i class="fas fa-arrow-up"></i>
+      </button>
+    }
+
     <!-- Footer -->
     <footer class="v2-footer">
       <div class="container">
@@ -120,14 +130,14 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
               <img src="/images/emblem.png" alt="Emblem">
               <div>
                 <div style="font-weight: 700; font-size: 1.15rem; color: #fff;">e-MAAFA</div>
-                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">{{ L.t('lbl_prime_ministers_office') }}</div>
+                <div style="font-size: 0.9rem; color: rgba(255,255,255,0.5);">{{ L.t('lbl_prime_ministers_office') }}</div>
               </div>
             </div>
-            <p style="font-size: 0.85rem; color: rgba(255,255,255,0.55); line-height: 1.7; margin-bottom: 0;">{{ L.t('lbl_footer_description') }}</p>
+            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.55); line-height: 1.7; margin-bottom: 0;">{{ L.t('lbl_footer_description') }}</p>
           </div>
           <div class="col-lg-3 col-md-6">
-            <h6 style="font-weight: 700; font-size: 0.95rem; margin-bottom: 1.2rem; color: #60a5fa;">{{ L.t('lbl_quick_links') }}</h6>
-            <ul class="footer-links">
+            <h6 style="font-weight: 700; font-size: 1rem; margin-bottom: 1.2rem; color: #60a5fa;">{{ L.t('lbl_quick_links') }}</h6>
+            <ul class="footer-links" style="font-size: 0.9rem;">
               <li><a href="https://www.pmo.go.tz" target="_blank" rel="noopener"><i class="fas fa-landmark me-2" style="font-size: 0.7rem; opacity: 0.6;"></i>{{ L.t('lbl_ql_pmo') }}</a></li>
               <li><a href="https://www.tanzania.go.tz" target="_blank" rel="noopener"><i class="fas fa-globe-africa me-2" style="font-size: 0.7rem; opacity: 0.6;"></i>{{ L.t('lbl_ql_govt_portal') }}</a></li>
               <li><a href="https://www.undrr.org" target="_blank" rel="noopener"><i class="fas fa-shield-alt me-2" style="font-size: 0.7rem; opacity: 0.6;"></i>{{ L.t('lbl_ql_undrr') }}</a></li>
@@ -137,8 +147,8 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
             </ul>
           </div>
           <div class="col-lg-3 col-md-6">
-            <h6 style="font-weight: 700; font-size: 0.95rem; margin-bottom: 1.2rem; color: #60a5fa;">{{ L.t('lbl_contact_information') }}</h6>
-            <ul class="footer-links">
+            <h6 style="font-weight: 700; font-size: 1rem; margin-bottom: 1.2rem; color: #60a5fa;">{{ L.t('lbl_contact_information') }}</h6>
+            <ul class="footer-links" style="font-size: 0.9rem;">
               <li><a href="tel:190" style="color: #fbbf24; font-weight: 700;"><i class="fas fa-phone-alt me-2"></i>{{ L.t('lbl_emergency_phone') }}</a></li>
               <li><a href="mailto:Maafa@pmo.go.tz"><i class="fas fa-envelope me-2" style="font-size: 0.7rem; opacity: 0.6;"></i>Maafa&#64;pmo.go.tz</a></li>
               <li><a href="mailto:eocctz@pmo.go.tz"><i class="fas fa-envelope me-2" style="font-size: 0.7rem; opacity: 0.6;"></i>eocctz&#64;pmo.go.tz</a></li>
@@ -150,8 +160,8 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
             </div>
           </div>
           <div class="col-lg-2 col-md-6">
-            <h6 style="font-weight: 700; font-size: 0.95rem; margin-bottom: 1.2rem; color: #60a5fa;">{{ L.t('lbl_address') }}</h6>
-            <p style="font-size: 0.82rem; color: rgba(255,255,255,0.55); line-height: 1.8; margin: 0;">
+            <h6 style="font-weight: 700; font-size: 1rem; margin-bottom: 1.2rem; color: #60a5fa;">{{ L.t('lbl_address') }}</h6>
+            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.55); line-height: 1.8; margin: 0;">
               {{ L.t('lbl_permanent_secretary') }},<br>
               {{ L.t('lbl_prime_ministers_office') }},<br>
               {{ L.t('lbl_govt_city_mtumba') }},<br>
@@ -159,7 +169,7 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
             </p>
           </div>
         </div>
-        <div class="footer-bottom">&copy; {{ year }} e-MAAFA — {{ L.t('lbl_prime_ministers_office') }}, {{ L.t('lbl_united_republic_of_tanzania') }}</div>
+        <div class="footer-bottom" style="font-size: 0.9rem;">&copy; {{ year }} e-MAAFA — {{ L.t('lbl_prime_ministers_office') }}, {{ L.t('lbl_united_republic_of_tanzania') }}</div>
       </div>
     </footer>
   `,
@@ -173,6 +183,8 @@ export class PublicLayoutComponent implements OnDestroy {
   dark = signal(document.documentElement.getAttribute('data-theme') === 'dark');
   scrolled = signal(false);
   mobileOpen = signal(false);
+  /** Back-to-top affordance — shown once the visitor has scrolled a screen's worth. */
+  showTop = signal(false);
 
   /** Mobile menu links (same set as the desktop navbar). */
   mobileLinks = [
@@ -195,7 +207,10 @@ export class PublicLayoutComponent implements OnDestroy {
   ]);
 
   private links: HTMLLinkElement[] = [];
-  private onScroll = () => this.scrolled.set(window.scrollY > 60);
+  private onScroll = () => {
+    this.scrolled.set(window.scrollY > 60);
+    this.showTop.set(window.scrollY > 600);
+  };
 
   private portalData = inject(PortalDataService);
 
@@ -218,11 +233,15 @@ export class PublicLayoutComponent implements OnDestroy {
     for (const href of ['/css/v2-shared.css', '/css/portal-landing.css']) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = href + '?v=20260617';   // cache-buster: bump when the portal CSS changes so browsers re-fetch
+      link.href = href + '?v=20260703';   // cache-buster: bump when the portal CSS changes so browsers re-fetch
       document.head.appendChild(link);
       this.links.push(link);
     }
     window.addEventListener('scroll', this.onScroll, { passive: true });
+  }
+
+  scrollTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   /** Dark mode — same html[data-theme] + localStorage('dmis-theme') contract as the source. */

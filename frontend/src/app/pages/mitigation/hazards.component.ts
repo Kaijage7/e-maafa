@@ -64,7 +64,7 @@ interface HazardIndexResponse {
           }
         </div>
       </dmis-panel>
-      <dmis-panel title="Severity vs Frequency" icon="fa-chart-scatter" [badge]="bySeverity().length + ' combos'">
+      <dmis-panel title="Severity vs Frequency" icon="fa-chart-scatter" [badge]="bySeverity().length + ' combinations'">
         <div class="panel-body">
           @if (bySeverity().length) {
             <div class="chart-wrap"><canvas #bubbleChart></canvas></div>
@@ -112,12 +112,12 @@ interface HazardIndexResponse {
                       <td>
                         <div class="r-title">{{ h.name }}</div>
                         @if (h.seasonalPattern) {
-                          <div class="r-subtitle"><i class="fas fa-calendar-alt" style="font-size:0.55rem;margin-right:0.2rem;"></i>{{ h.seasonalPattern }}</div>
+                          <div class="r-subtitle"><i class="fas fa-calendar-alt" style="font-size:0.7rem;margin-right:0.2rem;"></i>{{ h.seasonalPattern }}</div>
                         }
                       </td>
                       <td>
                         <span class="r-badge" style="background:rgba(0,51,102,0.08);color:var(--primary);">
-                          <i class="fas {{ h.type === 'Natural' ? 'fa-leaf' : 'fa-industry' }}" style="font-size:0.5rem;margin-right:0.2rem;"></i>
+                          <i class="fas {{ h.type === 'Natural' ? 'fa-leaf' : 'fa-industry' }}" style="font-size:0.75rem;margin-right:0.2rem;"></i>
                           {{ typeLabel(h.type) }}
                         </span>
                       </td>
@@ -129,7 +129,7 @@ interface HazardIndexResponse {
                           <span style="color:var(--text-light);">-</span>
                         }
                       </td>
-                      <td style="color:var(--text-mid);font-size:0.72rem;">{{ h.frequency || '-' }}</td>
+                      <td style="color:var(--text-mid);">{{ h.frequency || '-' }}</td>
                       <td>
                         <label class="status-switch">
                           <input type="checkbox" [checked]="h.isActive" (change)="toggleStatus(h, $any($event.target))">
@@ -200,28 +200,28 @@ interface HazardIndexResponse {
         <div class="v2-modal-body">
           @if (detail(); as d) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Name</div><div style="font-weight:600;">{{ d.name }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Type</div><div><span class="r-badge" style="background:rgba(0,51,102,0.08);color:var(--primary);">{{ typeLabel(d.type || 'N/A') }}</span></div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Category</div><div style="color:var(--text-mid);">{{ d.category || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Severity</div><div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Name</div><div style="font-weight:600;">{{ d.name }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Type</div><div><span class="r-badge" style="background:rgba(0,51,102,0.08);color:var(--primary);">{{ typeLabel(d.type || 'N/A') }}</span></div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Category</div><div style="color:var(--text-mid);">{{ d.category || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Severity</div><div>
                 @if (d.severity) { <span class="r-badge sev-{{ d.severity.toLowerCase() }}">{{ d.severity }}</span> } @else { N/A }
               </div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Frequency</div><div style="color:var(--text-mid);">{{ d.frequency || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Status</div><div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Frequency</div><div style="color:var(--text-mid);">{{ d.frequency || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Status</div><div>
                 @if (d.isActive) { <span class="r-badge" style="background:rgba(16,185,129,0.12);color:#059669;">Active</span> }
                 @else { <span class="r-badge" style="background:rgba(156,163,175,0.12);color:#6b7280;">Inactive</span> }
               </div></div>
             </div>
             @if (d.description) {
-              <div style="margin-top:0.8rem;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Description</div>
-                <div style="font-size:0.78rem;color:var(--text-mid);line-height:1.5;">{{ d.description }}</div></div>
+              <div style="margin-top:0.8rem;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Description</div>
+                <div style="font-size:0.85rem;color:var(--text-mid);line-height:1.5;">{{ d.description }}</div></div>
             }
             @if (d.seasonalPattern) {
-              <div style="margin-top:0.6rem;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Seasonal Pattern</div>
-                <div style="font-size:0.78rem;color:var(--text-mid);">{{ d.seasonalPattern }}</div></div>
+              <div style="margin-top:0.6rem;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Seasonal Pattern</div>
+                <div style="font-size:0.85rem;color:var(--text-mid);">{{ d.seasonalPattern }}</div></div>
             }
             @if (d.warningSigns.length) {
-              <div style="margin-top:0.6rem;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Warning Signs</div>
+              <div style="margin-top:0.6rem;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Warning Signs</div>
                 <div style="display:flex;flex-wrap:wrap;gap:0.25rem;">
                   @for (s of d.warningSigns; track s) {
                     <span class="r-badge" style="background:rgba(245,158,11,0.12);color:#d97706;">{{ s }}</span>
@@ -450,8 +450,8 @@ export class HazardsComponent implements AfterViewInit, OnDestroy {
         plugins: { tooltip: this.tooltipStyle, legend: { display: false } },
         scales: {
           x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
-            ticks: { stepSize: 1, font: { size: 10 }, color: '#9ca3af', callback: (v: number) => Number.isInteger(v) ? v : '' } },
-          y: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' }, color: '#4b5563' } },
+            ticks: { stepSize: 1, font: { size: 12 }, color: '#9ca3af', callback: (v: number) => Number.isInteger(v) ? v : '' } },
+          y: { grid: { display: false }, ticks: { font: { size: 12, weight: '600' }, color: '#4b5563' } },
         },
       },
     }));
@@ -488,11 +488,11 @@ export class HazardsComponent implements AfterViewInit, OnDestroy {
         },
         scales: {
           x: { min: 0.5, max: 5.5, grid: { color: 'rgba(0,0,0,0.04)' },
-            title: { display: true, text: 'Frequency →', font: { size: 11, weight: '700' }, color: '#6b7280' },
-            ticks: { stepSize: 1, font: { size: 9 }, color: '#9ca3af', callback: (v: number) => ['', 'V.Rare', 'Rare', 'Occasional', 'Common', 'V.Common'][v] || '' } },
+            title: { display: true, text: 'Frequency →', font: { size: 12, weight: '700' }, color: '#6b7280' },
+            ticks: { stepSize: 1, font: { size: 12 }, color: '#9ca3af', callback: (v: number) => ['', 'V.Rare', 'Rare', 'Occasional', 'Common', 'V.Common'][v] || '' } },
           y: { min: 0.5, max: 4.5, grid: { color: 'rgba(0,0,0,0.04)' },
-            title: { display: true, text: '← Severity', font: { size: 11, weight: '700' }, color: '#6b7280' },
-            ticks: { stepSize: 1, font: { size: 9 }, color: '#9ca3af', callback: (v: number) => ['', 'Low', 'Medium', 'High', 'Critical'][v] || '' } },
+            title: { display: true, text: '← Severity', font: { size: 12, weight: '700' }, color: '#6b7280' },
+            ticks: { stepSize: 1, font: { size: 12 }, color: '#9ca3af', callback: (v: number) => ['', 'Low', 'Medium', 'High', 'Critical'][v] || '' } },
         },
       },
     }));
@@ -508,7 +508,7 @@ function ensureChartJs(): Promise<void> {
   if (!chartJsPromise) {
     chartJsPromise = new Promise(resolve => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      script.src = '/vendor/chartjs/chart.umd.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

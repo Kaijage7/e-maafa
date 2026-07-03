@@ -120,12 +120,12 @@ interface Resource {
     }
   `,
   styles: [`
-    .f-lbl { font-size:0.68rem; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-light); display:block; margin-bottom:3px; }
+    .f-lbl { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-light); display:block; margin-bottom:3px; }
     /* Anchor the row action menu under its trigger (the global .ctx-menu is position:fixed and detaches). */
     .ctx-menu { position: absolute; top: 100%; right: 0; }
     .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1500; display:flex; align-items:flex-start; justify-content:center; padding:6vh 1rem; }
-    .modal-card { background:var(--card-bg,#fff); border-radius:16px; max-width:640px; width:100%; padding:1.4rem 1.5rem; }
-    .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:9px; padding:0.5rem 1rem; cursor:pointer; }
+    .modal-card { background:var(--card-bg,#fff); border-radius:12px; max-width:640px; width:100%; padding:1.4rem 1.5rem; }
+    .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:8px; padding:0.5rem 1rem; cursor:pointer; }
   `],
 })
 export class ResourceCatalogueComponent {

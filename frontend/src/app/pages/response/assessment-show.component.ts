@@ -22,22 +22,23 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     .stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.1rem; display: block; }
-    .stat span { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat span { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; }
     .wf-strip { display: flex; gap: 8px; align-items: center; background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.82rem; }
-    .step { padding: 3px 12px; border-radius: 12px; background: #e2e8f0; color: #334155; font-weight: 600; font-size: 0.74rem; }
+    .step { padding: 3px 12px; border-radius: 12px; background: #e2e8f0; color: #334155; font-weight: 600; font-size: 0.75rem; }
     .step.done { background: #d1fae5; color: #065f46; }
     .step.now { background: #dc3545; color: #fff; }
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-    th { text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
+    th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; }
     .sev-Minor { color: #65a30d; } .sev-Moderate { color: #d97706; } .sev-Severe { color: #dc2626; font-weight: 700; }
-    .btn-sm { font-size: 0.74rem; padding: 5px 14px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
+    .btn-sm { font-size: 0.78rem; padding: 6px 14px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; }
     .b-red { background: #dc3545; color: #fff; } .b-green { background: #198754; color: #fff; }
+    .b-red:hover { background: #c82333; } .b-green:hover { background: #157347; }
     .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
     .photo img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #e3e6ed; }
-    .photo small { font-size: 0.68rem; color: #6c757d; display: block; }
+    .photo small { font-size: 0.75rem; color: #6c757d; display: block; }
     .empty { text-align: center; color: #94a3b8; padding: 22px 0; font-size: 0.85rem; }
-    .chip { display: inline-block; font-size: 0.66rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; background: #e2e8f0; color: #334155; }
+    .chip { display: inline-block; font-size: 0.75rem; font-weight: 600; border-radius: 10px; padding: 1px 8px; background: #e2e8f0; color: #334155; }
   `],
   template: `
     @if (assessment(); as a) {
@@ -216,10 +217,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.body.appendChild(script);
     });

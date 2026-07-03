@@ -42,7 +42,7 @@ import { qrcodegen } from '../shared/qrcodegen';
             <rect [attr.x]="-3" [attr.y]="-3" [attr.width]="qr.n + 6" [attr.height]="qr.n + 6" fill="#ffffff"/>
             @for (m of qr.dark; track $index) { <rect [attr.x]="m[0]" [attr.y]="m[1]" width="1" height="1" fill="#0d3b66"/> }
           </svg>
-          <div class="sb-qr-cap" style="font-size:.62rem;color:rgba(255,255,255,.72);margin-top:.3rem;font-weight:700;letter-spacing:.04em;">SCAN TO REGISTER</div>
+          <div class="sb-qr-cap" style="font-size:.75rem;color:var(--text-mid);margin-top:.3rem;font-weight:700;letter-spacing:.04em;">SCAN TO REGISTER</div>
         </a>
         <div class="sb-user">
           <div class="sb-user-avatar">{{ auth.initials() }}</div>

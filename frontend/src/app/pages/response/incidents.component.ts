@@ -35,7 +35,7 @@ interface FormData {
   imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
   styles: [`
     .filter-bar select { padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.78rem; background: #fff; color: var(--text-dark); font-family: inherit; }
-    .impact { display: flex; gap: 0.6rem; font-size: 0.72rem; color: var(--text-mid); }
+    .impact { display: flex; gap: 0.6rem; font-size: 0.75rem; color: var(--text-mid); }
     .impact b { color: #b91c1c; }
     .pagination-wrap { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.1rem; font-size: 0.78rem; color: var(--text-light); }
     .page-links { display: flex; gap: 0.25rem; }
@@ -112,7 +112,7 @@ interface FormData {
                       </div>
                     </td>
                     <td style="font-size:0.78rem;color:var(--text-mid);">{{ i.reported_at }}</td>
-                    <td style="font-size:0.72rem;color:var(--text-light);white-space:nowrap;">
+                    <td style="font-size:0.75rem;color:var(--text-light);white-space:nowrap;">
                       <i class="fas fa-truck" title="Resource allocations"></i> {{ i.allocations_count }}
                       &nbsp;<i class="fas fa-tasks" title="Tasks"></i> {{ i.tasks_count }}
                     </td>

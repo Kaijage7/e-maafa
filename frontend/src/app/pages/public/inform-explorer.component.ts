@@ -63,46 +63,46 @@ const DIM_DESC: Record<string, string> = {
   imports: [],
   styles: [`
     :host { display:block; font-family:system-ui, -apple-system, "Segoe UI", sans-serif; color:#1e293b; }
-    .wrap { max-width:1240px; margin:0 auto; padding:1rem; }
+    .wrap { max-width:min(1560px, 94vw); margin:0 auto; padding:1rem; }
     .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; }
     .pad { padding:1rem 1.2rem; }
-    .eyebrow { font-size:.7rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:#64748b; }
+    .eyebrow { font-size:.8rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:#64748b; }
     .muted { color:#64748b; }
     .h2 { font-size:1.25rem; font-weight:900; margin:.1rem 0 .2rem; }
 
-    .hero { background:linear-gradient(135deg,#0d3b66,#1f6feb); color:#fff; padding:1.8rem 1.4rem; border-radius:0 0 14px 14px; }
-    .hero-row { max-width:1240px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-start; gap:1.4rem; flex-wrap:wrap; }
+    .hero { background:#0d3b66; color:#fff; padding:1.8rem 1.4rem; border-radius:0 0 14px 14px; }
+    .hero-row { max-width:min(1560px, 94vw); margin:0 auto; display:flex; justify-content:space-between; align-items:flex-start; gap:1.4rem; flex-wrap:wrap; }
     .hero .eyebrow { color:rgba(255,255,255,.85); }
     .hero h1 { font-size:1.8rem; font-weight:900; margin:.3rem 0 .4rem; }
-    .hero p { max-width:680px; opacity:.92; margin:0; font-size:.93rem; }
+    .hero p { max-width:680px; opacity:.92; margin:0; font-size:1rem; }
     .natbadge { text-align:center; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.3); border-radius:14px; padding:.7rem 1.2rem; min-width:130px; }
     .natbadge .v { font-size:2.1rem; font-weight:900; line-height:1; }
-    .natbadge .b { font-size:.7rem; font-weight:800; margin-top:.35rem; padding:.12rem .5rem; border-radius:50px; display:inline-block; color:#fff; }
+    .natbadge .b { font-size:.8rem; font-weight:800; margin-top:.35rem; padding:.12rem .5rem; border-radius:50px; display:inline-block; color:#fff; }
 
-    .stats { display:flex; gap:1rem; flex-wrap:wrap; margin:-1.4rem auto 1rem; max-width:1240px; padding:0 1rem; }
+    .stats { display:flex; gap:1rem; flex-wrap:wrap; margin:-1.4rem auto 1rem; max-width:min(1560px, 94vw); padding:0 1rem; }
     .stat { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:.7rem 1rem; box-shadow:0 2px 8px rgba(0,0,0,.06); min-width:108px; }
-    .stat .v { font-size:1.4rem; font-weight:900; color:#0d3b66; }
-    .stat .l { font-size:.68rem; color:#64748b; font-weight:700; text-transform:uppercase; }
+    .stat .v { font-size:1.7rem; font-weight:900; color:#0d3b66; }
+    .stat .l { font-size:.8rem; color:#64748b; font-weight:700; text-transform:uppercase; }
 
     .controls { margin-bottom:1rem; }
     .ctl-row { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin-bottom:.7rem; }
     .chips { display:flex; gap:.4rem; flex-wrap:wrap; }
-    .chip { font:inherit; font-size:.78rem; font-weight:700; padding:.4rem .85rem; border-radius:50px; border:1.5px solid #cbd5e1; background:#fff; color:#475569; cursor:pointer; }
+    .chip { font:inherit; font-size:.9rem; font-weight:700; padding:.45rem .95rem; border-radius:50px; border:1.5px solid #cbd5e1; background:#fff; color:#475569; cursor:pointer; }
     .chip.on { background:#0d3b66; color:#fff; border-color:#0d3b66; }
 
     .indi { margin-top:.4rem; border-top:1px dashed #e2e8f0; padding-top:.7rem; }
     .indi-top { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin-bottom:.5rem; }
-    .indi select { font:inherit; font-size:.8rem; padding:.35rem .5rem; border:1px solid #cbd5e1; border-radius:6px; max-width:340px; }
+    .indi select { font:inherit; font-size:1rem; padding:.4rem .55rem; border:1px solid #cbd5e1; border-radius:6px; max-width:380px; }
     .grp { margin:.45rem 0; }
-    .grp-cat { font-size:.74rem; font-weight:800; color:#0d3b66; text-transform:uppercase; letter-spacing:.04em; }
-    .grp-name { font-size:.72rem; font-weight:700; color:#475569; margin:.25rem 0 .15rem; }
+    .grp-cat { font-size:.8rem; font-weight:800; color:#0d3b66; text-transform:uppercase; letter-spacing:.04em; }
+    .grp-name { font-size:.8rem; font-weight:700; color:#475569; margin:.25rem 0 .15rem; }
     .ind-chips { display:flex; gap:.3rem; flex-wrap:wrap; }
-    .ind-chip { font:inherit; font-size:.7rem; font-weight:600; padding:.2rem .55rem; border-radius:5px; border:1px solid #d7dee6; background:#f8fafc; color:#475569; cursor:pointer; }
+    .ind-chip { font:inherit; font-size:.8rem; font-weight:600; padding:.25rem .6rem; border-radius:5px; border:1px solid #d7dee6; background:#f8fafc; color:#475569; cursor:pointer; }
     .ind-chip.on { background:#1f6feb; color:#fff; border-color:#1f6feb; }
     .ind-chip .own { opacity:.7; font-weight:500; }
 
     .catbar { display:flex; flex-direction:row; gap:.4rem .5rem; align-items:center; flex-wrap:wrap; margin-bottom:.9rem; padding:.5rem .8rem; }
-    .cat { font:inherit; font-size:.74rem; font-weight:700; padding:.28rem .65rem; border-radius:50px; border:1.5px solid #cbd5e1; background:#fff; color:#475569; cursor:pointer; display:inline-flex; align-items:center; gap:.3rem; flex:none; white-space:nowrap; }
+    .cat { font:inherit; font-size:.85rem; font-weight:700; padding:.32rem .7rem; border-radius:50px; border:1.5px solid #cbd5e1; background:#fff; color:#475569; cursor:pointer; display:inline-flex; align-items:center; gap:.3rem; flex:none; white-space:nowrap; }
     .cat:disabled { opacity:.45; cursor:default; }
     .cat-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
     .cat-n { font-weight:800; opacity:.8; }
@@ -112,32 +112,32 @@ const DIM_DESC: Record<string, string> = {
     .map-wrap { position:relative; overflow:hidden; }
     #informExpMap { height:62vh; min-height:460px; border-radius:12px; z-index:1; }
     .leaflet-container { background:#e8edf2; } .leaflet-control-attribution { display:none !important; }
-    .legend { background:#fff; padding:.5rem .65rem; border:1px solid #e2e8f0; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08); font-size:.66rem; line-height:1.55; }
-    .legend strong { font-size:.68rem; }
+    .legend { background:#fff; padding:.5rem .65rem; border:1px solid #e2e8f0; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08); font-size:.8rem; line-height:1.55; }
+    .legend strong { font-size:.85rem; }
     .legend i { display:inline-block; width:11px; height:11px; border-radius:2px; margin-right:5px; vertical-align:middle; }
 
     .table-wrap { overflow:hidden; margin-bottom:1rem; }
     .table-head { display:flex; align-items:center; gap:.6rem; padding:.6rem 1rem; border-bottom:1px solid #eef2f7; }
     .table-actions { margin-left:auto; display:flex; gap:.4rem; }
     .table-scroll { max-height:52vh; overflow:auto; }
-    table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    table { width:100%; border-collapse:collapse; font-size:.9rem; }
     th, td { padding:.45rem .7rem; text-align:left; border-bottom:1px solid #f1f5f9; white-space:nowrap; }
-    th { position:sticky; top:0; background:#f8fafc; font-size:.7rem; text-transform:uppercase; letter-spacing:.03em; color:#64748b; z-index:1; }
+    th { position:sticky; top:0; background:#f8fafc; font-size:.8rem; text-transform:uppercase; letter-spacing:.03em; color:#64748b; z-index:1; }
     th.sortable { cursor:pointer; user-select:none; }
     td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
     tbody tr { cursor:pointer; }
     tbody tr:hover { background:#f8fafc; }
     tbody tr.sel { background:#dbeafe; }
-    .badge { font-size:.68rem; font-weight:800; padding:.1rem .5rem; border-radius:50px; color:#fff; }
+    .badge { font-size:.8rem; font-weight:800; padding:.1rem .5rem; border-radius:50px; color:#fff; }
 
     .detail-empty { padding:1.4rem; color:#64748b; }
     .detail-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
     .detail-score { text-align:right; font-size:2rem; font-weight:900; line-height:1; }
-    .detail-score .badge { display:block; margin-top:.35rem; font-size:.7rem; }
+    .detail-score .badge { display:block; margin-top:.35rem; font-size:.8rem; }
     .dim-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.9rem; margin-top:1rem; }
     .dim { border:1px solid #e2e8f0; border-radius:10px; padding:.7rem .85rem; }
-    .dim-head { display:flex; justify-content:space-between; font-weight:800; font-size:.85rem; margin-bottom:.45rem; }
-    .bar-row { display:flex; align-items:center; gap:.5rem; margin:.22rem 0; font-size:.76rem; }
+    .dim-head { display:flex; justify-content:space-between; font-weight:800; font-size:.95rem; margin-bottom:.45rem; }
+    .bar-row { display:flex; align-items:center; gap:.5rem; margin:.22rem 0; font-size:.85rem; }
     .bar-label { flex:0 0 46%; color:#334155; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .bar-track { flex:1; height:9px; background:#eef2f7; border-radius:50px; overflow:hidden; }
     .bar-fill { height:100%; border-radius:50px; }
@@ -146,9 +146,9 @@ const DIM_DESC: Record<string, string> = {
     .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
     @media (max-width:980px){ .grid2 { grid-template-columns:1fr; } }
     .chart-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:.8rem 1rem; }
-    .chart-card h3 { font-size:.92rem; margin:0; }
-    .chart-card .sub { font-size:.72rem; color:#64748b; margin:.1rem 0 .5rem; }
-    .note { font-size:.73rem; color:#64748b; margin-top:.6rem; }
+    .chart-card h3 { font-size:1.1rem; margin:0; }
+    .chart-card .sub { font-size:.85rem; color:#64748b; margin:.1rem 0 .5rem; }
+    .note { font-size:.85rem; color:#64748b; margin-top:.6rem; }
   `],
   template: `
     @if (!embedded()) {
@@ -188,7 +188,7 @@ const DIM_DESC: Record<string, string> = {
         </div>
 
         @if (activeDim(); as dim) {
-          <p class="muted" style="font-size:.8rem; margin:.1rem 0 .5rem;">{{ dimDesc() }}</p>
+          <p class="muted" style="font-size:.9rem; margin:.1rem 0 .5rem;">{{ dimDesc() }}</p>
           <div class="indi">
             <div class="indi-top">
               <span class="eyebrow">{{ dimLabel(dim) }} — {{ t('drill_into') }}</span>
@@ -260,7 +260,7 @@ const DIM_DESC: Record<string, string> = {
         </div>
         <div class="card pad">
           <div class="eyebrow">{{ t('regional_profile') }}</div>
-          <div class="sub muted" style="font-size:.72rem; margin:.1rem 0 .3rem;">{{ t('regional_sub') }}{{ emphasize() ? ' ' + t('highlighting') + ' ' + emphasizeLabel() : '' }}</div>
+          <div class="sub muted" style="font-size:.85rem; margin:.1rem 0 .3rem;">{{ t('regional_sub') }}{{ emphasize() ? ' ' + t('highlighting') + ' ' + emphasizeLabel() : '' }}</div>
           <div [innerHTML]="regionalSvg()"></div>
         </div>
       </div>
@@ -374,7 +374,7 @@ const DIM_DESC: Record<string, string> = {
                     <span class="bar-val">{{ fmt(b.value) }}</span>
                   </div>
                 }
-                @if (!topIndicatorBars(d).length) { <div class="muted" style="font-size:.78rem;">{{ t('no_indicator_data') }}</div> }
+                @if (!topIndicatorBars(d).length) { <div class="muted" style="font-size:.9rem;">{{ t('no_indicator_data') }}</div> }
               </div>
             </div>
 
@@ -703,7 +703,7 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
       style: () => ({ color: '#fff', weight: 1, fillColor: NO_DATA, fillOpacity: 0.82 }),
       onEachFeature: (f: any, lyr: any) => {
         const p = f.properties || {};
-        lyr.bindTooltip(`<strong>${escapeHtml(p.name || p.code || this.t('council_word'))}</strong>`, { sticky: true });
+        lyr.bindTooltip(`<strong>${escapeHtml(p.name || p.code || this.t('council_word'))}</strong>`, { className: 'map-tip', sticky: true });
         lyr.on('click', () => { if (p.code) this.selectByCode(p.code); });
       },
     }).addTo(this.map);

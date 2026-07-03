@@ -98,11 +98,11 @@ interface IndexResponse {
                             <span class="r-badge" style="background:rgba(212,160,23,0.12);color:#b8860b;margin-right:0.15rem;">{{ ht }}</span>
                           }
                           @if (fw.hazardTypes.length > 2) {
-                            <span style="font-size:0.6rem;color:var(--text-light);">+{{ fw.hazardTypes.length - 2 }}</span>
+                            <span style="font-size:0.75rem;color:var(--text-light);">+{{ fw.hazardTypes.length - 2 }}</span>
                           }
                         } @else { <span style="color:var(--text-light);">-</span> }
                       </td>
-                      <td style="color:var(--text-mid);font-size:0.72rem;">{{ fw.geographicScope || '-' }}</td>
+                      <td style="color:var(--text-mid);">{{ fw.geographicScope || '-' }}</td>
                       <td>
                         <div class="ctx-wrap">
                           <button class="ctx-trigger" type="button" (click)="toggleMenu(fw.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
@@ -161,18 +161,18 @@ interface IndexResponse {
         <div class="v2-modal-body">
           @if (detail(); as f) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-              <div style="grid-column:1/-1;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Document Name</div><div style="font-weight:600;">{{ f.documentName || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Type</div><div><span class="r-badge" style="background:rgba(0,51,102,0.08);color:var(--primary);">{{ f.documentType || 'N/A' }}</span></div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Year</div><div style="color:var(--text-mid);">{{ f.yearOfApproval || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Scope</div><div style="color:var(--text-mid);">{{ f.geographicScope || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Status</div><div style="color:var(--text-mid);">{{ f.status || 'N/A' }}</div></div>
+              <div style="grid-column:1/-1;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Document Name</div><div style="font-weight:600;">{{ f.documentName || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Type</div><div><span class="r-badge" style="background:rgba(0,51,102,0.08);color:var(--primary);">{{ f.documentType || 'N/A' }}</span></div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Year</div><div style="color:var(--text-mid);">{{ f.yearOfApproval || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Scope</div><div style="color:var(--text-mid);">{{ f.geographicScope || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Status</div><div style="color:var(--text-mid);">{{ f.status || 'N/A' }}</div></div>
             </div>
             @if (f.narrativeDescription) {
-              <div style="margin-top:0.8rem;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Description</div>
-                <div style="font-size:0.78rem;color:var(--text-mid);line-height:1.5;">{{ f.narrativeDescription }}</div></div>
+              <div style="margin-top:0.8rem;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Description</div>
+                <div style="font-size:0.85rem;color:var(--text-mid);line-height:1.5;">{{ f.narrativeDescription }}</div></div>
             }
             @if (f.hazardTypes?.length) {
-              <div style="margin-top:0.6rem;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Hazard Types</div>
+              <div style="margin-top:0.6rem;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Hazard Types</div>
                 <div style="display:flex;flex-wrap:wrap;gap:0.25rem;">
                   @for (s of f.hazardTypes; track s) { <span class="r-badge" style="background:rgba(212,160,23,0.12);color:#b8860b;">{{ s }}</span> }
                 </div></div>
@@ -366,7 +366,7 @@ export class FrameworksComponent implements AfterViewInit, OnDestroy {
         backgroundColor: labels.map((_, i) => this.chartColors[(i + colorOffset) % this.chartColors.length] + 'cc'),
         borderWidth: 2, borderColor: '#fff' }] },
       options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
-        plugins: { tooltip: this.tooltipStyle, legend: { position: 'bottom', labels: { padding: 12, font: { size: 10, weight: '600' }, usePointStyle: true, pointStyle: 'circle' } } } },
+        plugins: { tooltip: this.tooltipStyle, legend: { position: 'bottom', labels: { padding: 12, font: { size: 12, weight: '600' }, usePointStyle: true, pointStyle: 'circle' } } } },
     }));
   }
 }
@@ -380,7 +380,7 @@ function ensureChartJs(): Promise<void> {
   if (!chartJsPromise) {
     chartJsPromise = new Promise(resolve => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      script.src = '/vendor/chartjs/chart.umd.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

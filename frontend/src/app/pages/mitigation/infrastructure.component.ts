@@ -101,7 +101,7 @@ interface IndexResponse {
                         @if (item.address) { <div class="r-subtitle">{{ limit(item.address, 40) }}</div> }
                       </td>
                       <td><span class="r-badge" style="background:rgba(0,51,102,0.08);color:var(--primary);">{{ item.type }}</span></td>
-                      <td style="color:var(--text-mid);font-size:0.72rem;">{{ limit(item.locationDescription, 30) || '-' }}</td>
+                      <td style="color:var(--text-mid);">{{ limit(item.locationDescription, 30) || '-' }}</td>
                       <td style="color:var(--text-mid);">{{ item.capacity ? (item.capacity | number) : '-' }}</td>
                       <td><span class="r-badge {{ statusClass(item.status) }}">{{ item.status }}</span></td>
                       <td>
@@ -168,18 +168,18 @@ interface IndexResponse {
         <div class="v2-modal-body">
           @if (detail(); as d) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-              <div style="grid-column:1/-1;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Name</div><div style="font-weight:600;">{{ d.name || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Type</div><div><span class="r-badge" style="background:rgba(0,51,102,0.08);color:var(--primary);">{{ d.type || 'N/A' }}</span></div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Status</div><div style="color:var(--text-mid);">{{ d.status || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Capacity</div><div style="color:var(--text-mid);">{{ d.capacity || 'N/A' }}</div></div>
-              <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Address</div><div style="color:var(--text-mid);">{{ d.address || 'N/A' }}</div></div>
+              <div style="grid-column:1/-1;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Name</div><div style="font-weight:600;">{{ d.name || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Type</div><div><span class="r-badge" style="background:rgba(0,51,102,0.08);color:var(--primary);">{{ d.type || 'N/A' }}</span></div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Status</div><div style="color:var(--text-mid);">{{ d.status || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Capacity</div><div style="color:var(--text-mid);">{{ d.capacity || 'N/A' }}</div></div>
+              <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Address</div><div style="color:var(--text-mid);">{{ d.address || 'N/A' }}</div></div>
               @if (d.contactPersonName) {
-                <div><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Contact</div><div style="color:var(--text-mid);">{{ d.contactPersonName }}{{ d.contactPersonPhone ? ' (' + d.contactPersonPhone + ')' : '' }}</div></div>
+                <div><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Contact</div><div style="color:var(--text-mid);">{{ d.contactPersonName }}{{ d.contactPersonPhone ? ' (' + d.contactPersonPhone + ')' : '' }}</div></div>
               }
             </div>
             @if (d.locationDescription) {
-              <div style="margin-top:0.8rem;"><div style="font-size:0.6rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Location</div>
-                <div style="font-size:0.78rem;color:var(--text-mid);line-height:1.5;">{{ d.locationDescription }}</div></div>
+              <div style="margin-top:0.8rem;"><div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.2rem;">Location</div>
+                <div style="font-size:0.85rem;color:var(--text-mid);line-height:1.5;">{{ d.locationDescription }}</div></div>
             }
           }
         </div>
@@ -379,9 +379,9 @@ export class InfrastructureComponent implements AfterViewInit, OnDestroy {
         const color = statusColors[item.status] || '#003366';
         L.circleMarker([item.latitude, item.longitude], { radius: 7, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.85 })
           .addTo(this.map)
-          .bindPopup('<div style="font-family:Inter,sans-serif;"><strong style="font-size:0.82rem;">' + escapeHtml(item.name)
-            + '</strong><br><span style="font-size:0.7rem;color:#6b7280;">' + escapeHtml(item.type)
-            + '</span><br><span style="font-size:0.65rem;font-weight:700;color:' + color + ';">' + escapeHtml(item.status) + '</span></div>');
+          .bindPopup('<div style="font-family:Inter,sans-serif;"><strong style="font-size:0.9rem;">' + escapeHtml(item.name)
+            + '</strong><br><span style="font-size:0.8rem;color:#6b7280;">' + escapeHtml(item.type)
+            + '</span><br><span style="font-size:0.8rem;font-weight:700;color:' + color + ';">' + escapeHtml(item.status) + '</span></div>');
       }
       setTimeout(() => this.map.invalidateSize(), 300);
     });

@@ -26,42 +26,42 @@ interface GisPayload {
     .map-container { position: relative; }
     #gisMap { height: 60vh; min-height: 500px; z-index: 1; }
     .layer-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.85rem 1.15rem; border-top: 1px solid rgba(0,0,0,0.04); }
-    .layer-toggle { display: flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.7rem; border-radius: 50px; font-size: 0.68rem; font-weight: 700; cursor: pointer; transition: all 0.2s; border: 2px solid; user-select: none; }
+    .layer-toggle { display: flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.7rem; border-radius: 50px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; border: 2px solid; user-select: none; }
     .layer-toggle input { display: none; }
     .layer-toggle.active { color: #fff; }
-    .legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.65rem; font-weight: 600; color: var(--text-mid); }
+    .legend-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; font-weight: 600; color: var(--text-mid); }
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
     .region-tooltip { background: #fff !important; border: 1px solid rgba(0,0,0,0.1) !important; border-radius: 6px !important; padding: 6px 12px !important; font-size: 12px !important; font-weight: 700 !important; color: var(--primary) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important; }
-    .lake-label { background: transparent !important; border: none !important; box-shadow: none !important; color: #1565C0; font-size: 0.55rem; font-weight: 600; font-style: italic; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.8); }
+    .lake-label { background: transparent !important; border: none !important; box-shadow: none !important; color: #1565C0; font-size: 0.75rem; font-weight: 600; font-style: italic; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.8); }
     .lake-label::before { display: none !important; }
-    .map-back-btn { position: absolute; top: 0.8rem; left: 50%; transform: translateX(-50%); z-index: 500; display: none; align-items: center; gap: 0.35rem; padding: 0.4rem 0.85rem; background: #fff; border-radius: 50px; border: 1px solid rgba(0,51,102,0.18); box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.65rem; font-weight: 700; color: var(--primary); }
+    .map-back-btn { position: absolute; top: 0.8rem; left: 50%; transform: translateX(-50%); z-index: 500; display: none; align-items: center; gap: 0.35rem; padding: 0.4rem 0.85rem; background: #fff; border-radius: 8px; border: 1px solid rgba(0,51,102,0.18); box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--primary); }
     .map-back-btn.visible { display: flex; }
-    .map-back-btn:hover { background: #fff; }
-    .map-back-btn i { font-size: 0.55rem; }
-    .map-breadcrumb { position: absolute; top: 2.8rem; left: 0.9rem; z-index: 500; display: none; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; background: #fff; border-radius: 6px; border: 1px solid var(--line, #e2e8f0); box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 0.6rem; font-weight: 600; color: var(--text-mid); }
+    .map-back-btn:hover { background: #f1f5f9; }
+    .map-back-btn i { font-size: 0.7rem; }
+    .map-breadcrumb { position: absolute; top: 2.8rem; left: 0.9rem; z-index: 500; display: none; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; background: #fff; border-radius: 6px; border: 1px solid var(--line, #e2e8f0); box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 0.75rem; font-weight: 600; color: var(--text-mid); }
     .map-breadcrumb.visible { display: flex; }
     .map-breadcrumb .bc-link { color: var(--primary); cursor: pointer; }
     .map-breadcrumb .bc-link:hover { text-decoration: underline; }
-    .map-breadcrumb .bc-sep { opacity: 0.4; font-size: 0.4rem; }
+    .map-breadcrumb .bc-sep { opacity: 0.4; font-size: 0.7rem; }
     .map-breadcrumb .bc-current { color: var(--text-dark); font-weight: 700; }
     .region-info-panel { position: absolute; bottom: 0.8rem; left: 0.9rem; z-index: 500; width: 240px; background: #fff; border-radius: 6px; border: 1px solid var(--line, #e2e8f0); box-shadow: 0 2px 10px rgba(0,0,0,0.12); opacity: 0; pointer-events: none; transition: opacity 0.2s ease; overflow: hidden; }
     .region-info-panel.visible { opacity: 1; pointer-events: auto; }
     .rip-header { padding: 10px 12px 8px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); }
     .rip-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .rip-name { font-size: 12px; font-weight: 800; color: #111827; flex: 1; }
-    .rip-level { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; }
-    .rip-close { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.04); border: none; cursor: pointer; font-size: 10px; color: #9ca3af; transition: all 0.15s; margin-left: 4px; }
+    .rip-name { font-size: 13px; font-weight: 800; color: #111827; flex: 1; }
+    .rip-level { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px; }
+    .rip-close { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.04); border: none; cursor: pointer; font-size: 12px; color: #9ca3af; transition: all 0.15s; margin-left: 4px; }
     .rip-close:hover { background: rgba(0,0,0,0.08); color: #111827; }
     .rip-body { padding: 8px 12px 10px; }
     .rip-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
     .rip-row + .rip-row { border-top: 1px solid rgba(0,0,0,0.03); }
-    .rip-label { font-size: 10px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 5px; }
-    .rip-label i { font-size: 8px; opacity: 0.5; width: 12px; text-align: center; }
-    .rip-val { font-size: 11px; font-weight: 700; color: #111827; }
+    .rip-label { font-size: 12px; color: #6b7280; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+    .rip-label i { font-size: 12px; opacity: 0.5; width: 12px; text-align: center; }
+    .rip-val { font-size: 12px; font-weight: 700; color: #111827; }
     .rip-bar { height: 4px; border-radius: 2px; background: rgba(0,0,0,0.04); margin-top: 8px; overflow: hidden; }
     .rip-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
     .map-legend { position: absolute; bottom: 0.8rem; right: 0.9rem; z-index: 500; display: flex; flex-direction: column; gap: 0.25rem; background: #fff; border-radius: 6px; border: 1px solid var(--line, #e2e8f0); padding: 0.5rem 0.65rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-    .map-legend .legend-title { font-size: 0.58rem; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.15rem; }
+    .map-legend .legend-title { font-size: 0.75rem; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.15rem; }
     .leaflet-container { background: #e8edf2; }
     .leaflet-container path:focus, .leaflet-interactive:focus { outline: none !important; }
     .leaflet-control-attribution { display: none !important; }
@@ -133,7 +133,7 @@ interface GisPayload {
                  [style.background]="layerOn()[t.key] ? t.color : 'transparent'"
                  [style.color]="layerOn()[t.key] ? '#fff' : t.color">
             <input type="checkbox" [checked]="layerOn()[t.key]" (change)="toggleLayer(t.key, $any($event.target).checked)">
-            <i class="fas {{ t.icon }}" style="font-size:0.6rem;"></i> {{ t.label }}{{ t.count !== null ? ' (' + t.count + ')' : '' }}
+            <i class="fas {{ t.icon }}" style="font-size:0.75rem;"></i> {{ t.label }}{{ t.count !== null ? ' (' + t.count + ')' : '' }}
           </label>
         }
       </div>
@@ -226,9 +226,9 @@ export class GisMapComponent implements AfterViewInit, OnDestroy {
     return n.replace(/ /g, '_').replace(/\//g, '_').replace(/'/g, '');
   }
   private makePopup(title: string, sub: string, detail?: string): string {
-    return '<div style="font-family:Inter,sans-serif;"><strong style="font-size:0.82rem;">' + escapeHtml(title)
-      + '</strong><br><span style="font-size:0.7rem;color:#6b7280;">' + escapeHtml(sub) + '</span>'
-      + (detail ? '<br><span style="font-size:0.65rem;font-weight:600;">' + escapeHtml(detail) + '</span>' : '') + '</div>';
+    return '<div style="font-family:Inter,sans-serif;"><strong style="font-size:0.9rem;">' + escapeHtml(title)
+      + '</strong><br><span style="font-size:0.8rem;color:#6b7280;">' + escapeHtml(sub) + '</span>'
+      + (detail ? '<br><span style="font-size:0.8rem;font-weight:600;">' + escapeHtml(detail) + '</span>' : '') + '</div>';
   }
 
   private showRegionInfo(name: string, rd: any): void {

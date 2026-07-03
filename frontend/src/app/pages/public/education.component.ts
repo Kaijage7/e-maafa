@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PortalLabels } from './portal-i18n';
 import { PortalDataService, HazardCard } from './portal-data.service';
@@ -21,104 +21,260 @@ interface EduItem {
   standalone: true,
   imports: [RouterLink],
   template: `
-    <div class="v2-page-content" style="max-width: 1320px; margin: 0 auto; padding: 7rem 2rem 4rem;">
-      <a routerLink="/" style="color:#60a5fa;text-decoration:none;font-size:0.85rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
+    <div class="v2-page-content edu-wrap">
+      <a routerLink="/" class="edu-back"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
 
       @if (item(); as it) {
-        <!-- ===== Detail view ===== -->
-        <div style="margin-top:1rem;">
-          <span style="background:rgba(0,51,102,0.08);color:#003366;font-size:0.72rem;font-weight:700;padding:3px 12px;border-radius:10px;text-transform:uppercase;">{{ it.contentType }}</span>
-          <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0.7rem 0 0.4rem;">{{ eduTitle(it) }}</h1>
-          <div style="color:var(--text-secondary, #64748b);font-size:0.84rem;margin-bottom:1.4rem;">
+        <!-- ===== Detail view (measure capped for reading comfort, not a layout cap) ===== -->
+        <article class="edu-detail">
+          <span class="art-type">{{ it.contentType }}</span>
+          <h1 class="edu-detail-title">{{ eduTitle(it) }}</h1>
+          <div class="edu-detail-meta">
             @if (it.author) { <span><i class="fas fa-user me-1"></i>{{ it.author }}</span> }
-            @if (it.publicationDate) { <span class="ms-3"><i class="fas fa-clock me-1"></i>{{ it.publicationDate }}</span> }
-            @if (it.targetAudience) { <span class="ms-3"><i class="fas fa-users me-1"></i>{{ it.targetAudience }}</span> }
+            @if (it.publicationDate) { <span><i class="fas fa-clock me-1"></i>{{ it.publicationDate }}</span> }
+            @if (it.targetAudience) { <span><i class="fas fa-users me-1"></i>{{ it.targetAudience }}</span> }
+            <span><i class="fas fa-book-open me-1"></i>{{ readMins(it) }} {{ L.lang() === 'sw' ? 'dakika za kusoma' : 'min read' }}</span>
           </div>
-          @if (eduSummary(it)) { <p style="font-size:1.02rem;font-weight:600;color:var(--text-primary, #2C3E50);line-height:1.7;">{{ eduSummary(it) }}</p> }
-          <div style="font-size:1.05rem;color:var(--text-secondary, #475569);line-height:1.85;white-space:pre-line;">{{ eduBody(it) }}</div>
-          <a routerLink="/education" style="display:inline-block;margin-top:2rem;color:#60a5fa;text-decoration:none;font-size:0.88rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_education') }}</a>
-        </div>
+          <button type="button" class="edu-btn-outline" (click)="printPage()">
+            <i class="fas fa-print"></i> {{ L.lang() === 'sw' ? 'Chapisha / Hifadhi' : 'Print / Save' }}
+          </button>
+          @if (eduSummary(it)) { <p class="edu-detail-lede">{{ eduSummary(it) }}</p> }
+          <div class="edu-detail-body">{{ eduBody(it) }}</div>
+          <a routerLink="/education" class="edu-back edu-detail-return"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_education') }}</a>
+        </article>
       } @else {
-        <!-- ===== List view ===== -->
-        <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0.8rem 0 0.3rem;">{{ L.t('lbl_education') }}</h1>
-        <p style="color:var(--text-secondary, #64748b);margin-bottom:1.6rem;">{{ L.t('lbl_hazards_education_subtitle') }}</p>
-
-        <!-- INFORM Framework guided course (interactive, 6 sections, a quiz each) -->
-        <a routerLink="/inform-education" style="display:flex;align-items:center;gap:1rem;background:linear-gradient(135deg,#0d3b66,#1f6feb);color:#fff;border-radius:16px;padding:1.3rem 1.5rem;text-decoration:none;margin-bottom:2rem;box-shadow:0 4px 16px rgba(13,59,102,0.25);">
-          <div style="width:54px;height:54px;border-radius:14px;background:rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex:none;"><i class="fas fa-graduation-cap"></i></div>
-          <div style="min-width:0;flex:1;">
-            <div style="font-size:0.7rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;opacity:0.85;">{{ L.t('edu_inform_course_eyebrow') }}</div>
-            <div style="font-size:1.15rem;font-weight:800;margin:0.15rem 0;">{{ L.t('edu_inform_course_title') }}</div>
-            <div style="font-size:0.82rem;opacity:0.92;">{{ L.t('edu_inform_course_desc') }}</div>
+        <!-- ===== List view: public learning hub ===== -->
+        <header class="edu-head">
+          <h1 class="edu-title">{{ L.t('lbl_education') }}</h1>
+          <p class="edu-mission">{{ L.t('lbl_hazards_education_subtitle') }}</p>
+          <div class="edu-search">
+            <i class="fas fa-search"></i>
+            <input type="search" [value]="q()" (input)="q.set($any($event.target).value)"
+                   [placeholder]="L.lang() === 'sw' ? 'Tafuta mwongozo wa janga au makala…' : 'Search hazard guides and articles…'"
+                   [attr.aria-label]="L.lang() === 'sw' ? 'Tafuta maudhui ya elimu' : 'Search education content'">
           </div>
-          <span style="background:#fff;color:#0d3b66;font-weight:800;font-size:0.82rem;padding:0.5rem 1.1rem;border-radius:50px;white-space:nowrap;flex:none;">{{ L.t('edu_inform_course_cta') }} <i class="fas fa-arrow-right ms-1"></i></span>
-        </a>
+          <div class="edu-stats">
+            <span><i class="fas fa-shield-alt me-1"></i><b>{{ hazardCards().length }}</b> {{ L.lang() === 'sw' ? 'miongozo ya majanga' : 'hazard guides' }}</span>
+            <span><i class="fas fa-newspaper me-1"></i><b>{{ contents().length }}</b> {{ L.lang() === 'sw' ? 'makala na miongozo' : 'articles & guides' }}</span>
+            <span><i class="fas fa-graduation-cap me-1"></i><b>1</b> {{ L.lang() === 'sw' ? 'kozi elekezi' : 'guided course' }}</span>
+            <span><i class="fas fa-calendar-days me-1"></i><b>1</b> {{ L.lang() === 'sw' ? 'kalenda ya kitaifa' : 'national calendar' }}</span>
+          </div>
+        </header>
+
+        <!-- Featured: the INFORM guided course + the National Hazard Calendar, as equals -->
+        <div class="edu-featured">
+          <a routerLink="/inform-education" class="edu-feat edu-lift" style="background:#0d3b66;">
+            <div class="feat-icon"><i class="fas fa-graduation-cap"></i></div>
+            <div class="feat-body">
+              <div class="feat-eyebrow">{{ L.t('edu_inform_course_eyebrow') }}</div>
+              <div class="feat-title">{{ L.t('edu_inform_course_title') }}</div>
+              <div class="feat-desc">{{ L.t('edu_inform_course_desc') }}</div>
+            </div>
+            <span class="feat-cta" style="color:#0d3b66;">{{ L.t('edu_inform_course_cta') }} <i class="fas fa-arrow-right ms-1"></i></span>
+          </a>
+          <a routerLink="/hazard-calendar" class="edu-feat edu-lift" style="background:#0369a1;">
+            <div class="feat-icon"><i class="fas fa-calendar-days"></i></div>
+            <div class="feat-body">
+              <div class="feat-eyebrow">{{ L.lang() === 'sw' ? 'Kalenda ya Kitaifa' : 'National Calendar' }}</div>
+              <div class="feat-title">{{ L.lang() === 'sw' ? 'Kalenda ya Majanga ya Kitaifa' : 'National Hazard Calendar' }}</div>
+              <div class="feat-desc">{{ L.lang() === 'sw' ? 'Majanga yanapotarajiwa zaidi mwaka mzima, mwezi kwa mwezi' : 'When each hazard is most likely across the year, month by month' }}</div>
+            </div>
+            <span class="feat-cta" style="color:#0369a1;">{{ L.lang() === 'sw' ? 'Fungua kalenda' : 'Open calendar' }} <i class="fas fa-arrow-right ms-1"></i></span>
+          </a>
+        </div>
 
         <!-- National threats under watch — with their past impacts to Tanzania -->
         @if (threats().length) {
-          <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0 0 0.9rem;">{{ L.t('edu_national_threats') }}</h5>
-          <div class="row g-2" style="margin-bottom:2rem;">
+          <div class="edu-sec-head">
+            <h2>{{ L.t('edu_national_threats') }}</h2>
+            <p>{{ L.lang() === 'sw' ? 'Vitisho vinavyofuatiliwa kitaifa sasa — na athari zake za nyuma kwa Tanzania' : 'Threats under national watch right now — with their past impacts to Tanzania' }}</p>
+          </div>
+          <div class="th-grid">
             @for (th of threats(); track th.id) {
-              <div class="col-md-6">
-                <a [routerLink]="['/threats', th.id]" style="display:flex;align-items:center;gap:12px;border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:var(--card-bg, #fff);padding:0.9rem 1rem;text-decoration:none;">
-                  <div [style.background]="th.severity === 'Emergency' ? '#dc2626' : th.severity === 'Warning' ? '#d97706' : '#2563eb'"
-                       style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;"><i class="fas fa-satellite-dish"></i></div>
-                  <div style="min-width:0;">
-                    <div style="font-size:0.9rem;font-weight:700;color:var(--text-primary, #2C3E50);">{{ th.name }}</div>
-                    <div style="font-size:0.72rem;color:var(--text-secondary, #64748b);">{{ th.sourceAgency }} — {{ L.t('edu_see_past_impacts') }}</div>
-                  </div>
-                  <i class="fas fa-chevron-right" style="margin-left:auto;font-size:0.6rem;color:#94a3b8;"></i>
-                </a>
-              </div>
+              <a [routerLink]="['/threats', th.id]" class="edu-card edu-lift th-card">
+                <div class="th-icon" [style.background]="th.severity === 'Emergency' ? '#dc2626' : th.severity === 'Warning' ? '#d97706' : '#2563eb'">
+                  <i class="fas fa-satellite-dish"></i>
+                </div>
+                <div style="min-width:0;flex:1;">
+                  <div class="th-name">{{ th.name }} <span class="pp-sev {{ sevClass(th.severity) }}">{{ th.severity }}</span></div>
+                  <div class="th-meta">{{ th.sourceAgency }} — {{ L.t('edu_see_past_impacts') }}</div>
+                </div>
+                <i class="fas fa-chevron-right th-chev"></i>
+              </a>
             }
           </div>
         }
 
         <!-- Hazard guide hubs: one repository per hazard (action guides, videos, materials by audience) -->
-        <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0 0 0.9rem;">{{ L.t('lbl_know_your_hazards') }}</h5>
-        <a routerLink="/hazard-calendar" style="display:inline-flex;align-items:center;gap:7px;margin-bottom:0.9rem;padding:0.45rem 0.9rem;border-radius:9px;background:#0ea5e9;color:#fff;text-decoration:none;font-size:0.84rem;font-weight:600;">
-          <i class="fas fa-calendar-days"></i> {{ L.lang() === 'sw' ? 'Kalenda ya Majanga ya Kitaifa' : 'National Hazard Calendar' }}
-        </a>
-        <div class="row g-2" style="margin-bottom:2rem;">
-          @for (hz of hazardCards(); track hz.name) {
-            <div class="col-6 col-md-4 col-lg-3">
-              <a [routerLink]="['/education/hazard', hz.name]"
-                 style="display:flex;align-items:center;gap:10px;border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:var(--card-bg, #fff);padding:0.7rem 0.85rem;text-decoration:none;height:100%;">
-                <div style="flex-shrink:0;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:0.95rem;"
-                     [style.background]="hz.color + '1a'" [style.color]="hz.color">
-                  <i class="fas {{ hz.icon }}"></i>
-                </div>
-                <div style="font-size:0.94rem;font-weight:700;color:var(--text-primary, #2C3E50);">{{ hazardName(hz) }}</div>
-                <i class="fas fa-chevron-right" style="margin-left:auto;font-size:0.6rem;color:#94a3b8;"></i>
-              </a>
+        <div class="edu-sec-head">
+          <h2>{{ L.t('lbl_know_your_hazards') }}</h2>
+          <p>{{ L.lang() === 'sw' ? 'Mwongozo wa kila janga — hatua za kuchukua kabla, wakati na baada' : 'A guide for every hazard — what to do before, during and after' }}</p>
+        </div>
+        <div class="hz-grid">
+          @for (hz of filteredHazards(); track hz.name) {
+            <a [routerLink]="['/education/hazard', hz.name]" class="edu-card edu-lift hz-card">
+              <div class="hz-icon" [style.background]="hz.color + '1a'" [style.color]="hz.color">
+                <i class="fas {{ hz.icon }}"></i>
+              </div>
+              <div style="min-width:0;">
+                <div class="hz-name">{{ hazardName(hz) }}</div>
+                @if (hazardDesc(hz)) { <p class="hz-desc">{{ hazardDesc(hz) }}</p> }
+                <span class="hz-open" [style.color]="hz.color">{{ L.lang() === 'sw' ? 'Fungua mwongozo' : 'Open guide' }} <i class="fas fa-arrow-right"></i></span>
+              </div>
+            </a>
+          } @empty {
+            <div class="edu-empty">
+              <i class="fas fa-shield-alt"></i>
+              @if (q()) {
+                <p>{{ L.lang() === 'sw' ? 'Hakuna mwongozo wa janga unaolingana na "' + q() + '"' : 'No hazard guides match "' + q() + '"' }}</p>
+                <button type="button" class="edu-btn-outline" (click)="q.set('')">{{ L.lang() === 'sw' ? 'Futa utafutaji' : 'Clear search' }}</button>
+              } @else {
+                <p>{{ L.lang() === 'sw' ? 'Miongozo ya majanga inapakiwa…' : 'Hazard guides are loading…' }}</p>
+              }
             </div>
           }
         </div>
 
-        <h5 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0 0 0.9rem;">{{ L.t('edu_guides_articles') }}</h5>
-        <div class="row g-3">
-          @for (c of contents(); track c.id) {
-            <div class="col-md-6 col-lg-4">
-              <a [routerLink]="['/education', c.id]" style="display:flex;flex-direction:column;gap:8px;height:100%;text-decoration:none;border:1px solid rgba(0,0,0,0.08);border-radius:14px;background:var(--card-bg, #fff);padding:1.1rem 1.2rem;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                  <div style="width:38px;height:38px;border-radius:10px;background:rgba(0,51,102,0.08);color:#003366;display:flex;align-items:center;justify-content:center;"><i class="fas fa-graduation-cap"></i></div>
-                  <span style="font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">{{ c.contentType }}</span>
-                </div>
-                <div style="font-size:1.05rem;font-weight:700;color:var(--text-primary, #2C3E50);line-height:1.35;">{{ eduTitle(c) }}</div>
-                @if (eduSummary(c)) { <p style="font-size:0.9rem;color:var(--text-secondary, #64748b);line-height:1.6;margin:0;flex:1;">{{ eduSummary(c).slice(0, 130) }}</p> }
-                <div style="font-size:0.72rem;color:#94a3b8;">{{ c.author }} @if (c.publicationDate) { · {{ c.publicationDate }} }</div>
-              </a>
-            </div>
+        <!-- Published guidelines, bulletins and articles -->
+        <div class="edu-sec-head">
+          <h2>{{ L.t('edu_guides_articles') }}</h2>
+          <p>{{ L.lang() === 'sw' ? 'Miongozo, taarifa na makala zilizochapishwa na Idara ya Menejimenti ya Maafa' : 'Published guidelines, bulletins and articles from the Disaster Management Department' }}</p>
+        </div>
+        <div class="art-grid">
+          @for (c of filteredContents(); track c.id) {
+            <a [routerLink]="['/education', c.id]" class="edu-card edu-lift art-card">
+              <div class="art-top">
+                <span class="art-type">{{ c.contentType }}</span>
+                <span class="art-read">{{ readMins(c) }} {{ L.lang() === 'sw' ? 'dakika za kusoma' : 'min read' }}</span>
+              </div>
+              <div class="art-title">{{ eduTitle(c) }}</div>
+              @if (eduSummary(c)) { <p class="art-summary">{{ eduSummary(c) }}</p> }
+              <div class="art-meta">
+                @if (c.author) { <span><i class="fas fa-user me-1"></i>{{ c.author }}</span> }
+                @if (c.publicationDate) { <span><i class="fas fa-clock me-1"></i>{{ c.publicationDate }}</span> }
+              </div>
+            </a>
           } @empty {
-            <div class="col-12 text-center" style="color:var(--text-secondary, #64748b);padding:3rem;">
-              <i class="fas fa-graduation-cap" style="font-size:2.5rem;opacity:0.3;"></i>
-              <p style="margin-top:0.8rem;">{{ L.t('edu_no_content_yet') }}</p>
+            <div class="edu-empty">
+              <i class="fas fa-graduation-cap"></i>
+              @if (q()) {
+                <p>{{ L.lang() === 'sw' ? 'Hakuna makala inayolingana na "' + q() + '"' : 'No articles match "' + q() + '"' }}</p>
+                <button type="button" class="edu-btn-outline" (click)="q.set('')">{{ L.lang() === 'sw' ? 'Futa utafutaji' : 'Clear search' }}</button>
+              } @else {
+                <p>{{ L.t('edu_no_content_yet') }}</p>
+              }
             </div>
           }
         </div>
       }
     </div>
   `,
+  styles: [`
+    .edu-wrap { max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 2rem 4rem; }
+    .edu-back { color: #60a5fa; text-decoration: none; font-size: 0.9rem; }
+
+    /* --- Header band --- */
+    .edu-head { margin-top: 1rem; }
+    .edu-title { font-weight: 800; color: var(--text-primary, #2C3E50); margin: 0; }
+    .edu-mission { font-size: 1.05rem; color: var(--text-secondary, #64748b); margin: 0.35rem 0 0; }
+    .edu-search { position: relative; max-width: 640px; margin-top: 1.2rem; }
+    .edu-search i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+    .edu-search input { width: 100%; height: 48px; border: 1.5px solid rgba(13, 43, 77, 0.18); border-radius: 10px;
+      padding: 0 1rem 0 2.7rem; font-size: 1rem; background: var(--card-bg, #fff); color: var(--text-primary, #2C3E50); }
+    .edu-search input:focus { outline: none; border-color: #0d3b66; box-shadow: 0 0 0 3px rgba(13, 59, 102, 0.12); }
+    .edu-stats { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 0.9rem;
+      font-size: 0.9rem; color: var(--text-secondary, #64748b); }
+    .edu-stats b { color: var(--text-primary, #2C3E50); font-weight: 800; }
+
+    /* --- Featured row (flat solids, no gradients) --- */
+    .edu-featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 1rem; margin: 1.8rem 0 0; }
+    .edu-feat { display: flex; flex-wrap: wrap; align-items: center; gap: 1.1rem; color: #fff; border-radius: 12px;
+      padding: 1.4rem 1.5rem; text-decoration: none; box-shadow: 0 4px 14px rgba(9, 30, 58, 0.18); }
+    .feat-icon { width: 56px; height: 56px; border-radius: 12px; background: rgba(255, 255, 255, 0.16);
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex: none; }
+    .feat-body { min-width: 240px; flex: 1; }
+    .feat-eyebrow { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
+    .feat-title { font-size: 1.2rem; font-weight: 800; margin: 0.15rem 0; }
+    .feat-desc { font-size: 0.95rem; opacity: 0.92; }
+    .feat-cta { background: #fff; font-weight: 800; font-size: 0.95rem; padding: 0.6rem 1.1rem; border-radius: 8px; white-space: nowrap; flex: none; }
+
+    /* --- Section headers --- */
+    .edu-sec-head { margin: 2.75rem 0 1.2rem; }
+    .edu-sec-head h2 { font-size: 1.45rem; font-weight: 800; color: var(--text-primary, #2C3E50); margin: 0; }
+    .edu-sec-head p { font-size: 1rem; color: var(--text-secondary, #64748b); margin: 0.25rem 0 0; }
+
+    /* --- Shared card base + hover lift --- */
+    .edu-card { display: flex; border: 1px solid rgba(13, 43, 77, 0.12); border-radius: 12px;
+      background: var(--card-bg, #fff); text-decoration: none; box-shadow: 0 2px 8px rgba(9, 30, 58, 0.05); }
+    .edu-lift { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+    .edu-lift:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(9, 30, 58, 0.14); }
+
+    /* --- National threats --- */
+    .th-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); gap: 1rem; }
+    .th-card { align-items: center; gap: 14px; padding: 1rem 1.1rem; }
+    .th-icon { width: 42px; height: 42px; border-radius: 10px; color: #fff;
+      display: flex; align-items: center; justify-content: center; flex: none; }
+    .th-name { font-size: 1rem; font-weight: 800; color: var(--text-primary, #2C3E50);
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .th-meta { font-size: 0.9rem; color: var(--text-secondary, #64748b); margin-top: 2px; }
+    .th-chev { margin-left: auto; font-size: 0.7rem; color: #94a3b8; flex: none; }
+    /* Severity chips — same contract as .pp-sev in portal-landing.css, scoped here. */
+    .pp-sev { display: inline-block; font-size: 0.8rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.04em; padding: 2px 10px; border-radius: 999px; }
+    .sev-emergency { background: #fde3e3; color: #b51c1c; }
+    .sev-warning { background: #ffeede; color: #a85607; }
+    .sev-watch { background: #fff7d6; color: #8a6d00; }
+    .sev-incident { background: #ece7fb; color: #5b21b6; }
+
+    /* --- Know Your Hazards --- */
+    .hz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 1rem; }
+    .hz-card { align-items: flex-start; gap: 14px; padding: 1.1rem 1.2rem; height: 100%; }
+    .hz-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center;
+      justify-content: center; font-size: 1.15rem; flex: none; }
+    .hz-name { font-size: 1.1rem; font-weight: 800; color: var(--text-primary, #2C3E50); }
+    .hz-desc { font-size: 0.95rem; line-height: 1.55; color: var(--text-secondary, #64748b); margin: 0.3rem 0 0.55rem;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .hz-open { font-size: 0.9rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+    .hz-open i { font-size: 0.7rem; }
+
+    /* --- Guides & Articles --- */
+    .art-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 1.1rem; }
+    .art-card { flex-direction: column; gap: 0.6rem; padding: 1.2rem 1.3rem; height: 100%; }
+    .art-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .art-type { display: inline-block; background: rgba(0, 51, 102, 0.08); color: #0d3b66; font-size: 0.8rem;
+      font-weight: 700; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .art-read { font-size: 0.85rem; color: #94a3b8; white-space: nowrap; }
+    .art-title { font-size: 1.1rem; font-weight: 800; color: var(--text-primary, #2C3E50); line-height: 1.4; }
+    .art-summary { font-size: 1rem; color: var(--text-secondary, #64748b); line-height: 1.6; margin: 0; flex: 1;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .art-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.85rem; color: #94a3b8; }
+
+    /* --- Empty / no-results states --- */
+    .edu-empty { grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-secondary, #64748b);
+      border: 1px dashed rgba(13, 43, 77, 0.18); border-radius: 12px; }
+    .edu-empty i { font-size: 2.4rem; opacity: 0.3; }
+    .edu-empty p { margin: 0.8rem 0 1rem; font-size: 1rem; }
+
+    /* --- Flat outline action button --- */
+    .edu-btn-outline { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 1.1rem;
+      border: 1.5px solid #0d3b66; border-radius: 8px; background: transparent; color: #0d3b66;
+      font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+    .edu-btn-outline:hover { background: rgba(13, 59, 102, 0.06); }
+
+    /* --- Detail view --- */
+    .edu-detail { max-width: 920px; margin-top: 1rem; }
+    .edu-detail-title { font-weight: 800; color: var(--text-primary, #2C3E50); margin: 0.7rem 0 0.4rem; }
+    .edu-detail-meta { display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--text-secondary, #64748b);
+      font-size: 0.9rem; margin-bottom: 1rem; }
+    .edu-detail-lede { font-size: 1.05rem; font-weight: 600; color: var(--text-primary, #2C3E50);
+      line-height: 1.7; margin-top: 1.2rem; }
+    .edu-detail-body { font-size: 1.05rem; color: var(--text-secondary, #475569); line-height: 1.85; white-space: pre-line; }
+    .edu-detail-return { display: inline-block; margin-top: 2rem; }
+
+    @media (max-width: 640px) {
+      .edu-wrap { padding: 6rem 1rem 2.5rem; }
+    }
+  `],
 })
 export class EducationComponent {
   L = inject(PortalLabels);
@@ -129,6 +285,7 @@ export class EducationComponent {
   eduSummary(c: EduItem): string { return this.pick(c.summarySw, c.summary); }
   eduBody(c: EduItem): string { return this.pick(c.fullContentSw, c.fullContent ?? ''); }
   hazardName(hz: HazardCard): string { return this.pick(hz.nameSw, hz.name); }
+  hazardDesc(hz: HazardCard): string { return this.pick(hz.descriptionSw, hz.descriptionEn); }
   private pick(sw: string | undefined | null, en: string): string {
     return this.L.lang() === 'sw' && sw != null && sw.trim() !== '' ? sw : en;
   }
@@ -139,6 +296,34 @@ export class EducationComponent {
   hazardCards = signal<HazardCard[]>([]);
   /** National threats — Elimu reflects their past impacts (threat pages carry NDRF-IP figures). */
   threats = signal<{ id: number; name: string; sourceAgency: string; severity: string }[]>([]);
+
+  /** Live search query — filters both the hazard hubs and the articles as the visitor types. */
+  q = signal('');
+  filteredHazards = computed(() => {
+    const s = this.q().trim().toLowerCase();
+    if (!s) return this.hazardCards();
+    return this.hazardCards().filter(h =>
+      [h.name, h.nameSw, h.descriptionEn, h.descriptionSw].some(v => (v ?? '').toLowerCase().includes(s)));
+  });
+  filteredContents = computed(() => {
+    const s = this.q().trim().toLowerCase();
+    if (!s) return this.contents();
+    return this.contents().filter(c =>
+      [c.title, c.titleSw, c.summary, c.summarySw].some(v => (v ?? '').toLowerCase().includes(s)));
+  });
+
+  /** Reading time at ~200 words/minute over the visitor-language summary + body, minimum 1. */
+  readMins(c: EduItem): number {
+    const words = `${this.eduSummary(c)} ${this.eduBody(c)}`.trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.ceil(words / 200));
+  }
+
+  /** Maps the threat severity string onto the shared .pp-sev chip variants. */
+  sevClass(severity: string): string {
+    return severity === 'Emergency' ? 'sev-emergency' : severity === 'Warning' ? 'sev-warning' : 'sev-watch';
+  }
+
+  printPage(): void { window.print(); }
 
   constructor(route: ActivatedRoute) {
     document.title = 'Education — e-MAAFA';

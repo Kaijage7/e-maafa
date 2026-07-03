@@ -21,7 +21,7 @@ export interface Breadcrumb {
             <div class="breadcrumb-trail">
               @for (crumb of breadcrumbs(); track $index; let last = $last) {
                 @if ($index > 0) {
-                  <span class="sep"><i class="fas fa-chevron-right" style="font-size:0.4rem;"></i></span>
+                  <span class="sep"><i class="fas fa-chevron-right" style="font-size:0.7rem;"></i></span>
                 }
                 @if (crumb.url) {
                   <a [routerLink]="crumb.url">{{ crumb.label }}</a>

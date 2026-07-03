@@ -24,6 +24,7 @@ type Tab = 'map' | 'registry' | 'analytics' | 'entry' | 'approvals';
     .tabbar { display:flex; gap:.25rem; flex-wrap:wrap; margin:.25rem 0 1.1rem; border-bottom:2px solid var(--line,#e2e8f0); }
     .tabbar button { font:inherit; font-size:.86rem; font-weight:700; padding:.6rem 1.1rem; border:none; background:transparent;
       color:var(--text-mid,#64748b); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; display:flex; align-items:center; gap:.45rem; }
+    .tabbar button:hover:not(.on) { color:var(--text-dark,#1e293b); background:#f8fafc; }
     .tabbar button.on { color:var(--module-color,#0d6efd); border-bottom-color:var(--module-color,#0d6efd); }
     .tabbar button i { font-size:.8rem; }
   `],

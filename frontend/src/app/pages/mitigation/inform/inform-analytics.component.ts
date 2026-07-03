@@ -24,9 +24,10 @@ function classOf(r: number | null | undefined) { if (r == null || !isFinite(r)) 
     @media (max-width:1000px){ .grid2 { grid-template-columns:1fr; } }
     .chart-card { background:#fff; border:1px solid var(--line,#e2e8f0); border-radius:10px; padding:.9rem 1rem; }
     .chart-card h3 { font-size:.9rem; margin:0; }
-    .chart-card .sub { font-size:.72rem; color:var(--text-mid,#64748b); margin:.1rem 0 .6rem; }
+    .chart-card .sub { font-size:.8rem; color:var(--text-mid,#64748b); margin:.1rem 0 .6rem; }
     .filterbar { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin:1.4rem 0 .6rem; }
-    .chip { font:inherit; font-size:.74rem; font-weight:700; padding:.25rem .7rem; border-radius:50px; border:1.5px solid var(--line,#cbd5e1); background:#fff; color:var(--text-mid,#475569); cursor:pointer; }
+    .chip { font:inherit; font-size:.8rem; font-weight:700; padding:.25rem .7rem; border-radius:50px; border:1.5px solid var(--line,#cbd5e1); background:#fff; color:var(--text-mid,#475569); cursor:pointer; }
+    .chip:hover:not(.on) { border-color:#94a3b8; background:#f8fafc; }
     .chip.on { color:#fff; border-color:transparent; }
     th.sortable { cursor:pointer; user-select:none; }
   `],
@@ -40,30 +41,30 @@ function classOf(r: number | null | undefined) { if (r == null || !isFinite(r)) 
           <svg viewBox="0 0 540 260" width="100%" height="260" style="font-family:Calibri,system-ui,sans-serif;">
             @for (t of vTicksReal; track t) {
               <line [attr.x1]="40" [attr.y1]="yOf(t)" [attr.x2]="526" [attr.y2]="yOf(t)" stroke="#edf1f6" />
-              <text [attr.x]="33" [attr.y]="yOf(t)+3.5" text-anchor="end" font-size="10" fill="#334155">{{ t }}</text>
+              <text [attr.x]="33" [attr.y]="yOf(t)+3.5" text-anchor="end" font-size="12" fill="#334155">{{ t }}</text>
             }
             <line x1="40" y1="22" x2="40" y2="220" stroke="#94a3b8" stroke-width="1.25" />
             <line x1="40" y1="220" x2="526" y2="220" stroke="#94a3b8" stroke-width="1.25" />
             @for (b of distBars(); track b.label) {
               <rect [attr.x]="b.x" [attr.y]="b.y" [attr.width]="b.w" [attr.height]="220-b.y" [attr.fill]="b.color" />
               <text [attr.x]="b.x+b.w/2" [attr.y]="b.y-5" text-anchor="middle" font-size="12" font-weight="700" fill="#0a0f1a">{{ b.value }}</text>
-              <text [attr.x]="b.x+b.w/2" [attr.y]="235" text-anchor="middle" font-size="9.5" fill="#334155">{{ b.label }}</text>
+              <text [attr.x]="b.x+b.w/2" [attr.y]="235" text-anchor="middle" font-size="12" fill="#334155">{{ b.label }}</text>
             }
           </svg>
         </div>
 
         <div class="chart-card">
           <h3>Highest councils</h3>
-          <div class="sub">top 12 by INFORM risk</div>
+          <div class="sub">Top 12 by INFORM risk</div>
           <svg [attr.viewBox]="'0 0 540 ' + topH()" width="100%" [attr.height]="topH()" style="font-family:Calibri,system-ui,sans-serif;">
             @for (t of [0,5,10]; track t) {
               <line [attr.x1]="hx(t)" y1="10" [attr.x2]="hx(t)" [attr.y2]="topH()-26" stroke="#edf1f6" />
-              <text [attr.x]="hx(t)" [attr.y]="topH()-11" text-anchor="middle" font-size="10" fill="#334155">{{ t }}</text>
+              <text [attr.x]="hx(t)" [attr.y]="topH()-11" text-anchor="middle" font-size="12" fill="#334155">{{ t }}</text>
             }
             <line x1="140" y1="10" [attr.x2]="140" [attr.y2]="topH()-26" stroke="#94a3b8" stroke-width="1.25" />
             @for (b of topBars(); track b.label; let i = $index) {
               <text x="132" [attr.y]="10+i*28+12" text-anchor="end" font-size="12" font-weight="600" fill="#0a0f1a">{{ b.label }}</text>
-              <text x="132" [attr.y]="10+i*28+24" text-anchor="end" font-size="9.5" fill="#334155">{{ b.sub }}</text>
+              <text x="132" [attr.y]="10+i*28+24" text-anchor="end" font-size="12" fill="#334155">{{ b.sub }}</text>
               <rect x="140" [attr.y]="10+i*28+6" [attr.width]="b.w" height="15" [attr.fill]="b.color" />
               <text [attr.x]="146+b.w" [attr.y]="10+i*28+16" font-size="12" font-weight="700" fill="#0a0f1a">{{ b.value.toFixed(1) }}</text>
             }

@@ -53,7 +53,7 @@ const WORKFLOW_STEPS = [
 
 /**
  * Reproduction of onehealth/events/show.blade.php (2927 lines) — the One Health
- * coordination hub: gradient banner, 6-step workflow stepper, tabbed layout
+ * coordination hub: flat banner, 6-step workflow stepper, tabbed layout
  * (Overview / Cases / Directives / Disseminations / Actions) with inline creation
  * panels, expandable directive matrices, the dual-track dissemination panel and a
  * timeline-focused sidebar with the review and closure forms.
@@ -66,15 +66,15 @@ const WORKFLOW_STEPS = [
   standalone: true,
   imports: [FormsModule, RouterLink, NgTemplateOutlet],
   styles: [`
-    /* ── Gradient header ── */
+    /* ── Banner header (flat solid) ── */
     .oh-show-header { background: #0891b2; border-radius: 12px; padding: 1.25rem 1.5rem; color: #fff; margin-bottom: 1.5rem; }
-    .oh-show-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; opacity: 0.8; }
+    .oh-show-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; opacity: 0.8; }
     .oh-show-breadcrumb a { color: rgba(255,255,255,0.85); text-decoration: none; }
     .oh-show-breadcrumb a:hover { color: #fff; }
     .oh-show-breadcrumb span { color: #fff; font-weight: 600; }
-    .oh-show-breadcrumb i.fa-chevron-right { font-size: 0.55rem; opacity: 0.5; }
+    .oh-show-breadcrumb i.fa-chevron-right { font-size: 0.7rem; opacity: 0.5; }
     .oh-show-title { color: #fff; font-weight: 700; font-size: 1.2rem; line-height: 1.3; }
-    .oh-show-badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; background: rgba(255,255,255,0.2); color: #fff; }
+    .oh-show-badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; background: rgba(255,255,255,0.2); color: #fff; }
     .oh-show-header-btn { display: inline-flex; align-items: center; padding: 6px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: #fff; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); text-decoration: none; transition: all 0.2s; cursor: pointer; }
     .oh-show-header-btn:hover { background: rgba(255,255,255,0.22); color: #fff; }
     /* ── Stepper ── */
@@ -86,20 +86,20 @@ const WORKFLOW_STEPS = [
     .oh-step-icon { width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 0.4rem; transition: all 0.3s ease; position: relative; }
     .oh-step.pending .oh-step-icon { background: #f0f0f0; color: #adb5bd; border: 2px solid #dee2e6; }
     .oh-step.pending .oh-step-label { color: #adb5bd; font-size: 0.75rem; font-weight: 500; }
-    .oh-step.pending .oh-step-desc { color: #ced4da; font-size: 0.65rem; }
+    .oh-step.pending .oh-step-desc { color: #ced4da; font-size: 0.75rem; }
     .oh-step.active .oh-step-icon { background: #0891b2; color: #fff; border: 2px solid #0891b2; box-shadow: 0 0 0 4px rgba(8, 145, 178, 0.15); }
     .oh-step.active .oh-step-label { color: #0891b2; font-size: 0.75rem; font-weight: 700; }
-    .oh-step.active .oh-step-desc { color: #0891b2; font-size: 0.65rem; font-weight: 500; }
+    .oh-step.active .oh-step-desc { color: #0891b2; font-size: 0.75rem; font-weight: 500; }
     .oh-step.completed .oh-step-icon { background: #198754; color: #fff; border: 2px solid #198754; }
     .oh-step.completed .oh-step-label { color: #198754; font-size: 0.75rem; font-weight: 600; }
-    .oh-step.completed .oh-step-desc { color: #6c757d; font-size: 0.65rem; }
+    .oh-step.completed .oh-step-desc { color: #6c757d; font-size: 0.75rem; }
     @media (max-width: 768px) { .oh-step-desc { display: none; } .oh-step-icon { width: 36px; height: 36px; font-size: 0.85rem; } .oh-stepper-line { top: 18px; } }
     /* ── Tabs ── */
     .oh-show-tabs { background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; display: flex; list-style: none; margin: 0; }
     .oh-show-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 18px; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s ease; cursor: pointer; font-family: inherit; }
     .oh-show-tabs button:hover { color: #0891b2; }
     .oh-show-tabs button.active { color: #0891b2; border-bottom-color: #0891b2; }
-    .oh-show-tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; font-size: 0.68rem; font-weight: 700; background: rgba(8,145,178,0.1); color: #0891b2; margin-left: 6px; }
+    .oh-show-tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; background: rgba(8,145,178,0.1); color: #0891b2; margin-left: 6px; }
     .oh-show-tab-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0 12px; }
     /* ── Cards / fields ── */
     .oh-show-card { background: #fff; border: 1px solid #e3e6ed; border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
@@ -117,7 +117,7 @@ const WORKFLOW_STEPS = [
     @media (max-width: 991px) { .oh-show-grid-3 { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 576px) { .oh-show-grid-3 { grid-template-columns: 1fr; } }
     .oh-show-field { display: flex; flex-direction: column; gap: 2px; }
-    .oh-show-label { font-size: 0.7rem; color: #9ca3af; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+    .oh-show-label { font-size: 0.75rem; color: #9ca3af; font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
     .oh-show-value { font-size: 0.85rem; font-weight: 600; color: #222834; }
     .oh-show-desc { font-size: 0.84rem; color: #4a5568; line-height: 1.6; background: #f9fafb; padding: 10px 12px; border-radius: 8px; border-left: 3px solid #0891b2; }
     .oh-show-coords { font-size: 0.78rem; color: #6e7891; background: #f8f9fb; display: inline-block; padding: 4px 10px; border-radius: 6px; }
@@ -126,7 +126,7 @@ const WORKFLOW_STEPS = [
     .oh-show-stat { flex: 1; text-align: center; padding: 10px 6px; border-right: 1px solid #e3e6ed; }
     .oh-show-stat:last-child { border-right: none; }
     .oh-show-stat-num { font-size: 1.3rem; font-weight: 700; color: #222834; }
-    .oh-show-stat-label { font-size: 0.65rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 500; }
+    .oh-show-stat-label { font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 500; }
     .oh-show-stat-accent .oh-show-stat-num { color: #0891b2; }
     .oh-show-stat-danger .oh-show-stat-num { color: #dc3545; }
     /* ── Directive / dissemination cards ── */
@@ -134,16 +134,16 @@ const WORKFLOW_STEPS = [
     .oh-show-dir-card:hover, .oh-show-dis-card:hover { border-color: #0891b2; }
     .oh-show-dir-title { font-weight: 600; font-size: 0.88rem; color: #222834; text-decoration: none; display: flex; align-items: center; gap: 4px; }
     .oh-show-dir-title:hover { color: #0891b2; }
-    .oh-show-dir-meta { font-size: 0.72rem; color: #9ca3af; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .oh-show-dir-progress-label { font-size: 0.7rem; color: #6e7891; margin-bottom: 3px; display: flex; justify-content: space-between; }
-    .oh-show-dis-meta { font-size: 0.72rem; color: #6e7891; }
+    .oh-show-dir-meta { font-size: 0.8rem; color: #9ca3af; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .oh-show-dir-progress-label { font-size: 0.8rem; color: #6e7891; margin-bottom: 3px; display: flex; justify-content: space-between; }
+    .oh-show-dis-meta { font-size: 0.8rem; color: #6e7891; }
     .oh-dir-chevron { transition: transform 0.2s; font-size: 0.65rem; }
     .oh-dir-chevron.expanded { transform: rotate(90deg); }
     .oh-dir-detail-panel { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e3e6ed; }
     .oh-dir-section { background: #f9fafb; border: 1px solid #e3e6ed; border-radius: 8px; padding: 12px; }
-    .oh-dir-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #6e7891; margin-bottom: 8px; }
+    .oh-dir-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #6e7891; margin-bottom: 8px; }
     .oh-dir-admin-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .oh-dir-admin-bar .btn-sm { font-size: 0.72rem; padding: 3px 10px; border-radius: 6px; }
+    .oh-dir-admin-bar .btn-sm { font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; }
     /* ── Inline panels ── */
     .oh-show-inline-panel { background: #fff; border: 1px solid rgba(8,145,178,0.3); border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
     .oh-show-inline-panel-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(8,145,178,0.04); border-bottom: 1px solid #e3e6ed; }
@@ -172,13 +172,13 @@ const WORKFLOW_STEPS = [
     /* Sidebar */
     .oh-show-sidebar-divider { height: 1px; background: #f0f2f5; margin: 0 16px; }
     .oh-show-sidebar-section { padding: 12px 16px; }
-    .oh-show-sidebar-section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #6e7891; margin-bottom: 10px; }
+    .oh-show-sidebar-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #6e7891; margin-bottom: 10px; }
     .oh-show-review-box { border: 2px dashed #e3e6ed; border-radius: 10px; padding: 14px; background: #f9fafb; }
     .oh-show-contact { display: flex; align-items: center; gap: 12px; }
     .oh-show-contact-avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(8,145,178,0.08); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .oh-show-contact-avatar i { font-size: 1.3rem; color: #0891b2; }
     .oh-show-contact-name { font-weight: 700; font-size: 0.85rem; color: #222834; }
-    .oh-show-contact-detail { font-size: 0.75rem; color: #6e7891; margin-top: 1px; }
+    .oh-show-contact-detail { font-size: 0.8rem; color: #6e7891; margin-top: 1px; }
     .oh-show-review-row { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f0f2f5; }
     .oh-show-review-row:last-child { border-bottom: none; }
     .oh-show-review-icon { width: 26px; height: 26px; border-radius: 50%; background: rgba(8,145,178,0.08); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #0891b2; font-size: 0.7rem; }
@@ -187,13 +187,13 @@ const WORKFLOW_STEPS = [
     .oh-show-tl-line { position: absolute; left: 10px; top: 4px; bottom: 4px; width: 2px; background: #e3e6ed; }
     .oh-show-tl-item { position: relative; padding-bottom: 18px; }
     .oh-show-tl-item:last-child { padding-bottom: 0; }
-    .oh-show-tl-dot { position: absolute; left: -20px; top: 2px; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.55rem; z-index: 1; }
+    .oh-show-tl-dot { position: absolute; left: -20px; top: 2px; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.7rem; z-index: 1; }
     .oh-show-tl-body { background: #f9fafb; border: 1px solid #e3e6ed; border-radius: 8px; padding: 10px 12px; }
     .oh-show-tl-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
     .oh-show-tl-actor { font-size: 0.8rem; font-weight: 600; color: #222834; }
-    .oh-show-tl-role { font-weight: 400; color: #9ca3af; font-size: 0.75rem; }
-    .oh-show-tl-time { font-size: 0.7rem; color: #9ca3af; }
-    .oh-show-tl-transition { font-size: 0.7rem; color: #6e7891; }
+    .oh-show-tl-role { font-weight: 400; color: #9ca3af; font-size: 0.8rem; }
+    .oh-show-tl-time { font-size: 0.8rem; color: #9ca3af; }
+    .oh-show-tl-transition { font-size: 0.8rem; color: #6e7891; }
     .oh-show-tl-comment { margin-top: 6px; font-size: 0.8rem; color: #4a5568; padding: 6px 8px; background: #fff; border-radius: 6px; border-left: 2px solid #0891b2; }
     /* Empty / table */
     .oh-show-empty-state { text-align: center; padding: 3rem 1rem; }
@@ -201,12 +201,12 @@ const WORKFLOW_STEPS = [
     .oh-show-empty-state p { font-size: 0.88rem; color: #9ca3af; margin: 0; }
     .oh-show-table { width: 100%; border-collapse: collapse; }
     .oh-show-table thead tr { background: #f8f9fb; }
-    .oh-show-table th { font-size: 0.72rem; font-weight: 600; color: #6e7891; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 16px; border-bottom: 1px solid #e3e6ed; text-align: left; }
+    .oh-show-table th { font-size: 0.75rem; font-weight: 600; color: #6e7891; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 16px; border-bottom: 1px solid #e3e6ed; text-align: left; }
     .oh-show-table td { font-size: 0.84rem; padding: 10px 16px; border-bottom: 1px solid #f0f2f5; }
     .progress { background: #e9ecef; border-radius: 4px; overflow: hidden; display: flex; }
-    .progress-bar { background: #0d6efd; color: #fff; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; transition: width 0.6s ease; }
+    .progress-bar { background: #0d6efd; color: #fff; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; transition: width 0.6s ease; }
     .progress-bar.bg-success { background: #198754; }
-    .badge { display: inline-block; padding: 0.3em 0.55em; border-radius: 0.375rem; font-size: 0.68rem; font-weight: 700; }
+    .badge { display: inline-block; padding: 0.3em 0.55em; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 700; }
     .badge.bg-success { background: #198754; color: #fff; }
     .badge.bg-warning { background: #ffc107; color: #1e293b; }
     .badge.bg-danger { background: #dc3545; color: #fff; }
@@ -217,7 +217,7 @@ const WORKFLOW_STEPS = [
   `],
   template: `
     @if (data(); as d) {
-      <!-- ═══ Gradient Banner Header ═══ -->
+      <!-- ═══ Banner Header (flat solid) ═══ -->
       <div class="oh-show-header">
         <div class="oh-show-breadcrumb">
           <a routerLink="/m/one-health/dashboard"><i class="fas fa-home"></i> One Health</a>
@@ -233,7 +233,7 @@ const WORKFLOW_STEPS = [
               <span class="oh-show-badge" [style.background]="typeBg(d.event.event_type)" [style.color]="typeColor(d.event.event_type)">
                 <i class="fas fa-tag me-1"></i>{{ ucfirst(d.event.event_type) }}
               </span>
-              <span class="oh-show-badge"><i class="fas fa-circle me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>{{ d.event.status_label }}</span>
+              <span class="oh-show-badge"><i class="fas fa-circle me-1" style="font-size: 0.7rem; vertical-align: middle;"></i>{{ d.event.status_label }}</span>
               @if (d.event.priority_level) {
                 <span class="oh-show-badge" [style.color]="prioColor(d.event.priority_level)" style="background: rgba(255,255,255,0.15);">
                   <i class="fas fa-flag me-1"></i>{{ ucfirst(d.event.priority_level) }} Priority
@@ -554,7 +554,7 @@ const WORKFLOW_STEPS = [
                 <div class="oh-show-inline-panel-footer">
                   <div class="form-check mb-0">
                     <input class="form-check-input" type="checkbox" id="alsoAddActions" [(ngModel)]="alsoAddActions">
-                    <label class="form-check-label" for="alsoAddActions" style="font-size: 0.78rem; color: #6e7891;"><i class="fas fa-tasks me-1"></i> Also add action items after issuing</label>
+                    <label class="form-check-label" for="alsoAddActions" style="font-size: 0.8rem; color: #6e7891;"><i class="fas fa-tasks me-1"></i> Also add action items after issuing</label>
                   </div>
                   <div class="d-flex gap-2">
                     <button type="button" class="btn btn-sm btn-light" (click)="dirPanelOpen.set(false)">Cancel</button>
@@ -615,7 +615,7 @@ const WORKFLOW_STEPS = [
                 @if (expandedDir() === dir.id) {
                   <div class="oh-dir-detail-panel">
                     @if (dir.action_description) { <div class="oh-show-desc mt-1" style="font-size: 0.82rem;">{{ dir.action_description }}</div> }
-                    @if (dir.coordination_notes) { <div class="mt-2" style="font-size: 0.78rem; color: #6e7891;"><strong>Coordination:</strong> {{ dir.coordination_notes }}</div> }
+                    @if (dir.coordination_notes) { <div class="mt-2" style="font-size: 0.8rem; color: #6e7891;"><strong>Coordination:</strong> {{ dir.coordination_notes }}</div> }
 
                     <div class="oh-dir-admin-bar mt-3">
                       @if (dir.total_stakeholders - dir.ack_count > 0) {
@@ -638,8 +638,8 @@ const WORKFLOW_STEPS = [
                                   @else if (s.acknowledgement_status === 'declined') { <span class="badge bg-danger">Declined</span> }
                                   @else { <span class="badge bg-warning">Pending</span> }
                                 </td>
-                                <td style="font-size: 0.78rem;">{{ s.acknowledged_at ?? '-' }}</td>
-                                <td style="font-size: 0.78rem;">{{ s.response_notes ?? '-' }}</td>
+                                <td style="font-size: 0.8rem;">{{ s.acknowledged_at ?? '-' }}</td>
+                                <td style="font-size: 0.8rem;">{{ s.response_notes ?? '-' }}</td>
                               </tr>
                             }
                           </tbody>
@@ -660,8 +660,8 @@ const WORKFLOW_STEPS = [
                                     <div class="progress-bar" [class.bg-success]="(s.implementation_percentage ?? 0) >= 100" [style.width.%]="s.implementation_percentage ?? 0">{{ s.implementation_percentage ?? 0 }}%</div>
                                   </div>
                                 </td>
-                                <td style="font-size: 0.78rem;">{{ s.last_update_at ?? '-' }}</td>
-                                <td style="font-size: 0.78rem;">{{ limit(s.implementation_notes ?? '-', 40) }}</td>
+                                <td style="font-size: 0.8rem;">{{ s.last_update_at ?? '-' }}</td>
+                                <td style="font-size: 0.8rem;">{{ limit(s.implementation_notes ?? '-', 40) }}</td>
                               </tr>
                             }
                           </tbody>
@@ -763,15 +763,15 @@ const WORKFLOW_STEPS = [
                           }
                         </div>
                         <div class="mt-1">
-                          <button type="button" class="btn btn-sm btn-link p-0 text-muted" style="font-size: 0.72rem;" (click)="selectAllDissStakeholders(true)">Select All</button>
-                          <button type="button" class="btn btn-sm btn-link p-0 text-muted ms-2" style="font-size: 0.72rem;" (click)="selectAllDissStakeholders(false)">Clear</button>
+                          <button type="button" class="btn btn-sm btn-link p-0 text-muted" style="font-size: 0.8rem;" (click)="selectAllDissStakeholders(true)">Select All</button>
+                          <button type="button" class="btn btn-sm btn-link p-0 text-muted ms-2" style="font-size: 0.8rem;" (click)="selectAllDissStakeholders(false)">Clear</button>
                         </div>
                       </div>
                     }
                     <div class="col-12 border-top pt-2">
                       <label class="form-label oh-show-form-label"><i class="fas fa-file-excel me-1 text-success"></i> Or Upload Recipients (CSV/Excel)</label>
                       <input type="file" class="form-control form-control-sm" accept=".xlsx,.xls,.csv" (change)="onDissFile($event)">
-                      <small class="text-muted" style="font-size: 0.72rem;">Columns: Name, Phone, Email, Organization.</small>
+                      <small class="text-muted" style="font-size: 0.8rem;">Columns: Name, Phone, Email, Organization.</small>
                     </div>
                   </div>
                 </div>
@@ -810,7 +810,7 @@ const WORKFLOW_STEPS = [
             <div class="oh-show-tab-header">
               <h6 class="mb-0 fw-bold text-muted"><i class="fas fa-tasks me-1"></i> Action Items ({{ d.action_trackings.length }})</h6>
               <div class="d-flex gap-2">
-                <a class="btn btn-sm btn-outline-secondary" [routerLink]="['/m/one-health/events', d.event.id, 'actions']" style="font-size: 0.75rem;"><i class="fas fa-external-link-alt me-1"></i> Tracking Board</a>
+                <a class="btn btn-sm btn-outline-secondary" [routerLink]="['/m/one-health/events', d.event.id, 'actions']" style="font-size: 0.78rem;"><i class="fas fa-external-link-alt me-1"></i> Tracking Board</a>
                 <button type="button" class="btn btn-sm oh-show-action-btn" (click)="actionPanelOpen.set(!actionPanelOpen())"><i class="fas fa-plus me-1"></i> Add Action</button>
               </div>
             </div>
@@ -862,7 +862,7 @@ const WORKFLOW_STEPS = [
                   </div>
                 </div>
                 <div class="oh-show-inline-panel-footer">
-                  <div style="font-size: 0.78rem; color: #198754;" [style.display]="actionAddCount() > 0 ? 'block' : 'none'">
+                  <div style="font-size: 0.8rem; color: #198754;" [style.display]="actionAddCount() > 0 ? 'block' : 'none'">
                     <i class="fas fa-check me-1"></i> {{ actionAddCount() }} action{{ actionAddCount() > 1 ? 's' : '' }} added
                   </div>
                   <div class="d-flex gap-2">
@@ -928,7 +928,7 @@ const WORKFLOW_STEPS = [
               <div class="progress" style="height: 6px;">
                 <div class="progress-bar" [style.width.%]="d.event.completion_percentage" [style.background]="gaugeColor()"></div>
               </div>
-              <div class="oh-show-label mt-1" style="font-size: 0.7rem;">Submitted by {{ d.event.submitted_by_name ?? '-' }}</div>
+              <div class="oh-show-label mt-1" style="font-size: 0.75rem;">Submitted by {{ d.event.submitted_by_name ?? '-' }}</div>
             </div>
 
             @if (d.event.status === 'submitted' && d.can_review) {
@@ -980,7 +980,7 @@ const WORKFLOW_STEPS = [
                   <span><strong>Closed</strong>@if (d.event.closure_date) { on {{ formatDate(d.event.closure_date) }}}</span>
                 </div>
                 @if (d.event.outcome_summary) {
-                  <div class="oh-show-desc mt-2" style="font-size: 0.78rem;">{{ limit(d.event.outcome_summary, 120) }}</div>
+                  <div class="oh-show-desc mt-2" style="font-size: 0.8rem;">{{ limit(d.event.outcome_summary, 120) }}</div>
                 }
                 <button type="button" class="btn btn-sm w-100 btn-outline-secondary mt-2" (click)="submitArchive()"><i class="fas fa-archive me-1"></i> Archive Event</button>
               </div>
@@ -999,7 +999,7 @@ const WORKFLOW_STEPS = [
                   <div class="oh-show-tl-line"></div>
                   @for (h of d.workflow_histories; track $index) {
                     <div class="oh-show-tl-item">
-                      <div class="oh-show-tl-dot" [style.background]="tlColor(h.action)"><i [class]="h.action_icon" style="font-size: 0.55rem;"></i></div>
+                      <div class="oh-show-tl-dot" [style.background]="tlColor(h.action)"><i [class]="h.action_icon" style="font-size: 0.7rem;"></i></div>
                       <div class="oh-show-tl-body">
                         <div class="oh-show-tl-header">
                           <span class="badge bg-secondary">{{ h.action_label }}</span>
@@ -1028,7 +1028,7 @@ const WORKFLOW_STEPS = [
           <div class="d-flex justify-content-between align-items-start">
             <div class="flex-grow-1 me-3">
               <div class="fw-semibold" style="font-size: 0.85rem; color: #222834;">{{ action.action_title }}</div>
-              @if (action.action_description) { <div class="text-muted" style="font-size: 0.78rem;">{{ limit(action.action_description, 100) }}</div> }
+              @if (action.action_description) { <div class="text-muted" style="font-size: 0.8rem;">{{ limit(action.action_description, 100) }}</div> }
               <div class="oh-show-dir-meta mt-1">
                 @if (action.stakeholder_organization) { <span><i class="fas fa-building me-1"></i>{{ action.stakeholder_organization }}</span> }
                 @if (action.target_date_display) {
@@ -1481,10 +1481,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

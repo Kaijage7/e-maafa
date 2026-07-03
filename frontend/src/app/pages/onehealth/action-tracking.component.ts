@@ -37,7 +37,7 @@ interface ActionsResponse {
     .progress-bar { background: #198754; color: #fff; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; white-space: nowrap; transition: width 0.6s ease; }
     .list-group-item { padding: 0.85rem 1.1rem; border-bottom: 1px solid #f1f5f9; }
     .list-group-item:last-child { border-bottom: none; }
-    .badge { display: inline-block; padding: 0.3em 0.55em; border-radius: 0.375rem; font-size: 0.7rem; font-weight: 700; color: #fff; }
+    .badge { display: inline-block; padding: 0.3em 0.55em; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 700; color: #fff; }
     .badge.bg-success { background: #198754; }
     .badge.bg-warning { background: #ffc107; color: #1e293b; }
     .badge.bg-danger { background: #dc3545; }
@@ -60,7 +60,7 @@ interface ActionsResponse {
           {label:'Events', url:'/m/one-health/events'}, {label:d.event.event_id}, {label:'Action Tracking'}]">
         <div style="display:flex;gap:0.5rem;align-items:center;">
           <button type="button" class="btn btn-primary" (click)="openAdd()"><i class="fas fa-plus"></i> Add Action</button>
-          <a [routerLink]="['/m/one-health/events', d.event.id]" class="r-view" style="font-size:0.78rem;padding:0.35rem 0.75rem;"><i class="fas fa-arrow-left" style="font-size:0.55rem;margin-right:0.25rem;"></i> Back to Event</a>
+          <a [routerLink]="['/m/one-health/events', d.event.id]" class="r-view" style="font-size:0.78rem;padding:0.35rem 0.75rem;"><i class="fas fa-arrow-left" style="font-size:0.7rem;margin-right:0.25rem;"></i> Back to Event</a>
         </div>
       </dmis-page-header>
 
@@ -147,7 +147,7 @@ interface ActionsResponse {
                 @if (action.target_date_display) {
                   <span [class.text-danger]="isOverdue(action)" [class.fw-bold]="isOverdue(action)">
                     <i class="fas fa-calendar"></i> Target: {{ action.target_date_display }}
-                    @if (isOverdue(action)) { <span class="badge bg-danger" style="font-size:0.6rem;vertical-align:middle;">OVERDUE</span> }
+                    @if (isOverdue(action)) { <span class="badge bg-danger" style="font-size:0.75rem;vertical-align:middle;">OVERDUE</span> }
                   </span>
                 }
                 @if (action.completed_date_display) {
@@ -161,7 +161,7 @@ interface ActionsResponse {
             <div class="text-end" style="min-width: 200px;">
               <div class="d-flex align-items-center justify-content-end gap-2 mb-2">
                 <span class="badge" [class]="'badge ' + actionBadge(action.status)">{{ ucfirst(action.status) }}</span>
-                <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size:0.65rem;padding:0.15rem 0.4rem;" (click)="toggleEdit(action.id)" title="Edit action"><i class="fas fa-pen"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;padding:0.15rem 0.4rem;" (click)="toggleEdit(action.id)" title="Edit action"><i class="fas fa-pen"></i></button>
               </div>
               <div class="d-flex align-items-center gap-2">
                 <input type="range" class="form-range flex-grow-1" min="0" max="100" step="5"
@@ -463,10 +463,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

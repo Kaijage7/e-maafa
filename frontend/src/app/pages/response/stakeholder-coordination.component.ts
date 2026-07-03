@@ -54,7 +54,7 @@ interface StakeRow {
                 <tr class="data-row">
                   <td class="r-title">{{ s.organization || s.name }}
                     @if (s.is_verified) { <i class="fas fa-circle-check" style="color:#059669;font-size:0.72rem;margin-left:4px;" title="Verified"></i> }</td>
-                  <td style="font-size:0.8rem;color:var(--text-mid);">{{ s.type || '—' }}<br><span style="font-size:0.74rem;color:var(--text-light);">{{ s.sector || '' }}</span></td>
+                  <td style="font-size:0.8rem;color:var(--text-mid);">{{ s.type || '—' }}<br><span style="font-size:0.75rem;color:var(--text-light);">{{ s.sector || '' }}</span></td>
                   <td style="font-size:0.8rem;color:var(--text-mid);">{{ s.region || '—' }}</td>
                   <td style="text-align:center;">
                     <span class="pill" [class.pill-on]="s.response_tasks > 0" [class.red]="s.response_tasks > 0">{{ s.response_tasks }}</span></td>
@@ -133,19 +133,21 @@ interface StakeRow {
     }
   `,
   styles: [`
-    .btn-mini { font-size: 0.72rem; padding: 0.25rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; cursor: pointer; margin-left: 4px; color: var(--text-dark); }
+    .btn-mini { font-size: 0.78rem; padding: 0.35rem 0.8rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; cursor: pointer; margin-left: 4px; color: var(--text-dark); }
+    .btn-mini:hover { background: #f1f5f9; }
     .pill { display:inline-block; min-width:26px; padding:2px 8px; border-radius:20px; font-size:0.78rem; background:rgba(100,116,139,0.12); color:#64748b; }
     .pill-on.red { background:rgba(220,53,69,0.12); color:#dc3545; font-weight:700; }
     .pill-on.green { background:rgba(5,150,105,0.12); color:#059669; font-weight:700; }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1500; display: flex; align-items: flex-start; justify-content: center; padding: 3vh 1rem; overflow-y: auto; }
     .modal-card { background: var(--card-bg, #fff); border-radius: 16px; max-width: 900px; width: 100%; padding: 1.4rem 1.5rem; }
-    .btn-cancel { border: 1px solid var(--border); background: #fff; border-radius: 9px; padding: 0.4rem 0.9rem; cursor: pointer; }
+    .btn-cancel { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 0.4rem 0.9rem; cursor: pointer; }
+    .btn-cancel:hover { background: #f1f5f9; }
     .sec-title { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin: 1.1rem 0 0.4rem; display:flex; align-items:center; gap:6px; }
     .mini-stat { background: var(--surface, #f8fafc); border:1px solid var(--border); border-radius: 10px; padding: 0.5rem 0.9rem; min-width: 90px; text-align:center; }
     .ms-v { font-size: 1.3rem; font-weight: 800; color: var(--text-dark); }
-    .ms-l { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); }
+    .ms-l { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); }
     .empty-line { font-size: 0.82rem; color: var(--text-light); padding: 0.4rem 0; font-style: italic; }
-    table.mini th { font-size: 0.7rem; } table.mini td { font-size: 0.82rem; }
+    table.mini th { font-size: 0.75rem; } table.mini td { font-size: 0.82rem; }
   `],
 })
 export class StakeholderCoordinationComponent {

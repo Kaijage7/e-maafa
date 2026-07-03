@@ -15,7 +15,7 @@ import { InformRefreshService } from './inform-refresh.service';
     <p class="muted">PMO approval queue — keyed values await sign-off before they feed the strategic composite or hazard signals.</p>
 
     <div class="row-controls">
-      <div class="field"><label>Approver</label><input [(ngModel)]="approver" placeholder="your name / role" /></div>
+      <div class="field"><label>Approver</label><input [(ngModel)]="approver" placeholder="Name or role" /></div>
       <div class="field"><label>Sector</label>
         <select [(ngModel)]="owner" (ngModelChange)="load()">
           <option value="">All sectors</option>
@@ -29,7 +29,7 @@ import { InformRefreshService } from './inform-refresh.service';
     @if (pending().length) {
       <div class="card" style="padding:0; overflow:auto; max-height:65vh;">
         <table>
-          <thead><tr><th>Indicator</th><th>Hazard</th><th>Sector</th><th>Area</th><th class="num">Raw</th><th class="num">0–10</th><th>By</th><th></th></tr></thead>
+          <thead><tr><th>Indicator</th><th>Hazard</th><th>Sector</th><th>Area</th><th class="num">Raw</th><th class="num">0–10</th><th>Submitted by</th><th></th></tr></thead>
           <tbody>
             @for (p of pending(); track p.id) {
               <tr>
@@ -76,7 +76,7 @@ export class InformApprovalsComponent implements OnInit {
         const seen = new Set([...this.owners(), ...rows.map(r => r.owner)]);
         this.owners.set([...seen].filter(Boolean).sort());
       },
-      error: () => this.msg.set('Could not load the queue — is the backend up?'),
+      error: () => this.msg.set('Could not load the approval queue. Please try again.'),
     });
   }
 
@@ -84,7 +84,7 @@ export class InformApprovalsComponent implements OnInit {
     this.busy.set(p.id);
     this.svc.approveValue(p.id, this.approver.trim()).subscribe({
       next: () => { this.msg.set(`Approved ${p.indicatorId} @ ${p.areaCode} — risk updated`); this.busy.set(null); this.load(); this.refresh.bump(); },
-      error: () => { this.msg.set('Approve failed'); this.busy.set(null); },
+      error: () => { this.msg.set('Approval failed'); this.busy.set(null); },
     });
   }
 
@@ -92,7 +92,7 @@ export class InformApprovalsComponent implements OnInit {
     this.busy.set(p.id);
     this.svc.rejectValue(p.id, this.approver.trim()).subscribe({
       next: () => { this.msg.set(`Rejected ${p.indicatorId} @ ${p.areaCode}`); this.busy.set(null); this.load(); },
-      error: () => { this.msg.set('Reject failed'); this.busy.set(null); },
+      error: () => { this.msg.set('Rejection failed'); this.busy.set(null); },
     });
   }
 }

@@ -18,43 +18,42 @@ interface CalApiRow { hazardName: string; hazardNameSw: string | null; icon: str
   standalone: true,
   imports: [RouterLink],
   template: `
-    <div style="max-width:1100px;margin:0 auto;padding:1.5rem 1rem;">
-      <a routerLink="/education" style="color:#60a5fa;text-decoration:none;font-size:0.85rem;"><i class="fas fa-arrow-left me-1"></i> {{ t('back') }}</a>
-      <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0.6rem 0 0.2rem;">
+    <div class="v2-page-content cal-wrap">
+      <a routerLink="/education" class="cal-back"><i class="fas fa-arrow-left me-1"></i> {{ t('back') }}</a>
+      <h1 class="cal-title">
         <i class="fas fa-calendar-days me-2" style="color:#0ea5e9;"></i>{{ t('title') }}
       </h1>
-      <p style="color:var(--text-secondary, #64748b);margin:0 0 1.1rem;">{{ t('subtitle') }}</p>
+      <p class="cal-subtitle">{{ t('subtitle') }}</p>
 
-      <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:center;margin-bottom:1rem;font-size:0.8rem;color:var(--text-primary,#2C3E50);">
-        <span style="font-weight:700;">{{ t('legend') }}:</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:14px;height:14px;border-radius:3px;background:#dc2626;display:inline-block;"></span>{{ t('high') }}</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:14px;height:14px;border-radius:3px;background:#f59e0b;display:inline-block;"></span>{{ t('moderate') }}</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:14px;height:14px;border-radius:3px;background:#16a34a;display:inline-block;"></span>{{ t('low') }}</span>
+      <div class="cal-legend">
+        <span class="cal-legend-label">{{ t('legend') }}:</span>
+        <span class="cal-chip"><span class="cal-dot" style="background:#dc2626;"></span>{{ t('high') }}</span>
+        <span class="cal-chip"><span class="cal-dot" style="background:#f59e0b;"></span>{{ t('moderate') }}</span>
+        <span class="cal-chip"><span class="cal-dot" style="background:#16a34a;"></span>{{ t('low') }}</span>
       </div>
 
       @if (rows().length) {
-        <div style="overflow-x:auto;border:1px solid var(--card-border, #e2e8f0);border-radius:12px;">
-          <table style="border-collapse:collapse;width:100%;min-width:780px;font-size:0.82rem;">
+        <div class="cal-scroller">
+          <table class="cal-table">
             <thead>
               <tr>
-                <th style="text-align:left;padding:0.6rem 0.7rem;border-bottom:2px solid var(--card-border,#e2e8f0);position:sticky;left:0;background:var(--card-bg,#fff);color:var(--text-primary,#2C3E50);">{{ t('hazard') }}</th>
+                <th class="cal-hazard-col">{{ t('hazard') }}</th>
                 @for (m of months; track m) {
-                  <th style="padding:0.5rem 0.2rem;border-bottom:2px solid var(--card-border,#e2e8f0);text-align:center;font-weight:600;color:var(--text-secondary,#64748b);">{{ mon(m) }}</th>
+                  <th class="cal-month">{{ mon(m) }}</th>
                 }
               </tr>
             </thead>
             <tbody>
               @for (r of rows(); track r.hazardName) {
                 <tr>
-                  <td style="padding:0.55rem 0.7rem;white-space:nowrap;border-bottom:1px solid var(--card-border,#f1f5f9);position:sticky;left:0;background:var(--card-bg,#fff);font-weight:600;color:var(--text-primary,#2C3E50);">
+                  <td class="cal-hazard-cell">
                     <span [style.color]="r.color"><i class="fas {{ r.icon }} me-2"></i></span>{{ hazardName(r) }}
                   </td>
                   @for (m of months; track m) {
-                    <td style="padding:0.3rem;text-align:center;border-bottom:1px solid var(--card-border,#f1f5f9);">
+                    <td class="cal-cell">
                       @if (r.months[m]; as c) {
-                        <span [style.background]="riskColor(c.riskLevel)"
-                              [title]="riskLabel(c.riskLevel) + ' — ' + c.season + ': ' + c.note"
-                              style="display:inline-block;width:22px;height:22px;border-radius:5px;cursor:help;"></span>
+                        <span class="cal-block" [style.background]="riskColor(c.riskLevel)"
+                              [title]="riskLabel(c.riskLevel) + ' — ' + c.season + ': ' + c.note"></span>
                       }
                     </td>
                   }
@@ -63,12 +62,47 @@ interface CalApiRow { hazardName: string; hazardNameSw: string | null; icon: str
             </tbody>
           </table>
         </div>
-        <p style="font-size:0.74rem;color:var(--text-light, #94a3b8);margin-top:0.8rem;">{{ t('footnote') }}</p>
+        <p class="cal-footnote">{{ t('footnote') }}</p>
       } @else {
-        <p style="color:var(--text-secondary,#64748b);">{{ t('loading') }}</p>
+        <p class="cal-loading">{{ t('loading') }}</p>
       }
     </div>
   `,
+  styles: [`
+    .cal-wrap { max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 2rem 4rem; }
+    .cal-back { color: #60a5fa; text-decoration: none; font-size: 0.9rem; }
+    .cal-title { font-weight: 800; color: var(--text-primary, #2C3E50); margin: 0.8rem 0 0.2rem; }
+    .cal-subtitle { font-size: 1.05rem; color: var(--text-secondary, #64748b); margin: 0 0 1.3rem; }
+
+    /* Flat legend chips */
+    .cal-legend { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 1.2rem; }
+    .cal-legend-label { font-size: 0.9rem; font-weight: 700; color: var(--text-primary, #2C3E50); }
+    .cal-chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 14px; border-radius: 999px;
+      border: 1px solid rgba(13, 43, 77, 0.14); background: var(--card-bg, #fff); font-size: 0.9rem;
+      font-weight: 700; color: var(--text-primary, #2C3E50); }
+    .cal-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+    .cal-scroller { overflow-x: auto; border: 1px solid var(--card-border, #e2e8f0); border-radius: 12px;
+      background: var(--card-bg, #fff); }
+    .cal-table { border-collapse: collapse; width: 100%; min-width: 900px; font-size: 0.9rem; }
+    .cal-hazard-col { text-align: left; padding: 0.8rem 0.9rem; border-bottom: 2px solid var(--card-border, #e2e8f0);
+      position: sticky; left: 0; background: var(--card-bg, #fff); color: var(--text-primary, #2C3E50);
+      font-size: 0.9rem; }
+    .cal-month { padding: 0.7rem 0.3rem; border-bottom: 2px solid var(--card-border, #e2e8f0); text-align: center;
+      font-weight: 700; color: var(--text-secondary, #64748b); font-size: 0.9rem; }
+    .cal-hazard-cell { padding: 0.65rem 0.9rem; white-space: nowrap; border-bottom: 1px solid var(--card-border, #f1f5f9);
+      position: sticky; left: 0; background: var(--card-bg, #fff); font-weight: 600;
+      color: var(--text-primary, #2C3E50); font-size: 0.95rem; }
+    .cal-cell { padding: 0.35rem; text-align: center; border-bottom: 1px solid var(--card-border, #f1f5f9); }
+    .cal-block { display: inline-block; width: 26px; height: 26px; border-radius: 6px; cursor: help; }
+
+    .cal-footnote { font-size: 0.9rem; color: var(--text-light, #94a3b8); margin-top: 0.9rem; }
+    .cal-loading { font-size: 1rem; color: var(--text-secondary, #64748b); }
+
+    @media (max-width: 640px) {
+      .cal-wrap { padding: 6rem 1rem 2.5rem; }
+    }
+  `],
 })
 export class HazardCalendarComponent {
   readonly L = inject(PortalLabels);

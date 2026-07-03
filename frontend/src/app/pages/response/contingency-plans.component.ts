@@ -161,12 +161,13 @@ const STATUS_BADGE: Record<string, string> = {
     }
   `,
   styles: [`
-    .f-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
-    .btn-mini { font-size: 0.72rem; padding: 0.25rem 0.7rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; cursor: pointer; margin-left: 4px; color: var(--text-dark); }
-    .chip { display:inline-block; font-size: 0.72rem; padding: 2px 8px; border-radius: 20px; background: rgba(13,110,253,0.1); color: #0d6efd; }
+    .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
+    .btn-mini { font-size: 0.78rem; padding: 0.35rem 0.8rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; cursor: pointer; margin-left: 4px; color: var(--text-dark); }
+    .chip { display:inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 20px; background: rgba(13,110,253,0.1); color: #0d6efd; }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1500; display: flex; align-items: flex-start; justify-content: center; padding: 3vh 1rem; overflow-y: auto; }
     .modal-card { background: var(--card-bg, #fff); border-radius: 16px; max-width: 760px; width: 100%; padding: 1.4rem 1.5rem; }
-    .btn-cancel { border: 1px solid var(--border); background: #fff; border-radius: 9px; padding: 0.5rem 1rem; cursor: pointer; }
+    .btn-cancel { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; }
+    .btn-cancel:hover { background: #f1f5f9; }
     .badge-muted { background: rgba(100,116,139,0.14); color: #64748b; }
   `],
 })

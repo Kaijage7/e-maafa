@@ -113,7 +113,7 @@ let swalPromise: Promise<void> | null = null;
     .badge-completed { background: rgba(16,185,129,0.12); color: #059669; }
     .badge-cancelled { background: rgba(156,163,175,0.15); color: #6b7280; }
     .link-badges { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.35rem; }
-    .lb { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.72rem; font-weight: 600; padding: 0.12rem 0.5rem; border-radius: 20px; }
+    .lb { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; font-weight: 600; padding: 0.12rem 0.5rem; border-radius: 20px; }
     .lb i { font-size: 0.68rem; }
     .lb-pub { background: rgba(37,99,235,0.1); color: #2563eb; }
     .lb-drr { background: rgba(0,51,102,0.1); color: #003366; }
@@ -210,10 +210,10 @@ function ensureSweetAlert(): Promise<void> {
     swalPromise = new Promise(resolve => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+      link.href = '/vendor/sweetalert2/sweetalert2.min.css';
       document.head.appendChild(link);
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+      script.src = '/vendor/sweetalert2/sweetalert2.all.min.js';
       script.onload = () => resolve();
       document.head.appendChild(script);
     });

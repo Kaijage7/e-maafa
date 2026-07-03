@@ -27,26 +27,26 @@ interface SnapEscalation { action: string; from: string; to: string; role: strin
   standalone: true,
   imports: [RouterLink],
   template: `
-    <div class="v2-page-content" style="max-width: 980px; margin: 0 auto; padding: 7rem 1.5rem 4rem;">
+    <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 1.5rem 4rem;">
       @if (snap(); as s) {
-        <a routerLink="/portal" style="color:#60a5fa;text-decoration:none;font-size:0.85rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_portal') }}</a>
+        <a routerLink="/portal" style="color:#60a5fa;text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_portal') }}</a>
 
         <!-- Header card -->
         <div style="margin-top:1rem;border:1px solid rgba(0,0,0,0.08);border-radius:16px;overflow:hidden;background:var(--card-bg,#fff);">
           <div [style.background]="sevColor(s.incident.severityLevel)" style="padding:1.2rem 1.4rem;color:#fff;">
             <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
-              <span style="background:rgba(255,255,255,0.25);font-size:0.7rem;font-weight:700;padding:3px 12px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;">
-                <i class="fas fa-circle" style="font-size:0.6rem;"></i> {{ L.t('snap_live_incident') }}
+              <span style="background:rgba(255,255,255,0.25);font-size:0.8rem;font-weight:700;padding:3px 12px;border-radius:10px;text-transform:uppercase;letter-spacing:0.5px;">
+                <i class="fas fa-circle" style="font-size:0.7rem;"></i> {{ L.t('snap_live_incident') }}
               </span>
-              <span style="background:rgba(255,255,255,0.25);font-size:0.7rem;font-weight:700;padding:3px 12px;border-radius:10px;">{{ s.incident.severityLevel || L.t('snap_unknown') }}</span>
-              <span style="font-size:0.78rem;opacity:0.92;">{{ s.incident.hazardName }}{{ s.incident.incidentType ? ' · ' + s.incident.incidentType : '' }}</span>
+              <span style="background:rgba(255,255,255,0.25);font-size:0.8rem;font-weight:700;padding:3px 12px;border-radius:10px;">{{ s.incident.severityLevel || L.t('snap_unknown') }}</span>
+              <span style="font-size:0.9rem;opacity:0.92;">{{ s.incident.hazardName }}{{ s.incident.incidentType ? ' · ' + s.incident.incidentType : '' }}</span>
             </div>
             <h1 style="font-weight:800;line-height:1.25;margin:0.7rem 0 0.3rem;font-size:1.6rem;">{{ s.incident.title }}</h1>
-            <div style="font-size:0.86rem;opacity:0.95;">
+            <div style="font-size:0.9rem;opacity:0.95;">
               <i class="fas fa-map-marker-alt me-1"></i>{{ areaLine(s.incident) }}
             </div>
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:1.2rem;padding:0.9rem 1.4rem;font-size:0.8rem;color:var(--text-secondary,#64748b);">
+          <div style="display:flex;flex-wrap:wrap;gap:1.2rem;padding:0.9rem 1.4rem;font-size:0.9rem;color:var(--text-secondary,#64748b);">
             <span><i class="fas fa-flag me-1"></i><span [style.color]="lc(s.incident.status).color" style="font-weight:700;">{{ lc(s.incident.status).label }}</span> · {{ s.incident.status || '—' }}</span>
             <span><i class="fas fa-clock me-1"></i>{{ L.t('snap_reported') }} {{ fmt(s.incident.reportedAt) }}</span>
             <span><i class="fas fa-sync me-1"></i>{{ L.t('snap_updated') }} {{ fmt(s.incident.updatedAt) }}</span>
@@ -58,8 +58,8 @@ interface SnapEscalation { action: string; from: string; to: string; role: strin
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.8rem;">
           @for (k of impactCards(s.incident); track k.label) {
             <div style="border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:0.8rem 1rem;background:var(--card-bg,#fff);">
-              <div style="font-size:1.5rem;font-weight:800;" [style.color]="k.color">{{ k.value }}</div>
-              <div style="font-size:0.76rem;color:var(--text-secondary,#64748b);">{{ k.label }}</div>
+              <div style="font-size:1.7rem;font-weight:800;" [style.color]="k.color">{{ k.value }}</div>
+              <div style="font-size:0.8rem;color:var(--text-secondary,#64748b);text-transform:uppercase;">{{ k.label }}</div>
             </div>
           }
         </div>
@@ -67,12 +67,12 @@ interface SnapEscalation { action: string; from: string; to: string; role: strin
         <!-- Situation -->
         @if (s.incident.description) {
           <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.6rem;">{{ L.t('snap_situation') }}</h4>
-          <p style="font-size:0.95rem;color:var(--text-secondary,#475569);line-height:1.8;white-space:pre-line;">{{ s.incident.description }}</p>
+          <p style="font-size:1rem;color:var(--text-secondary,#475569);line-height:1.8;white-space:pre-line;">{{ s.incident.description }}</p>
         }
         @if (s.incident.actionTaken) {
           <div style="margin-top:0.8rem;background:rgba(16,185,129,0.08);border-radius:12px;padding:0.8rem 1rem;">
-            <div style="font-size:0.74rem;font-weight:700;color:#059669;text-transform:uppercase;">{{ L.t('snap_action_taken') }}</div>
-            <div style="font-size:0.9rem;color:var(--text-primary,#2C3E50);">{{ s.incident.actionTaken }}</div>
+            <div style="font-size:0.8rem;font-weight:700;color:#059669;text-transform:uppercase;">{{ L.t('snap_action_taken') }}</div>
+            <div style="font-size:1rem;color:var(--text-primary,#2C3E50);">{{ s.incident.actionTaken }}</div>
           </div>
         }
 
@@ -80,7 +80,7 @@ interface SnapEscalation { action: string; from: string; to: string; role: strin
         <h4 style="font-weight:800;color:var(--text-primary,#2C3E50);margin:1.8rem 0 0.8rem;">{{ L.t('snap_response_resources') }}</h4>
         @if (s.resources.length) {
           <div style="overflow-x:auto;border:1px solid rgba(0,0,0,0.08);border-radius:12px;">
-            <table style="width:100%;border-collapse:collapse;font-size:0.86rem;">
+            <table style="width:100%;border-collapse:collapse;font-size:0.95rem;">
               <thead><tr style="background:rgba(0,51,102,0.05);text-align:left;">
                 <th style="padding:0.6rem 0.9rem;">{{ L.t('snap_th_resource') }}</th><th style="padding:0.6rem 0.9rem;">{{ L.t('snap_th_quantity') }}</th><th style="padding:0.6rem 0.9rem;">{{ L.t('snap_th_status') }}</th>
               </tr></thead>
@@ -96,7 +96,7 @@ interface SnapEscalation { action: string; from: string; to: string; role: strin
             </table>
           </div>
         } @else {
-          <p style="font-size:0.88rem;color:var(--text-secondary,#64748b);"><i class="fas fa-box-open me-1"></i>{{ L.t('snap_no_resources') }}</p>
+          <p style="font-size:0.95rem;color:var(--text-secondary,#64748b);"><i class="fas fa-box-open me-1"></i>{{ L.t('snap_no_resources') }}</p>
         }
 
         <!-- Escalation / response progress (from the incident workflow history) -->
@@ -107,8 +107,8 @@ interface SnapEscalation { action: string; from: string; to: string; role: strin
               <div style="display:flex;gap:0.8rem;padding:0.6rem 0;border-bottom:1px solid rgba(0,0,0,0.06);">
                 <div style="color:#2563eb;padding-top:2px;"><i class="fas fa-circle-check" style="font-size:0.72rem;"></i></div>
                 <div>
-                  <div style="font-size:0.9rem;color:var(--text-primary,#2C3E50);font-weight:600;">{{ escLabel(e) }}</div>
-                  <div style="font-size:0.72rem;color:#94a3b8;">{{ e.role || '' }}{{ e.role ? ' · ' : '' }}{{ fmt(e.at) }}</div>
+                  <div style="font-size:1rem;color:var(--text-primary,#2C3E50);font-weight:600;">{{ escLabel(e) }}</div>
+                  <div style="font-size:0.9rem;color:#94a3b8;">{{ e.role || '' }}{{ e.role ? ' · ' : '' }}{{ fmt(e.at) }}</div>
                 </div>
               </div>
             }
@@ -120,21 +120,21 @@ interface SnapEscalation { action: string; from: string; to: string; role: strin
         @if (s.updates.length) {
           @for (u of s.updates; track $index) {
             <div style="display:flex;gap:0.8rem;padding:0.6rem 0;border-bottom:1px solid rgba(0,0,0,0.06);">
-              <div style="color:#7c3aed;"><i class="fas fa-circle" style="font-size:0.5rem;"></i></div>
+              <div style="color:#7c3aed;"><i class="fas fa-circle" style="font-size:0.7rem;"></i></div>
               <div>
-                <div style="font-size:0.9rem;color:var(--text-primary,#2C3E50);">{{ u.detail }}</div>
-                <div style="font-size:0.72rem;color:#94a3b8;">{{ u.type }} · {{ fmt(u.at) }}</div>
+                <div style="font-size:1rem;color:var(--text-primary,#2C3E50);">{{ u.detail }}</div>
+                <div style="font-size:0.9rem;color:#94a3b8;">{{ u.type }} · {{ fmt(u.at) }}</div>
               </div>
             </div>
           }
         } @else {
-          <p style="font-size:0.88rem;color:var(--text-secondary,#64748b);"><i class="fas fa-stream me-1"></i>{{ L.t('snap_no_updates') }}</p>
+          <p style="font-size:0.95rem;color:var(--text-secondary,#64748b);"><i class="fas fa-stream me-1"></i>{{ L.t('snap_no_updates') }}</p>
         }
       } @else if (notFound()) {
         <div style="text-align:center;padding:6rem 1rem;color:var(--text-secondary,#64748b);">
           <i class="fas fa-shield-alt" style="font-size:3rem;opacity:0.3;"></i>
           <h4 style="margin-top:1rem;">{{ L.t('snap_not_available') }}</h4>
-          <p style="font-size:0.88rem;">{{ L.t('snap_not_available_detail') }}</p>
+          <p style="font-size:0.95rem;">{{ L.t('snap_not_available_detail') }}</p>
           <a routerLink="/portal" style="color:#60a5fa;">{{ L.t('lbl_portal') }}</a>
         </div>
       }

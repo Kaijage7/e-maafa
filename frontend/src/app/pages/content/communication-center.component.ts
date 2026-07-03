@@ -105,9 +105,9 @@ const STATUS_BADGE: Record<string, string> = {
                   <tr class="data-row">
                     <td><span class="r-badge" [style.background]="color(r.channel) + '14'" [style.color]="color(r.channel)">{{ r.channel }}</span></td>
                     <td style="font-size:0.8rem;color:var(--text-mid);">{{ r.type }}</td>
-                    <td style="font-family:monospace;font-size:0.78rem;max-width:240px;overflow:hidden;text-overflow:ellipsis;">{{ r.recipient }}</td>
+                    <td style="font-family:monospace;font-size:0.8rem;max-width:240px;overflow:hidden;text-overflow:ellipsis;">{{ r.recipient }}</td>
                     <td><span class="r-badge {{ badge(r.status) }}">{{ r.status }}</span></td>
-                    <td style="font-size:0.78rem;color:var(--text-mid);">{{ r.created_at | date:'dd MMM, HH:mm' }}</td>
+                    <td style="font-size:0.8rem;color:var(--text-mid);">{{ r.created_at | date:'dd MMM, HH:mm' }}</td>
                   </tr>
                 } @empty { <tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:2.5rem;">No recent communication activity.</td></tr> }
               </tbody>
