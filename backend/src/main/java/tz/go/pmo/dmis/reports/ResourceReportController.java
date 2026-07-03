@@ -69,7 +69,9 @@ public class ResourceReportController {
                 from public.allocated_resources ar
                 left join public.resources r on r.id = ar.resource_id
                 left join public.incidents i on i.id = ar.incident_id
-                where ar.created_at >= ? and ar.created_at < ?""");
+                where ar.created_at >= ? and ar.created_at < ?
+                  and not exists (select 1 from public.incidents s
+                                   where s.id = ar.incident_id and s.is_simulation)""");
         List<Object> summaryParams = new ArrayList<>(List.of(start, endExclusive));
         jurisdiction.appendAreaScopeSharedOrOwn("i", summarySql, summaryParams);
         out.put("summary", jdbc.queryForMap(summarySql.toString(), summaryParams.toArray()));
@@ -82,7 +84,9 @@ public class ResourceReportController {
                 from public.allocated_resources ar
                 left join public.incidents i on i.id = ar.incident_id
                 left join public.resources r on r.id = ar.resource_id
-                where ar.created_at >= ? and ar.created_at < ?""");
+                where ar.created_at >= ? and ar.created_at < ?
+                  and not exists (select 1 from public.incidents s
+                                   where s.id = ar.incident_id and s.is_simulation)""");
         List<Object> recordsParams = new ArrayList<>(List.of(start, endExclusive));
         jurisdiction.appendAreaScopeSharedOrOwn("i", recordsSql, recordsParams);
         recordsSql.append(" order by ar.created_at desc limit 500");
@@ -92,7 +96,9 @@ public class ResourceReportController {
                 select coalesce(ar.status,'(none)') as status, count(*) as count
                 from public.allocated_resources ar
                 left join public.incidents i on i.id = ar.incident_id
-                where ar.created_at >= ? and ar.created_at < ?""");
+                where ar.created_at >= ? and ar.created_at < ?
+                  and not exists (select 1 from public.incidents s
+                                   where s.id = ar.incident_id and s.is_simulation)""");
         List<Object> byStatusParams = new ArrayList<>(List.of(start, endExclusive));
         jurisdiction.appendAreaScopeSharedOrOwn("i", byStatusSql, byStatusParams);
         byStatusSql.append(" group by ar.status order by count desc");
@@ -104,7 +110,9 @@ public class ResourceReportController {
                 from public.allocated_resources ar
                 left join public.resources r on r.id = ar.resource_id
                 left join public.incidents i on i.id = ar.incident_id
-                where ar.created_at >= ? and ar.created_at < ?""");
+                where ar.created_at >= ? and ar.created_at < ?
+                  and not exists (select 1 from public.incidents s
+                                   where s.id = ar.incident_id and s.is_simulation)""");
         List<Object> byCategoryParams = new ArrayList<>(List.of(start, endExclusive));
         jurisdiction.appendAreaScopeSharedOrOwn("i", byCategorySql, byCategoryParams);
         byCategorySql.append(" group by r.category order by count desc");

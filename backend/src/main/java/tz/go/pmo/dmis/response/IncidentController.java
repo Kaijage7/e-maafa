@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.geo.RegionCentroids;
 import tz.go.pmo.dmis.common.security.AreaGuard;
@@ -120,7 +121,7 @@ public class IncidentController {
                 select i.id, i.title, i.status, i.workflow_status, i.severity_level, i.origin_level,
                     i.district_name, i.region_name, i.location_description, i.reported_at, i.latitude, i.longitude,
                     i.deaths_total, i.injured_total, i.missing_total, i.displaced, i.rollback_count,
-                    i.last_rollback_at, i.last_rollback_by_role,
+                    i.last_rollback_at, i.last_rollback_by_role, i.is_simulation,
                     h.name as hazard_name, u.name as assigned_to_name,
                     (select count(*) from public.allocated_resources ar where ar.incident_id = i.id) as allocations_count,
                     (select count(*) from public.incident_tasks t where t.incident_id = i.id) as tasks_count,
@@ -523,7 +524,13 @@ public class IncidentController {
         boolean on = body == null || body.get("value") == null || Boolean.parseBoolean(String.valueOf(body.get("value")));
         if (on) {
             Map<String, Object> loc = jdbc.queryForMap(
-                    "select latitude, longitude, region_name, workflow_status from public.incidents where id = ?", id);
+                    "select latitude, longitude, region_name, workflow_status, is_simulation from public.incidents where id = ?", id);
+            // A drill NEVER reaches the public — no override exists for this (a citizen cannot tell an
+            // exercise from a real emergency, so exercises stay internal by doctrine).
+            if (Boolean.TRUE.equals(loc.get("is_simulation"))) {
+                return Map.of("success", false, "show_on_portal_map", false,
+                        "message", "This is a SIMULATION drill — exercises are never shown to the public.");
+            }
             // An unverified draft is held back by default so junk/unconfirmed reports don't slip onto the public
             // map — BUT PMO may deliberately push at any level via override (e.g. to warn the public early). The
             // map shows the incident's live verification + response status so citizens see it is still unverified,
@@ -564,7 +571,10 @@ public class IncidentController {
     public Map<String, Object> pushNews(@PathVariable long id) {
         workflow.findOr404(id);
         Map<String, Object> i = jdbc.queryForMap("select id, title, severity_level, region_name, district_name, "
-                + "description, portal_news_id from public.incidents where id = ?", id);
+                + "description, portal_news_id, is_simulation from public.incidents where id = ?", id);
+        if (Boolean.TRUE.equals(i.get("is_simulation"))) {
+            throw new BusinessRuleException("This is a SIMULATION drill — exercises are never published to the public portal.");
+        }
         String title = firstNonBlank(str(i.get("title")), "Incident #" + id);
         String area = firstNonBlank(str(i.get("region_name")), str(i.get("district_name")), "Tanzania");
         String desc = firstNonBlank(str(i.get("description")), title);

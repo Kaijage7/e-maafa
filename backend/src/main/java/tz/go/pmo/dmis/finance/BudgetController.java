@@ -36,13 +36,15 @@ public class BudgetController {
     private final JurisdictionScope jurisdiction;
     private final CurrentUserResolver currentUser;
     private final AreaGuard areaGuard;
+    private final tz.go.pmo.dmis.response.SimulationGuard simulationGuard; // no real money against table-top drills
 
     public BudgetController(JdbcTemplate jdbc, JurisdictionScope jurisdiction, CurrentUserResolver currentUser,
-            AreaGuard areaGuard) {
+            AreaGuard areaGuard, tz.go.pmo.dmis.response.SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
         this.currentUser = currentUser;
         this.areaGuard = areaGuard;
+        this.simulationGuard = simulationGuard;
     }
 
     // ─── Periods ───
@@ -191,6 +193,8 @@ public class BudgetController {
     @PreAuthorize("hasAuthority('budget_and_finance.manage')")
     @Transactional
     public Map<String, Object> request(@RequestBody Map<String, Object> b) {
+        // Drill isolation: real money is never committed against a table-top simulation incident.
+        simulationGuard.assertNotSimulationIncident(lng(b.get("incident_id")), "committing budget funds");
         Long lineId = lng(req(b, "budget_line_id"));
         BigDecimal amount = dec(req(b, "amount"));
         if (amount == null || amount.signum() <= 0) {
@@ -281,6 +285,8 @@ public class BudgetController {
     @Transactional
     public Map<String, Object> disburse(@PathVariable long id, @RequestBody(required = false) Map<String, Object> b) {
         assertCommitmentInArea(id);   // 404 if cross-area
+        simulationGuard.assertNotSimulationIncident(jdbc.queryForObject(
+                "select incident_id from public.budget_commitments where id = ?", Long.class, id), "disbursing funds");
         Map<String, Object> c = one("select status, amount, requested_by, approved_by from public.budget_commitments where id = ?", id);
         if (!"committed".equals(c.get("status"))) {
             throw new BusinessRuleException("Only an obligated (committed) commitment can be disbursed.");

@@ -34,6 +34,10 @@ import tz.go.pmo.dmis.notification.NotificationService;
 public class TaskController {
 
     private static final List<String> PRIORITIES = List.of("Low", "Medium", "High", "Critical");
+    /** Excludes exercise tasks — those whose incident OR activation is a simulation drill. */
+    private static final String NOT_SIM_TASK =
+            "coalesce(i.is_simulation, false) = false and not exists "
+            + "(select 1 from public.response_activations sa where sa.id = t.activation_id and sa.is_simulation)";
     private static final List<String> STATUSES = List.of("To Do", "In Progress", "On Hold", "Completed", "Cancelled");
     /** Rank by urgency, not by the alphabet. */
     private static final String PRIORITY_ORDER =
@@ -57,7 +61,9 @@ public class TaskController {
     @GetMapping
     public Map<String, Object> index(@RequestParam(required = false) String status,
                                      @RequestParam(required = false, name = "mine") Boolean mine) {
-        StringBuilder where = new StringBuilder("1=1");
+        // Drill isolation: exercise tasks (sim incident or sim activation) live on the Command Post
+        // board, never in the general task module or its statistics.
+        StringBuilder where = new StringBuilder(NOT_SIM_TASK);
         List<Object> params = new ArrayList<>();
         if (status != null && !status.isBlank()) {
             where.append(" and t.status = ?");
@@ -85,7 +91,7 @@ public class TaskController {
                 """.formatted(where, PRIORITY_ORDER), params.toArray()));
         // Aggregates must respect the same area scope as the board, otherwise an area officer's
         // statistics/by_priority/upcoming roll up the whole country. Join the incident and append the scope.
-        StringBuilder statWhere = new StringBuilder("1=1");
+        StringBuilder statWhere = new StringBuilder(NOT_SIM_TASK);
         List<Object> statParams = new ArrayList<>();
         jurisdiction.appendAreaScopeSharedOrOwn("i", statWhere, statParams);
         out.put("statistics", jdbc.queryForMap(("""
@@ -104,8 +110,8 @@ public class TaskController {
                 left join public.incidents i on i.id = t.incident_id
                 where %s group by t.priority
                 """).formatted(statWhere), statParams.toArray()));
-        StringBuilder upWhere = new StringBuilder(
-                "t.status <> 'Completed' and t.due_date between now() and now() + interval '7 days'");
+        StringBuilder upWhere = new StringBuilder(NOT_SIM_TASK
+                + " and t.status <> 'Completed' and t.due_date between now() and now() + interval '7 days'");
         List<Object> upParams = new ArrayList<>();
         jurisdiction.appendAreaScopeSharedOrOwn("i", upWhere, upParams);
         out.put("upcoming_deadlines", jdbc.queryForList(("""

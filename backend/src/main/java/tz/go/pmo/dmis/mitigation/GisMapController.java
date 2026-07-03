@@ -44,6 +44,7 @@ public class GisMapController {
                         + "h.name as hazard_name from public.incidents i "
                         + "left join public.hazards h on h.id = i.hazard_id "
                         + "where i.latitude is not null and i.longitude is not null "
+                        + "and coalesce(i.is_simulation, false) = false "
                         + "and i.status in ('Reported','Pending Verification','Verified','Active Response','Monitoring','Escalated')");
         List<Object> incidentsParams = new ArrayList<>();
         jurisdiction.appendAreaScopeSharedOrOwn("i", incidentsSql, incidentsParams);

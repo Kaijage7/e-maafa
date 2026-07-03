@@ -88,6 +88,7 @@ public class EwManagementController {
                 "from public.incidents i " +
                 "left join public.regions ri on ri.id = i.region_id " +
                 "where i.reported_at >= ?::timestamptz and i.reported_at < (?::timestamptz + interval '1 day') " +
+                "  and coalesce(i.is_simulation, false) = false " +
                 "  and ( (i.region_id is not null and i.region_id = ?) " +
                 "        or (? is not null and lower(coalesce(i.region_name, ri.name, '')) = lower(?)) ) " +
                 "order by i.reported_at",
@@ -139,6 +140,7 @@ public class EwManagementController {
             "left join public.regions ri on ri.id = i.region_id " +
             "left join public.hazards h on h.id = i.hazard_id " +
             "where i.reported_at >= ?::timestamptz and i.reported_at < (?::timestamptz + interval '1 day') " +
+                "  and coalesce(i.is_simulation, false) = false " +
             "  and not exists ( " +
             "     select 1 from public.warning_hazards wh " +
             "     join public.warnings w on w.id = wh.warning_id and w.deleted_at is null " +

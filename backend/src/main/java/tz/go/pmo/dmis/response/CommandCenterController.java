@@ -119,10 +119,15 @@ public class CommandCenterController {
         // Only open a command post for an incident in the caller's own area (national sees all).
         areaGuard.assertOwn("public.incidents", incidentId);
         boolean simulation = body != null && "simulation".equals(body.get("mode"));
+        // Only for simulations: table-top drill (default, real side-effects blocked) vs full-scale exercise.
+        boolean allowRealOps = simulation && body != null && Boolean.parseBoolean(String.valueOf(body.get("allow_real_ops")));
         String notes = body == null || body.get("notes") == null ? null : String.valueOf(body.get("notes"));
-        Map<String, Object> result = activations.activate(incidentId, simulation, notes);
+        Map<String, Object> result = activations.activate(incidentId, simulation, allowRealOps, notes);
         return Map.of("success", true, "activation_id", result.get("activation_id"),
-                "message", (simulation ? "Simulation drill activated. " : "Disaster response activated. ")
+                "message", (simulation
+                        ? (allowRealOps ? "FULL-SCALE exercise activated (real operations permitted). "
+                                        : "Table-top simulation drill activated. ")
+                        : "Disaster response activated. ")
                         + "72-hour clock has started — " + result.get("tasks_created") + " DRF tasks created.");
     }
 
@@ -143,17 +148,18 @@ public class CommandCenterController {
             throw new BusinessRuleException("At least one forecast-impact area is required.");
         }
         boolean simulation = "simulation".equals(body.get("mode"));
+        boolean allowRealOps = simulation && Boolean.parseBoolean(String.valueOf(body.get("allow_real_ops")));
         Long userId = users.actingUserId();
         Long activationId = jdbc.queryForObject("""
                 insert into public.response_activations(incident_id, activated_by, activated_at, status,
                     posture, trigger_type, hazard_description, affected_areas, expected_impact_at,
-                    forecast_track, is_simulation, notes, created_at, updated_at)
+                    forecast_track, is_simulation, allow_real_ops, notes, created_at, updated_at)
                 values (null, ?, now(), 'active', 'monitoring', 'forecast', ?, ?::json, ?::timestamptz,
-                        ?::json, ?, ?, now(), now()) returning id
+                        ?::json, ?, ?, ?, now(), now()) returning id
                 """, Long.class, userId, hazard,
                 JSON.writeValueAsString(body.get("affected_areas")), str(body.get("expected_impact_at")),
                 body.get("forecast_track") == null ? null : JSON.writeValueAsString(body.get("forecast_track")),
-                simulation, str(body.get("notes")));
+                simulation, allowRealOps, str(body.get("notes")));
         // Every DRF goes on call: seed the NDPRP default tasks as lanes (no incident yet)
         int tasks = jdbc.update("""
                 insert into public.incident_tasks(incident_id, activation_id, drf_id, title, description,
@@ -380,7 +386,154 @@ public class CommandCenterController {
         // Doctrine reference: posture -> TEPRP level / alert colour / authoriser (V41 seed)
         out.put("posture_doctrine", jdbc.queryForList(
                 "select * from public.posture_doctrine order by sort_order"));
+        // Scenario injects: fire any that came due since the last look (evaluated on read — no scheduler
+        // needed; the board polls), then hand the full list to the exercise panel.
+        int fired = jdbc.update("update public.activation_injects set status='fired', fired_at=now(), updated_at=now() "
+                + "where activation_id = ? and status = 'pending' and due_at is not null and due_at <= now()", id);
+        if (fired > 0) {
+            activations.log(id, users.actingUserId(), "inject_fired",
+                    fired + " scheduled scenario inject(s) fired.", null);
+        }
+        out.put("injects", jdbc.queryForList(
+                "select * from public.activation_injects where activation_id = ? "
+                + "order by coalesce(due_at, created_at), id", id));
+        // After-action review once the activation is closed (drill or live — both are worth reviewing).
+        if (!"active".equals(String.valueOf(activation.get("status")))) {
+            out.put("aar", buildAar(id));
+        }
         return out;
+    }
+
+    // ─── Scenario injects (exercise director tools) ───
+
+    /** Script an inject into the exercise: fires at due_at, or manually via /fire. */
+    @PostMapping("/{id}/injects")
+    @Transactional
+    @PreAuthorize("hasAuthority('command_post.posture')")
+    public Map<String, Object> addInject(@PathVariable long id, @RequestBody Map<String, Object> body) {
+        findOr404(id);
+        String title = require(body.get("title"), "title");
+        String type = body.get("inject_type") == null ? "event" : String.valueOf(body.get("inject_type"));
+        if (!List.of("event", "decision", "message").contains(type)) {
+            throw new BusinessRuleException("inject_type must be event, decision or message.");
+        }
+        Long injectId = jdbc.queryForObject("""
+                insert into public.activation_injects(activation_id, title, detail, inject_type, due_at, created_by)
+                values (?,?,?,?, ?::timestamp, ?) returning id
+                """, Long.class, id, title, str(body.get("detail")), type,
+                str(body.get("due_at")), users.actingUserId());
+        activations.log(id, users.actingUserId(), "inject_scripted",
+                "Inject scripted: " + title + (body.get("due_at") != null ? " (due " + body.get("due_at") + ")" : " (manual fire)"), null);
+        return Map.of("success", true, "inject_id", injectId);
+    }
+
+    /** Fire an inject NOW (exercise director pushes the event onto the board). */
+    @PostMapping("/{id}/injects/{injectId}/fire")
+    @Transactional
+    @PreAuthorize("hasAuthority('command_post.posture')")
+    public Map<String, Object> fireInject(@PathVariable long id, @PathVariable long injectId) {
+        findOr404(id);
+        int n = jdbc.update("update public.activation_injects set status='fired', fired_at=now(), updated_at=now() "
+                + "where id = ? and activation_id = ? and status = 'pending'", injectId, id);
+        if (n == 0) {
+            throw new BusinessRuleException("Inject not found or already fired.");
+        }
+        Map<String, Object> in = jdbc.queryForMap("select title from public.activation_injects where id = ?", injectId);
+        activations.log(id, users.actingUserId(), "inject_fired", "INJECT: " + in.get("title"), null);
+        return Map.of("success", true, "status", "fired");
+    }
+
+    /** Commander resolves a fired inject with the decision/response taken (feeds the AAR). */
+    @PostMapping("/{id}/injects/{injectId}/resolve")
+    @Transactional
+    @PreAuthorize("hasAuthority('tasks.manage')")
+    public Map<String, Object> resolveInject(@PathVariable long id, @PathVariable long injectId,
+                                             @RequestBody(required = false) Map<String, Object> body) {
+        findOr404(id);
+        String resolution = body == null ? null : str(body.get("resolution"));
+        int n = jdbc.update("update public.activation_injects set status='resolved', resolved_at=now(), "
+                + "resolution=?, updated_at=now() where id = ? and activation_id = ? and status = 'fired'",
+                resolution, injectId, id);
+        if (n == 0) {
+            throw new BusinessRuleException("Inject not found or not in a fired state.");
+        }
+        Map<String, Object> in = jdbc.queryForMap("select title from public.activation_injects where id = ?", injectId);
+        activations.log(id, users.actingUserId(), "inject_resolved",
+                "Inject resolved: " + in.get("title") + (resolution == null || resolution.isBlank() ? "" : " — " + resolution), null);
+        return Map.of("success", true, "status", "resolved");
+    }
+
+    /** Remove a pending inject (mis-scripted). */
+    @DeleteMapping("/{id}/injects/{injectId}")
+    @Transactional
+    @PreAuthorize("hasAuthority('command_post.posture')")
+    public Map<String, Object> deleteInject(@PathVariable long id, @PathVariable long injectId) {
+        findOr404(id);
+        int n = jdbc.update("delete from public.activation_injects where id = ? and activation_id = ? and status = 'pending'",
+                injectId, id);
+        if (n == 0) {
+            throw new BusinessRuleException("Only pending injects can be removed.");
+        }
+        return Map.of("success", true);
+    }
+
+    /** After-action review — also available mid-exercise as a live scorecard. */
+    @GetMapping("/{id}/aar")
+    public Map<String, Object> aar(@PathVariable long id) {
+        findOr404(id);
+        return buildAar(id);
+    }
+
+    /**
+     * The after-action scorecard, derived entirely from what actually happened: the journalled
+     * posture/impact timeline, task + 72-hour-critical completion, per-DRF performance, challenges,
+     * and inject response times.
+     */
+    private Map<String, Object> buildAar(long id) {
+        Map<String, Object> aar = new LinkedHashMap<>();
+        aar.put("timeline", jdbc.queryForList("""
+                select l.action, l.message, l.created_at, u.name as user_name
+                from public.task_activity_log l
+                left join public.users u on u.id = l.user_id
+                where l.activation_id = ? and l.action in
+                      ('activated','forecast_activated','posture_changed','impact_confirmed',
+                       'inject_fired','inject_resolved','deactivated')
+                order by l.created_at
+                """, id));
+        aar.put("tasks", jdbc.queryForMap("""
+                select count(*) as total,
+                       count(*) filter (where status = 'Completed') as completed,
+                       coalesce(round(avg(progress_percent)), 0) as avg_progress,
+                       count(*) filter (where is_72hr_critical) as critical_total,
+                       count(*) filter (where is_72hr_critical and status = 'Completed') as critical_completed,
+                       count(*) filter (where coalesce(challenge,'') <> '') as challenges,
+                       count(distinct stakeholder_id) filter (where stakeholder_id is not null) as agencies_engaged
+                from public.incident_tasks where activation_id = ?
+                """, id));
+        aar.put("drf_performance", jdbc.queryForList("""
+                select f.number, f.name,
+                       count(t.id) as total,
+                       count(t.id) filter (where t.status = 'Completed') as completed,
+                       coalesce(round(avg(t.progress_percent)), 0) as progress
+                from public.disaster_response_functions f
+                join public.incident_tasks t on t.drf_id = f.id and t.activation_id = ?
+                group by f.number, f.name order by progress desc, f.number
+                """, id));
+        aar.put("injects", jdbc.queryForMap("""
+                select count(*) as total,
+                       count(*) filter (where status in ('fired','resolved')) as fired,
+                       count(*) filter (where status = 'resolved') as resolved,
+                       round(coalesce(avg(extract(epoch from (resolved_at - fired_at)) / 60)
+                             filter (where resolved_at is not null and fired_at is not null), 0)) as avg_response_minutes
+                from public.activation_injects where activation_id = ?
+                """, id));
+        aar.put("duration", jdbc.queryForMap("""
+                select activated_at, deactivated_at,
+                       round(extract(epoch from (coalesce(deactivated_at, now()) - activated_at)) / 3600.0, 1) as hours,
+                       is_simulation, allow_real_ops, posture, status
+                from public.response_activations where id = ?
+                """, id));
+        return aar;
     }
 
     /** One DRF lane's tasks (the drawer behind each lane card). */

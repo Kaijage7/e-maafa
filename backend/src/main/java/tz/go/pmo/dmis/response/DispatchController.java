@@ -58,14 +58,17 @@ public class DispatchController {
     private final IncidentWorkflowService users;
     private final tz.go.pmo.dmis.notification.NotificationService notifications; // the ONE dispatcher
     private final JurisdictionScope jurisdiction;
+    private final SimulationGuard simulationGuard; // table-top drills never move real stock
 
     public DispatchController(JdbcTemplate jdbc, DispatchSupportService sources, IncidentWorkflowService users,
-                              tz.go.pmo.dmis.notification.NotificationService notifications, JurisdictionScope jurisdiction) {
+                              tz.go.pmo.dmis.notification.NotificationService notifications, JurisdictionScope jurisdiction,
+                              SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.sources = sources;
         this.users = users;
         this.notifications = notifications;
         this.jurisdiction = jurisdiction;
+        this.simulationGuard = simulationGuard;
     }
 
     // ─── Dashboard ───
@@ -193,6 +196,8 @@ public class DispatchController {
     @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
     @Transactional
     public Map<String, Object> dispatch(@PathVariable long id, @RequestBody Map<String, Object> body) {
+        // Drill isolation (defence-in-depth): even a legacy table-top drill allocation cannot move real stock.
+        simulationGuard.assertAllocationNotSimulation(id, "dispatching real stock");
         String sourceType = require(str(body.get("source_type")), "source_type");
         if (!List.of("warehouse", "temporary_warehouse", "agency").contains(sourceType)) {
             throw new BusinessRuleException("The selected source type is invalid.");

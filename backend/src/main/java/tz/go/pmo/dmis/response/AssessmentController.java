@@ -147,7 +147,8 @@ public class AssessmentController {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("incidents", jdbc.queryForList("""
                 select id, title, status, severity_level from public.incidents
-                where status not in ('closed','resolved') order by reported_at desc limit 100
+                where status not in ('closed','resolved') and coalesce(is_simulation, false) = false
+                order by reported_at desc limit 100
                 """));
         out.put("category_tree", CATEGORY_TREE);
         out.put("assessment_types", ASSESSMENT_TYPES);

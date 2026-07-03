@@ -49,15 +49,17 @@ public class ResourceAllocationController {
     private final ApprovalWorkflowEngine approvals;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
+    private final SimulationGuard simulationGuard;
 
     public ResourceAllocationController(JdbcTemplate jdbc, IncidentWorkflowService incidents,
                                         ApprovalWorkflowEngine approvals, JurisdictionScope jurisdiction,
-                                        AreaGuard areaGuard) {
+                                        AreaGuard areaGuard, SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.incidents = incidents;
         this.approvals = approvals;
         this.jurisdiction = jurisdiction;
         this.areaGuard = areaGuard;
+        this.simulationGuard = simulationGuard;
     }
 
     // ─── Index: the three operational queues + stock summary ───
@@ -122,9 +124,13 @@ public class ResourceAllocationController {
         Map<String, Object> out = new LinkedHashMap<>();
         // Area officers may only target incidents in their own region/district; national tier sees all.
         // STRICT scope mirrors store()'s assertOwn on incidents (out-of-area incidents must not be pickable).
+        // Table-top drill clones are NOT allocation targets; a full-scale exercise (allow_real_ops) is.
         StringBuilder isql = new StringBuilder("""
                 select id, title, severity_level, status, workflow_status from public.incidents i
-                where (workflow_status = 'approved' or status in ('Active Response','Verified'))""");
+                where (workflow_status = 'approved' or status in ('Active Response','Verified'))
+                  and (coalesce(i.is_simulation, false) = false
+                       or exists (select 1 from public.response_activations ra
+                                   where ra.incident_id = i.id and ra.allow_real_ops))""");
         List<Object> iparams = new ArrayList<>();
         jurisdiction.appendAreaScope("i", isql, iparams);
         isql.append(" order by severity_level asc, reported_at desc");
@@ -161,6 +167,9 @@ public class ResourceAllocationController {
         Map<String, List<String>> errors = new LinkedHashMap<>();
         if (incidentId == null) {
             errors.put("incident_id", List.of("The incident id field is required."));
+        } else {
+            // Drill isolation: requesting real resources for a table-top simulation is blocked.
+            simulationGuard.assertNotSimulationIncident(incidentId, "requesting resources");
         }
         if (justification == null) {
             errors.put("justification", List.of("The justification field is required."));

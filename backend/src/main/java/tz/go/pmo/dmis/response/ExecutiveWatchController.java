@@ -77,9 +77,11 @@ public class ExecutiveWatchController {
                   (select count(*) from public.incidents where severity_level = 'Critical' and status <> 'Closed' and coalesce(is_simulation,false)=false) as critical_incidents,
                   (select count(*) from public.response_activations where status = 'active' and is_simulation=false) as active_activations,
                   (select count(*) from public.response_activations where status='active' and trigger_type='forecast' and is_simulation=false) as anticipatory_activations,
-                  (select count(*) from public.allocated_resources where status = 'Deployed') as resources_deployed,
+                  (select count(*) from public.allocated_resources ar where ar.status = 'Deployed'
+                     and not exists (select 1 from public.incidents s where s.id = ar.incident_id and s.is_simulation)) as resources_deployed,
                   (select coalesce(sum(quantity),0) from public.inventory_items where status='Good Condition') as stock_units,
-                  (select count(*) from public.damage_assessments where status = 'Pending Verification') as assessments_pending,
+                  (select count(*) from public.damage_assessments da where da.status = 'Pending Verification'
+                     and not exists (select 1 from public.incidents s where s.id = da.incident_id and s.is_simulation)) as assessments_pending,
                   (select coalesce(sum(affected_people),0) from public.anticipatory_action_plans where status='active') as people_under_aap
                 """));
 
@@ -121,7 +123,8 @@ public class ExecutiveWatchController {
                        count(*) filter (where channels::jsonb ? 'email') as email,
                        count(*) filter (where channels::jsonb ? 'app') as app,
                        count(*) as total
-                from public.alerts where created_at::date = current_date
+                from public.alerts a where a.created_at::date = current_date
+                  and not exists (select 1 from public.incidents s where s.id = a.incident_id and s.is_simulation)
                 """));
 
         out.put("lifelines", lifelines());
@@ -143,6 +146,7 @@ public class ExecutiveWatchController {
                 where da.status <> 'Draft' and exists (
                     select 1 from public.assessment_categories ac
                     where ac.assessment_id = da.id and ac.category = 'Infrastructure')
+                  and not exists (select 1 from public.incidents s where s.id = da.incident_id and s.is_simulation)
                 """);
         // HazMat lifeline signal — EXACT match on the Technological hazard class (Industrial Accident,
         // Building Collapse), NOT a fuzzy name regex (which could false-flag the national leadership board

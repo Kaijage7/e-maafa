@@ -71,6 +71,22 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
     select, input { background: #1e293b; border: 1px solid #475569; color: #e2e8f0; border-radius: 6px; font-size: 0.76rem; padding: 4px 8px; font-family: inherit; }
     .crit { border-left: 3px solid #f87171; background: #1e293b; border-radius: 6px; padding: 7px 10px; margin-bottom: 6px; font-size: 0.78rem; }
     .empty { color: #64748b; font-size: 0.8rem; text-align: center; padding: 18px 0; }
+    .aar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 8px 0 12px; }
+    .aar-stat { background: #1e293b; border-radius: 9px; padding: 8px 10px; text-align: center; }
+    .aar-stat b { display: block; font-size: 1.15rem; color: #c4b5fd; }
+    .aar-stat small { color: #94a3b8; font-size: 0.66rem; }
+    .aar-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .aar-cols h5 { font-size: 0.72rem; color: #a78bfa; text-transform: uppercase; margin: 0 0 4px; }
+    @media (max-width: 900px) { .aar-cols { grid-template-columns: 1fr; } }
+    .inj-st { font-size: 0.58rem; font-weight: 800; text-transform: uppercase; border-radius: 6px; padding: 1px 6px; background: #334155; color: #cbd5e1; }
+    .inj-st[data-s=fired] { background: #7c2d12; color: #fdba74; }
+    .inj-st[data-s=resolved] { background: #14532d; color: #4ade80; }
+    .btn-xs { font-size: 0.66rem; font-weight: 700; border: 1px solid #475569; background: #1e293b; color: #cbd5e1; border-radius: 6px; padding: 2px 9px; cursor: pointer; }
+    .btn-xs.go { background: #16a34a; border-color: #16a34a; color: #fff; }
+    .inj-form { border-top: 1px dashed #334155; margin-top: 8px; padding-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+    .inj-form input, .inj-form select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 7px; padding: 5px 8px; font-size: 0.76rem; }
+    .inj-row { display: flex; gap: 5px; align-items: center; }
+    .inj-row input { width: 110px; }
     /* Index ops-status strip + richer active-response rows */
     .ops-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
     .ops-stat { background: #1c2536; border: 1px solid #2c3a50; border-radius: 6px; padding: 11px 14px; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }
@@ -160,6 +176,11 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
               <input style="width:100%" type="datetime-local" [(ngModel)]="fEta">
               <label class="fld" style="display:flex; align-items:center; gap:8px; margin-top:10px">
                 <input type="checkbox" [(ngModel)]="fSim" style="width:auto"> Run as a Virtual Simulation drill
+                @if (fSim) {
+                  <label style="display:block;margin-top:4px;font-weight:400">
+                    <input type="checkbox" [(ngModel)]="fRealOps" style="width:auto"> Full-scale exercise — allow REAL operations (stock, dispatch, [DRILL]-marked comms)
+                  </label>
+                }
               </label>
               <label class="fld">Forecast track — click the map to drop track points (last = landfall)</label>
               <div class="track-pt">{{ fTrack().length }} point(s) plotted
@@ -370,7 +391,10 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
       <div class="card clockbar">
         <div>
           <span class="badge" [class]="b.activation.is_simulation ? 'b-sim' : (b.activation.trigger_type === 'forecast' ? 'b-fcast' : 'b-live')">
-            {{ b.activation.is_simulation ? 'SIMULATION DRILL' : (b.activation.trigger_type === 'forecast' ? 'ANTICIPATORY' : 'LIVE RESPONSE') }}</span>
+            {{ b.activation.is_simulation ? (b.activation.allow_real_ops ? 'FULL-SCALE EXERCISE' : 'TABLE-TOP DRILL') : (b.activation.trigger_type === 'forecast' ? 'ANTICIPATORY' : 'LIVE RESPONSE') }}</span>
+          @if (b.activation.is_simulation && b.activation.allow_real_ops) {
+            <span class="badge" style="background:#7c2d12;color:#fdba74;margin-left:4px" title="This exercise may run real operations — its communications are [DRILL]-marked">REAL OPS ENABLED</span>
+          }
           <b style="font-size:1rem; margin-left:8px">{{ b.activation.incident_title }}</b>
           <div style="color:#94a3b8; font-size:0.74rem; margin-top:2px">
             {{ b.activation.region_name ?? '' }} · activated {{ b.activation.activated_at?.substring(0, 16)?.replace('T', ' ') }}
@@ -392,6 +416,39 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
           <button class="btn b-outline" style="margin-left:6px" (click)="closeBoard()">← All Activations</button>
         </div>
       </div>
+
+      <!-- After-Action Review — the scorecard of what actually happened (shown once closed) -->
+      @if (b.aar; as aar) {
+        <div class="card" style="border-color:#7c3aed">
+          <h4><i class="fas fa-clipboard-list"></i> After-Action Review
+            <span class="pill" style="background:#2e1065;color:#c4b5fd">{{ aar.duration.hours }}h ·
+              {{ b.activation.is_simulation ? (b.activation.allow_real_ops ? 'full-scale exercise' : 'table-top drill') : 'live response' }}</span></h4>
+          <div class="aar-grid">
+            <div class="aar-stat"><b>{{ aar.tasks.completed }}/{{ aar.tasks.total }}</b><small>tasks completed</small></div>
+            <div class="aar-stat"><b>{{ aar.tasks.critical_completed }}/{{ aar.tasks.critical_total }}</b><small>72-hr critical done</small></div>
+            <div class="aar-stat"><b>{{ aar.tasks.avg_progress }}%</b><small>average progress</small></div>
+            <div class="aar-stat"><b>{{ aar.tasks.challenges }}</b><small>challenges raised</small></div>
+            <div class="aar-stat"><b>{{ aar.tasks.agencies_engaged }}</b><small>agencies engaged</small></div>
+            <div class="aar-stat"><b>{{ aar.injects.resolved }}/{{ aar.injects.total }}</b><small>injects resolved{{ aar.injects.avg_response_minutes > 0 ? ' · avg ' + aar.injects.avg_response_minutes + ' min' : '' }}</small></div>
+          </div>
+          <div class="aar-cols">
+            <div>
+              <h5>Escalation & decision timeline</h5>
+              @for (e of aar.timeline; track $index) {
+                <div class="feed"><b>{{ e.created_at?.substring(11, 16) }}</b> {{ e.created_at?.substring(0, 10) }} · {{ e.user_name ?? 'System' }}<br>{{ e.message }}</div>
+              } @empty { <div class="empty">No journalled decisions.</div> }
+            </div>
+            <div>
+              <h5>DRF lane performance</h5>
+              @for (d of aar.drf_performance; track d.number) {
+                <div class="feed"><b>DRF {{ d.number }}</b> — {{ d.name }}
+                  <div class="mini-rail"><div class="mini-fill" [style.width.%]="d.progress"></div></div>
+                  <small style="color:#94a3b8">{{ d.completed }}/{{ d.total }} done · {{ d.progress }}%</small></div>
+              } @empty { <div class="empty">No lane data.</div> }
+            </div>
+          </div>
+        </div>
+      }
 
       <div class="split">
         <div>
@@ -422,6 +479,34 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
                 <small style="color:#64748b">{{ c.title }} · {{ c.stakeholder_organization ?? '' }}</small></div>
             } @empty { <div class="empty">No challenges raised.</div> }
           </div>
+          @if (b.activation.is_simulation) {
+            <div class="card" style="border-color:#6d28d9"><h4><i class="fas fa-bolt"></i> Scenario Injects
+              <span class="pill" style="background:#2e1065;color:#c4b5fd">{{ firedInjects() }} live</span></h4>
+              @for (j of b.injects; track j.id) {
+                <div class="feed" [style.opacity]="j.status === 'resolved' ? 0.6 : 1">
+                  <span class="inj-st" [attr.data-s]="j.status">{{ j.status }}</span> <b>{{ j.title }}</b>
+                  @if (j.detail) { <br><small>{{ j.detail }}</small> }
+                  @if (j.due_at && j.status === 'pending') { <br><small style="color:#f59e0b">fires {{ j.due_at?.substring(0, 16)?.replace('T', ' ') }}</small> }
+                  @if (j.resolution) { <br><small style="color:#4ade80">↳ {{ j.resolution }}</small> }
+                  <div style="margin-top:3px">
+                    @if (j.status === 'pending') { <button class="btn-xs" (click)="fireInject(j)">Fire now</button> }
+                    @if (j.status === 'fired') { <button class="btn-xs go" (click)="resolveInject(j)">Resolve…</button> }
+                  </div>
+                </div>
+              } @empty { <div class="empty">No injects scripted. Add scenario events below.</div> }
+              @if (b.activation.status === 'active') {
+                <div class="inj-form">
+                  <input [(ngModel)]="injTitle" placeholder="Inject title (e.g. Bridge washed out at Ruvu)">
+                  <input [(ngModel)]="injDetail" placeholder="Detail for the commander (optional)">
+                  <div class="inj-row">
+                    <select [(ngModel)]="injType"><option value="event">Event</option><option value="decision">Decision point</option><option value="message">Message</option></select>
+                    <input type="number" [(ngModel)]="injDueMin" min="0" placeholder="Fire in (min)" title="Minutes from now; empty = manual fire">
+                    <button class="btn-xs go" [disabled]="!injTitle.trim()" (click)="addInject()">Script inject</button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
           <div class="card"><h4><i class="fas fa-list-ul"></i> Activity Timeline</h4>
             @for (l of b.recent_activity; track l.id) {
               <div class="feed"><b>{{ l.user_name ?? 'System' }}</b> · {{ l.action }}<br>{{ l.message }}
@@ -488,6 +573,7 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   fAreas = '';
   fEta = '';
   fSim = false;
+  fRealOps = false;   // full-scale exercise: allow real operations (only meaningful when fSim)
   readonly fTrack = signal<[number, number][]>([]);
   private formMap: any = null;
   private formLayer: any = null;
@@ -743,12 +829,13 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
       expected_impact_at: eta ? eta.toISOString() : null,
       forecast_track: track.length ? track : null,
       mode: this.fSim ? 'simulation' : 'live',
+      allow_real_ops: this.fSim && this.fRealOps,
     };
     this.http.post<any>('/api/v1/response/coordination/forecast', body).subscribe({
       next: res => {
         this.showForecast.set(false);
         this.destroyFormMap();
-        this.fHazard = ''; this.fAreas = ''; this.fEta = ''; this.fSim = false; this.fTrack.set([]);
+        this.fHazard = ''; this.fAreas = ''; this.fEta = ''; this.fSim = false; this.fRealOps = false; this.fTrack.set([]);
         this.openBoard(res.activation_id);
       },
       error: err => ensureSweetAlert().then(() => this.swal({ title: 'Error', text: err?.error?.detail ?? 'Could not open the post.', icon: 'error' })),
@@ -884,17 +971,57 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   // ── existing R11 activation + lane operations ──
   activate(incident: any, simulation: boolean): void {
     ensureSweetAlert().then(() => this.swal({
-      title: simulation ? `Run a SIMULATION drill for "${incident.title}"?` : `Activate LIVE response for "${incident.title}"?`,
-      text: simulation
-        ? 'A flagged drill copy of the incident is created — live operations are not touched.'
-        : 'All 15 DRFs and their default tasks will be created and the 72-hour clock starts.',
+      title: simulation ? `Run a SIMULATION exercise for "${incident.title}"?` : `Activate LIVE response for "${incident.title}"?`,
+      ...(simulation ? {
+        html: 'A flagged drill copy of the incident is created — the board is identical.<br><br>'
+          + '<b>Table-top</b>: real logistics, money and communications are blocked.<br>'
+          + '<b>Full-scale</b>: real operations are permitted; all alerts are [DRILL]-marked.',
+        input: 'select',
+        inputOptions: { tabletop: 'Table-top drill (board only)', fullscale: 'Full-scale exercise (real operations)' },
+        inputValue: 'tabletop',
+      } : {
+        text: 'All 15 DRFs and their default tasks will be created and the 72-hour clock starts.',
+        input: 'text', inputLabel: 'Activation notes (optional)',
+      }),
       icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545',
-      input: 'text', inputLabel: 'Activation notes (optional)',
     }).then((r: any) => {
       if (r.isConfirmed) {
         this.post(`/api/v1/response/coordination/activate/${incident.id}`,
-          { mode: simulation ? 'simulation' : 'live', notes: r.value || null },
+          { mode: simulation ? 'simulation' : 'live',
+            allow_real_ops: simulation && r.value === 'fullscale',
+            notes: simulation ? null : (r.value || null) },
           (res: any) => this.openBoard(res.activation_id));
+      }
+    }));
+  }
+
+  // ── Scenario injects (exercise director tools) ──
+
+  injTitle = ''; injDetail = ''; injType = 'event'; injDueMin: number | null = null;
+  firedInjects(): number {
+    return (this.board()?.injects ?? []).filter((j: any) => j.status === 'fired').length;
+  }
+  addInject(): void {
+    const id = this.board()!.activation.id;
+    const due = this.injDueMin != null && this.injDueMin > 0
+      ? new Date(Date.now() + this.injDueMin * 60000).toISOString().substring(0, 19) : null;
+    this.post(`/api/v1/response/coordination/${id}/injects`,
+      { title: this.injTitle.trim(), detail: this.injDetail.trim() || null, inject_type: this.injType, due_at: due },
+      () => { this.injTitle = ''; this.injDetail = ''; this.injDueMin = null; this.openBoard(id); });
+  }
+  fireInject(j: any): void {
+    const id = this.board()!.activation.id;
+    this.post(`/api/v1/response/coordination/${id}/injects/${j.id}/fire`, {}, () => this.openBoard(id));
+  }
+  resolveInject(j: any): void {
+    const id = this.board()!.activation.id;
+    ensureSweetAlert().then(() => this.swal({
+      title: `Resolve inject: ${j.title}`, input: 'text', inputLabel: 'Decision / response taken',
+      showCancelButton: true, confirmButtonColor: '#16a34a',
+    }).then((r: any) => {
+      if (r.isConfirmed) {
+        this.post(`/api/v1/response/coordination/${id}/injects/${j.id}/resolve`,
+          { resolution: r.value || null }, () => this.openBoard(id));
       }
     }));
   }

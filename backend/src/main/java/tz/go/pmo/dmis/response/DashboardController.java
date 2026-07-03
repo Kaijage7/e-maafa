@@ -52,11 +52,21 @@ public class DashboardController {
         this.areaGuard = areaGuard;
     }
 
-    /** Build "<extra> and <area predicate>" for an incidents query (alias optional); national tier adds nothing. */
+    /** Build "<extra> and <area predicate>" for an incidents query (alias optional); national tier adds nothing.
+     *  Always excludes simulation (drill-clone) incidents — dashboards report the REAL picture only
+     *  (same D1 contract as Executive Watch; drills are visible in the Command Post, not in live KPIs). */
     private String incidentScope(String alias, String extra, List<Object> params) {
         StringBuilder w = new StringBuilder(extra == null || extra.isBlank() ? "1=1" : extra);
+        String col = alias == null || alias.isBlank() ? "is_simulation" : alias + ".is_simulation";
+        w.append(" and coalesce(").append(col).append(", false) = false");
         jurisdiction.appendAreaScopeSharedOrOwn(alias, w, params);
         return w.toString();
+    }
+
+    /** Correlated guard: the row's incident (if any) is not a simulation drill clone.
+     *  Leading space is deliberate — text blocks strip trailing spaces, so "and " + this would fuse. */
+    private static String notSimIncident(String incidentIdExpr) {
+        return " not exists (select 1 from public.incidents s where s.id = " + incidentIdExpr + " and s.is_simulation)";
     }
 
     /** Response overview dashboard (stat cards, feeds, type/region rollups, map markers). */
@@ -64,14 +74,25 @@ public class DashboardController {
     @GetMapping("/dashboard")
     public Map<String, Object> dashboard() {
         Map<String, Object> out = new LinkedHashMap<>();
+        // REAL picture only: every branch excludes simulation drill clones (and rows hanging off them).
         out.put("statistics", jdbc.queryForMap("""
                 select
-                  (select count(*) from public.incidents where status in ('Active Response','Verified','Pending Verification')) as active_incidents,
-                  (select count(*) from public.incidents where reported_at::date = current_date) as total_incidents_today,
-                  (select count(*) from public.allocated_resources where status = 'Deployed') as resources_deployed,
-                  (select count(*) from public.incident_tasks where status = 'To Do') as pending_tasks,
-                  (select count(*) from public.incidents where severity_level = 'Critical' and status <> 'Closed') as critical_incidents,
-                  (select count(*) from public.damage_assessments where status = 'Pending Verification') as assessments_pending
+                  (select count(*) from public.incidents where status in ('Active Response','Verified','Pending Verification')
+                     and is_simulation = false) as active_incidents,
+                  (select count(*) from public.incidents where reported_at::date = current_date
+                     and is_simulation = false) as total_incidents_today,
+                  (select count(*) from public.allocated_resources ar where ar.status = 'Deployed'
+                     and """ + notSimIncident("ar.incident_id") + """
+                  ) as resources_deployed,
+                  (select count(*) from public.incident_tasks t where t.status = 'To Do'
+                     and """ + notSimIncident("t.incident_id") + """
+                     and not exists (select 1 from public.response_activations sa
+                                      where sa.id = t.activation_id and sa.is_simulation)) as pending_tasks,
+                  (select count(*) from public.incidents where severity_level = 'Critical' and status <> 'Closed'
+                     and is_simulation = false) as critical_incidents,
+                  (select count(*) from public.damage_assessments da where da.status = 'Pending Verification'
+                     and """ + notSimIncident("da.incident_id") + """
+                  ) as assessments_pending
                 """));
         List<Object> caP = new ArrayList<>();
         out.put("critical_alerts", jdbc.queryForList(
@@ -97,7 +118,8 @@ public class DashboardController {
                 + incidentScope("", "region_name is not null and status <> 'Closed'", rdP)
                 + " group by region_name order by total desc", rdP.toArray()));
         out.put("new_incidents", jdbc.queryForObject(
-                "select count(*) from public.incidents where reported_at >= now() - interval '5 minutes'", Long.class));
+                "select count(*) from public.incidents where reported_at >= now() - interval '5 minutes' "
+                + "and is_simulation = false", Long.class));
         out.put("timestamp", OffsetDateTime.now().toString());
         return out;
     }
@@ -107,22 +129,31 @@ public class DashboardController {
     @GetMapping("/eocc")
     public Map<String, Object> eocc() {
         Map<String, Object> out = new LinkedHashMap<>();
+        // REAL picture only (drills excluded; they surface via simulations_running below).
         out.put("statistics", jdbc.queryForMap("""
                 select
-                  (select count(*) from public.incidents where status in ('Active Response','Verified','Reported')) as active_incidents,
+                  (select count(*) from public.incidents where status in ('Active Response','Verified','Reported')
+                     and is_simulation = false) as active_incidents,
                   (select count(*) from public.incidents where severity_level = 'Critical'
-                     and status in ('Active Response','Verified')) as critical_count,
-                  (select count(*) from public.incidents where created_at::date = current_date) as new_today,
-                  (select count(*) from public.incident_tasks where status = 'In Progress') as personnel_deployed,
-                  (select coalesce(sum(quantity),0) from public.inventory_items where status = 'Good Condition') as resources_available
+                     and status in ('Active Response','Verified') and is_simulation = false) as critical_count,
+                  (select count(*) from public.incidents where created_at::date = current_date
+                     and is_simulation = false) as new_today,
+                  (select count(*) from public.incident_tasks t where t.status = 'In Progress'
+                     and """ + notSimIncident("t.incident_id") + """
+                     and not exists (select 1 from public.response_activations sa
+                                      where sa.id = t.activation_id and sa.is_simulation)) as personnel_deployed,
+                  (select coalesce(sum(quantity),0) from public.inventory_items where status = 'Good Condition') as resources_available,
+                  (select count(*) from public.response_activations where status = 'active'
+                     and is_simulation = true) as simulations_running
                 """));
         out.put("incidents_by_severity", jdbc.queryForList("""
                 select severity_level, count(*) as count from public.incidents
-                where status in ('Active Response','Verified','Reported')
+                where status in ('Active Response','Verified','Reported') and is_simulation = false
                 group by severity_level
                 """));
         out.put("incidents_by_status", jdbc.queryForList(
-                "select status, count(*) as count from public.incidents group by status order by count desc"));
+                "select status, count(*) as count from public.incidents where is_simulation = false "
+                + "group by status order by count desc"));
         List<Object> erP = new ArrayList<>();
         out.put("recent_incidents", jdbc.queryForList(
                 "select id, title, location_description, severity_level, status, created_at, latitude, longitude "
@@ -139,14 +170,17 @@ public class DashboardController {
                   count(*) filter (where channels::jsonb ? 'sms') as sms_sent,
                   count(*) filter (where channels::jsonb ? 'email') as email_sent,
                   count(*) filter (where channels::jsonb ? 'app') as app_notifications
-                from public.alerts where created_at::date = current_date
+                from public.alerts a where a.created_at::date = current_date
+                  and """ + notSimIncident("a.incident_id") + """
                 """));
+        // The activation the EOCC board headlines must be a REAL response — never a drill.
         out.put("active_activation", firstOrNull(jdbc.queryForList("""
                 select ra.*, i.title as incident_title, u.name as activated_by_name
                 from public.response_activations ra
                 join public.incidents i on i.id = ra.incident_id
                 left join public.users u on u.id = ra.activated_by
-                where ra.status = 'active' order by ra.activated_at desc limit 1
+                where ra.status = 'active' and ra.is_simulation = false
+                order by ra.activated_at desc limit 1
                 """)));
         out.put("timestamp", OffsetDateTime.now().toString());
         return out;

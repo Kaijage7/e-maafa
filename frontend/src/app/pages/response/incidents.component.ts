@@ -8,7 +8,7 @@ import { AuthService } from '../../core/auth.service';
 
 interface IncidentRow {
   id: number; title: string; status: string; workflow_status: string; workflow_status_label: string;
-  severity_level: string; origin_level: string; hazard_name: string | null;
+  severity_level: string; origin_level: string; hazard_name: string | null; is_simulation?: boolean;
   district_name: string | null; region_name: string | null; location_description: string;
   reported_at: string | null; assigned_to_name: string | null;
   deaths_total: number; injured_total: number; missing_total: number; displaced: number;
@@ -88,6 +88,7 @@ interface FormData {
                       <a [routerLink]="['/m/response/incidents', i.id]" style="text-decoration:none;">
                         <div class="r-title" style="color:#dc3545;">
                           @if (i.response_active) { <span class="live-dot" title="Response activated"></span> }
+                          @if (i.is_simulation) { <span class="r-badge" style="background:#ede9fe;color:#6d28d9;margin-right:4px;" title="Simulation drill — never mixed into live KPIs or public surfaces">SIM</span> }
                           {{ limit(i.title, 45) }}
                         </div>
                         <div class="r-subtitle">{{ ucfirst(i.origin_level) }} origin

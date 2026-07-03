@@ -55,14 +55,16 @@ public class WarehouseOpsController {
     private final IncidentWorkflowService users;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
+    private final SimulationGuard simulationGuard;
 
     public WarehouseOpsController(JdbcTemplate jdbc, DispatchSupportService stock, IncidentWorkflowService users,
-                                  JurisdictionScope jurisdiction, AreaGuard areaGuard) {
+                                  JurisdictionScope jurisdiction, AreaGuard areaGuard, SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.stock = stock;
         this.users = users;
         this.jurisdiction = jurisdiction;
         this.areaGuard = areaGuard;
+        this.simulationGuard = simulationGuard;
     }
 
     // ─── Stock dashboard ───
@@ -118,8 +120,13 @@ public class WarehouseOpsController {
         out.put("resources", jdbc.queryForList(
                 "select id, name, category, unit_of_measure from public.resources order by name"));
         // Open incidents so any warehouse operation can optionally be linked to the emergency it supports.
+        // Table-top drill clones are not linkable (real stock never moves for them); full-scale exercises are.
         out.put("incidents", jdbc.queryForList(
-                "select id, title, status from public.incidents order by created_at desc limit 60"));
+                "select id, title, status from public.incidents i"
+                + " where coalesce(i.is_simulation, false) = false"
+                + "    or exists (select 1 from public.response_activations ra"
+                + "                where ra.incident_id = i.id and ra.allow_real_ops)"
+                + " order by created_at desc limit 60"));
         StringBuilder rmWhere = new StringBuilder();
         List<Object> rmParams = new ArrayList<>();
         appendStoreVisibility(rmWhere, rmParams,
@@ -152,6 +159,7 @@ public class WarehouseOpsController {
     @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
     @Transactional
     public Map<String, Object> intake(@RequestBody Map<String, Object> body) {
+        simulationGuard.assertNotSimulationIncident(incidentId(body), "booking real warehouse stock");
         String warehouseType = warehouseType(body.get("warehouse_type"));
         long warehouseId = lng(body.get("warehouse_id"), "warehouse_id");
         long resourceId = lng(body.get("resource_id"), "resource_id");
@@ -200,6 +208,7 @@ public class WarehouseOpsController {
     @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
     @Transactional
     public Map<String, Object> remove(@RequestBody Map<String, Object> body) {
+        simulationGuard.assertNotSimulationIncident(incidentId(body), "removing real warehouse stock");
         String warehouseType = warehouseType(body.get("warehouse_type"));
         long warehouseId = lng(body.get("warehouse_id"), "warehouse_id");
         requireStore(warehouseType, warehouseId);   // cannot deplete another region's store
@@ -231,6 +240,7 @@ public class WarehouseOpsController {
     @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
     @Transactional
     public Map<String, Object> transfer(@RequestBody Map<String, Object> body) {
+        simulationGuard.assertNotSimulationIncident(incidentId(body), "transferring real warehouse stock");
         String fromType = warehouseType(body.get("from_type"));
         String toType = warehouseType(body.get("to_type"));
         long fromId = lng(body.get("from_id"), "from_id");

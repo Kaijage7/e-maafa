@@ -65,6 +65,7 @@ public class DeclarationController {
                        count(*) filter (where status = 'revoked'
                             or (status = 'declared' and effective_until < current_date)) as ended
                 from public.disaster_declarations
+                where is_simulation = false
                 """));
         return out;
     }

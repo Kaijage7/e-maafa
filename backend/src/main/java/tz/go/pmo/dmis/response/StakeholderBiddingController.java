@@ -60,16 +60,19 @@ public class StakeholderBiddingController {
     private final NotificationService notifications; // the notification dispatcher (in-app feed + channels)
     private final JurisdictionScope jurisdiction; // row-level area (region/district) visibility for area officers
     private final AreaGuard areaGuard; // by-id area guards (allocation via incident, warehouse own-or-shared)
+    private final SimulationGuard simulationGuard; // drill isolation — table-top sims never reach real partners
 
     public StakeholderBiddingController(JdbcTemplate jdbc, DispatchSupportService stock,
                                         IncidentWorkflowService users, NotificationService notifications,
-                                        JurisdictionScope jurisdiction, AreaGuard areaGuard) {
+                                        JurisdictionScope jurisdiction, AreaGuard areaGuard,
+                                        SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.stock = stock;
         this.users = users;
         this.notifications = notifications;
         this.jurisdiction = jurisdiction;
         this.areaGuard = areaGuard;
+        this.simulationGuard = simulationGuard;
     }
 
     /**
@@ -96,6 +99,8 @@ public class StakeholderBiddingController {
     @Transactional
     public Map<String, Object> publish(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         guardAllocationArea(id);
+        // Drill isolation: publishing a table-top drill's need would notify REAL partners.
+        simulationGuard.assertAllocationNotSimulation(id, "publishing a donation request to stakeholders");
         Map<String, Object> allocation = findAllocation(id);
         if (Boolean.TRUE.equals(allocation.get("published_for_stakeholder_bidding"))) {
             throw new BusinessRuleException("This resource is already published for stakeholder donations.");

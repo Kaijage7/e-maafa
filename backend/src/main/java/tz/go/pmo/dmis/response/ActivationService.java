@@ -33,6 +33,16 @@ public class ActivationService {
 
     @Transactional
     public Map<String, Object> activate(long incidentId, boolean simulation, String notes) {
+        return activate(incidentId, simulation, false, notes);
+    }
+
+    /**
+     * @param allowRealOps only meaningful for simulations: false = table-top drill (real side-effects
+     *                     hard-blocked by {@link SimulationGuard}); true = full-scale exercise (real
+     *                     operations permitted, communications [DRILL]-marked).
+     */
+    @Transactional
+    public Map<String, Object> activate(long incidentId, boolean simulation, boolean allowRealOps, String notes) {
         List<Map<String, Object>> incidents = jdbc.queryForList(
                 "select * from public.incidents where id = ?", incidentId);
         if (incidents.isEmpty()) {
@@ -62,9 +72,9 @@ public class ActivationService {
         Long userId = users.actingUserId();
         Long activationId = jdbc.queryForObject("""
                 insert into public.response_activations(incident_id, activated_by, activated_at, status,
-                    notes, is_simulation, created_at, updated_at)
-                values (?,?,now(),'active',?,?,now(),now()) returning id
-                """, Long.class, targetIncidentId, userId, notes, simulation);
+                    notes, is_simulation, allow_real_ops, created_at, updated_at)
+                values (?,?,now(),'active',?,?,?,now(),now()) returning id
+                """, Long.class, targetIncidentId, userId, notes, simulation, simulation && allowRealOps);
 
         // Snapshot every DRF's default tasks as coordination lanes (unified 'To Do' status)
         int tasks = jdbc.update("""
@@ -78,7 +88,9 @@ public class ActivationService {
                 """, targetIncidentId, activationId, userId);
 
         log(activationId, userId, "activated",
-                (simulation ? "SIMULATION drill activated" : "Disaster response activated")
+                (simulation
+                        ? "SIMULATION " + (allowRealOps ? "FULL-SCALE exercise" : "table-top drill") + " activated"
+                        : "Disaster response activated")
                         + " — 15 DRFs and " + tasks + " tasks created.", null);
         return Map.of("activation_id", activationId, "incident_id", targetIncidentId,
                 "tasks_created", tasks, "is_simulation", simulation);

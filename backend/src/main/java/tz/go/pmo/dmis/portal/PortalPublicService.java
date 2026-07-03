@@ -210,7 +210,8 @@ public class PortalPublicService {
                         + " from public.incidents i"
                         + " left join public.hazards h on h.id = i.hazard_id"
                         + " left join public.incident_types it on it.id = i.incident_type_id"
-                        + " where i.id = ? and i.show_on_portal_map = true", id);
+                        + " where i.id = ? and i.show_on_portal_map = true"
+                        + "   and coalesce(i.is_simulation, false) = false", id);
         if (found.isEmpty()) {
             return null;
         }

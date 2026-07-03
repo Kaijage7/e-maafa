@@ -77,16 +77,19 @@ public class CommunicationController {
     private final NotificationService notifications;        // the one in-app feed dispatcher
     private final JurisdictionScope jurisdiction;           // row-level area scoping for the operational history list
     private final AreaGuard areaGuard;                      // by-id read area guard (scoped-list/unscoped-detail leaks)
+    private final SimulationGuard simulationGuard;          // drill isolation — no real SMS/email for table-top drills
 
     public CommunicationController(JdbcTemplate jdbc, IncidentWorkflowService users,
                                    ExternalDeliveryService externalDelivery, NotificationService notifications,
-                                   JurisdictionScope jurisdiction, AreaGuard areaGuard) {
+                                   JurisdictionScope jurisdiction, AreaGuard areaGuard,
+                                   SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.users = users;
         this.externalDelivery = externalDelivery;
         this.notifications = notifications;
         this.jurisdiction = jurisdiction;
         this.areaGuard = areaGuard;
+        this.simulationGuard = simulationGuard;
     }
 
     // ─── Dashboard + form data ───
@@ -129,9 +132,13 @@ public class CommunicationController {
                 "select id, name, type, title, message, variables, is_active from public.alert_templates order by name");
         templates.forEach(t -> parseJsonField(t, "variables"));  // clean arrays, not PGobjects
         out.put("templates", templates);
+        // Table-top drill clones are not alertable; full-scale exercises are (their alerts get [DRILL]-marked).
         StringBuilder incidentSql = new StringBuilder(
                 "select i.id, i.title, i.severity_level from public.incidents i"
-                        + " where i.status not in ('Closed','Resolved')");
+                        + " where i.status not in ('Closed','Resolved')"
+                        + " and (coalesce(i.is_simulation, false) = false"
+                        + "      or exists (select 1 from public.response_activations ra"
+                        + "                  where ra.incident_id = i.id and ra.allow_real_ops))");
         List<Object> incidentParams = new ArrayList<>();
         jurisdiction.appendAreaScopeSharedOrOwn("i", incidentSql, incidentParams);
         incidentSql.append(" order by i.reported_at desc limit 50");
@@ -184,6 +191,18 @@ public class CommunicationController {
         }
         String scheduledAt = str(body.get("scheduled_at"));
         boolean scheduled = scheduledAt != null;
+
+        // Drill isolation: a table-top simulation must never trigger real SMS/email. A FULL-SCALE
+        // exercise may — but its messages are unmistakably marked so nobody reads a drill as real.
+        Long incidentIdRaw = body.get("incident_id") == null ? null
+                : (long) Double.parseDouble(String.valueOf(body.get("incident_id")));
+        if (simulationGuard.isSimulationIncident(incidentIdRaw)) {
+            simulationGuard.assertNotSimulationIncident(incidentIdRaw, "sending a real alert");
+            if (!title.startsWith("[DRILL")) {
+                title = "[DRILL EXERCISE] " + title;
+                message = "[DRILL EXERCISE — NOT A REAL EMERGENCY] " + message;
+            }
+        }
 
         Long alertId = jdbc.queryForObject("""
                 insert into public.alerts(incident_id, alert_type, severity, title, message, channels,
