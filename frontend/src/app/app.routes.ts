@@ -83,7 +83,9 @@ export const routes: Routes = [
   { path: 'm/stakeholder-portal/donations', canActivate: [authGuard], loadComponent: () => import('./pages/response/stakeholder-donations.component').then(m => m.StakeholderDonationsComponent) },
   { path: 'm/stakeholder-portal/open-needs', canActivate: [authGuard], loadComponent: () => import('./pages/response/open-needs.component').then(m => m.OpenNeedsComponent) },
   { path: 'm/stakeholder-portal/support-needs', canActivate: [authGuard], loadComponent: () => import('./pages/response/support-needs.component').then(m => m.SupportNeedsComponent) },
-  { path: 'm/stakeholder-portal/early-warnings', canActivate: [authGuard], loadComponent: () => import('./pages/preparedness/early-warnings.component').then(m => m.EarlyWarningsComponent) },
+  // Stakeholders do not get the EW management console — read-only issued alerts instead (2026-07-03)
+  { path: 'm/stakeholder-portal/issued-alerts', canActivate: [authGuard], loadComponent: () => import('./pages/stakeholder/issued-alerts.component').then(m => m.StakeholderIssuedAlertsComponent) },
+  { path: 'm/stakeholder-portal/early-warnings', redirectTo: 'm/stakeholder-portal/issued-alerts', pathMatch: 'full' },
   { path: 'm/stakeholder-portal/one-health', canActivate: [authGuard], loadComponent: () => import('./pages/onehealth/events.component').then(m => m.OhEventsComponent) },
   { path: 'm/content-management/educational-content', canActivate: [authGuard], loadComponent: () => import('./pages/content/educational-content.component').then(m => m.EducationalContentComponent) },
   { path: 'm/reports-analytics/repository', canActivate: [authGuard], loadComponent: () => import('./pages/reports/repository-events.component').then(m => m.RepositoryEventsComponent) },

@@ -152,7 +152,7 @@ export const MODULES: Module[] = [
       { name: 'Resource Donations', path: 'donations', icon: 'fa-hand-holding-heart', description: 'Open calls to donate, partner bids and NDMF cash donations', legacyRoute: 'stakeholder.resource-donations.index' },
       { name: 'Open Needs', path: 'open-needs', icon: 'fa-bullhorn', description: 'What the platform needs now — open donation calls and unfunded training-support requests', legacyRoute: '' },
       { name: 'Fund a Measure or Training', path: 'support-needs', icon: 'fa-seedling', description: 'Mitigation measures (DRR priorities) and trainings needing support — pledge your contribution', legacyRoute: '' },
-      { name: 'Early Warning Bulletins', path: 'early-warnings', icon: 'fa-tower-broadcast', description: 'Partner-authored early-warning bulletins', legacyRoute: 'stakeholders.warnings.index' },
+      { name: 'Issued Alerts & Active Warnings', path: 'issued-alerts', icon: 'fa-bell', description: 'Read-only: warnings and bulletins issued by the Government', legacyRoute: 'stakeholders.warnings.index' },
       { name: 'One Health Reporting', path: 'one-health', icon: 'fa-notes-medical', description: 'Report One Health events from the field', legacyRoute: 'stakeholders.one-health.events.index' },
     ],
   },
