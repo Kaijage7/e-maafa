@@ -10,7 +10,16 @@ export PATH="$JAVA_HOME/bin:/home/kaijage/tools/maven/bin:$PATH"
 echo "[1/5] Postgres…"; docker start dmis-pg >/dev/null 2>&1 || echo "  (ensure dmis-pg container exists)"
 
 echo "[2/5] Backend :8080…"; fuser -k 8080/tcp >/dev/null 2>&1; sleep 2
-( cd "$ROOT/dmis-platform/backend" && SPRING_PROFILES_ACTIVE=local nohup mvn -q spring-boot:run >/tmp/dmis-backend.log 2>&1 & )
+# run-secrets.env holds the REAL M-Gov SMS + Gmail SMTP creds — without it the gateways
+# report "not configured" and every send is logged as pending. Prefer the stable jar
+# (dmis-run.jar) when present: faster boot, no mvn, survives `mvn clean` of target/.
+( cd "$ROOT/dmis-platform/backend" \
+  && set -a && [ -f run-secrets.env ] && . ./run-secrets.env; set +a \
+  && if [ -f dmis-run.jar ]; then \
+       nohup "$JAVA_HOME/bin/java" -Xmx1024m -jar dmis-run.jar --spring.profiles.active=local >/tmp/dmis-backend.log 2>&1 & \
+     else \
+       SPRING_PROFILES_ACTIVE=local nohup mvn -q spring-boot:run >/tmp/dmis-backend.log 2>&1 & \
+     fi )
 
 # [3/5] RETIRED: the Streamlit authoring engine (:8501) is replaced by the native Angular EW consoles.
 #   ( cd "$EW" && DMIS_URL=http://localhost:8080 nohup "$VENV/bin/streamlit" run dashboard.py … )  # removed
