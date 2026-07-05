@@ -120,8 +120,29 @@ public class DashboardController {
         out.put("new_incidents", jdbc.queryForObject(
                 "select count(*) from public.incidents where reported_at >= now() - interval '5 minutes' "
                 + "and is_simulation = false", Long.class));
+        out.put("my_area", myArea());
         out.put("timestamp", OffsetDateTime.now().toString());
         return out;
+    }
+
+    /**
+     * The caller's jurisdiction (scope + area names) so the live map can FOCUS on their own
+     * district/region — a DED opens on their district, an RAS on their region, national sees all.
+     */
+    private Map<String, Object> myArea() {
+        JurisdictionScope.AreaFilter f = jurisdiction.sharedOrOwnFilter();
+        Map<String, Object> area = new LinkedHashMap<>();
+        area.put("scope", f.scope());
+        if (f.districtId() != null) {
+            Map<String, Object> d = jdbc.queryForMap(
+                    "select d.name as district_name, r.name as region_name from public.districts d "
+                    + "join public.regions r on r.id = d.region_id where d.id = ?", f.districtId());
+            area.putAll(d);
+        } else if (f.regionId() != null) {
+            area.put("region_name", jdbc.queryForObject(
+                    "select name from public.regions where id = ?", String.class, f.regionId()));
+        }
+        return area;
     }
 
     /** The merged EOCC live board payload (also the 30-second poll). */
@@ -182,6 +203,7 @@ public class DashboardController {
                 where ra.status = 'active' and ra.is_simulation = false
                 order by ra.activated_at desc limit 1
                 """)));
+        out.put("my_area", myArea());
         out.put("timestamp", OffsetDateTime.now().toString());
         return out;
     }

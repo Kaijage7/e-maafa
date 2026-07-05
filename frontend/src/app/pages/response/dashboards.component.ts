@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { addMapNav } from '../../core/tz-map';
+import { addMapNav, addTanzaniaDarkBase, addTanzaniaGisBase } from '../../core/tz-map';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 
@@ -125,7 +125,7 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
     if (!this.map) {
       const el = document.getElementById('resp-map');
       if (!el) { return; }
-      this.map = buildTanzaniaMap('resp-map');
+      this.map = buildTanzaniaMap('resp-map', this.http, this.d()?.my_area);
       addMapNav(this.map, { home: [-6.369028, 34.888822, 6] });
     }
     this.markers.forEach(m => m.remove());
@@ -277,7 +277,7 @@ export class EoccBoardComponent implements OnInit, OnDestroy {
     if (!this.map) {
       const el = document.getElementById('eocc-map');
       if (!el) { return; }
-      this.map = buildTanzaniaMap('eocc-map');
+      this.map = buildTanzaniaMap('eocc-map', this.http, this.d()?.my_area, true);
       addMapNav(this.map, { dark: true, home: [-6.369028, 34.888822, 6] });
     }
     this.markers.forEach(m => m.remove());
@@ -352,22 +352,54 @@ function ensureLeaflet(): Promise<void> {
   return leafletPromise;
 }
 
-/** The project map standard: voyager tiles, Tanzania maxBounds, country mask + lakes. */
-function buildTanzaniaMap(elementId: string): any {
+/**
+ * The SYSTEM map standard (same base as the landing/portal/EW maps): official local GIS layers via
+ * addTanzaniaGisBase — no external tile CDN, works offline. When the caller's jurisdiction is known
+ * (my_area from the dashboard payload), the map FOCUSES on it: a DED opens framed on their district,
+ * an RAS on their region (own-area outline + fitBounds); national logins keep the country view.
+ */
+function buildTanzaniaMap(elementId: string, http: HttpClient,
+                          myArea?: { scope?: string; region_name?: string; district_name?: string },
+                          dark = false): any {
   const map = L.map(elementId, {
-    center: [-6.369028, 34.888822], zoom: 6, minZoom: 5,
-    maxBounds: [[-12.0, 29.0], [-0.8, 41.0]],
+    center: [-6.369028, 34.888822], zoom: 6, minZoom: 5, maxZoom: 12,
+    maxBounds: [[-12.0, 29.0], [-0.8, 41.0]], attributionControl: false,
   });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap, © CARTO', maxZoom: 18,
-  }).addTo(map);
-  fetch('/geojson/tz_boundary_simple.geojson').then(r => r.json()).then(adm0 => {
-    L.geoJSON(adm0, { style: { color: '#475569', weight: 2, fill: false } }).addTo(map);
-  });
-  fetch('/geojson/tz_lakes.geojson').then(r => r.json()).then(lakes => {
-    L.geoJSON(lakes, { style: { color: '#7cb3d4', weight: 1, fillColor: '#a5cde3', fillOpacity: 1 } }).addTo(map);
-  });
+  if (dark) { addTanzaniaDarkBase(map, http); } else { addTanzaniaGisBase(map, http); }
+  focusJurisdiction(map, myArea, dark);
   return map;
+}
+
+/** GIS split-file name rule (same as tz-map's safeName, which is module-private). */
+const gisFileName = (name: string) => name.replace(/ /g, '_').replace(/\//g, '_').replace(/'/g, '');
+/** Registry names carry admin-type suffixes the GIS layer omits ("Dodoma Urban" vs "Dodoma"). */
+const normArea = (n: string) => (n || '').toLowerCase()
+  .replace(/\s+(urban|rural|municipal|city|town|cbd|dc|mc|tc)\b/gi, '').replace(/[^a-z]/g, '');
+
+/** Outline + zoom the officer's own district/region so their live map opens focused on their area. */
+function focusJurisdiction(map: any, myArea?: { scope?: string; region_name?: string; district_name?: string },
+                           dark = false): void {
+  if (!myArea?.region_name) { return; }   // national / unassigned → country view
+  const outline = { color: dark ? '#7dd3fc' : '#0d3b66', weight: 2.5, fill: false, dashArray: undefined };
+  if (myArea.scope === 'DISTRICT' && myArea.district_name) {
+    fetch(`/geojson/adm2_district/by_region/${gisFileName(myArea.region_name)}.geojson`)
+      .then(r => r.json())
+      .then(data => {
+        const feat = (data.features ?? []).find((f: any) => normArea(f.properties.dist_name) === normArea(myArea.district_name!));
+        if (!feat) { return; }
+        const layer = L.geoJSON(feat, { style: outline, interactive: false }).addTo(map);
+        map.fitBounds(layer.getBounds(), { padding: [24, 24], maxZoom: 11 });
+      }).catch(() => { /* GIS file missing — stay at the national view */ });
+  } else {
+    fetch('/geojson/tz_regions_gis.geojson')
+      .then(r => r.json())
+      .then(data => {
+        const feat = (data.features ?? []).find((f: any) => normArea(f.properties.Region_Nam) === normArea(myArea.region_name!));
+        if (!feat) { return; }
+        const layer = L.geoJSON(feat, { style: outline, interactive: false }).addTo(map);
+        map.fitBounds(layer.getBounds(), { padding: [24, 24], maxZoom: 9 });
+      }).catch(() => { /* GIS file missing — stay at the national view */ });
+  }
 }
 
 let swalPromise: Promise<void> | null = null;
