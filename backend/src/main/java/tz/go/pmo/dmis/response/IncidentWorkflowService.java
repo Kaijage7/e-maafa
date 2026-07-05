@@ -184,8 +184,7 @@ public class IncidentWorkflowService {
                 where id = ?
                 """, to, actingUserId(), incidentId);
         logHistory(incidentId, "submitted", from, to, comments);
-        notifyStage(incident, to);
-        return to;
+        return settleStage(incidentId, incident, to);   // auto-advance past unstaffed/auto tiers, then notify
     }
 
     /**
@@ -209,8 +208,7 @@ public class IncidentWorkflowService {
                 ? comments
                 : ((comments == null ? "" : comments + " ") + "[recommendation: " + recommendation + "]");
         logHistory(incidentId, "approved", from, to, note);
-        notifyStage(incident, to);
-        return to;
+        return settleStage(incidentId, incident, to);   // auto-advance past unstaffed/auto tiers, then notify
     }
 
     /** Roll back one level; comments are mandatory in the source for every rollback. */
@@ -334,8 +332,7 @@ public class IncidentWorkflowService {
         assertActorInIncidentArea(incident);   // only the incident's own area (or national) may resubmit it
         jdbc.update("update public.incidents set workflow_status = ?, updated_at = now() where id = ?", to, incidentId);
         logHistory(incidentId, "resubmitted", from, to, comments);
-        notifyStage(incident, to);   // the corrected incident now waits for the next approver — ping them
-        return to;
+        return settleStage(incidentId, incident, to);   // auto-advance past unstaffed/auto tiers, then notify
     }
 
     /**
@@ -353,6 +350,89 @@ public class IncidentWorkflowService {
         jdbc.update("update public.incidents set status = ?, updated_at = now() where id = ?", newStatus, incidentId);
         logHistory(incidentId, "edited", from, newStatus,
                 comments == null ? "Operational status changed to " + newStatus : comments);
+    }
+
+    // ── automation: settings-driven auto-advance so incidents never stall in an area with no coordinator ──
+
+    /**
+     * After a FORWARD transition, advance the incident past any tier that is configured to auto-advance,
+     * or is a "skip_if_unstaffed" tier with no officer staffing it in the incident's own area — cascading
+     * until it rests on a manual, staffed stage (or reaches approval). Then notify that resting stage's
+     * owners. This is what lets a citizen report in a district/region with no DDMC/RDMC/DED still flow up
+     * to the RAS (present in every region) and on to the national tiers, all governed by System Settings.
+     * Backward transitions (rollback) deliberately do NOT call this.
+     */
+    String settleStage(long incidentId, Map<String, Object> incident, String landedStage) {
+        String stage = landedStage;
+        for (int hop = 0; hop < NEXT_STAGE.size() + 1; hop++) {   // bounded — never loops past the ladder length
+            String next = NEXT_STAGE.get(stage);
+            if (next == null) {
+                break;                                            // terminal stage (approved) — nothing to skip
+            }
+            String mode = approvalMode(stage);
+            boolean advance = "auto".equals(mode)
+                    || ("skip_if_unstaffed".equals(mode) && !stageStaffed(stage, incident));
+            if (!advance) {
+                break;                                            // manual, or staffed skip-tier: an officer acts here
+            }
+            jdbc.update("update public.incidents set workflow_status = ?, updated_at = now() where id = ?", next, incidentId);
+            logHistory(incidentId, "auto_advanced", stage, next, "auto".equals(mode)
+                    ? "[system] auto-advanced — this tier is set to automatic approval in System Settings."
+                    : "[system] auto-advanced — no officer staffs this tier in the incident's area (skip-if-unstaffed).");
+            stage = next;
+        }
+        notifyStage(incident, stage);   // ping only the resting stage's owners (not the skipped tiers)
+        return stage;
+    }
+
+    /** Convenience overload: settle from a freshly-created incident (loads its row for the area check + notify). */
+    String settleStage(long incidentId, String landedStage) {
+        return settleStage(incidentId, findOr404(incidentId), landedStage);
+    }
+
+    /** Configured automation mode for a ladder stage: manual | auto | skip_if_unstaffed (with safe defaults). */
+    private String approvalMode(String stage) {
+        String v = jdbc.query(
+                "select value from public.portal_settings where \"group\" = 'incident_approval' and key = ?",
+                rs -> rs.next() ? rs.getString(1) : null, stage);
+        if (v != null && !v.isBlank()) {
+            return v;
+        }
+        // Defaults mirror V133: coordinator gates + district DED skip when unstaffed; RAS and national are manual.
+        return switch (stage) {
+            case "waiting_ddmc", "waiting_ded", "waiting_rdmc" -> "skip_if_unstaffed";
+            default -> "manual";
+        };
+    }
+
+    /** True when at least one active officer holds this stage's role in the incident's own area (national = anywhere). */
+    private boolean stageStaffed(String stage, Map<String, Object> incident) {
+        Set<String> roles = STAGE_ROLES.get(stage);
+        if (roles == null || roles.isEmpty()) {
+            return true;   // no role gate on this stage → treat as staffed (don't auto-skip it)
+        }
+        // Stage roles are compile-time Authz constants, so inlining them in the IN-list is injection-safe.
+        String roleList = roles.stream().map(r -> "'" + r.replace("'", "''") + "'").collect(java.util.stream.Collectors.joining(","));
+        StringBuilder sql = new StringBuilder(
+                "select count(*) from public.users u "
+                + "join public.model_has_roles mhr on mhr.model_id = u.id "
+                + "join public.roles r on r.id = mhr.role_id "
+                + "where r.name in (" + roleList + ")");
+        List<Object> params = new java.util.ArrayList<>();
+        Scope scope = STAGE_SCOPE.getOrDefault(stage, Scope.NATIONAL);
+        if (scope == Scope.DISTRICT) {
+            Long d = asLong(incident.get("district_id"));
+            if (d == null) { return false; }   // untagged district → treat as unstaffed so it skips to the next tier
+            sql.append(" and u.district_id = ?");
+            params.add(d);
+        } else if (scope == Scope.REGION) {
+            Long rg = asLong(incident.get("region_id"));
+            if (rg == null) { return false; }
+            sql.append(" and u.region_id = ?");
+            params.add(rg);
+        }
+        Integer n = jdbc.queryForObject(sql.toString(), Integer.class, params.toArray());
+        return n != null && n > 0;
     }
 
     // ── internals ──

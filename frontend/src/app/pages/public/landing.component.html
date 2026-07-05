@@ -31,7 +31,7 @@
 
     <!-- CTAs kept high (under the title) so Report Hazard is visible above the fold -->
     <div class="hero-cta-row" style="margin:0.25rem 0 0.85rem;">
-      <button class="btn-gold" (click)="reportOpen.set(true)"><i class="fas fa-flag"></i> {{ L.t('lbl_report_hazard') }}</button>
+      <button class="btn-gold" (click)="reportOpen.set(true); loadRegions()"><i class="fas fa-flag"></i> {{ L.t('lbl_report_hazard') }}</button>
       <a class="btn-outline-gold" routerLink="/subscribe"><i class="fas fa-bell"></i> {{ L.t('lbl_subscribe_to_alerts') }}</a>
     </div>
 
@@ -437,6 +437,17 @@
             @for (h of hazardCards(); track h.name) { <option [value]="h.name">{{ cardName(h) }}</option> }
           </select>
           <textarea rows="3" class="form-control" placeholder="Describe what you are seeing…" [value]="rDesc()" (input)="rDesc.set($any($event.target).value)"></textarea>
+          <!-- Region → District: routes the report to THAT district's officers. Strongly encouraged. -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+            <select [value]="rRegionId()" (change)="onRegionChange($any($event.target).value)" class="form-control" aria-label="Region">
+              <option value="">{{ L.lang() === 'sw' ? 'Chagua mkoa…' : 'Select region…' }}</option>
+              @for (r of regions(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+            </select>
+            <select [value]="rDistrictId()" (change)="rDistrictId.set($any($event.target).value)" class="form-control" aria-label="District" [disabled]="!rRegionId()">
+              <option value="">{{ L.lang() === 'sw' ? 'Chagua wilaya…' : 'Select district…' }}</option>
+              @for (d of districts(); track d.id) { <option [value]="d.id">{{ d.name }}</option> }
+            </select>
+          </div>
           <input class="form-control" placeholder="Location (street / village / landmark)" [value]="rLocation()" (input)="rLocation.set($any($event.target).value)">
           <select [value]="rUrgency()" (change)="rUrgency.set($any($event.target).value)" class="form-control">
             <option value="Low">Low urgency</option><option value="Medium">Medium urgency</option><option value="High">High urgency</option>

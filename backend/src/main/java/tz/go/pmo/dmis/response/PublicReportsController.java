@@ -169,8 +169,12 @@ public class PublicReportsController {
                 update public.public_hazard_reports set status = 'converted', linked_incident_id = ?,
                     reviewed_by = ?, reviewed_at = now(), updated_at = now() where id = ?
                 """, incidentId, users.actingUserId(), id);
+        // Settle the chain: skip any unstaffed/auto tier (per System Settings) so the incident rests on a real
+        // approver even in a district/region with no DED/coordinator — then the resting officers are notified.
+        String resting = users.settleStage(incidentId, "waiting_ded");
         return Map.of("success", true, "incident_id", incidentId,
-                "message", "Report confirmed — incident #" + incidentId + " enters the chain at the DED stage.");
+                "message", "Report confirmed — incident #" + incidentId + " is now in the response chain ("
+                        + IncidentOptions.workflowStatusLabel(resting) + ").");
     }
 
     // ── helpers ──

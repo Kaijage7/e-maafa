@@ -186,6 +186,10 @@ export class LandingComponent implements OnDestroy {
   rType = signal(''); rDesc = signal(''); rLocation = signal(''); rUrgency = signal('Medium');
   rName = signal(''); rPhone = signal(''); rEmail = signal('');
   rReportedBy = signal('public'); rOrg = signal('');   // public | institution | sector | ministry | region (official → straight to EOCC)
+  // Structured Region → District (public location cascade) — routes the report to that district's officers.
+  rRegionId = signal(''); rDistrictId = signal('');
+  regions = signal<{ id: number; name: string }[]>([]);
+  districts = signal<{ id: number; name: string }[]>([]);
 
   /** Managed cards from Content Management; built-in defaults if the API has none. */
   hazardCards = computed<HazardCard[]>(() => {
@@ -336,10 +340,28 @@ export class LandingComponent implements OnDestroy {
       urgency: this.rUrgency(), reporterName: this.rName() || null, reporterPhone: this.rPhone() || null,
       reporterEmail: this.rEmail() || null,
       reporterType: this.rReportedBy(), reporterOrg: this.rReportedBy() === 'public' ? null : (this.rOrg() || null),
+      regionId: this.rRegionId() || null, districtId: this.rDistrictId() || null,
     }).subscribe({
       next: r => { this.reportSaving.set(false); this.reportDone.set(r.reportCode); },
       error: (err) => { this.reportSaving.set(false); this.reportError.set(err?.error?.detail || err?.error?.message || 'Could not submit — please check your entries and try again.'); },
     });
+  }
+
+  /** Load the region list the first time the report modal needs it (public location cascade). */
+  loadRegions(): void {
+    if (this.regions().length) { return; }
+    this.http.get<{ id: number; name: string }[]>('/api/v1/portal/regions').subscribe(r => this.regions.set(r));
+  }
+
+  /** Region chosen → reset district and load that region's districts. */
+  onRegionChange(regionId: string): void {
+    this.rRegionId.set(regionId);
+    this.rDistrictId.set('');
+    this.districts.set([]);
+    if (regionId) {
+      this.http.get<{ id: number; name: string }[]>(`/api/v1/portal/regions/${regionId}/districts`)
+        .subscribe(d => this.districts.set(d));
+    }
   }
 
   closeReport(): void {
@@ -347,6 +369,7 @@ export class LandingComponent implements OnDestroy {
     this.reportDone.set('');
     this.rType.set(''); this.rDesc.set(''); this.rLocation.set(''); this.rUrgency.set('Medium');
     this.rReportedBy.set('public'); this.rOrg.set(''); this.rEmail.set(''); this.reportError.set('');
+    this.rRegionId.set(''); this.rDistrictId.set(''); this.districts.set([]);
   }
 
   /* ------------------------------- map -------------------------------- */

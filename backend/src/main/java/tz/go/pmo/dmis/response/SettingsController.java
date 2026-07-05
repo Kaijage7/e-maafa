@@ -229,6 +229,75 @@ public class SettingsController {
         return Map.of("success", true, "message", "Incident type removed.");
     }
 
+    // ─── Incident approval automation (the ladder-stage modes read by IncidentWorkflowService) ───
+
+    /** The incident ladder stages an admin can automate, in flow order, with their human labels. */
+    private static final List<Map<String, String>> AUTOMATION_TIERS = List.of(
+            Map.of("stage", "waiting_ddmc", "label", "DDMC — District entry gate", "role", "Dist DC", "scope", "District"),
+            Map.of("stage", "waiting_ded", "label", "DED — District approval", "role", "DED", "scope", "District"),
+            Map.of("stage", "waiting_rdmc", "label", "RDMC — Regional coordinator", "role", "Reg DC", "scope", "Region"),
+            Map.of("stage", "waiting_ras", "label", "RAS — Regional approval", "role", "RAS", "scope", "Region"),
+            Map.of("stage", "waiting_eocc", "label", "EOCC — National operations", "role", "EOCC", "scope", "National"),
+            Map.of("stage", "waiting_director", "label", "Director (DMD)", "role", "Director", "scope", "National"),
+            Map.of("stage", "waiting_ps", "label", "PS — Permanent Secretary", "role", "Secretary", "scope", "National"));
+
+    private static final java.util.Set<String> AUTOMATION_MODES = java.util.Set.of("manual", "auto", "skip_if_unstaffed");
+
+    /** Current mode for each ladder stage + how many officers actually staff that role, for the settings screen. */
+    @GetMapping("/approval-automation")
+    @PreAuthorize("hasAuthority('approval_workflows.manage')")
+    public Map<String, Object> approvalAutomation() {
+        Map<String, String> configured = new LinkedHashMap<>();
+        jdbc.queryForList("select key, value from public.portal_settings where \"group\" = 'incident_approval'")
+                .forEach(r -> configured.put(String.valueOf(r.get("key")), String.valueOf(r.get("value"))));
+        List<Map<String, Object>> tiers = new java.util.ArrayList<>();
+        for (Map<String, String> t : AUTOMATION_TIERS) {
+            String stage = t.get("stage");
+            String mode = configured.getOrDefault(stage,
+                    java.util.Set.of("waiting_ddmc", "waiting_ded", "waiting_rdmc").contains(stage) ? "skip_if_unstaffed" : "manual");
+            Long officers = jdbc.queryForObject("""
+                    select count(distinct u.id) from public.users u
+                    join public.model_has_roles mhr on mhr.model_id = u.id
+                    join public.roles r on r.id = mhr.role_id where r.name = ?
+                    """, Long.class, t.get("role"));
+            Map<String, Object> row = new LinkedHashMap<>(t);
+            row.put("mode", mode);
+            row.put("officers", officers == null ? 0 : officers);
+            tiers.add(row);
+        }
+        return Map.of("tiers", tiers, "modes", List.of("manual", "auto", "skip_if_unstaffed"));
+    }
+
+    /** Save the stage modes. Body: { "waiting_ddmc": "skip_if_unstaffed", "waiting_ras": "manual", ... }. */
+    @PostMapping("/approval-automation")
+    @PreAuthorize("hasAuthority('approval_workflows.manage')")
+    @Transactional
+    public Map<String, Object> saveApprovalAutomation(@RequestBody Map<String, Object> body) {
+        java.util.Set<String> validStages = new java.util.HashSet<>();
+        AUTOMATION_TIERS.forEach(t -> validStages.add(t.get("stage")));
+        int saved = 0;
+        for (Map.Entry<String, Object> e : body.entrySet()) {
+            String stage = e.getKey();
+            String mode = str(e.getValue());
+            if (!validStages.contains(stage)) {
+                throw new BusinessRuleException("Unknown approval stage: " + stage);
+            }
+            if (mode == null || !AUTOMATION_MODES.contains(mode)) {
+                throw new BusinessRuleException("Invalid mode for " + stage + " (use manual, auto or skip_if_unstaffed).");
+            }
+            // Upsert without relying on a unique constraint: update, else insert.
+            int updated = jdbc.update(
+                    "update public.portal_settings set value = ?, updated_at = now() where \"group\" = 'incident_approval' and key = ?",
+                    mode, stage);
+            if (updated == 0) {
+                jdbc.update("insert into public.portal_settings (\"group\", key, value, type, created_at, updated_at) "
+                        + "values ('incident_approval', ?, ?, 'string', now(), now())", stage, mode);
+            }
+            saved++;
+        }
+        return Map.of("success", true, "saved", saved, "message", "Approval automation updated.");
+    }
+
     // ── helpers ──
 
     private void requireModule(long moduleId) {

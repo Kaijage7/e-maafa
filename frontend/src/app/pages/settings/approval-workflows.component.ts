@@ -12,6 +12,9 @@ interface Module {
   id: number; moduleCode: string; moduleName: string; modelClass: string | null;
   isActive: boolean; description: string | null; levels: Level[];
 }
+interface AutoTier {
+  stage: string; label: string; role: string; scope: string; mode: string; officers: number;
+}
 
 /**
  * System Settings → Approval Workflows. The admin surface for the V24 generalized approval engine:
@@ -32,6 +35,41 @@ interface Module {
       chain of approval levels here. Reorder with the arrows; a level can require any role, be marked
       skippable, or be deactivated. Changes take effect on the next request the engine initialises.
     </p>
+
+    <!-- Incident approval automation — the report→resolution ladder read by the incident engine -->
+    <div class="panel-row">
+      <dmis-panel title="Incident Approval Automation" icon="fa-robot" badge="Report → resolution chain">
+        <div class="panel-body">
+          <p style="font-size:0.86rem;color:var(--text-mid);margin:0 0 0.8rem;">
+            How each tier of the incident chain behaves. <b>Manual</b> — an officer of that role &amp; area must approve.
+            <b>Auto-advance</b> — the system approves it automatically. <b>Skip if unstaffed</b> — advance automatically
+            only when no officer of that role serves the incident's own area, so a report never stalls in a district or
+            region that has no coordinator for that tier.
+          </p>
+          <div style="display:grid;gap:0.5rem;">
+            @for (t of tiers(); track t.stage) {
+              <div class="autolvl">
+                <div class="ord" [style.background]="t.scope==='National' ? '#7c3aed' : t.scope==='Region' ? '#0d6efd' : '#059669'">
+                  <i class="fas fa-flag-checkered" style="font-size:0.68rem;"></i>
+                </div>
+                <div style="min-width:0;">
+                  <div style="font-weight:700;font-size:0.9rem;">{{ t.label }}</div>
+                  <div style="font-size:0.78rem;color:var(--text-light);">{{ t.scope }} · role {{ t.role }} ·
+                    <span [style.color]="t.officers ? '#059669' : '#dc2626'">{{ t.officers }} officer{{ t.officers === 1 ? '' : 's' }} seeded</span>
+                  </div>
+                </div>
+                <select class="form-select" [ngModel]="t.mode" (ngModelChange)="setMode(t, $event)">
+                  <option value="manual">Manual approval</option>
+                  <option value="auto">Auto-advance</option>
+                  <option value="skip_if_unstaffed">Skip if unstaffed</option>
+                </select>
+              </div>
+            } @empty { <div style="color:var(--text-light);font-size:0.85rem;padding:0.5rem 0;">Loading tiers…</div> }
+          </div>
+          @if (autoSaved()) { <div style="font-size:0.82rem;color:#059669;margin-top:0.7rem;"><i class="fas fa-check"></i> Saved — takes effect on the next incident action.</div> }
+        </div>
+      </dmis-panel>
+    </div>
 
     @for (m of modules(); track m.id) {
       <div class="panel-row">
@@ -110,6 +148,8 @@ interface Module {
     /* Anchor the row action menu under its trigger (the global .ctx-menu is position:fixed and detaches). */
     .ctx-menu { position: absolute; top: 100%; right: 0; }
     .addrow { display:flex; gap:0.6rem; align-items:center; margin-top:0.8rem; padding-top:0.8rem; border-top:1px dashed var(--border); }
+    .autolvl { display:grid; grid-template-columns: 34px 1fr 210px; gap:0.7rem; align-items:center;
+               border:1px solid var(--border); border-radius:10px; padding:0.5rem 0.7rem; background:var(--card-bg,#fff); }
   `],
 })
 export class ApprovalWorkflowsComponent {
@@ -118,6 +158,9 @@ export class ApprovalWorkflowsComponent {
 
   modules = signal<Module[]>([]);
   roles = signal<string[]>([]);
+  tiers = signal<AutoTier[]>([]);
+  autoSaved = signal(false);
+  private autoBase = '/api/v1/response/settings/approval-automation';
 
   newName: Record<number, string> = {};
   newRole: Record<number, string> = {};
@@ -126,12 +169,26 @@ export class ApprovalWorkflowsComponent {
   toggleMenu(id: number, e: Event): void { e.stopPropagation(); this.openMenu.update(c => c === id ? null : id); }
   @HostListener('document:click') closeMenu(): void { this.openMenu.set(null); }
 
-  constructor() { this.reload(); }
+  constructor() { this.reload(); this.loadAutomation(); }
 
   reload(): void {
     this.http.get<{ modules: Module[]; roles: string[] }>(this.base).subscribe(r => {
       this.modules.set(r.modules);
       this.roles.set(r.roles);
+    });
+  }
+
+  /** Load the incident ladder-stage automation modes (+ how many officers staff each role). */
+  loadAutomation(): void {
+    this.http.get<{ tiers: AutoTier[] }>(this.autoBase).subscribe(r => this.tiers.set(r.tiers));
+  }
+
+  /** Change one tier's mode and persist immediately. */
+  setMode(t: AutoTier, mode: string): void {
+    t.mode = mode;
+    this.http.post(this.autoBase, { [t.stage]: mode }).subscribe({
+      next: () => { this.autoSaved.set(true); setTimeout(() => this.autoSaved.set(false), 1800); },
+      error: err => { alert(err?.error?.message ?? 'Could not save the automation setting.'); this.loadAutomation(); },
     });
   }
 

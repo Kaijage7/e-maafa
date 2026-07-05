@@ -261,17 +261,23 @@ public class PortalPublicService {
         boolean official = !"public".equals(reporterType);
         String reporterOrg = official ? str(req.get("reporterOrg")) : null;
 
+        // The citizen's selected Region/District (public location cascade) — tags the report to a specific
+        // area so it routes to THAT district's officers via JurisdictionScope (shared-or-own), instead of the
+        // untagged bucket every district sees. Both are optional; an untagged report stays area-assignable at
+        // convert time.
+        Long regionId = asId(req.get("regionId"));
+        Long districtId = asId(req.get("districtId"));
         Long n = jdbc.queryForObject("select count(*) from public.public_hazard_reports", Long.class);
         String code = String.format("PHR-%d-%05d", Year.now().getValue(), (n == null ? 0 : n) + 1);
         Long reportId = jdbc.queryForObject("insert into public.public_hazard_reports(report_code,hazard_type,"
                         + "description,location_description,latitude,longitude,urgency_level,reporter_name,"
-                        + "reporter_phone,reporter_type,reporter_org,reporter_email,created_at,updated_at)"
-                        + " values (?,?,?,?,?,?,?,?,?,?,?,?,now(),now()) returning id", Long.class,
+                        + "reporter_phone,reporter_type,reporter_org,reporter_email,region_id,district_id,created_at,updated_at)"
+                        + " values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,now(),now()) returning id", Long.class,
                 code, hazardType, description, str(req.get("location")),
                 num(req.get("latitude")), num(req.get("longitude")),
                 str(req.get("urgency")) == null ? "Medium" : str(req.get("urgency")),
                 str(req.get("reporterName")), str(req.get("reporterPhone")), reporterType, reporterOrg,
-                email);
+                email, regionId, districtId);
 
         if (!official) {
             return Map.of("reportCode", code,
@@ -287,12 +293,12 @@ public class PortalPublicService {
                 + " (official report via public portal)";
         Long incidentId = jdbc.queryForObject(
                 "insert into public.incidents(title, description, incident_type_id, severity_level, status, "
-                + "workflow_status, origin_level, location_description, latitude, longitude, reported_at, "
+                + "workflow_status, origin_level, region_id, district_id, location_description, latitude, longitude, reported_at, "
                 + "reported_by_name, reported_by_contact, source_of_report, submitted_at, created_at, updated_at) "
-                + "values (?,?,?,?, 'Reported', 'waiting_eocc', 'national', ?,?,?, now(), ?,?,?, now(), now(), now()) "
+                + "values (?,?,?,?, 'Reported', 'waiting_eocc', 'national', ?,?, ?,?,?, now(), ?,?,?, now(), now(), now()) "
                 + "returning id", Long.class,
                 "Official report: " + hazardType + (str(req.get("location")) == null ? "" : " — " + str(req.get("location"))),
-                description, incidentTypeId, urgencyToSeverity(str(req.get("urgency"))),
+                description, incidentTypeId, urgencyToSeverity(str(req.get("urgency"))), regionId, districtId,
                 str(req.get("location")), num(req.get("latitude")), num(req.get("longitude")),
                 str(req.get("reporterName")), str(req.get("reporterPhone")), src);
         // (No incident_workflow_histories row: that table requires a user_id and a portal report has no acting
@@ -718,6 +724,22 @@ public class PortalPublicService {
     private static Double num(Object v) {
         try {
             return v == null ? null : Double.valueOf(String.valueOf(v));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /** Parse an optional FK id from the request (JSON numbers arrive as Integer/Long/Double, or a string). */
+    private static Long asId(Object v) {
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Number nu) {
+            return nu.longValue();
+        }
+        try {
+            String s = String.valueOf(v).trim();
+            return s.isEmpty() ? null : Long.valueOf(s);
         } catch (NumberFormatException e) {
             return null;
         }
