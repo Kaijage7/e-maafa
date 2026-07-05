@@ -7,6 +7,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { EwAgencyService } from './ew-agency.service';
 import { EwCrossAgencyPanelComponent } from './ew-cross-agency-panel.component';
 import { EwPreviewModalComponent } from './ew-preview-modal.component';
+import { EntityTaskingsComponent } from './entity-taskings.component';
 import { CATCHMENT_BASINS, BASIN_BY_KEY } from './catchment-basins';
 import { ALERT_LEVELS, ALERT_RANK, alertColor, AGENCIES, HAZ_ICON, LIKELIHOOD, IMPACT } from './ew-agency.model';
 import { loadCrossAgencyRef, renderCrossAgencyRef, RefMarker } from './cross-agency-ref';
@@ -29,7 +30,7 @@ interface Day { day_number: number; assessments: Assessment[]; }
 @Component({
   selector: 'page-mow-flood',
   standalone: true,
-  imports: [FormsModule, NgClass, RouterLink, EwCrossAgencyPanelComponent, EwPreviewModalComponent],
+  imports: [FormsModule, NgClass, RouterLink, EwCrossAgencyPanelComponent, EwPreviewModalComponent, EntityTaskingsComponent],
   styles: [`
     .wrap { padding: 14px 18px 40px; }
     .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
@@ -98,6 +99,8 @@ interface Day { day_number: number; assessments: Assessment[]; }
       }
 
       <ew-cross-agency-panel current="mow"></ew-cross-agency-panel>
+
+      <dmis-entity-taskings agency="mow"></dmis-entity-taskings>
 
       @if (tmaNote(); as t) { <div class="tma-note"><i class="fas fa-cloud-showers-heavy"></i> {{ t }}</div> }
 

@@ -77,6 +77,18 @@ public class DisasterEventService {
                         + " coalesce((select sum(deaths_total) from disaster_event_effects x where x.event_id=e.id),0) as deaths,"
                         + " coalesce((select sum(directly_affected+displaced) from disaster_event_effects x where x.event_id=e.id),0) as affected,"
                         + " coalesce((select sum(total_loss_tzs) from disaster_event_effects x where x.event_id=e.id),0) as \"lossTzs\","
+                        // F04 (COST-USED): recorded gov figure + in-kind dispatches + cash commitments of linked incidents
+                        + " coalesce(e.gov_response_tzs,0)"
+                        + "  + coalesce((select sum(ar.quantity_allocated * coalesce(r.unit_cost,0))"
+                        + "      from allocated_resources ar join resources r on r.id = ar.resource_id"
+                        + "      where ar.incident_id in (select entity_id from disaster_event_links li"
+                        + "        where li.event_id=e.id and li.entity_type='incident')"
+                        + "      or ar.id in (select entity_id from disaster_event_links la"
+                        + "        where la.event_id=e.id and la.entity_type='allocated_resource')),0)"
+                        + "  + coalesce((select sum(c.amount) from budget_commitments c"
+                        + "      where c.status in ('approved','committed','disbursed')"
+                        + "      and c.incident_id in (select entity_id from disaster_event_links lc"
+                        + "        where lc.event_id=e.id and lc.entity_type='incident')),0) as \"costUsedTzs\","
                         + " (select count(*) from disaster_event_links l where l.event_id=e.id) as \"linkCount\""
                         + " from disaster_events e" + where + " order by e.started_on desc, e.id desc",
                 args.toArray());
@@ -189,7 +201,9 @@ public class DisasterEventService {
                         + " coalesce(sum(livestock_lost),0) as \"livestockLost\","
                         + " coalesce(sum(crops_destroyed_ha),0) as \"cropsHa\""
                         + " from disaster_event_effects where event_id = ?", id));
-        out.put("responseInvestment", responseInvestment(id));
+        Map<String, Object> investment = responseInvestment(id);
+        out.put("responseInvestment", investment);
+        out.put("costUsed", costUsed(id, event, investment)); // F04: three cost mechanisms + total
         return out;
     }
 
@@ -225,29 +239,37 @@ public class DisasterEventService {
                 ? null : Long.valueOf(String.valueOf(req.get("hazardId")));
         String hazardType = hazardId == null ? str(req.get("hazardType"))
                 : jdbc.queryForObject("select name from hazards where id = ?", String.class, hazardId);
+        String govResponse = numericOrBadRequest(req.get("govResponseTzs"),
+                "Government response cost must be a number (TZS)"); // F04: recorded cost, optional
         Long id = jdbc.queryForObject(
                 "insert into disaster_events(event_code,name,hazard_id,hazard_type,glide_number,started_on,"
-                        + "ended_on,primary_region,scope,description,triggering_event,data_source,status,"
-                        + "recorded_by,created_at,updated_at)"
-                        + " values (?,?,?,?,?,?::date,?::date,?,?,?,?,?,'Open',?,now(),now()) returning id",
+                        + "ended_on,primary_region,scope,description,triggering_event,data_source,"
+                        + "gov_response_tzs,status,recorded_by,created_at,updated_at)"
+                        + " values (?,?,?,?,?,?::date,?::date,?,?,?,?,?,coalesce(?::numeric,0),'Open',?,now(),now())"
+                        + " returning id",
                 Long.class, code, name, hazardId, hazardType, str(req.get("glideNumber")), startedOn,
                 str(req.get("endedOn")), str(req.get("primaryRegion")),
                 str(req.get("scope")) == null ? "District" : str(req.get("scope")),
-                str(req.get("description")), str(req.get("triggeringEvent")), str(req.get("dataSource")), actor);
+                str(req.get("description")), str(req.get("triggeringEvent")), str(req.get("dataSource")),
+                govResponse, actor);
         return Map.of("id", id, "eventCode", code);
     }
 
     @Transactional
     public void update(long id, Map<String, Object> req) {
         requireEditable(id);
+        String govResponse = numericOrBadRequest(req.get("govResponseTzs"),
+                "Government response cost must be a number (TZS)"); // F04: recorded cost, absent = unchanged
         jdbc.update("update disaster_events set name=coalesce(?,name), glide_number=coalesce(?,glide_number),"
                         + " started_on=coalesce(?::date,started_on), ended_on=coalesce(?::date,ended_on),"
                         + " primary_region=coalesce(?,primary_region), scope=coalesce(?,scope),"
                         + " description=coalesce(?,description), triggering_event=coalesce(?,triggering_event),"
-                        + " data_source=coalesce(?,data_source), updated_at=now() where id=?",
+                        + " data_source=coalesce(?,data_source),"
+                        + " gov_response_tzs=coalesce(?::numeric,gov_response_tzs), updated_at=now() where id=?",
                 str(req.get("name")), str(req.get("glideNumber")), str(req.get("startedOn")),
                 str(req.get("endedOn")), str(req.get("primaryRegion")), str(req.get("scope")),
-                str(req.get("description")), str(req.get("triggeringEvent")), str(req.get("dataSource")), id);
+                str(req.get("description")), str(req.get("triggeringEvent")), str(req.get("dataSource")),
+                govResponse, id);
     }
 
     /** Open → Validated → Archived (validation freezes figures into the Sendai analytics). */
@@ -503,6 +525,41 @@ public class DisasterEventService {
                         + "   where event_id=? and entity_type='allocated_resource')", eventId, eventId);
     }
 
+    /**
+     * F04 (COST-USED per disaster): the three cost mechanisms surfaced together, honestly
+     * labelled — (a) in-kind dispatches (allocations × unit cost, computed from linked
+     * incidents — the existing {@link #responseInvestment} figure), (b) Budget &amp; Finance
+     * cash commitments/disbursements against linked incidents (V99–V101 ledger; committed =
+     * approved/committed/disbursed, the same definition BudgetController uses), and (c) the
+     * manually recorded {@code gov_response_tzs} figure. {@code totalTzs} = a + b + c; the
+     * card labels computed vs recorded so overlaps stay visible rather than silently merged.
+     */
+    private Map<String, Object> costUsed(long eventId, Map<String, Object> event, Map<String, Object> investment) {
+        Map<String, Object> cash = jdbc.queryForMap(
+                "select coalesce(sum(c.amount) filter (where c.status in ('approved','committed','disbursed')),0)"
+                        + "   as committed,"
+                        + " coalesce(sum(coalesce(c.expended_amount, c.amount)) filter (where c.status='disbursed'),0)"
+                        + "   as disbursed,"
+                        + " count(*) filter (where c.status in ('approved','committed','disbursed')) as commitments"
+                        + " from budget_commitments c where c.incident_id in"
+                        + " (select entity_id from disaster_event_links where event_id=? and entity_type='incident')",
+                eventId);
+        double inKindTzs = investment.get("valueTzs") == null ? 0
+                : ((Number) investment.get("valueTzs")).doubleValue();
+        double committedTzs = ((Number) cash.get("committed")).doubleValue();
+        double recordedTzs = event.get("govResponseTzs") == null ? 0
+                : ((Number) event.get("govResponseTzs")).doubleValue();
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("inKindTzs", inKindTzs);
+        out.put("inKindAllocations", investment.get("allocations"));
+        out.put("budgetCommittedTzs", committedTzs);
+        out.put("budgetDisbursedTzs", cash.get("disbursed"));
+        out.put("budgetCommitments", cash.get("commitments"));
+        out.put("recordedGovResponseTzs", recordedTzs);
+        out.put("totalTzs", inKindTzs + committedTzs + recordedTzs);
+        return out;
+    }
+
     private Map<String, Object> one(long id) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select id, event_code as \"eventCode\", name, hazard_id as \"hazardId\","
@@ -511,6 +568,7 @@ public class DisasterEventService {
                         + " to_char(ended_on,'YYYY-MM-DD') as \"endedOn\","
                         + " primary_region as \"primaryRegion\", scope, description,"
                         + " triggering_event as \"triggeringEvent\", data_source as \"dataSource\", status,"
+                        + " gov_response_tzs as \"govResponseTzs\","
                         + " recorded_by as \"recordedBy\", validated_by as \"validatedBy\","
                         + " to_char(validated_at,'DD Mon YYYY') as \"validatedAt\""
                         + " from disaster_events where id = ?", id);
@@ -531,6 +589,20 @@ public class DisasterEventService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Card is " + status.get(0) + " — reopen it before editing");
         }
+    }
+
+    /** Optional numeric input: null/blank → null (leave column alone); non-numeric → 400, not a SQL 500. */
+    private static String numericOrBadRequest(Object v, String message) {
+        String s = str(v);
+        if (s == null) {
+            return null;
+        }
+        try {
+            new java.math.BigDecimal(s);
+        } catch (NumberFormatException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
+        return s;
     }
 
     private static String str(Object v) {

@@ -397,7 +397,112 @@ public class IncidentController {
                 """, id));
         out.put("response_activation", firstOrNull(jdbc.queryForList(
                 "select * from public.response_activations where incident_id = ?", id)));
+        out.put("forecast", forecastCoverage(incident));
         return out;
+    }
+
+    // ─── Forecast coverage (audit F03: per-incident "was this forecast?") ───
+
+    /**
+     * Answers "was this incident forecast?" against the issued-warning corpus, mirroring the
+     * EW-management report's matching semantics (EwManagementController): same warned AREA
+     * (a district-level warning row must match the incident's district; region-level rows — or
+     * incidents without a district — fall back to region) AND reported_at inside the warning's
+     * validity window with a 48-hour tail. On top of that a hazard-compatibility guard (audit
+     * F11): exact hazard_id match or same related-hazard family (rainfall→floods etc.) — a
+     * Drought warning must not claim a Cholera incident. Best match = highest warning level,
+     * then earliest validity start. Read-only; the block is always present so the UI can render
+     * the badge either way.
+     */
+    private Map<String, Object> forecastCoverage(Map<String, Object> incident) {
+        Map<String, Object> f = new LinkedHashMap<>();
+        f.put("covered", false);
+        f.put("warning_code", null);
+        f.put("warning_level", null);
+        f.put("hazard", null);
+        f.put("lead_hours", null);
+        f.put("validity_start", null);
+        Object reportedAt = incident.get("reported_at");
+        if (reportedAt == null || (incident.get("region_id") == null && incident.get("district_id") == null)) {
+            return f;
+        }
+        List<Map<String, Object>> candidates;
+        try {
+            candidates = jdbc.queryForList("""
+                    select w.warning_code, wh.warning_level, wh.hazard_id, h.name as hazard, wh.validity_start,
+                           round(extract(epoch from (?::timestamptz - wh.validity_start)) / 3600)::bigint as lead_hours
+                    from public.warning_hazards wh
+                    join public.warnings w on w.id = wh.warning_id and w.deleted_at is null
+                         and lower(w.status) in ('approved','published')
+                    left join public.hazards h on h.id = wh.hazard_id
+                    where wh.deleted_at is null
+                      and ?::timestamptz >= wh.validity_start
+                      and ?::timestamptz < wh.validity_end + interval '48 hours'
+                      and ( (wh.district_id is not null and cast(? as bigint) is not null and wh.district_id = cast(? as bigint))
+                            or ((wh.district_id is null or cast(? as bigint) is null) and wh.region_id = cast(? as bigint)) )
+                    order by case wh.warning_level when 'Major Warning' then 0 when 'Warning' then 1
+                                  when 'Advisory' then 2 else 3 end,
+                             wh.validity_start
+                    """,
+                    reportedAt, reportedAt, reportedAt,
+                    incident.get("district_id"), incident.get("district_id"), incident.get("district_id"),
+                    incident.get("region_id"));
+        } catch (Exception e) {
+            // The badge is advisory context — never let it break the incident page itself.
+            log.warn("forecast-coverage lookup failed for incident {}: {}", incident.get("id"), e.getMessage());
+            return f;
+        }
+        Long incHazardId = incident.get("hazard_id") instanceof Number n ? n.longValue() : null;
+        String incHazardName = str(incident.get("hazard_name"));
+        for (Map<String, Object> c : candidates) {
+            Long whHazardId = c.get("hazard_id") instanceof Number n ? n.longValue() : null;
+            if (!hazardCompatible(whHazardId, str(c.get("hazard")), incHazardId, incHazardName)) {
+                continue;
+            }
+            f.put("covered", true);
+            f.put("warning_code", c.get("warning_code"));
+            f.put("warning_level", c.get("warning_level"));
+            f.put("hazard", c.get("hazard"));
+            Object lead = c.get("lead_hours");
+            f.put("lead_hours", lead instanceof Number n && n.longValue() > 0 ? n.longValue() : null);
+            f.put("validity_start", c.get("validity_start"));
+            break;
+        }
+        return f;
+    }
+
+    /** Exact hazard match or same related-hazard family; a missing hazard on either side never blocks. */
+    private static boolean hazardCompatible(Long warnHazardId, String warnHazard, Long incHazardId, String incHazard) {
+        if (warnHazardId == null || incHazardId == null) {
+            return true; // nothing to contradict — falls back to area+time, like the aggregate report
+        }
+        if (warnHazardId.equals(incHazardId)) {
+            return true;
+        }
+        String wf = hazardFamily(warnHazard);
+        return wf != null && wf.equals(hazardFamily(incHazard));
+    }
+
+    /** Small related-hazard family map (kin to AnticipatoryPlanController.matchingPlans' keyword logic). */
+    private static String hazardFamily(String name) {
+        String h = name == null ? "" : name.toLowerCase(Locale.ROOT);
+        if (h.contains("flood") || h.contains("rain") || h.contains("cyclone") || h.contains("storm")
+                || h.contains("wind") || h.contains("lightning") || h.contains("landslide")) {
+            return "storm_water"; // rainfall-driven family: rainfall→floods/landslides, cyclone→storm winds
+        }
+        if (h.contains("drought") || h.contains("heat")) {
+            return "drought_heat";
+        }
+        if (h.contains("fire")) {
+            return "fire";
+        }
+        if (h.contains("epidemic") || h.contains("disease") || h.contains("outbreak") || h.contains("cholera")) {
+            return "health";
+        }
+        if (h.contains("earthquake") || h.contains("tsunami") || h.contains("volcan")) {
+            return "geo";
+        }
+        return null; // unknown → exact-id match only
     }
 
     // ─── Situation updates ───

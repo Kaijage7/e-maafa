@@ -11,6 +11,8 @@ interface EventRow {
   startedOn: string; endedOn: string | null; primaryRegion: string; scope: string;
   status: 'Open' | 'Validated' | 'Archived'; recordedBy: string;
   deaths: number; affected: number; lossTzs: number; linkCount: number;
+  /** F04: recorded gov_response_tzs + computed linked-incident costs (dispatches + cash commitments). */
+  costUsedTzs: number;
 }
 interface Hazard { id: number; name: string; }
 
@@ -75,7 +77,12 @@ const STATUS_BADGE: Record<string, string> = {
                   <td style="font-size:0.82rem;">{{ e.primaryRegion || '—' }}</td>
                   <td style="text-align:right;font-weight:700;color:#dc2626;">{{ e.deaths | number }}</td>
                   <td style="text-align:right;">{{ e.affected | number }}</td>
-                  <td style="text-align:right;">{{ e.lossTzs | number:'1.0-0' }}</td>
+                  <td style="text-align:right;">{{ e.lossTzs | number:'1.0-0' }}
+                    @if (e.costUsedTzs > 0) {
+                      <div class="r-subtitle" style="white-space:nowrap;" title="Response cost used — recorded + computed from linked incidents">
+                        cost used {{ e.costUsedTzs | number:'1.0-0' }}</div>
+                    }
+                  </td>
                   <td><span class="r-badge" style="background:rgba(13,110,253,0.1);color:#0d6efd;">{{ e.linkCount }}</span></td>
                   <td><span class="r-badge {{ statusBadge(e.status) }}">{{ e.status }}</span></td>
                   <td><button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.8rem;" (click)="open(e.id)">Open card</button></td>
@@ -131,6 +138,15 @@ const STATUS_BADGE: Record<string, string> = {
             <input class="form-control" placeholder="e.g. EOCC sitreps 1–4; RAS Pwani assessment"
                    [value]="fSource()" (input)="fSource.set($any($event.target).value)">
           </div>
+          <div>
+            <label class="form-label">Government response cost (TZS) — recorded</label>
+            <input type="number" min="0" class="form-control" placeholder="e.g. 5000000"
+                   [value]="fGovResponse()" (input)="fGovResponse.set($any($event.target).value)">
+            <p style="font-size:0.75rem;color:var(--text-light);margin:0.25rem 0 0;">
+              Optional manual figure. Costs from linked incidents (resource dispatches, Budget &amp; Finance
+              commitments) are computed automatically on the card.
+            </p>
+          </div>
           <button class="btn-add" [disabled]="!fName().trim() || !fStart() || saving()" (click)="save()">
             <i class="fas" [class.fa-save]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i>
             {{ saving() ? 'Saving…' : 'Register event card' }}
@@ -158,6 +174,7 @@ export class RepositoryEventsComponent {
   fHazard = signal(''); fYear = signal(''); fStatus = signal('');
   fName = signal(''); fHazardId = signal(''); fStart = signal(''); fEnd = signal('');
   fRegion = signal(''); fScope = signal('District'); fDesc = signal(''); fSource = signal('');
+  fGovResponse = signal('');
 
   currentYear = new Date().getFullYear();
   years = Array.from({ length: 30 }, (_, k) => this.currentYear - k);
@@ -206,6 +223,7 @@ export class RepositoryEventsComponent {
       name: this.fName(), hazardId: this.fHazardId() || null, startedOn: this.fStart(),
       endedOn: this.fEnd() || null, primaryRegion: this.fRegion(), scope: this.fScope(),
       description: this.fDesc(), dataSource: this.fSource(),
+      govResponseTzs: this.fGovResponse() || null,
     }).subscribe({
       next: r => { this.saving.set(false); this.drawerOpen.set(false); this.open(r.id); },
       error: () => this.saving.set(false),

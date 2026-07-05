@@ -281,16 +281,49 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
               </div>
             </div>
           </div>
-          <!-- Response investment -->
-          <div class="panel-body" style="border-top:1px solid var(--border);display:flex;align-items:center;gap:1.4rem;flex-wrap:wrap;">
-            <div>
-              <div class="f-label">DMD response investment (linked dispatches)</div>
-              <div style="font-size:1.3rem;font-weight:800;color:#059669;">TZS {{ investment()['valueTzs'] | number:'1.0-0' }}</div>
-            </div>
-            <div style="font-size:0.8rem;color:var(--text-mid);">
-              {{ investment()['allocations'] }} allocations · {{ investment()['resourceTypes'] }} resource types —
-              computed from the resource allocations of the linked incidents.
-            </div>
+          <!-- Cost used — the three cost mechanisms + total, honestly labelled (audit F04) -->
+          <div class="panel-body" style="border-top:1px solid var(--border);">
+            <div class="f-label" style="margin-bottom:0.55rem;">Cost used — government response investment</div>
+            <table style="width:100%;max-width:760px;border-collapse:collapse;">
+              <tbody>
+                <tr>
+                  <td class="cost-line">DMD response investment (linked dispatches)
+                    <div class="cost-note">computed from linked incidents — {{ investment()['allocations'] || 0 }} allocations · {{ investment()['resourceTypes'] || 0 }} resource types × unit cost</div></td>
+                  <td class="cost-amt" style="color:#059669;">TZS {{ investment()['valueTzs'] || 0 | number:'1.0-0' }}</td>
+                </tr>
+                <tr>
+                  <td class="cost-line">Cash commitments (Budget &amp; Finance)
+                    <div class="cost-note">computed from linked incidents — {{ costUsed()['budgetCommitments'] || 0 }} commitment(s) approved/committed/disbursed · TZS {{ costUsed()['budgetDisbursedTzs'] || 0 | number:'1.0-0' }} disbursed</div></td>
+                  <td class="cost-amt" style="color:#0d6efd;">TZS {{ costUsed()['budgetCommittedTzs'] || 0 | number:'1.0-0' }}</td>
+                </tr>
+                <tr>
+                  <td class="cost-line">Government response cost — recorded
+                    <div class="cost-note">manual figure entered on this card; linked-incident costs above are computed automatically</div>
+                    @if (e.status === 'Open') {
+                      @if (govEdit()) {
+                        <div style="display:flex;gap:0.4rem;align-items:center;margin-top:0.35rem;">
+                          <input type="number" min="0" class="form-control" style="max-width:200px;font-size:0.8rem;"
+                                 placeholder="TZS" [value]="govValue()" (input)="govValue.set($any($event.target).value)">
+                          <button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.8rem;" (click)="saveGov()">Save</button>
+                          <button type="button" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:0.3rem 0.7rem;font-size:0.8rem;cursor:pointer;" (click)="govEdit.set(false)">Cancel</button>
+                        </div>
+                      } @else {
+                        <button type="button" style="border:1px solid var(--border);background:#fff;border-radius:8px;padding:0.2rem 0.6rem;font-size:0.75rem;cursor:pointer;margin-top:0.3rem;color:var(--text-mid);"
+                                (click)="startGovEdit()">
+                          <i class="fas fa-pen" style="font-size:0.65rem;"></i> Edit recorded cost
+                        </button>
+                      }
+                    }
+                  </td>
+                  <td class="cost-amt" style="color:#7c3aed;">TZS {{ costUsed()['recordedGovResponseTzs'] || 0 | number:'1.0-0' }}</td>
+                </tr>
+                <tr style="border-top:1px solid var(--border);">
+                  <td class="cost-line" style="font-weight:800;color:var(--text-dark);">Total response cost
+                    <div class="cost-note">computed (dispatches + cash) + recorded; TZS 0 lines mean no linked ledger entries or nothing recorded yet</div></td>
+                  <td class="cost-amt" style="font-size:1.15rem;color:var(--text-dark);">TZS {{ costUsed()['totalTzs'] || 0 | number:'1.0-0' }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </dmis-panel>
       </div>
@@ -300,6 +333,9 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
     .f-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); }
     .f-value { font-size: 0.86rem; font-weight: 700; color: var(--text-dark); }
     .btn-icon { border: none; background: transparent; cursor: pointer; padding: 4px 7px; color: var(--text-mid); }
+    .cost-line { padding: 0.4rem 0; font-size: 0.84rem; color: var(--text-mid); font-weight: 600; }
+    .cost-note { font-size: 0.75rem; color: var(--text-light); font-weight: 400; }
+    .cost-amt { padding: 0.4rem 0; text-align: right; font-weight: 800; font-size: 0.95rem; white-space: nowrap; vertical-align: top; }
   `],
 })
 export class RepositoryEventDetailComponent {
@@ -310,6 +346,10 @@ export class RepositoryEventDetailComponent {
   links = signal<LinkRow[]>([]);
   totals = signal<Record<string, number>>({});
   investment = signal<Record<string, number>>({});
+  /** F04: three cost mechanisms + total (inKindTzs, budgetCommittedTzs, recordedGovResponseTzs, totalTzs …). */
+  costUsed = signal<Record<string, number>>({});
+  govEdit = signal(false);
+  govValue = signal('');
   suggestions = signal<Record<string, Suggestion[]>>({});
   form = signal<Record<string, any>>({});
   saving = signal(false);
@@ -353,6 +393,7 @@ export class RepositoryEventDetailComponent {
       this.links.set(r.links);
       this.totals.set(r.totals);
       this.investment.set(r.responseInvestment);
+      this.costUsed.set(r.costUsed ?? {});
     });
     this.http.get<Record<string, Suggestion[]>>(`/api/v1/repository/events/${this.id}/link-suggestions`)
       .subscribe(s => this.suggestions.set(s));
@@ -422,6 +463,20 @@ export class RepositoryEventDetailComponent {
 
   unlink(linkId: number): void {
     this.http.delete(`/api/v1/repository/events/${this.id}/links/${linkId}`).subscribe(() => this.reload());
+  }
+
+  /** F04: inline editor for the manually recorded government response cost (Open cards only). */
+  startGovEdit(): void {
+    this.govValue.set(String(this.costUsed()['recordedGovResponseTzs'] ?? 0));
+    this.govEdit.set(true);
+  }
+
+  saveGov(): void {
+    this.http.put(`/api/v1/repository/events/${this.id}`, { govResponseTzs: this.govValue() })
+      .subscribe({
+        next: () => { this.govEdit.set(false); this.reload(); },
+        error: err => alert(err?.error?.message ?? 'Could not save the recorded cost'),
+      });
   }
 
   transition(action: string): void {

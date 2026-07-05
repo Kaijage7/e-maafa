@@ -54,6 +54,17 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
         @if (d.incident.rollback_count > 0) {
           <span class="r-badge badge-rejected" style="font-size:0.8rem;padding:0.3rem 0.7rem;" title="Returned for corrections{{ d.incident.last_rollback_by_role ? ' by ' + d.incident.last_rollback_by_role : '' }}{{ d.incident.last_rollback_at_display ? ' on ' + d.incident.last_rollback_at_display : '' }}">↩ Returned · {{ d.incident.rollback_count }} rollback(s)</span>
         }
+        @if (d.forecast; as f) {
+          @if (f.covered) {
+            <span class="r-badge" style="font-size:0.8rem;padding:0.3rem 0.7rem;background:#e7f5ec;color:#1e7e34;border:1px solid #b7dfc4;"
+              title="This incident was reported inside a warned area during the warning's validity window (48-hour tail){{ f.warning_level ? ' — ' + f.warning_level : '' }}.">
+              <i class="fas fa-bullhorn"></i> Forecast: WARNED — {{ f.warning_code }}{{ f.hazard ? ' (' + f.hazard + ')' : '' }}{{ f.lead_hours ? ', issued ' + f.lead_hours + 'h ahead' : '' }}</span>
+          } @else {
+            <span class="r-badge" style="font-size:0.8rem;padding:0.3rem 0.7rem;background:#f1f3f5;color:#495057;border:1px solid #dee2e6;"
+              title="No approved/published early warning of a compatible hazard covered this district/region when the incident was reported.">
+              <i class="fas fa-bullhorn"></i> Forecast: Out of forecast — no active warning covered this area</span>
+          }
+        }
       </div>
 
       <div class="stats-row">

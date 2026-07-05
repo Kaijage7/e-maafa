@@ -16,13 +16,13 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F03 [GAP s4] Per-incident 'was this forecast?' answer — the user's core ask — has no surface on the incident record
 - Domain: EW ↔ incident linkage
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 2) — computed `forecast` block on GET /v1/response/incidents/{id} (area district-first/region-fallback + validity+48h tail + hazard-compatibility guard) + green WARNED / grey Out-of-forecast badge on incident-show; VERIFIED live + independently re-checked (CONFIRMED): 6 incidents all carry the 6-key block; incident 82 in SQL-proven area+time overlap with EW-2026-00050 returns covered:false (hazard guard fired, drought_heat vs storm_water); controlled Floods incident in warned district 1964 returned covered:true EW-2026-00050 / Major Warning / lead 33h (= exact validity_start→reported_at); same-region district 1967 NOT claimed; district-less incident still 200s; both badge variants screenshotted on :4200 with zero console errors; test rows deleted.**
 - Evidence: No FK columns exist in either direction: psql information_schema shows incidents has no warning/forecast column and early_warnings has no incident column. incident-show.component.ts contains no warning linkage UI (only Bootstrap 'btn-outline-warning'/Swal icons match a grep for 'warning'). The forecast/occurrence classification lives ONLY in the aggregate report; an officer opening incident #82 cannot see it fell inside warned district Bahi during EW-2026-00050's window.
 - Fix hint: Add a computed block to IncidentController.show (same EXISTS: warning_hazards row where area matches and reported_at within validity+tail) returning {covered:boolean, warning_code, warning_level, lead_hours}; render a 'Forecast: WARNED (EW-2026-00050, 33h lead) / UNWARNED' badge in incident-show and the triage queue. Optionally persist incidents.warning_id (nullable FK) set at triage time for audi
 
 ## F04 [GAP s4] COST-USED per disaster: three disconnected mechanisms, repository shows TZS 0 for all 75 events
 - Domain: Disaster Repository + Reports & Analytics
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 2) — list() returns per-event `costUsedTzs` (= recorded gov_response_tzs + in-kind allocations×unit_cost over linked incidents/allocations + budget_commitments cash over linked incidents), show() returns 7-key `costUsed` breakdown block, create/update accept optional govResponseTzs (blank=unchanged, non-numeric→400 not 500), detail card renders the three mechanisms honestly labelled; VERIFIED live + independently re-checked (CONFIRMED): create 1,234,567→update 7,654,321→blank-leaves-unchanged all held; linking incident 2 made budgetCommittedTzs equal the independent SQL sum; re-checker also proved the in-kind arm non-zero (109,715,000 over 15 allocations == SQL); CSV export shows the real figure; UI list column + cost card screenshotted; test event+links removed.**
 - Evidence: (1) In-kind: responseInvestment = allocated_resources×unit_cost for LINKED incidents (DisasterEventService.java:493-504), rendered on the card (repository-event-detail.component.ts:284-291 'DMD response investment') — but zero incident links exist, so LIVE GET /repository/events/{id} returned {valueTzs:0, allocations:0} and the Sendai 'DMD response delivered' insight (SendaiAnalyticsService.java:223-238) never fires (absent from live insights list). (2) Cash: Budget&Finance V99-V101 works E2E — LIVE GET /v1/finance/budgets/1 shows commitment of 5,000,000 TZS against incident #2 'Market fire — 
 - Fix hint: Surface cost on the event card from both ledgers: sum budget_commitments (via linked incidents) + allocations×unit_cost; add gov_response_tzs to create/update/show or drop it from the CSV — today the exported column silently reports 0 government response for every disaster.
 
@@ -58,13 +58,13 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F10 [PARTIAL s4] EW report counts one warning once PER DISTRICT ROW — headline stats inflated ~6x
 - Domain: EW ↔ incident linkage
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 2) — rows aggregated to ONE per warning×region (min/max validity, district list + district_count) BEFORE classification; headline counts per DISTINCT warning_id; additive summary keys same_area_different_hazard + warned_area_windows; VERIFIED live + independently re-checked (CONFIRMED): warnings_issued 53→8 == SQL count(distinct warning_id) for the default window; EW-2026-00050 appears exactly once for Dodoma with its 7 districts listed and min/max == SQL; rows == warned_area_windows == distinct (warning,region) pairs; summary identity warned+no_incident+different_hazard == issued holds; RAS(Dodoma) scoped view internally consistent; UI classbar (now 5 buckets) matches API; no 500s across date ranges incl. zero-warning ranges.**
 - Evidence: EwManagementController.java:68-79 iterates raw warning_hazards rows (one per warning×hazard×district). DB: 53 rows but only 8 distinct warning_codes (psql: select count(distinct w.warning_code)... = 8). Live output shows EW-2026-00050 'Heavy rainfall / Dodoma' listed 7 times (district rows 1964,1965,1966,101,1968,1969,1970 share region_id=1), each matching the same incident 82 → warned_incident=9 is really 3 distinct warning-region hits. warnings_issued=53 vs 8 real warnings.
 - Fix hint: Aggregate to one row per (warning_id, region_id) — or per warning_code — before classification: group by w.id, wh.region_id with min(validity_start)/max(validity_end), and count distinct warnings in the summary.
 
 ## F11 [PARTIAL s4] Hazard type NOT used in warned→incident matching (Javadoc claims it is) — cross-hazard false positives
 - Domain: EW ↔ incident linkage
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 2) — hazard-compatibility predicate (exact hazard_id OR related family map: flood-storm / drought-agri / disease / fire / geophysical; a side with no hazard info is never demoted) applied in the EW report; incompatible area+time matches move to per-row `different_hazard_incidents` + summary `same_area_different_hazard` so the spatial coincidence stays visible without inflating true positives; VERIFIED live + independently re-checked (CONFIRMED): Fire/Drought incident 82 now in EW-2026-00050's different_hazard bucket not its hits; Drought EW-2026-00038 no longer claims Windstorm/Cholera; NULL-hazard incident kept as a hit (never blocks); the surviving warned_incident=1 is a genuine compatible match; warned_incident dropped 9→1 on the seeded corpus.**
 - Evidence: EwManagementController.java:27-28 claims hazard is 'used to refine when both sides carry hazard_id', but the incident query (lines 85-96) filters only time+region — no hazard predicate exists. Live proof: 'Heavy rainfall' warning EW-2026-00050 matched incident 82 'Fire' (hazard_id=4, both sides carry hazard ids) → counted as warned→incident true positive with 33h lead; 'Drought' warning EW-2026-00038 matched 'Windstorm roof damage' + 'Cholera outbreak'. 15 of 22 non-simulation incidents carry hazard_id, so refinement is feasible.
 - Fix hint: Add a hazard-compatibility predicate (wh.hazard_id = i.hazard_id, or a keyword-family map like AnticipatoryPlanController.matchingPlans' cyclone→floods logic at AnticipatoryPlanController.java:253-273) with a 'related-hazard' fallback bucket so rainfall→flood still counts.
 
@@ -76,7 +76,7 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F13 [PARTIAL s4] Scanner entity taskings round trip (V131) — entity-taskings.component.ts + ScannerController tasking endpoints
 - Domain: assignments/tasks/provisions + information & knowledge
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 2) — `<dmis-entity-taskings agency="mow">` embedded in mow-flood.component.ts (same pattern as TMA's ew-alert-map embed); all 7 taskable entities now render their inbox (5 via shared agency-event-console, TMA + MoW via direct embeds); VERIFIED live + independently re-checked (CONFIRMED): as mow@pmo.go.tz the awaiting flood tasking is visible at /m/preparedness/early-warnings/mow (screenshot, content matches API), Acknowledge round-trip worked in the UI and was precisely reverted; TMA console regression clean; consolePath string equals the route visited. Follow-up logged as F92: GET /entity-taskings is not agency-scoped for READS (pre-existing, mutations are guarded by assertOwnAgency).**
 - Evidence: Round trip is real code and exercised: awaiting→acknowledge→respond→EOCC accept/return (ScannerController.java:306-385, disaster-scanner.component.ts:86-87 Accept/Return wired, agency lockdown assertOwnAgency:70-77). DB: 12 taskings (10 awaiting/1 responded[gst]/1 returned[tma with review_note]); 1 row carries new urgency/source/instruction picker fields. Live GET ?agency=tma returns full context. BUT the MoW console never renders the inbox: route /m/preparedness/early-warnings/mow loads MowFloodComponent (app.routes.ts:41) which does NOT import EntityTaskingsComponent (grep confirms; only age
 - Fix hint: Embed <dmis-entity-taskings agency="mow"> in mow-flood.component.ts (same pattern as ew-alert-map.component.ts:85 for tma).
 
@@ -94,7 +94,7 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F16 [DEAD s3] gov_response_tzs column: designed cost field with no fill path, exported as always-0
 - Domain: Disaster Repository + Reports & Analytics
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 2, together with F04) — govResponseTzs wired into create/update/show and the event form (inline edit while Open, read-only after validation), CSV export now carries real values; VERIFIED live + independently re-checked (CONFIRMED): recorded value round-trips create→show→list→CSV; blank update leaves the column unchanged (coalesce semantics); non-numeric input → 400 with readable message (ProblemDetail + message, frontend-compatible), not a SQL 500.**
 - Evidence: V61__disaster_effects_official_report_fields.sql:20-23 creates it with a comment 'relief disbursed (OWM-SBUU + region/council)'; grep across backend+frontend finds only exportCsv (DisasterEventService.java:120,131) and the seeder insert (OfficialDisasterReportSeeder.java:77) — no API request field, no UI form field, show() omits it. LIVE: all rows 0; CSV export shows '0.00' for every event including the validated official-report cards.
 - Fix hint: Either wire it into the event form/API and show(), or remove it from the CSV header until fillable.
 
@@ -544,4 +544,10 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 - Status: **OPEN**
 - Evidence: app.routes.ts defines both; no routerLink/navigate/modules.ts nav entry composes them (route-vs-nav cross-check: not in modules.ts paths; Communication Center embeds them instead - communication-center.component.ts:119-121 '<page-sms-management [embedded]=true>'). Components themselves are alive and working.
 - Fix hint: Remove the leftover standalone routes or add redirects to communication-center.
+
+## F92 [PARTIAL s3] Scanner entity-taskings READ endpoint not agency-scoped — any authenticated agency user can read other agencies' taskings
+- Domain: Dissemination flows / least privilege (found by the Wave-2 F13 adversarial re-check, 2026-07-06)
+- Status: **OPEN**
+- Evidence: assertOwnAgency (ScannerController.java:70-77) guards only the MUTATIONS (acknowledge/respond/review); GET /v1/ew/scanner/entity-taskings?agency=X returns any agency's taskings to any authenticated agency user — live-proven: mow@pmo.go.tz successfully read agency=tma taskings (expected 403, got 200). Pre-existing behavior, NOT introduced or worsened by F13 (ScannerController has no working-tree changes); consistent with the fine-grained-RBAC follow-on that per-action gates are still TODO.
+- Fix hint: Apply the same assertOwnAgency check (with an EOCC/national bypass) to the GET handler, mirroring the mutation guards.
 

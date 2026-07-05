@@ -6,12 +6,15 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 
-interface MatchedIncident { id: number; title: string; reported_at: string; severity_level: string; status: string; region_name: string; }
+interface MatchedIncident { id: number; title: string; reported_at: string; severity_level: string; status: string; region_name: string; hazard?: string; }
 interface PrepActivity { kind: string; name: string; status: string; starts: string; ends: string; area: string; }
 interface WarningRow {
   id: number; warning_code: string; hazard: string; area: string; warning_level: string;
   validity_start: string; validity_end: string; ew_class: string; incident_count: number;
   incidents: MatchedIncident[]; preparedness: PrepActivity[]; lead_time_hours?: number;
+  // one row per warning × warned region (districts aggregated server-side):
+  warning_id?: number; districts?: string; district_count?: number;
+  different_hazard_incidents?: MatchedIncident[]; // same area+window, but not the warned hazard
 }
 interface UnwarnedRow { id: number; title: string; hazard: string; severity_level: string; status: string; reported_at: string; region_name: string; }
 interface EwAnalysis {
@@ -25,29 +28,33 @@ interface EwAnalysis {
  * Early Warning Management — links Early Warning THROUGHOUT (the Reports & Analytics tab the user asked
  * for). Each issued warning is correlated with the incidents in its warned area during its validity
  * window and the preparedness activities active then, classifying every case:
- *   warned→incident · warning→no-incident · unwarned-incident · preparedness-during-warning,
+ *   warned→incident · warning→no-incident · unwarned-incident · preparedness-during-warning ·
+ *   same-area-different-hazard (a spatial coincidence, kept visible but not counted as a hit),
  * plus warning lead time and the DRR-in-the-EW-context metric (% of archived disasters preceded by a
- * warning). Backend: GET /v1/reports/early-warnings (EwManagementController).
+ * warning). One table row per warning × warned region (districts aggregated); headline counts are per
+ * DISTINCT warning. Backend: GET /v1/reports/early-warnings (EwManagementController).
  */
 @Component({
   selector: 'page-ew-management',
   standalone: true,
   imports: [FormsModule, DatePipe, DecimalPipe, NgClass, PageHeaderComponent, PanelComponent, StatCardComponent],
   styles: [`
-    .ew-classbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 4px 0 6px; }
+    .ew-classbar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 4px 0 6px; }
     @media (max-width: 900px) { .ew-classbar { grid-template-columns: repeat(2, 1fr); } }
     .ew-q { border-radius: 12px; padding: 12px 14px; color: #fff; }
     .ew-q b { display: block; font-size: 1.7rem; line-height: 1; } .ew-q span { font-size: 0.75rem; font-weight: 700; opacity: 0.95; }
     .ew-q small { display: block; font-size: 0.75rem; opacity: 0.85; margin-top: 3px; }
     .q-hit { background: #059669; } .q-false { background: #f59e0b; } .q-gap { background: #dc2626; } .q-prep { background: #2563eb; }
+    .q-diff { background: #64748b; }
     .r-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
     .r-table th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #64748b; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     .r-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
     .pill { font-size: 0.75rem; font-weight: 800; border-radius: 7px; padding: 2px 8px; color: #fff; white-space: nowrap; }
-    .p-hit { background: #059669; } .p-false { background: #f59e0b; } .p-gap { background: #dc2626; }
+    .p-hit { background: #059669; } .p-false { background: #f59e0b; } .p-gap { background: #dc2626; } .p-diff { background: #64748b; }
     .lvl { font-size: 0.75rem; font-weight: 800; border-radius: 6px; padding: 1px 7px; }
     .l-major { background: #fee2e2; color: #b91c1c; } .l-warning { background: #ffedd5; color: #c2410c; } .l-advisory { background: #fef9c3; color: #854d0e; }
     .inc-line { font-size: 0.8rem; color: #334155; padding: 2px 0; } .inc-line .t { color: #94a3b8; }
+    .inc-line.diff { color: #64748b; }
     .prep-chip { display: inline-block; font-size: 0.75rem; background: #dbeafe; color: #1e40af; border-radius: 6px; padding: 1px 7px; margin: 2px 3px 0 0; }
     .muted { color: #94a3b8; font-size: 0.8rem; }
     .drr-card { display: flex; align-items: center; gap: 16px; }
@@ -90,28 +97,35 @@ interface EwAnalysis {
       <div class="ew-q q-false"><b>{{ s()['warning_no_incident'] ?? 0 }}</b><span>WARNING → NO INCIDENT</span><small>warning passed, no incident (good forecast / false alarm)</small></div>
       <div class="ew-q q-gap"><b>{{ s()['unwarned_incident'] ?? 0 }}</b><span>UNWARNED INCIDENT</span><small>hazard struck with no covering warning (the gap)</small></div>
       <div class="ew-q q-prep"><b>{{ s()['preparedness_during_warning'] ?? 0 }}</b><span>PREPAREDNESS IN WINDOW</span><small>anticipatory action active during a warning</small></div>
+      <div class="ew-q q-diff"><b>{{ s()['same_area_different_hazard'] ?? 0 }}</b><span>DIFFERENT HAZARD IN AREA</span><small>an incident hit the warned area, but not the warned hazard — not counted as a hit</small></div>
     </div>
 
     <div class="panel-row">
-      <dmis-panel title="Issued warnings — linked to incidents & preparedness" icon="fa-link" [badge]="warnings().length + ' warnings'">
+      <dmis-panel title="Issued warnings — linked to incidents & preparedness" icon="fa-link" [badge]="(s()['warnings_issued'] ?? 0) + ' warnings · ' + warnings().length + ' warned areas'">
         <div class="panel-body" style="padding:0;">
           <table class="r-table">
             <thead><tr><th>Hazard / Area</th><th>Level</th><th>Validity window</th><th>Outcome</th><th>Incidents in window (day & time)</th><th>Preparedness</th></tr></thead>
             <tbody>
               @for (w of warnings(); track w.id) {
                 <tr>
-                  <td><b>{{ w.hazard || 'Hazard' }}</b><br><span class="muted">{{ w.area || '—' }}@if (w.warning_code) { <span> · {{ w.warning_code }}</span> }</span></td>
+                  <td><b>{{ w.hazard || 'Hazard' }}</b><br><span class="muted">{{ w.area || '—' }}@if (w.warning_code) { <span> · {{ w.warning_code }}</span> }</span>
+                    @if (w.districts) { <br><span class="muted">{{ w.district_count }} district{{ w.district_count === 1 ? '' : 's' }}: {{ w.districts }}</span> }
+                  </td>
                   <td><span class="lvl" [ngClass]="lvlClass(w.warning_level)">{{ w.warning_level }}</span></td>
                   <td style="white-space:nowrap">{{ w.validity_start | date:'MMM d' }} → {{ w.validity_end | date:'MMM d' }}</td>
                   <td>
                     @if (w.ew_class === 'warned_incident') { <span class="pill p-hit">WARNED → INCIDENT</span><br>@if (w.lead_time_hours != null) { <small class="muted">lead {{ w.lead_time_hours }}h</small> } }
+                    @else if (w.ew_class === 'same_area_different_hazard') { <span class="pill p-diff">DIFFERENT HAZARD IN AREA</span> }
                     @else { <span class="pill p-false">NO INCIDENT</span> }
                   </td>
                   <td>
                     @for (i of w.incidents; track i.id) {
                       <div class="inc-line">• {{ i.title }} <span class="t">— {{ i.reported_at | date:'MMM d, HH:mm' }} · {{ i.severity_level }}</span></div>
                     }
-                    @if (!w.incidents.length) { <span class="muted">none</span> }
+                    @for (i of (w.different_hazard_incidents || []); track i.id) {
+                      <div class="inc-line diff">• {{ i.title }} <span class="t">— {{ i.reported_at | date:'MMM d, HH:mm' }} · {{ i.hazard || 'unclassified' }} — different hazard, not counted</span></div>
+                    }
+                    @if (!w.incidents.length && !(w.different_hazard_incidents || []).length) { <span class="muted">none</span> }
                   </td>
                   <td>
                     @for (p of w.preparedness; track $index) { <span class="prep-chip" title="{{ p.kind }} · {{ p.status }}">{{ p.name || p.kind }}</span> }
