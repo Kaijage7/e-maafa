@@ -62,7 +62,7 @@ public class IncidentController {
 
     public IncidentController(JdbcTemplate jdbc, IncidentWorkflowService workflow, ObjectMapper objectMapper,
                               JurisdictionScope jurisdiction, AreaGuard areaGuard, RegionCentroids centroids,
-                              @Value("${dmis.storage.public-root:./storage}") String publicRoot) {
+                              @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
         this.jdbc = jdbc;
         this.workflow = workflow;
         this.objectMapper = objectMapper;
@@ -521,6 +521,7 @@ public class IncidentController {
     @Transactional
     public Map<String, Object> pushMap(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
         workflow.findOr404(id);
+        areaGuard.assertOwn("public.incidents", id);   // publish is national-tier work; an area-scoped grant reaches only own-area incidents
         boolean on = body == null || body.get("value") == null || Boolean.parseBoolean(String.valueOf(body.get("value")));
         if (on) {
             Map<String, Object> loc = jdbc.queryForMap(
@@ -570,6 +571,7 @@ public class IncidentController {
     @Transactional
     public Map<String, Object> pushNews(@PathVariable long id) {
         workflow.findOr404(id);
+        areaGuard.assertOwn("public.incidents", id);   // publish is national-tier work; an area-scoped grant reaches only own-area incidents
         Map<String, Object> i = jdbc.queryForMap("select id, title, severity_level, region_name, district_name, "
                 + "description, portal_news_id, is_simulation from public.incidents where id = ?", id);
         if (Boolean.TRUE.equals(i.get("is_simulation"))) {
@@ -616,6 +618,7 @@ public class IncidentController {
     @Transactional
     public Map<String, Object> removeNews(@PathVariable long id) {
         workflow.findOr404(id);
+        areaGuard.assertOwn("public.incidents", id);   // publish is national-tier work; an area-scoped grant reaches only own-area incidents
         Map<String, Object> i = jdbc.queryForMap("select portal_news_id from public.incidents where id = ?", id);
         Long newsId = i.get("portal_news_id") == null ? null : ((Number) i.get("portal_news_id")).longValue();
         if (newsId != null) {

@@ -30,7 +30,9 @@ import tz.go.pmo.dmis.notification.NotificationService;
  *   region:    → waiting_rdmc (RDMC = Reg DC) → waiting_ras (RAS) │
  *   national:  → waiting_eocc (EOCC) → waiting_director (Director)│
  *                  → waiting_ps (PS / Permanent Secretary) → approved
- *   Every approver above the DDMC can roll back one level (rollback_count++, history logged).
+ *   Every approver above the DDMC can roll back to the nearest ACTIONABLE tier below — auto/unstaffed
+ *   tiers that settleStage() skipped on the way up are walked past again on the way down
+ *   (rollback_count++, history logged with the skipped tiers).
  *   The DDMC may instead closeAsRumor() → closed_rumor, informing the district leadership (DED + DAS).
  * </pre>
  *
@@ -94,6 +96,16 @@ public class IncidentWorkflowService {
             "waiting_eocc", "waiting_ras",
             "waiting_director", "waiting_eocc",
             "waiting_ps", "waiting_director");
+
+    /** Short tier names for system-generated history comments ("rolled back past unstaffed RDMC tier"). */
+    private static final Map<String, String> TIER_NAMES = Map.of(
+            "waiting_ddmc", "DDMC",
+            "waiting_ded", "DED",
+            "waiting_rdmc", "RDMC",
+            "waiting_ras", "RAS",
+            "waiting_eocc", "EOCC",
+            "waiting_director", "Director",
+            "waiting_ps", "PS");
 
     /**
      * Enforce that the actor owns the incident's current stage — the correct ROLE and, for district/region
@@ -211,7 +223,7 @@ public class IncidentWorkflowService {
         return settleStage(incidentId, incident, to);   // auto-advance past unstaffed/auto tiers, then notify
     }
 
-    /** Roll back one level; comments are mandatory in the source for every rollback. */
+    /** Roll back to the nearest actionable earlier tier; comments are mandatory in the source for every rollback. */
     @Transactional
     public String rollback(long incidentId, String comments, String byRole) {
         if (comments == null || comments.isBlank()) {
@@ -227,13 +239,36 @@ public class IncidentWorkflowService {
             throw new BusinessRuleException(
                     "This stage cannot be rolled back — the DDMC entry has no level below it (close it as a rumor instead).");
         }
+        // Reverse settle — the mirror image of settleStage(): walk DOWN past tiers nobody can action
+        // (automatic tiers, and skip-if-unstaffed tiers with no officer in the incident's own area) so the
+        // rollback lands on a desk that can actually re-review it. Without this, rolling back into a tier
+        // settleStage() auto-skipped on the way up (e.g. an unstaffed RDMC) strands the incident: submit()
+        // only accepts draft/rolled_back_* and no officer exists to approve at the landed stage.
+        List<String> skippedTiers = new java.util.ArrayList<>();
+        for (int hop = 0; hop < PREV_STAGE.size() + 1 && to != null; hop++) {   // bounded — never loops past the ladder length
+            String mode = approvalMode(to);
+            if ("manual".equals(mode) || stageStaffed(to, incident)) {
+                break;                       // a manual gate, or an officer really staffs it — land here
+            }
+            skippedTiers.add(("auto".equals(mode) ? "automatic " : "unstaffed ") + TIER_NAMES.getOrDefault(to, to));
+            to = PREV_STAGE.get(to);         // null once even the DDMC entry is skipped — nothing below it
+        }
+        if (to == null) {
+            throw new BusinessRuleException(
+                    "Cannot roll back: every earlier tier is unstaffed in this area — nothing to roll back to."
+                    + " Approve to escalate, or resolve it at this stage instead.");
+        }
         String role = byRole != null ? byRole : String.join(" / ", STAGE_ROLES.getOrDefault(from, java.util.Set.of()));
         jdbc.update("""
                 update public.incidents set workflow_status = ?, rollback_count = rollback_count + 1,
                     last_rollback_at = now(), last_rollback_by_role = ?, updated_at = now()
                 where id = ?
                 """, to, role, incidentId);
-        logHistory(incidentId, "rolled_back", from, to, comments);
+        String note = skippedTiers.isEmpty()
+                ? comments
+                : comments + " [system] rolled back past " + String.join(", ", skippedTiers)
+                  + (skippedTiers.size() == 1 ? " tier." : " tiers.");
+        logHistory(incidentId, "rolled_back", from, to, note);
         notifyStage(incident, to);
         return to;
     }
@@ -360,7 +395,8 @@ public class IncidentWorkflowService {
      * until it rests on a manual, staffed stage (or reaches approval). Then notify that resting stage's
      * owners. This is what lets a citizen report in a district/region with no DDMC/RDMC/DED still flow up
      * to the RAS (present in every region) and on to the national tiers, all governed by System Settings.
-     * Backward transitions (rollback) deliberately do NOT call this.
+     * Backward transitions do NOT call this — {@link #rollback} runs the mirror-image walk (skip the same
+     * auto/unstaffed tiers DOWNWARD) inline, so both directions always rest on an actionable stage.
      */
     String settleStage(long incidentId, Map<String, Object> incident, String landedStage) {
         String stage = landedStage;

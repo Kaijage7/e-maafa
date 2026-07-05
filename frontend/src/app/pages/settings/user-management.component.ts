@@ -8,7 +8,20 @@ import { StatCardComponent } from '../../shell/stat-card.component';
 interface User {
   id: number; name: string; email: string; roles: string; roleList: string[];
   emailVerifiedAt: string | null; createdAt: string;
+  regionId: number | null; regionName: string | null;
+  districtId: number | null; districtName: string | null;
+  agencyId: number | null; agencyName: string | null;
+  stakeholderId: number | null; stakeholderName: string | null;
 }
+
+interface Opt { id: number; name: string; acronym?: string; }
+interface Lookups { regions: Opt[]; agencies: Opt[]; stakeholders: Opt[]; }
+
+/** Which roles demand which attachment (mirrors JurisdictionScope REGION/DISTRICT tiers + agency/partner links). */
+const REGION_ROLES = ['RAS', 'RC', 'Reg DC', 'Regional Planning Officer', 'Regional Logistic Officer'];
+const DISTRICT_ROLES = ['DED', 'DAS', 'Dist DC', 'District Commissioner', 'District Planning Officer', 'District Logistic Officer'];
+const AGENCY_ROLES = ['MDA Focal'];
+const PARTNER_ROLES = ['Partners'];
 
 /**
  * System Settings → User Management. Administers accounts and their SRS roles — the access-control
@@ -43,7 +56,7 @@ interface User {
         </div>
         <div class="panel-body" style="padding:0;">
           <table class="r-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Verified</th><th>Created</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Area</th><th>Verified</th><th>Created</th><th></th></tr></thead>
             <tbody>
               @for (u of users(); track u.id) {
                 <tr class="data-row">
@@ -53,6 +66,7 @@ interface User {
                     @for (r of u.roleList; track r) { <span class="role-chip">{{ r }}</span> }
                     @if (!u.roleList.length) { <span style="color:var(--text-light);font-size:0.8rem;">no roles</span> }
                   </td>
+                  <td style="font-size:0.8rem;color:var(--text-mid);white-space:nowrap;">{{ areaLabel(u) }}</td>
                   <td>@if (u.emailVerifiedAt) { <i class="fas fa-circle-check" style="color:#059669;"></i> } @else { <i class="fas fa-circle" style="color:#cbd5e1;"></i> }</td>
                   <td style="font-size:0.8rem;color:var(--text-light);">{{ u.createdAt }}</td>
                   <td style="text-align:right;white-space:nowrap;">
@@ -67,7 +81,7 @@ interface User {
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="6" style="text-align:center;color:var(--text-light);padding:2rem;">No users match.</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem;">No users match.</td></tr>
               }
             </tbody>
           </table>
@@ -95,6 +109,52 @@ interface User {
               </label>
             }
           </div>
+          @if (needsRegion() || needsAgency() || needsPartner()) {
+            <div class="area-box">
+              <div class="area-note"><i class="fas fa-location-dot"></i>
+                @if (needsDistrict()) { District-level roles must be attached to their region and district. }
+                @else if (needsRegion()) { Regional roles must be attached to their region. }
+                @else if (needsAgency()) { MDA Focal accounts must be attached to their agency. }
+                @else { Partner accounts must be attached to their organisation. }
+              </div>
+              @if (needsRegion()) {
+                <div class="area-row">
+                  <div class="area-fg">
+                    <label class="f-lbl">Region <span class="text-danger">*</span></label>
+                    <select class="form-select" [(ngModel)]="m.regionId" (change)="onRegionChange()">
+                      <option [ngValue]="null">Select region…</option>
+                      @for (r of lookups().regions; track r.id) { <option [ngValue]="r.id">{{ r.name }}</option> }
+                    </select>
+                  </div>
+                  @if (needsDistrict()) {
+                    <div class="area-fg">
+                      <label class="f-lbl">District <span class="text-danger">*</span></label>
+                      <select class="form-select" [(ngModel)]="m.districtId" [disabled]="!m.regionId">
+                        <option [ngValue]="null">{{ m.regionId ? 'Select district…' : 'Select a region first' }}</option>
+                        @for (d of districts(); track d.id) { <option [ngValue]="d.id">{{ d.name }}</option> }
+                      </select>
+                    </div>
+                  }
+                </div>
+              }
+              @if (needsAgency()) {
+                <label class="f-lbl">Agency (MDA) <span class="text-danger">*</span></label>
+                <select class="form-select" [(ngModel)]="m.agencyId">
+                  <option [ngValue]="null">Select agency…</option>
+                  @for (a of lookups().agencies; track a.id) {
+                    <option [ngValue]="a.id">{{ a.name }}{{ a.acronym ? ' (' + a.acronym + ')' : '' }}</option>
+                  }
+                </select>
+              }
+              @if (needsPartner()) {
+                <label class="f-lbl">Partner organisation <span class="text-danger">*</span></label>
+                <select class="form-select" [(ngModel)]="m.stakeholderId">
+                  <option [ngValue]="null">Select organisation…</option>
+                  @for (s of lookups().stakeholders; track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+                </select>
+              }
+            </div>
+          }
           <div style="display:flex;justify-content:flex-end;gap:0.6rem;margin-top:1.1rem;">
             <button class="btn-cancel" (click)="formOpen.set(false)">Cancel</button>
             <button class="btn-add" [disabled]="!canSave() || saving()" (click)="save()">
@@ -111,6 +171,10 @@ interface User {
     .role-chip { font-size:0.78rem; font-weight:700; background:rgba(13,110,253,0.1); color:#0d6efd; border-radius:7px; padding:1px 8px; margin:0 4px 2px 0; display:inline-block; }
     .ctx-menu { position:absolute; top:100%; right:0; }
     .roles-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.3rem 0.8rem; margin-top:4px; }
+    .area-box { border:1px solid var(--border); border-radius:8px; background:#f8fafc; padding:0.6rem 0.8rem 0.8rem; margin-top:0.9rem; }
+    .area-note { font-size:0.78rem; font-weight:600; color:var(--text-mid); display:flex; align-items:center; gap:6px; }
+    .area-row { display:flex; gap:0.8rem; flex-wrap:wrap; }
+    .area-fg { flex:1; min-width:180px; }
     .role-opt { font-size:0.82rem; display:flex; align-items:center; gap:6px; cursor:pointer; }
     .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1500; display:flex; align-items:flex-start; justify-content:center; padding:6vh 1rem; }
     .modal-card { background:var(--card-bg,#fff); border-radius:12px; max-width:560px; width:100%; padding:1.4rem 1.5rem; }
@@ -124,6 +188,8 @@ export class UserManagementComponent {
   users = signal<User[]>([]);
   roles = signal<string[]>([]);
   stats = signal<Record<string, number>>({});
+  lookups = signal<Lookups>({ regions: [], agencies: [], stakeholders: [] });
+  districts = signal<Opt[]>([]);
   formOpen = signal(false);
   saving = signal(false);
   selectedRoles = signal<string[]>([]);
@@ -143,33 +209,90 @@ export class UserManagementComponent {
       this.users.set(r.users);
       this.roles.set(r.roles);
       this.stats.set(r.stats);
+      if (r.lookups) { this.lookups.set(r.lookups); }
     });
   }
 
+  // ── role → attachment requirements (mirrors the backend jurisdiction tiers) ──
+  needsDistrict(): boolean { return this.selectedRoles().some(r => DISTRICT_ROLES.includes(r)); }
+  needsRegion(): boolean { return this.needsDistrict() || this.selectedRoles().some(r => REGION_ROLES.includes(r)); }
+  needsAgency(): boolean { return this.selectedRoles().some(r => AGENCY_ROLES.includes(r)); }
+  needsPartner(): boolean { return this.selectedRoles().some(r => PARTNER_ROLES.includes(r)); }
+
+  areaLabel(u: User): string {
+    if (u.districtName) { return `${u.regionName ?? '?'} / ${u.districtName}`; }
+    if (u.regionName) { return u.regionName; }
+    if (u.agencyName) { return u.agencyName; }
+    if (u.stakeholderName) { return u.stakeholderName; }
+    return '—';
+  }
+
   canSave(): boolean {
-    return !!this.m.name?.trim() && !!this.m.email?.trim() && (!!this.editId || !!this.m.password?.trim());
+    const base = !!this.m.name?.trim() && !!this.m.email?.trim() && (!!this.editId || !!this.m.password?.trim());
+    // an area/agency/partner role without its attachment produces a broken account (sees nothing,
+    // cannot action its stage, bypasses partner self-identity) — block it at the source
+    return base
+      && (!this.needsRegion() || !!this.m.regionId)
+      && (!this.needsDistrict() || !!this.m.districtId)
+      && (!this.needsAgency() || !!this.m.agencyId)
+      && (!this.needsPartner() || !!this.m.stakeholderId);
   }
 
   toggleRole(r: string): void {
     this.selectedRoles.update(list => list.includes(r) ? list.filter(x => x !== r) : [...list, r]);
   }
 
+  onRegionChange(): void {
+    this.m.districtId = null;
+    this.loadDistricts(this.m.regionId);
+  }
+
+  private loadDistricts(regionId: number | null): void {
+    if (!regionId) { this.districts.set([]); return; }
+    this.http.get<Opt[]>(`/api/v1/portal/regions/${regionId}/districts`).subscribe({
+      next: ds => this.districts.set(ds ?? []),
+      error: () => this.districts.set([]),
+    });
+  }
+
   openCreate(): void {
-    this.editId = null; this.m = {}; this.selectedRoles.set([]);
+    this.editId = null;
+    this.m = { regionId: null, districtId: null, agencyId: null, stakeholderId: null };
+    this.selectedRoles.set([]);
+    this.districts.set([]);
     this.formOpen.set(true);
   }
 
   openEdit(u: User): void {
-    this.editId = u.id; this.m = { name: u.name, email: u.email };
+    this.editId = u.id;
+    this.m = {
+      name: u.name, email: u.email,
+      regionId: u.regionId ?? null, districtId: u.districtId ?? null,
+      agencyId: u.agencyId ?? null, stakeholderId: u.stakeholderId ?? null,
+    };
     this.selectedRoles.set([...u.roleList]);
+    this.districts.set([]);
+    this.loadDistricts(u.regionId ?? null);
     this.formOpen.set(true);
+  }
+
+  /** Attachment payload — only roles that demand a link keep their id; the rest are cleared explicitly. */
+  private areaPayload(): Record<string, number | null> {
+    return {
+      regionId: this.needsRegion() ? this.m.regionId ?? null : null,
+      districtId: this.needsDistrict() ? this.m.districtId ?? null : null,
+      agencyId: this.needsAgency() ? this.m.agencyId ?? null : null,
+      stakeholderId: this.needsPartner() ? this.m.stakeholderId ?? null : null,
+    };
   }
 
   save(): void {
     this.saving.set(true);
     if (this.editId) {
-      // update name/email, then replace roles
-      this.http.put(`${this.base}/${this.editId}`, { name: this.m.name, email: this.m.email }).subscribe({
+      // update name/email/area, then replace roles
+      this.http.put(`${this.base}/${this.editId}`, {
+        name: this.m.name, email: this.m.email, ...this.areaPayload(),
+      }).subscribe({
         next: () => this.http.put(`${this.base}/${this.editId}/roles`, { roles: this.selectedRoles() }).subscribe({
           next: () => { this.saving.set(false); this.formOpen.set(false); this.reload(); },
           error: err => { this.saving.set(false); alert(err?.error?.detail ?? 'Could not update roles.'); this.reload(); },
@@ -179,6 +302,7 @@ export class UserManagementComponent {
     } else {
       this.http.post(this.base, {
         name: this.m.name, email: this.m.email, password: this.m.password, roles: this.selectedRoles(),
+        ...this.areaPayload(),
       }).subscribe({
         next: () => { this.saving.set(false); this.formOpen.set(false); this.reload(); },
         error: err => { this.saving.set(false); alert(err?.error?.detail ?? 'Could not create the user.'); },

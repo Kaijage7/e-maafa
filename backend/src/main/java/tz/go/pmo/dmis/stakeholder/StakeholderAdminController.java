@@ -167,7 +167,11 @@ public class StakeholderAdminController {
     public Map<String, Object> linkUser(@PathVariable long id, @RequestBody Map<String, Object> req) {
         find(id);
         String email = req.get("email") == null ? null : String.valueOf(req.get("email")).trim();
+        // The link lives in TWO mirror columns: stakeholders.user_id (directory side) and
+        // users.stakeholder_id (what JurisdictionScope.currentStakeholderId() and every partner
+        // self-identity guard reads). Every branch below writes BOTH sides.
         if (email == null || email.isBlank()) {
+            jdbc.update("update public.users set stakeholder_id = null, updated_at = now() where stakeholder_id = ?", id);
             jdbc.update("update public.stakeholders set user_id = null, updated_at = now() where id = ?", id);
             return Map.of("id", id, "message", "Login unlinked from this partner.");
         }
@@ -177,9 +181,12 @@ public class StakeholderAdminController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No user account found with that email.");
         }
         Long uid = uids.get(0);
-        // A login belongs to one partner only: release it from any other stakeholder first.
+        // A login belongs to one partner only (and a partner to one login): release the login from any
+        // other stakeholder and this stakeholder from any other login, then set both mirror columns.
         jdbc.update("update public.stakeholders set user_id = null, updated_at = now() where user_id = ? and id <> ?", uid, id);
+        jdbc.update("update public.users set stakeholder_id = null, updated_at = now() where stakeholder_id = ? and id <> ?", id, uid);
         jdbc.update("update public.stakeholders set user_id = ?, updated_at = now() where id = ?", uid, id);
+        jdbc.update("update public.users set stakeholder_id = ?, updated_at = now() where id = ?", id, uid);
         return Map.of("id", id, "userId", uid, "message", "Login linked. The partner can now donate from Open Needs.");
     }
 

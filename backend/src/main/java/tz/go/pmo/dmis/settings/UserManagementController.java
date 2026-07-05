@@ -66,10 +66,20 @@ public class UserManagementController {
         List<Map<String, Object>> users = jdbc.queryForList(
                 "select u.id, u.name, u.email, u.email_verified_at as \"emailVerifiedAt\","
                         + " to_char(u.created_at,'DD Mon YYYY') as \"createdAt\","
+                        + " u.region_id as \"regionId\", reg.name as \"regionName\","
+                        + " u.district_id as \"districtId\", dis.name as \"districtName\","
+                        + " u.agency_id as \"agencyId\", coalesce(ag.acronym, ag.name) as \"agencyName\","
+                        + " u.stakeholder_id as \"stakeholderId\","
+                        + " coalesce(st.organization, st.name) as \"stakeholderName\","
                         + " coalesce((select string_agg(r.name, ', ' order by r.name)"
                         + "   from public.model_has_roles mhr join public.roles r on r.id = mhr.role_id"
                         + "   where mhr.model_id = u.id), '') as roles"
-                        + " from public.users u" + where + " order by u.name", args.toArray());
+                        + " from public.users u"
+                        + " left join public.regions reg on reg.id = u.region_id"
+                        + " left join public.districts dis on dis.id = u.district_id"
+                        + " left join public.agencies ag on ag.id = u.agency_id"
+                        + " left join public.stakeholders st on st.id = u.stakeholder_id"
+                        + where + " order by u.name", args.toArray());
         for (Map<String, Object> u : users) {
             String roles = String.valueOf(u.getOrDefault("roles", ""));
             u.put("roleList", roles.isEmpty() ? List.of() : List.of(roles.split(", ")));
@@ -77,6 +87,16 @@ public class UserManagementController {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("users", users);
         out.put("roles", jdbc.queryForList("select name from public.roles order by name", String.class));
+        // Attachment catalogues for the create/edit modal — served here (not from the content/stakeholder
+        // modules) so the User Management screen works for admins who hold only user_management.manage.
+        Map<String, Object> lookups = new LinkedHashMap<>();
+        lookups.put("regions", jdbc.queryForList("select id, name from public.regions order by name"));
+        lookups.put("agencies", jdbc.queryForList(
+                "select id, name, acronym from public.agencies where coalesce(is_active, true) = true order by name"));
+        lookups.put("stakeholders", jdbc.queryForList(
+                "select id, coalesce(organization, name) as name from public.stakeholders"
+                        + " where coalesce(is_active, true) = true order by 2"));
+        out.put("lookups", lookups);
         out.put("stats", jdbc.queryForMap(
                 "select count(*) as total,"
                         + " (select count(*) from public.model_has_roles mhr join public.roles r on r.id = mhr.role_id"
@@ -99,21 +119,25 @@ public class UserManagementController {
         if (dup != null && dup > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "A user with that email already exists");
         }
+        Area area = areaAttachment(req);
         // Self-heal the id sequence: the legacy seeder inserted users with explicit ids without
         // bumping users_id_seq, so a fresh insert can collide on the pkey. Advance it past max(id).
         jdbc.queryForObject("select setval('public.users_id_seq', greatest("
                 + "coalesce((select max(id) from public.users), 1), (select last_value from public.users_id_seq)))",
                 Long.class);
         Long id = jdbc.queryForObject(
-                "insert into public.users(name, email, password, email_verified_at, created_at, updated_at)"
-                        + " values (?,?,?, now(), now(), now()) returning id",
-                Long.class, name, email, encoder.encode(password));
+                "insert into public.users(name, email, password, email_verified_at,"
+                        + " region_id, district_id, agency_id, stakeholder_id, created_at, updated_at)"
+                        + " values (?,?,?, now(), ?,?,?,?, now(), now()) returning id",
+                Long.class, name, email, encoder.encode(password),
+                area.regionId(), area.districtId(), area.agencyId(), area.stakeholderId());
         setRoles(id, roleList(req.get("roles")));
+        syncStakeholderLink(id, area.stakeholderId());
         return Map.of("id", id, "message", "User created");
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Edit a user's name / email")
+    @Operation(summary = "Edit a user's name / email / area attachment")
     @Transactional
     @PreAuthorize(CAN_WRITE)
     public Map<String, Object> update(@PathVariable long id, @RequestBody Map<String, Object> req) {
@@ -128,6 +152,16 @@ public class UserManagementController {
         }
         jdbc.update("update public.users set name = coalesce(?,name), email = coalesce(lower(?),email),"
                 + " updated_at = now() where id = ?", str(req.get("name")), email, id);
+        // Area attachment is a REPLACE, but only when the caller sends any of the keys (a legacy
+        // name/email-only body leaves the attachment untouched; an explicit null clears it).
+        if (req.containsKey("regionId") || req.containsKey("districtId")
+                || req.containsKey("agencyId") || req.containsKey("stakeholderId")) {
+            Area area = areaAttachment(req);
+            jdbc.update("update public.users set region_id = ?, district_id = ?, agency_id = ?,"
+                            + " stakeholder_id = ?, updated_at = now() where id = ?",
+                    area.regionId(), area.districtId(), area.agencyId(), area.stakeholderId(), id);
+            syncStakeholderLink(id, area.stakeholderId());
+        }
         return Map.of("message", "User updated");
     }
 
@@ -155,13 +189,9 @@ public class UserManagementController {
         return Map.of("message", "Password reset");
     }
 
-    /** Minimum password policy: at least 8 characters including a letter and a digit. */
+    /** Admin-set passwords use the same shared policy as self-service change (single source of truth). */
     private static void validatePassword(String password) {
-        if (password == null || password.length() < 8
-                || !password.matches(".*[A-Za-z].*") || !password.matches(".*\\d.*")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Password must be at least 8 characters and include a letter and a number.");
-        }
+        tz.go.pmo.dmis.common.security.PasswordPolicy.validate(password);
     }
 
     @DeleteMapping("/{id}")
@@ -177,6 +207,86 @@ public class UserManagementController {
     }
 
     // ── helpers ──
+
+    /** The user's jurisdiction/institution attachment — what JurisdictionScope reads for area scoping. */
+    private record Area(Long regionId, Long districtId, Long agencyId, Long stakeholderId) {
+    }
+
+    /**
+     * Parse + validate the optional attachment ids ({@code regionId}/{@code districtId}/{@code agencyId}/
+     * {@code stakeholderId}). Every id must exist; a district must belong to the given region (and fills
+     * the region in when omitted, so a district officer always carries a coherent region_id too).
+     */
+    private Area areaAttachment(Map<String, Object> req) {
+        Long regionId = idOf(req.get("regionId"), "regionId");
+        Long districtId = idOf(req.get("districtId"), "districtId");
+        Long agencyId = idOf(req.get("agencyId"), "agencyId");
+        Long stakeholderId = idOf(req.get("stakeholderId"), "stakeholderId");
+        if (regionId != null && !exists("regions", regionId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Region " + regionId + " does not exist");
+        }
+        if (districtId != null) {
+            List<Long> parent = jdbc.queryForList(
+                    "select region_id from public.districts where id = ?", Long.class, districtId);
+            if (parent.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "District " + districtId + " does not exist");
+            }
+            Long districtRegion = parent.get(0);
+            if (regionId != null && !regionId.equals(districtRegion)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "District " + districtId + " does not belong to region " + regionId);
+            }
+            regionId = districtRegion;
+        }
+        if (agencyId != null && !exists("agencies", agencyId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Agency " + agencyId + " does not exist");
+        }
+        if (stakeholderId != null && !exists("stakeholders", stakeholderId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stakeholder " + stakeholderId + " does not exist");
+        }
+        return new Area(regionId, districtId, agencyId, stakeholderId);
+    }
+
+    /**
+     * users.stakeholder_id and stakeholders.user_id are a two-column mirror of the SAME one-to-one link
+     * (partner guards read the users side, the directory reads the stakeholders side) — keep both in
+     * lockstep whenever this screen (re)attaches or clears a partner.
+     */
+    private void syncStakeholderLink(long userId, Long stakeholderId) {
+        if (stakeholderId == null) {
+            jdbc.update("update public.stakeholders set user_id = null, updated_at = now() where user_id = ?", userId);
+        } else {
+            jdbc.update("update public.stakeholders set user_id = null, updated_at = now()"
+                    + " where user_id = ? and id <> ?", userId, stakeholderId);
+            jdbc.update("update public.users set stakeholder_id = null, updated_at = now()"
+                    + " where stakeholder_id = ? and id <> ?", stakeholderId, userId);
+            jdbc.update("update public.stakeholders set user_id = ?, updated_at = now() where id = ?",
+                    userId, stakeholderId);
+        }
+    }
+
+    private boolean exists(String table, long id) {
+        Long n = jdbc.queryForObject("select count(*) from public." + table + " where id = ?", Long.class, id);
+        return n != null && n > 0;
+    }
+
+    private static Long idOf(Object v, String key) {
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
+        String s = String.valueOf(v).trim();
+        if (s.isEmpty() || "null".equalsIgnoreCase(s)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(s);
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, key + " must be a numeric id");
+        }
+    }
 
     private void setRoles(long userId, List<String> roleNames) {
         jdbc.update("delete from public.model_has_roles where model_id = ? and model_type = ?", userId, MODEL_TYPE);

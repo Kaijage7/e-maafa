@@ -9,7 +9,7 @@ public record WarehouseResponse(List<WarehouseRow> warehouses, Stats stats) {
     }
 
     public record WarehouseRow(Long id, String name, String cityOrRegion, String address, String zone,
-                               Long capacitySqm, String status, int stocks,
+                               Long capacitySqm, String status, long stocks,
                                String contactName, String contactPhone, Double latitude, Double longitude,
                                String region, String district) {
     }

@@ -72,7 +72,7 @@ interface WhResponse {
               <table class="r-table">
                 <thead><tr>
                   <th>Name</th><th>Location</th><th>Zone</th><th>Capacity (sqm)</th>
-                  <th>Status</th><th>Stocks</th><th>Contact</th><th>Actions</th>
+                  <th>Status</th><th>Stock (units)</th><th>Contact</th><th>Actions</th>
                 </tr></thead>
                 <tbody>
                   @for (w of filtered(); track w.name) {
@@ -85,7 +85,7 @@ interface WhResponse {
                       <td><span class="r-badge" style="background:rgba(25,135,84,0.1);color:#198754;">{{ w.zone || '-' }}</span></td>
                       <td style="font-size:0.85rem;font-weight:600;color:var(--text-dark);">{{ w.capacitySqm ? (w.capacitySqm | number) : '-' }}</td>
                       <td><span class="r-badge {{ statusClass(w.status) }}">{{ w.status || 'Unknown' }}</span></td>
-                      <td><span class="r-badge badge-info">{{ w.stocks }}</span></td>
+                      <td><span class="r-badge badge-info">{{ w.stocks | number }}</span></td>
                       <td style="font-size:0.78rem;color:var(--text-mid);">
                         {{ w.contactName || '-' }}
                         @if (w.contactPhone) { <div class="r-subtitle">{{ w.contactPhone }}</div> }
