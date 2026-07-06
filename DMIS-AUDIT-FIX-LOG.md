@@ -1,6 +1,6 @@
 # DMIS Audit Fix Ledger — resolve ALL, honestly, one by one
 Source: DMIS-LINKAGE-AUDIT.md (2026-07-05). Status: OPEN → FIXED (with verification evidence) / WONTFIX (with reason).
-Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY HERE before creating any migration.
+Migration counter: next free = V142 (V136 = Wave-1 publish revoke; V137–V139 = other sessions' [generated reports / DLNA scope / password reset, committed f3bcd60]; V140 = Wave-3 ICS command roles; V141 = Wave-3 area-name backfill). ASSIGN SERIALLY HERE before creating any migration.
 
 ## F01 [DEAD s4] 5 EW boundary endpoints whose only consumers (Streamlit dashboards) were retired: GET /ew/stakeholders, POST /ew/disseminate, POST /ew/sms-test, POST /ew/monitoring/reports/batch, POST /ew/monitoring/request-update
 - Domain: Dead code + unproductive endpoints hunt
@@ -28,7 +28,7 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F05 [GAP s4] No ICS organization structure: no incident commander, no section chiefs, no per-activation org chart or named command roles
 - Domain: Incident Command Post + Virtual Simulations
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 3) — V140 activation_command_roles (9 standard ICS roles, partial unique index = one active holder per role), appoint/relieve endpoints journaling both handover events into task_activity_log (AAR shows command handovers), board() returns command_roles + drf_sections (15 DRF lanes statically mapped under Operations/Planning/Logistics), 'Incident Command (ICS)' org-chart panel on the Command Post board; VERIFIED live: appoint IC→board+journal, replacement auto-relieves incumbent w/ handover journal, relieve→vacant, SQL duplicate-active blocked by the index, invalid role / unknown user → clean 422, Minister (no tasks.manage) → 403, board regression intact, UI panel screenshotted (initial UI-check 'failure' was the test string-matching lowercase against CSS-uppercased text).**
 - Evidence: grep -rni 'commander|incident_command|ics_' over all migrations hits only a comment in V132 line 11; no table for activation roles exists (psql \dt shows only response_activations/incident_tasks/task_activity_log/activation_injects/task_dependencies/task_updates). DRF lanes assign to stakeholder ORGANIZATIONS (CommandCenterController.java:559-574) and tasks to users (TaskController.java:266), but nothing models who commands the incident, who runs Operations/Planning/Logistics/Finance, or deputies — the ICS backbone the user asked for.
 - Fix hint: M: add activation_command_roles table (activation_id, role e.g. IC/Ops/Planning/Logistics/Finance/PIO/Safety, user_id, appointed_at, journal on appoint/relieve), an org-chart panel on the board, and appointment events into task_activity_log so the AAR shows command handovers. Map the 15 DRF lanes under section chiefs for the hierarchy view.
 
@@ -70,7 +70,7 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F12 [PARTIAL s4] Per-incident action tracing today = three DISCONNECTED trails, no unified operations log (the user's 'traced well virtually' is only partially met)
 - Domain: Incident Command Post + Virtual Simulations
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 3) — GET /v1/response/incidents/{id}/ops-timeline (IncidentTimelineController): nine trails union-merged time-desc (workflow, task via activation, situation reports, allocations, dispatch incl. the source_details fulfilment journal, warehouse movements, sms/email incident_workflow logs, budget commitments) with per-source counts, ?source=/?limit= filters, incidents.view gate + the show hub's exact area scope; <dmis-incident-ops-timeline> master-log panel on incident-show; VERIFIED live: per-source counts == origin tables (independently re-probed: incident 2 workflow 18==18, budget 1==1, 5M disbursement leads the log), probe rows resolve 1:1, bogus source → 422 w/ detail+message, quiet incident → 200 empty, Partners → 403, anon parity == pre-existing incident endpoints (local dev persona, F85), UI panel rendered w/ 6 filter chips + 30 rows, no page errors. Honest scope note: command_role source omitted at build time (no such table then) — the F05 journal events DO ride in via the task trail.**
 - Evidence: Trail 1: incident_workflow_histories on incident-show (IncidentController.java:816, incident-show.component.ts:214-221). Trail 2: task_activity_log keyed by ACTIVATION not incident (ActivationService.java:100-105) — only 13 rows total live (psql), and only Command-Post actions write to it. Trail 3: Situation Reports (incident_history_reports, IncidentController.java:393/645). Dispatch, warehouse movements, communications, allocations and budget actions for an incident are journalled in their own modules and NEVER appear on the Command Post timeline — the board's recent_activity (CommandCenterC
 - Fix hint: M: build a read-side union timeline endpoint per incident (task_activity_log + incident_workflow_histories + allocated_resources source_details journal + sms/email logs + warehouse ledger, all filtered by incident_id) and render it as the board's master ops log; no schema change needed since every trail already carries incident linkage.
 
@@ -142,7 +142,7 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F24 [GAP s3] Citizen-report-converted incidents have NULL region_name/district_name — blank area columns, '(null)' in officer notifications, broken centroid fallback
 - Domain: Incident lifecycle depth
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 3) — conversion INSERT resolves district_name/region_name by the ids in hand (+ derives region from district when the report carried only the district); V141 idempotent backfill repaired the broken rows; VERIFIED live: incidents 88 (Kyela, Mbeya) and 91 (Handeni, Tanga) backfilled, fresh citizen convert carried BOTH names, district-only convert derived the region, zero rows remain with id-set-but-name-null (independently re-probed 0|0), officer/seed incident names byte-identical to the pre-migration snapshot. Follow-up F93 logged: the official-source portal INSERT (PortalPublicService.reportHazard) has the same omission — outside this fix's file scope; V141 repaired its existing rows and the F70 id-fallback keeps its notifications clean.**
 - Evidence: PublicReportsController.java:155-158 inserts district_id/region_id but omits the *_name columns the rest of the system reads; officer-created incidents resolve names (IncidentController.java:221 comment, update path coalesceName 315-316). Live: incidents 91 and 88 have region_id set but region_name/district_name NULL (psql); RAS Tanga's own queue lists #91 with blank area; resource_notifications 4771 and 446 read "Incident '...' (null) has reached..." — the message summoning the officer names no place; pushMap's no-coordinates fallback reads region_name (IncidentController.java:549-551) so a c
 - Fix hint: In the conversion INSERT, also select the names from regions/districts by the ids already in hand.
 
@@ -208,7 +208,7 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F35 [PARTIAL s3] Response dashboard stat cards are national while the feeds beside them are area-scoped
 - Domain: Incident lifecycle depth
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 3, pulled forward after the user hit it live: RAS saw pending_tasks=200 + a Mtwara/Lindi/Pwani critical alert) — scope was leaking TWO ways: the statistics block had NO area predicate, and the feed blocks used shared-or-own (region-less national incidents shown to every region). Both /dashboard and /eocc now use the registry's STRICT appendAreaScope for area tiers with a byte-identical national fast path (EOCC watch floor unchanged); board headline activation, by-severity/status rollups and alert counters scoped too (warehouse availability deliberately stays national — shared pool). VERIFIED live: RAS(Dodoma) dashboard 1 active/0 critical/0 tasks + empty critical_alerts; RAS eocc 2 active/0 critical, headline None, Dodoma-only status rollup; admin both endpoints byte-equal national (3/200/3 + Shinyanga/Cyclone alerts; 16 active + Msimbazi headline). Gotcha fixed en route: adding bind params to the alert_stats query made PgJDBC read the jsonb `?` operators as placeholders (409) → jsonb_exists().**
 - Evidence: DashboardController.java:78-96 — the six statistics subqueries filter only is_simulation, no jurisdiction predicate, while critical_alerts/recent_incidents/incidents_by_type/regional_data on the same page all go through incidentScope() → appendAreaScopeSharedOrOwn (58-64, 97-119). Live as ras.tanga: statistics.active_incidents=3, pending_tasks=200; psql: national active=3, Tanga-only active=0. A RAS reads national KPIs as if they were their region's.
 - Fix hint: Apply incidentScope() to the statistics block (or label the cards 'National').
 
@@ -417,7 +417,7 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F70 [PARTIAL s2] Incident stage notification body renders area as literal "(null)" for portal-origin incidents
 - Domain: notifications + email/SMS coverage
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 3) — notifyStage areaLabel(): stored names first, else resolved by id from districts/regions, else the parenthetical is omitted entirely; VERIFIED live: fresh converted incident's stage notification reads "... 'Citizen report: Floods at Handeni verify site' (Handeni, Tanga) has reached ...", area-less incident's notification omits the parenthetical, historical '(null)' rows frozen at 7 with no new ones (independently re-probed).**
 - Evidence: IncidentWorkflowService.java:519-521 reads incident district_name/region_name and builds '(" + where + ")' with no null guard; portal-origin incidents leave both name columns null. LIVE: today's row 4771 message = "Incident 'Citizen report: Floods at Handeni' (null) has reached the 'Waiting for RAS' stage…"; psql: 7 of 59 incident_workflow rows contain '(null)' — and the same string went out in the emails.
 - Fix hint: Fall back to joining region/district names by id (or omit the parenthetical when both are null) in notifyStage.
 
@@ -518,19 +518,19 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F87 [DEAD s1] GET /v1/ew/scanner/stats - redundant duplicate of the stats block already embedded in the /detections payload the UI consumes
 - Domain: Dead code + unproductive endpoints hunt
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 3) — standalone handler deleted; VERIFIED live: /stats → 404 (admin + mow, independently re-probed), /detections still returns the embedded stats block driving the console's 4 stat cards (UI screenshot clean).**
 - Evidence: backend/src/main/java/tz/go/pmo/dmis/ew/scanner/ScannerController.java:131-132; the detections endpoint returns Map.of('detections', rows, 'stats', stats()) at :128 and disaster-scanner.component.ts:449 consumes that. Live GET /stats -> 200 {total:60,new:35,...}; grep 'scanner/stats' frontend/src -> 0.
 - Fix hint: Remove the standalone /stats handler.
 
 ## F88 [DEAD s1] GET /v1/settings/translations/map - full EN/SW key map endpoint with no consumer (public uses /v1/portal/i18n, admin uses the paged list)
 - Domain: Dead code + unproductive endpoints hunt
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 3) — /map handler deleted after a fresh zero-consumer grep; VERIFIED live: GET → 405 (path still matched by the sibling /{id} PUT/DELETE mappings — expected, handler gone; independently re-probed), Translations admin list/create/edit/delete round-trip intact (214 rows), /v1/portal/i18n unchanged at 214 keys == pre-fix baseline.**
 - Evidence: backend/src/main/java/tz/go/pmo/dmis/settings/TranslationController.java:75. Live GET -> 200 {lbl_about:{en,sw}...}. translations.component.ts calls only list/PUT/POST/DELETE on the base (:125-176); portal-i18n.ts hydrates from /v1/portal/i18n. grep 'translations/map' -> 0.
 - Fix hint: Delete, or repoint PortalLabels hydration at it if a single authoritative map is wanted.
 
 ## F89 [DEAD s1] LocationDto record - referenced by nothing in main or test
 - Domain: Dead code + unproductive endpoints hunt
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 3) — file deleted after a fresh zero-reference grep (main+test); build compiles clean and boots (V140/V141 run proves the jar).**
 - Evidence: backend/src/main/java/tz/go/pmo/dmis/common/web/LocationDto.java:6 (public record); class-name grep across backend/src (main+test) -> 0 external references (dead-class scan output).
 - Fix hint: Delete the file.
 
@@ -541,13 +541,19 @@ Migration counter: next free = V136 (V135 = DLNA, uncommitted). ASSIGN SERIALLY 
 
 ## F91 [PARTIAL s1] Standalone routes m/content-management/sms-management + email-management reachable only by typing the URL - components now live embedded in Communication Center
 - Domain: Dead code + unproductive endpoints hunt
-- Status: **OPEN**
+- Status: **CLOSED 2026-07-06 (already fixed, no Wave-3 code change) — the exact redirects the ledger asked for already exist in app.routes.ts (committed 32a50c5); VERIFIED live: both URLs redirect to /m/content-management/communication-center and the embedded SMS/Email management panels render there (puppeteer 5/5).**
 - Evidence: app.routes.ts defines both; no routerLink/navigate/modules.ts nav entry composes them (route-vs-nav cross-check: not in modules.ts paths; Communication Center embeds them instead - communication-center.component.ts:119-121 '<page-sms-management [embedded]=true>'). Components themselves are alive and working.
 - Fix hint: Remove the leftover standalone routes or add redirects to communication-center.
 
 ## F92 [PARTIAL s3] Scanner entity-taskings READ endpoint not agency-scoped — any authenticated agency user can read other agencies' taskings
 - Domain: Dissemination flows / least privilege (found by the Wave-2 F13 adversarial re-check, 2026-07-06)
-- Status: **OPEN**
+- Status: **FIXED 2026-07-06 (Wave 3) — GET /entity-taskings now carries the mutation guard's exact rule: agency login (users.agency_id set) reads only its own inbox (explicit other-agency filter → 403 ProblemDetail w/ detail+message; missing filter forced to own agency), national/EOCC (agency-less, same bypass as assertOwnAgency + ewAgencyGuard) reads all; awaiting/responded counters scoped to the effective filter; VERIFIED live + independently re-probed: mow→tma 403, mow→own 200, admin→tma 200; EOCC dispatch console still lists all 12 taskings across 6 agencies (UI screenshot), MoW inbox (F13) unaffected.**
 - Evidence: assertOwnAgency (ScannerController.java:70-77) guards only the MUTATIONS (acknowledge/respond/review); GET /v1/ew/scanner/entity-taskings?agency=X returns any agency's taskings to any authenticated agency user — live-proven: mow@pmo.go.tz successfully read agency=tma taskings (expected 403, got 200). Pre-existing behavior, NOT introduced or worsened by F13 (ScannerController has no working-tree changes); consistent with the fine-grained-RBAC follow-on that per-action gates are still TODO.
 - Fix hint: Apply the same assertOwnAgency check (with an EOCC/national bypass) to the GET handler, mirroring the mutation guards.
+
+## F93 [PARTIAL s2] Official-source portal report INSERT (PortalPublicService.reportHazard) also omits region_name/district_name
+- Domain: Incident lifecycle depth (found by the Wave-3 F24 fixer, 2026-07-06)
+- Status: **OPEN**
+- Evidence: The trusted institution/sector/ministry path (PortalPublicService.reportHazard ~line 296, straight to a waiting_eocc incident) has the same *_name omission F24 fixed in the citizen conversion path. V141 backfilled its existing rows and F70's id-fallback keeps its notifications clean, so the symptom is currently invisible — but each NEW official-source incident is born with NULL names until this INSERT is fixed too.
+- Fix hint: Mirror the F24 subselects (names by id) in the reportHazard INSERT; one-file change in PortalPublicService.java.
 

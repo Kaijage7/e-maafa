@@ -24,7 +24,8 @@ import tz.go.pmo.dmis.notification.NotificationService;
 import tz.go.pmo.dmis.notification.NotificationService.Notice;
 
 /**
- * OSINT disaster-scanner API. Read-authenticated list/stats; triage (dismiss) + dispatch are operator actions.
+ * OSINT disaster-scanner API. Read-authenticated list (stats ride embedded in /detections); triage (dismiss)
+ * + dispatch are operator actions.
  *
  * <p>Dispatch is a REAL router (not the old stamp-only stub), matching the intended monitoring flow:
  * <ul>
@@ -127,9 +128,6 @@ public class ScannerController {
             args.toArray());
         return Map.of("detections", rows, "stats", stats());
     }
-
-    @GetMapping("/stats")
-    public Map<String, Object> statsEndpoint() { return stats(); }
 
     /**
      * Regional &amp; Sectorial Information intake (Monitoring stream ②): a regional disaster-management center
@@ -280,13 +278,27 @@ public class ScannerController {
                 + " for verification & official assessment.");
     }
 
-    /** Entity inbox: online detections routed to a warning entity, awaiting its official assessment. */
+    /** Entity inbox: online detections routed to a warning entity, awaiting its official assessment.
+     *  Reads carry the same agency lockdown as the mutations ({@link #assertOwnAgency}): an agency-scoped
+     *  login sees ONLY its own inbox (an explicit {@code agency=} filter must match; a missing filter is
+     *  forced to its own agency), while a national / admin / EOCC login (no agency) — the tier that runs
+     *  the Disaster Scanner dispatch console — reads across all agencies. */
     @GetMapping("/entity-taskings")
     public Map<String, Object> entityTaskings(@RequestParam(required = false) String agency,
                                               @RequestParam(required = false) String status) {
+        String requested = agency == null || agency.isBlank() ? null : agency.trim().toLowerCase(Locale.ROOT);
+        String mine = scope.currentAgencyCode();
+        if (mine != null) {
+            if (requested != null && !mine.equalsIgnoreCase(requested)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "These taskings belong to " + requested.toUpperCase(Locale.ROOT)
+                        + " — you can only view your own agency's taskings.");
+            }
+            requested = mine;   // no explicit filter → an agency login still sees only its own inbox
+        }
         StringBuilder where = new StringBuilder("1=1");
         List<Object> args = new ArrayList<>();
-        if (agency != null && !agency.isBlank()) { where.append(" and t.agency=?"); args.add(agency); }
+        if (requested != null) { where.append(" and t.agency=?"); args.add(requested); }
         if (status != null && !status.isBlank()) { where.append(" and t.status=?"); args.add(status); }
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select t.id, t.agency, t.hazard_type, t.region, t.status, t.message, t.requested_at, "
@@ -297,9 +309,13 @@ public class ScannerController {
                 + "d.source_id, d.severity "
                 + "from public.scanner_entity_taskings t join public.scanner_detections d on d.id = t.detection_id "
                 + "where " + where + " order by t.requested_at desc limit 200", args.toArray());
+        String countScope = requested != null ? " and agency=?" : "";
+        Object[] countArgs = requested != null ? new Object[] {requested} : new Object[0];
         return Map.of("taskings", rows,
-            "awaiting", jdbc.queryForObject("select count(*) from public.scanner_entity_taskings where status in ('awaiting','acknowledged','returned')", Integer.class),
-            "responded", jdbc.queryForObject("select count(*) from public.scanner_entity_taskings where status='responded'", Integer.class));
+            "awaiting", jdbc.queryForObject("select count(*) from public.scanner_entity_taskings "
+                + "where status in ('awaiting','acknowledged','returned')" + countScope, Integer.class, countArgs),
+            "responded", jdbc.queryForObject("select count(*) from public.scanner_entity_taskings "
+                + "where status='responded'" + countScope, Integer.class, countArgs));
     }
 
     /** Entity acknowledges receipt of a tasking (awaiting → acknowledged). */

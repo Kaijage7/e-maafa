@@ -145,23 +145,37 @@ public class PublicReportsController {
             throw new BusinessRuleException(
                     "Assign the incident's district before converting — the citizen report is not geo-tagged.");
         }
+        // Region is authoritative from the district (a district belongs to exactly one region) — derive it
+        // when the report/convert body carried only the district, so region-stage routing and the map's
+        // region-centroid fallback both work for converted incidents.
+        if (regionId == null) {
+            regionId = jdbc.query("select region_id from public.districts where id = ?",
+                    rs -> rs.next() ? rs.getObject("region_id", Long.class) : null, districtId);
+        }
         String severity = body != null && body.get("severity_level") != null
                 ? String.valueOf(body.get("severity_level")) : "Moderate";
         Long incidentTypeId = jdbc.query("""
                 select id from public.incident_types where name ilike ? or ? ilike '%' || name || '%' limit 1
                 """, rs -> rs.next() ? rs.getLong(1) : null,
                 "%" + report.get("hazard_type") + "%", String.valueOf(report.get("hazard_type")));
+        // The denormalized area names are resolved from the ids in hand — the RAS/DED queues, stage
+        // notifications and the map's no-coordinates fallback all read district_name/region_name, so a
+        // converted incident must carry them like an officer-created one does (null ids yield null names).
         Long incidentId = jdbc.queryForObject("""
                 insert into public.incidents(title, description, incident_type_id, severity_level, status,
-                    workflow_status, origin_level, district_id, region_id, location_description, latitude, longitude,
+                    workflow_status, origin_level, district_id, region_id, district_name, region_name,
+                    location_description, latitude, longitude,
                     reported_at, submitted_by_user_id, submitted_at, created_at, updated_at)
-                values (?,?,?,?, 'Reported', 'waiting_ded', 'district', ?, ?, ?, ?, ?, now(), ?, now(), now(), now()) returning id
+                values (?,?,?,?, 'Reported', 'waiting_ded', 'district', ?, ?,
+                    (select name from public.districts where id = ?), (select name from public.regions where id = ?),
+                    ?, ?, ?, now(), ?, now(), now(), now()) returning id
                 """, Long.class,
                 "Citizen report: " + report.get("hazard_type") + " at " + report.get("location_description"),
                 "Converted from public hazard report " + report.get("report_code")
                         + " (reporter: " + report.get("reporter_name") + ")."
                         + (report.get("description") == null ? "" : " " + report.get("description")),
-                incidentTypeId, severity, districtId, regionId, report.get("location_description"),
+                incidentTypeId, severity, districtId, regionId, districtId, regionId,
+                report.get("location_description"),
                 report.get("latitude"), report.get("longitude"), users.actingUserId());
         users.logHistory(incidentId, "created", null, "waiting_ded",
                 "Citizen report " + report.get("report_code") + " converted by DDMC — presence approved, escalated to DED.");

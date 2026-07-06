@@ -54,13 +54,31 @@ public class DashboardController {
 
     /** Build "<extra> and <area predicate>" for an incidents query (alias optional); national tier adds nothing.
      *  Always excludes simulation (drill-clone) incidents — dashboards report the REAL picture only
-     *  (same D1 contract as Executive Watch; drills are visible in the Command Post, not in live KPIs). */
+     *  (same D1 contract as Executive Watch; drills are visible in the Command Post, not in live KPIs).
+     *  Area scope is STRICT (audit F35): the same appendAreaScope the incidents registry uses, so the
+     *  dashboard never shows an area officer an incident their own registry would hide (shared-or-own
+     *  let region-less national incidents through to every region's landing page). */
     private String incidentScope(String alias, String extra, List<Object> params) {
         StringBuilder w = new StringBuilder(extra == null || extra.isBlank() ? "1=1" : extra);
         String col = alias == null || alias.isBlank() ? "is_simulation" : alias + ".is_simulation";
         w.append(" and coalesce(").append(col).append(", false) = false");
-        jurisdiction.appendAreaScopeSharedOrOwn(alias, w, params);
+        jurisdiction.appendAreaScope(alias, w, params);
         return w.toString();
+    }
+
+    /** True when the caller's jurisdiction adds no area predicate (national tier). */
+    private boolean isNationalTier() {
+        StringBuilder probe = new StringBuilder("1=1");
+        List<Object> p = new ArrayList<>();
+        jurisdiction.appendAreaScope("i", probe, p);
+        return p.isEmpty() && probe.toString().equals("1=1");
+    }
+
+    /** count(*) over incidents with the caller's strict area scope + the no-simulation guard. */
+    private Long scopedIncidentCount(String extra) {
+        List<Object> p = new ArrayList<>();
+        return jdbc.queryForObject("select count(*) from public.incidents where " + incidentScope("", extra, p),
+                Long.class, p.toArray());
     }
 
     /** Correlated guard: the row's incident (if any) is not a simulation drill clone.
@@ -75,25 +93,54 @@ public class DashboardController {
     public Map<String, Object> dashboard() {
         Map<String, Object> out = new LinkedHashMap<>();
         // REAL picture only: every branch excludes simulation drill clones (and rows hanging off them).
-        out.put("statistics", jdbc.queryForMap("""
-                select
-                  (select count(*) from public.incidents where status in ('Active Response','Verified','Pending Verification')
-                     and is_simulation = false) as active_incidents,
-                  (select count(*) from public.incidents where reported_at::date = current_date
-                     and is_simulation = false) as total_incidents_today,
-                  (select count(*) from public.allocated_resources ar where ar.status = 'Deployed'
-                     and """ + notSimIncident("ar.incident_id") + """
-                  ) as resources_deployed,
-                  (select count(*) from public.incident_tasks t where t.status = 'To Do'
-                     and """ + notSimIncident("t.incident_id") + """
-                     and not exists (select 1 from public.response_activations sa
-                                      where sa.id = t.activation_id and sa.is_simulation)) as pending_tasks,
-                  (select count(*) from public.incidents where severity_level = 'Critical' and status <> 'Closed'
-                     and is_simulation = false) as critical_incidents,
-                  (select count(*) from public.damage_assessments da where da.status = 'Pending Verification'
-                     and """ + notSimIncident("da.incident_id") + """
-                  ) as assessments_pending
-                """));
+        if (isNationalTier()) {
+            // National tier: original whole-country counters, byte-identical to the pre-F35 behavior.
+            out.put("statistics", jdbc.queryForMap("""
+                    select
+                      (select count(*) from public.incidents where status in ('Active Response','Verified','Pending Verification')
+                         and is_simulation = false) as active_incidents,
+                      (select count(*) from public.incidents where reported_at::date = current_date
+                         and is_simulation = false) as total_incidents_today,
+                      (select count(*) from public.allocated_resources ar where ar.status = 'Deployed'
+                         and """ + notSimIncident("ar.incident_id") + """
+                      ) as resources_deployed,
+                      (select count(*) from public.incident_tasks t where t.status = 'To Do'
+                         and """ + notSimIncident("t.incident_id") + """
+                         and not exists (select 1 from public.response_activations sa
+                                          where sa.id = t.activation_id and sa.is_simulation)) as pending_tasks,
+                      (select count(*) from public.incidents where severity_level = 'Critical' and status <> 'Closed'
+                         and is_simulation = false) as critical_incidents,
+                      (select count(*) from public.damage_assessments da where da.status = 'Pending Verification'
+                         and """ + notSimIncident("da.incident_id") + """
+                      ) as assessments_pending
+                    """));
+        } else {
+            // Area tier (audit F35): every counter restricted to the caller's jurisdiction, matching the
+            // registry's strict scope. Rows not attributable to an in-scope incident (task/allocation/
+            // assessment with no incident linkage) do not count toward an area officer's cards.
+            Map<String, Object> stats = new LinkedHashMap<>();
+            stats.put("active_incidents", scopedIncidentCount(
+                    "status in ('Active Response','Verified','Pending Verification')"));
+            stats.put("total_incidents_today", scopedIncidentCount("reported_at::date = current_date"));
+            List<Object> rdP = new ArrayList<>();
+            stats.put("resources_deployed", jdbc.queryForObject(
+                    "select count(*) from public.allocated_resources ar join public.incidents i on i.id = ar.incident_id "
+                    + "where ar.status = 'Deployed' and " + incidentScope("i", null, rdP), Long.class, rdP.toArray()));
+            List<Object> ptP = new ArrayList<>();
+            stats.put("pending_tasks", jdbc.queryForObject(
+                    "select count(*) from public.incident_tasks t join public.incidents i on i.id = coalesce(t.incident_id, "
+                    + "  (select sa.incident_id from public.response_activations sa where sa.id = t.activation_id)) "
+                    + "where t.status = 'To Do' and not exists (select 1 from public.response_activations sa2 "
+                    + "  where sa2.id = t.activation_id and sa2.is_simulation) and "
+                    + incidentScope("i", null, ptP), Long.class, ptP.toArray()));
+            stats.put("critical_incidents", scopedIncidentCount("severity_level = 'Critical' and status <> 'Closed'"));
+            List<Object> apP = new ArrayList<>();
+            stats.put("assessments_pending", jdbc.queryForObject(
+                    "select count(*) from public.damage_assessments da join public.incidents i on i.id = da.incident_id "
+                    + "where da.status = 'Pending Verification' and " + incidentScope("i", null, apP),
+                    Long.class, apP.toArray()));
+            out.put("statistics", stats);
+        }
         List<Object> caP = new ArrayList<>();
         out.put("critical_alerts", jdbc.queryForList(
                 "select id, title, location_description from public.incidents where "
@@ -117,9 +164,10 @@ public class DashboardController {
                 "select region_name, count(*) as total from public.incidents where "
                 + incidentScope("", "region_name is not null and status <> 'Closed'", rdP)
                 + " group by region_name order by total desc", rdP.toArray()));
+        List<Object> niP = new ArrayList<>();
         out.put("new_incidents", jdbc.queryForObject(
-                "select count(*) from public.incidents where reported_at >= now() - interval '5 minutes' "
-                + "and is_simulation = false", Long.class));
+                "select count(*) from public.incidents where "
+                + incidentScope("", "reported_at >= now() - interval '5 minutes'", niP), Long.class, niP.toArray()));
         out.put("my_area", myArea());
         out.put("timestamp", OffsetDateTime.now().toString());
         return out;
@@ -151,30 +199,59 @@ public class DashboardController {
     public Map<String, Object> eocc() {
         Map<String, Object> out = new LinkedHashMap<>();
         // REAL picture only (drills excluded; they surface via simulations_running below).
-        out.put("statistics", jdbc.queryForMap("""
-                select
-                  (select count(*) from public.incidents where status in ('Active Response','Verified','Reported')
-                     and is_simulation = false) as active_incidents,
-                  (select count(*) from public.incidents where severity_level = 'Critical'
-                     and status in ('Active Response','Verified') and is_simulation = false) as critical_count,
-                  (select count(*) from public.incidents where created_at::date = current_date
-                     and is_simulation = false) as new_today,
-                  (select count(*) from public.incident_tasks t where t.status = 'In Progress'
-                     and """ + notSimIncident("t.incident_id") + """
-                     and not exists (select 1 from public.response_activations sa
-                                      where sa.id = t.activation_id and sa.is_simulation)) as personnel_deployed,
-                  (select coalesce(sum(quantity),0) from public.inventory_items where status = 'Good Condition') as resources_available,
-                  (select count(*) from public.response_activations where status = 'active'
-                     and is_simulation = true) as simulations_running
-                """));
-        out.put("incidents_by_severity", jdbc.queryForList("""
-                select severity_level, count(*) as count from public.incidents
-                where status in ('Active Response','Verified','Reported') and is_simulation = false
-                group by severity_level
-                """));
+        if (isNationalTier()) {
+            // EOCC national watch floor: whole-country counters, byte-identical to pre-F35 behavior.
+            out.put("statistics", jdbc.queryForMap("""
+                    select
+                      (select count(*) from public.incidents where status in ('Active Response','Verified','Reported')
+                         and is_simulation = false) as active_incidents,
+                      (select count(*) from public.incidents where severity_level = 'Critical'
+                         and status in ('Active Response','Verified') and is_simulation = false) as critical_count,
+                      (select count(*) from public.incidents where created_at::date = current_date
+                         and is_simulation = false) as new_today,
+                      (select count(*) from public.incident_tasks t where t.status = 'In Progress'
+                         and """ + notSimIncident("t.incident_id") + """
+                         and not exists (select 1 from public.response_activations sa
+                                          where sa.id = t.activation_id and sa.is_simulation)) as personnel_deployed,
+                      (select coalesce(sum(quantity),0) from public.inventory_items where status = 'Good Condition') as resources_available,
+                      (select count(*) from public.response_activations where status = 'active'
+                         and is_simulation = true) as simulations_running
+                    """));
+        } else {
+            // Area tier (audit F35): a region/district officer holding command_post.view gets THEIR live
+            // picture, not the national one. Warehouse availability stays national (warehouses are a
+            // deliberately shared national resource pool); drills-running stays global (a drill count is
+            // not sensitive and the drill board itself enforces its own access).
+            Map<String, Object> stats = new LinkedHashMap<>();
+            stats.put("active_incidents", scopedIncidentCount(
+                    "status in ('Active Response','Verified','Reported')"));
+            stats.put("critical_count", scopedIncidentCount(
+                    "severity_level = 'Critical' and status in ('Active Response','Verified')"));
+            stats.put("new_today", scopedIncidentCount("created_at::date = current_date"));
+            List<Object> pdP = new ArrayList<>();
+            stats.put("personnel_deployed", jdbc.queryForObject(
+                    "select count(*) from public.incident_tasks t join public.incidents i on i.id = coalesce(t.incident_id, "
+                    + "  (select sa.incident_id from public.response_activations sa where sa.id = t.activation_id)) "
+                    + "where t.status = 'In Progress' and not exists (select 1 from public.response_activations sa2 "
+                    + "  where sa2.id = t.activation_id and sa2.is_simulation) and "
+                    + incidentScope("i", null, pdP), Long.class, pdP.toArray()));
+            stats.put("resources_available", jdbc.queryForObject(
+                    "select coalesce(sum(quantity),0) from public.inventory_items where status = 'Good Condition'",
+                    Long.class));
+            stats.put("simulations_running", jdbc.queryForObject(
+                    "select count(*) from public.response_activations where status = 'active' and is_simulation = true",
+                    Long.class));
+            out.put("statistics", stats);
+        }
+        List<Object> sevP = new ArrayList<>();
+        out.put("incidents_by_severity", jdbc.queryForList(
+                "select severity_level, count(*) as count from public.incidents where "
+                + incidentScope("", "status in ('Active Response','Verified','Reported')", sevP)
+                + " group by severity_level", sevP.toArray()));
+        List<Object> stsP = new ArrayList<>();
         out.put("incidents_by_status", jdbc.queryForList(
-                "select status, count(*) as count from public.incidents where is_simulation = false "
-                + "group by status order by count desc"));
+                "select status, count(*) as count from public.incidents where " + incidentScope("", null, stsP)
+                + " group by status order by count desc", stsP.toArray()));
         List<Object> erP = new ArrayList<>();
         out.put("recent_incidents", jdbc.queryForList(
                 "select id, title, location_description, severity_level, status, created_at, latitude, longitude "
@@ -186,23 +263,34 @@ public class DashboardController {
                 "select id, title, severity_level, status, latitude, longitude from public.incidents where "
                 + incidentScope("", "status <> 'Closed' and latitude is not null and longitude is not null", miP)
                 + " limit 300", miP.toArray()));
+        // Comms counters: area users see alerts for THEIR incidents plus incident-less general broadcasts.
+        List<Object> asP = new ArrayList<>();
+        StringBuilder asW = new StringBuilder("1=1");
+        jurisdiction.appendAreaScope("i", asW, asP);
+        String alertAreaClause = asW.toString().equals("1=1") ? ""
+                : " and (a.incident_id is null or exists (select 1 from public.incidents i "
+                  + "where i.id = a.incident_id and " + asW + "))";
+        // jsonb_exists() instead of the `?` operator: this query is parameterized for area users, and
+        // PgJDBC would read a bare `?` operator as a bind placeholder (parameter-count mismatch).
         out.put("alert_stats", jdbc.queryForMap("""
                 select
-                  count(*) filter (where channels::jsonb ? 'sms') as sms_sent,
-                  count(*) filter (where channels::jsonb ? 'email') as email_sent,
-                  count(*) filter (where channels::jsonb ? 'app') as app_notifications
+                  count(*) filter (where jsonb_exists(channels::jsonb, 'sms')) as sms_sent,
+                  count(*) filter (where jsonb_exists(channels::jsonb, 'email')) as email_sent,
+                  count(*) filter (where jsonb_exists(channels::jsonb, 'app')) as app_notifications
                 from public.alerts a where a.created_at::date = current_date
                   and """ + notSimIncident("a.incident_id") + """
-                """));
-        // The activation the EOCC board headlines must be a REAL response — never a drill.
-        out.put("active_activation", firstOrNull(jdbc.queryForList("""
-                select ra.*, i.title as incident_title, u.name as activated_by_name
-                from public.response_activations ra
-                join public.incidents i on i.id = ra.incident_id
-                left join public.users u on u.id = ra.activated_by
-                where ra.status = 'active' and ra.is_simulation = false
-                order by ra.activated_at desc limit 1
-                """)));
+                """ + alertAreaClause, asP.toArray()));
+        // The activation the board headlines must be a REAL response — never a drill — and, for an
+        // area officer, one from THEIR jurisdiction (audit F35), not another region's operation.
+        List<Object> aaP = new ArrayList<>();
+        out.put("active_activation", firstOrNull(jdbc.queryForList(
+                "select ra.*, i.title as incident_title, u.name as activated_by_name "
+                + "from public.response_activations ra "
+                + "join public.incidents i on i.id = ra.incident_id "
+                + "left join public.users u on u.id = ra.activated_by "
+                + "where ra.status = 'active' and ra.is_simulation = false and "
+                + incidentScope("i", null, aaP)
+                + " order by ra.activated_at desc limit 1", aaP.toArray())));
         out.put("my_area", myArea());
         out.put("timestamp", OffsetDateTime.now().toString());
         return out;

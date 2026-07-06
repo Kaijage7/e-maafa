@@ -7,6 +7,7 @@ import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 import { AuthService } from '../../core/auth.service';
 import { SecureMediaService } from '../../core/secure-media.service';
+import { IncidentOpsTimelineComponent } from './incident-ops-timeline.component';
 
 declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as the Blade page pushes it
 
@@ -20,7 +21,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
 @Component({
   selector: 'page-incident-show',
   standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
+  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent, IncidentOpsTimelineComponent],
   styles: [`
     .detail-label { font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
     .detail-value { font-size: 0.85rem; color: var(--text-dark); }
@@ -295,6 +296,11 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
             </div>
           </dmis-panel>
         </div>
+      </div>
+
+      <!-- F12: the unified per-incident operations timeline (master ops log), full width -->
+      <div class="panel-row full">
+        <dmis-incident-ops-timeline [incidentId]="d.incident.id" />
       </div>
     }
   `,

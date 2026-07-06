@@ -552,16 +552,14 @@ public class IncidentWorkflowService {
             }
             long incidentId = ((Number) incident.get("id")).longValue();
             String title = str(incident.get("title"));
-            String area = str(incident.get("district_name"));
-            String region = str(incident.get("region_name"));
-            String where = area == null ? region : (region == null ? area : area + ", " + region);
+            String where = areaLabel(incident);   // " (District, Region)", or "" when the incident has no area
             String stageLabel = IncidentOptions.workflowStatusLabel(stage);
             boolean approved = "approved".equals(stage);
             String noticeTitle = approved ? "Incident approved: " + title
                     : "Incident needs your action: " + stageLabel;
             String message = approved
-                    ? "Incident '" + title + "' (" + where + ") has completed the approval chain and is now APPROVED."
-                    : "Incident '" + title + "' (" + where + ") has reached the '" + stageLabel
+                    ? "Incident '" + title + "'" + where + " has completed the approval chain and is now APPROVED."
+                    : "Incident '" + title + "'" + where + " has reached the '" + stageLabel
                       + "' stage and is pending your review.";
             String severity = "Critical".equalsIgnoreCase(str(incident.get("severity_level")))
                     ? "critical" : "warning";
@@ -609,6 +607,31 @@ public class IncidentWorkflowService {
             }
             default -> List.of();
         };
+    }
+
+    /** Notification area suffix " (District, Region)": stored names first, else resolved from the
+     *  districts/regions tables by the ids on the incident (portal-origin rows predating the name
+     *  backfill), else "" — a location-less incident must never read "(null)". */
+    private String areaLabel(Map<String, Object> incident) {
+        String district = str(incident.get("district_name"));
+        if (district == null || district.isBlank()) {
+            district = areaNameById("districts", asLong(incident.get("district_id")));
+        }
+        String region = str(incident.get("region_name"));
+        if (region == null || region.isBlank()) {
+            region = areaNameById("regions", asLong(incident.get("region_id")));
+        }
+        String where = (district == null || district.isBlank()) ? region
+                : (region == null || region.isBlank()) ? district : district + ", " + region;
+        return (where == null || where.isBlank()) ? "" : " (" + where + ")";
+    }
+
+    private String areaNameById(String table, Long id) {
+        if (id == null) {
+            return null;
+        }
+        List<String> names = jdbc.queryForList("select name from public." + table + " where id = ?", String.class, id);
+        return names.isEmpty() ? null : names.get(0);
     }
 
     private List<Long> usersByRoleInArea(String role, String areaColumn, Long areaId) {

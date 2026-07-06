@@ -25,11 +25,8 @@ import tz.go.pmo.dmis.common.security.Authz;
 
 /**
  * System Settings → Translations. The bilingual (English / Kiswahili) UI-string registry seeded
- * from the public portal's i18n labels. Admins maintain the EN/SW pairs here; {@code GET /map}
- * serves the flat key→{en,sw} dictionary an i18n loader can hydrate from.
- *
- * <p>Honest scope: the live public i18n is still the code-based {@code PortalLabels} service —
- * this table is the managed source of truth and the read endpoint that a future loader consumes.</p>
+ * from the public portal's i18n labels. Admins maintain the EN/SW pairs here; the public portal
+ * hydrates its flat key→{en,sw} dictionary from this table via {@code GET /v1/portal/i18n}.
  */
 @RestController
 @RequestMapping("/v1/settings/translations")
@@ -69,18 +66,6 @@ public class TranslationController {
                 "select count(*) as total, count(distinct group_name) as groups,"
                         + " count(*) filter (where en = sw) as untranslated from public.translations"));
         return out;
-    }
-
-    /** Flat key → {en, sw} dictionary for an i18n loader (the wiring target). */
-    @GetMapping("/map")
-    @Operation(summary = "Flat key→{en,sw} dictionary")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> map() {
-        Map<String, Object> dict = new LinkedHashMap<>();
-        for (Map<String, Object> r : jdbc.queryForList("select label_key, en, sw from public.translations")) {
-            dict.put(String.valueOf(r.get("label_key")), Map.of("en", r.get("en"), "sw", r.get("sw")));
-        }
-        return dict;
     }
 
     @PostMapping

@@ -125,6 +125,23 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
     .plan-card .acts li { margin: 1px 0; }
     label.fld { display: block; font-size: 0.75rem; color: #94a3b8; margin: 8px 0 3px; }
     .track-pt { font-size: 0.75rem; color: #7dd3fc; }
+    /* ICS org chart (F05) — flat command register: role cards in doctrine rows */
+    .ics-row { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); }
+    .ics-row.ics-sec { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-top: 8px; }
+    .ics-card { background: #17263d; border: 1px solid #33485f; border-radius: 6px; padding: 9px 11px; display: flex; flex-direction: column; }
+    .ics-card.ic { border-left: 3px solid #dc3545; }
+    .ics-card.vacant { border-style: dashed; background: transparent; }
+    .ics-role { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.6px; color: #8aa0bd; font-weight: 800; }
+    .ics-holder { font-size: 0.85rem; color: #f1f5f9; font-weight: 700; margin-top: 3px; }
+    .ics-holder i { color: #4ade80; margin-right: 4px; }
+    .ics-meta { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+    .ics-vac { color: #f59e0b; font-weight: 800; font-size: 0.78rem; margin-top: 3px; }
+    .ics-actions { display: flex; gap: 5px; margin-top: 7px; }
+    .ics-lanes { border-top: 1px dashed #334155; margin-top: 8px; padding-top: 6px; display: flex; flex-direction: column; gap: 3px; }
+    .ics-lane { font-size: 0.75rem; color: #cbd5e1; display: flex; gap: 6px; align-items: center; cursor: pointer; padding: 1px 0; }
+    .ics-lane:hover { color: #7dd3fc; }
+    .ics-lane .pc { margin-left: auto; color: #64748b; font-variant-numeric: tabular-nums; }
+    .ics-dot { width: 8px; height: 8px; border-radius: 2px; flex: 0 0 auto; }
   `],
   template: `
     <dmis-page-header title="Command Post — Disaster Response Coordination" icon="fa-tower-broadcast"
@@ -417,6 +434,79 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
             <button class="btn b-outline" (click)="deactivate()"><i class="fas fa-flag-checkered"></i> Close Response</button>
           }
           <button class="btn b-outline" style="margin-left:6px" (click)="closeBoard()">← All Activations</button>
+        </div>
+      </div>
+
+      <!-- ICS org chart (F05): who commands the incident — IC + command staff on top,
+           General-Staff section chiefs below with their DRF lanes grouped underneath.
+           Every appointment/relief is journalled, so handovers appear in the Activity
+           Timeline and the After-Action Review. -->
+      <div class="card">
+        <h4><i class="fas fa-sitemap"></i> Incident Command (ICS)
+          @if (roleEntry('IC'); as ic) {
+            @if (ic.vacant) { <span class="pill" style="background:#7c2d12;color:#fdba74">NO INCIDENT COMMANDER APPOINTED</span> }
+            @else { <span class="pill" style="background:#14532d;color:#4ade80">IC: {{ ic.user_name }}</span> }
+          }
+        </h4>
+        <!-- Command row: Incident Commander + deputy + command staff -->
+        <div class="ics-row">
+          @for (r of commandRow(); track r.role) {
+            <div class="ics-card" [class.vacant]="r.vacant" [class.ic]="r.role === 'IC'">
+              <div class="ics-role">{{ r.role_title }}</div>
+              @if (!r.vacant) {
+                <div class="ics-holder"><i class="fas fa-user-shield"></i> {{ r.user_name }}</div>
+                <div class="ics-meta">since {{ r.appointed_at?.substring(0, 16)?.replace('T', ' ') }}{{ r.appointed_by_name ? ' · by ' + r.appointed_by_name : '' }}</div>
+                @if (r.note) { <div class="ics-meta" style="color:#7dd3fc">{{ r.note }}</div> }
+                @if (b.activation.status === 'active') {
+                  <div class="ics-actions">
+                    <button class="btn-xs" (click)="appointRole(r)">Hand over…</button>
+                    <button class="btn-xs" (click)="relieveRole(r)">Relieve</button>
+                  </div>
+                }
+              } @else {
+                <div class="ics-vac"><i class="fas fa-circle-exclamation"></i> VACANT</div>
+                @if (b.activation.status === 'active') {
+                  <div class="ics-actions"><button class="btn-xs go" (click)="appointRole(r)">Appoint…</button></div>
+                }
+              }
+            </div>
+          }
+        </div>
+        <!-- General Staff: section chiefs, each with the DRF lanes their section runs -->
+        <div class="ics-row ics-sec">
+          @for (r of sectionChiefs(); track r.role) {
+            <div class="ics-card" [class.vacant]="r.vacant">
+              <div class="ics-role">{{ r.role_title }}</div>
+              @if (!r.vacant) {
+                <div class="ics-holder"><i class="fas fa-user-shield"></i> {{ r.user_name }}</div>
+                <div class="ics-meta">since {{ r.appointed_at?.substring(0, 16)?.replace('T', ' ') }}{{ r.appointed_by_name ? ' · by ' + r.appointed_by_name : '' }}</div>
+                @if (b.activation.status === 'active') {
+                  <div class="ics-actions">
+                    <button class="btn-xs" (click)="appointRole(r)">Hand over…</button>
+                    <button class="btn-xs" (click)="relieveRole(r)">Relieve</button>
+                  </div>
+                }
+              } @else {
+                <div class="ics-vac"><i class="fas fa-circle-exclamation"></i> VACANT</div>
+                @if (b.activation.status === 'active') {
+                  <div class="ics-actions"><button class="btn-xs go" (click)="appointRole(r)">Appoint…</button></div>
+                }
+              }
+              @if (sectionLanes(r.role).length) {
+                <div class="ics-lanes">
+                  @for (d of sectionLanes(r.role); track d.id) {
+                    <div class="ics-lane" (click)="openLane(d)" title="Open DRF lane">
+                      <span class="ics-dot" [style.background]="d.color || '#dc3545'"></span>
+                      <span>DRF {{ d.number }} — {{ d.name }}</span>
+                      <span class="pc">{{ d.progress }}%</span>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="ics-lanes"><small style="color:#64748b">No DRF lanes — cost, compensation &amp; administration.</small></div>
+              }
+            </div>
+          }
         </div>
       </div>
 
@@ -995,6 +1085,71 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
             allow_real_ops: simulation && r.value === 'fullscale',
             notes: simulation ? null : (r.value || null) },
           (res: any) => this.openBoard(res.activation_id));
+      }
+    }));
+  }
+
+  // ── ICS command roles (F05) ──
+
+  /** User picker options — lazily loaded once from the task modal's form-data endpoint. */
+  readonly icsUsers = signal<any[]>([]);
+
+  roleEntry(role: string): any {
+    return (this.board()?.command_roles ?? []).find((r: any) => r.role === role);
+  }
+  /** IC + command staff (top row of the org chart). */
+  commandRow(): any[] {
+    return ['IC', 'Deputy IC', 'PIO', 'Safety', 'Liaison'].map(r => this.roleEntry(r)).filter(Boolean);
+  }
+  /** General-Staff section chiefs (second row). */
+  sectionChiefs(): any[] {
+    return ['Operations', 'Planning', 'Logistics', 'Finance/Admin'].map(r => this.roleEntry(r)).filter(Boolean);
+  }
+  /** The DRF lanes a section chief runs — board drfs resolved through the static section map. */
+  sectionLanes(section: string): any[] {
+    const b = this.board();
+    const nums: number[] = b?.drf_sections?.[section] ?? [];
+    return nums.map(n => (b?.drfs ?? []).find((d: any) => Number(d.number) === Number(n))).filter(Boolean);
+  }
+
+  appointRole(entry: any): void {
+    const id = this.board()!.activation.id;
+    const open = (users: any[]) => {
+      const options = users.map((u: any) => `<option value="${u.id}">${u.name}</option>`).join('');
+      ensureSweetAlert().then(() => this.swal({
+        title: `Appoint ${entry.role_title}`,
+        html: `<select id="icsUser" class="swal2-select" style="width:85%"><option value="">Select officer…</option>${options}</select>
+               <input id="icsNote" class="swal2-input" placeholder="Appointment / handover note (optional)">`,
+        showCancelButton: true, confirmButtonColor: '#dc3545',
+        preConfirm: () => {
+          const uid = (document.getElementById('icsUser') as HTMLSelectElement).value;
+          if (!uid) { Swal.showValidationMessage('Select the officer to appoint'); return false; }
+          return { role: entry.role, user_id: Number(uid),
+            note: (document.getElementById('icsNote') as HTMLInputElement).value.trim() || null };
+        },
+      }).then((r: any) => {
+        if (r.isConfirmed) { this.post(`/api/v1/response/coordination/${id}/command-roles`, r.value); }
+      }));
+    };
+    if (this.icsUsers().length) {
+      open(this.icsUsers());
+    } else {
+      this.http.get<any>('/api/v1/response/tasks/form-data').subscribe(d => {
+        this.icsUsers.set(d.users ?? []);
+        open(d.users ?? []);
+      });
+    }
+  }
+
+  relieveRole(entry: any): void {
+    ensureSweetAlert().then(() => this.swal({
+      title: `Relieve ${entry.user_name} as ${entry.role_title}?`,
+      text: 'The role goes vacant until a replacement is appointed. The relief is journalled for the After-Action Review.',
+      icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545',
+      input: 'text', inputLabel: 'Relief note (optional)',
+    }).then((r: any) => {
+      if (r.isConfirmed) {
+        this.post(`/api/v1/response/coordination/command-roles/${entry.id}/relieve`, { note: r.value || null });
       }
     }));
   }

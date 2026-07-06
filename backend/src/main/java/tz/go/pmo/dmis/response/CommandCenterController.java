@@ -38,6 +38,29 @@ public class CommandCenterController {
 
     private static final List<String> TASK_STATUSES = List.of("To Do", "In Progress", "On Hold", "Completed", "Cancelled");
     private static final List<String> PRIORITIES = List.of("Low", "Medium", "High", "Critical");
+    /** ICS command & General Staff roles (NIMS/ICS doctrine, V140) — matches the DB CHECK exactly. */
+    private static final List<String> COMMAND_ROLES = List.of(
+            "IC", "Deputy IC", "Operations", "Planning", "Logistics", "Finance/Admin", "PIO", "Safety", "Liaison");
+    /**
+     * The 15 NDPRP DRF lanes grouped under their ICS General-Staff section chief for the
+     * org-chart hierarchy. Static doctrine mapping (by DRF number):
+     *   Operations — the ground-response functions: 4 Shelter & NFIs, 5 Security & Public Order,
+     *                6 Health & Medical, 7 Search & Rescue, 8 Food Security & Nutrition, 11 WASH,
+     *                12 Protection, 13 Education in Emergencies.
+     *   Planning   — information/assessment/recovery-planning functions: 1 Coordination (drives the
+     *                planning cycle and coordination meetings), 2 Information Management, 10 Damage &
+     *                Needs Assessment, 14 Environment (technical specialists), 15 Early Recovery.
+     *   Logistics  — 3 Logistics & Supply Chain, 9 Communications (the ICS Communications Unit sits
+     *                in the Logistics Section's Service Branch).
+     * Finance/Admin has no DRF lanes — it administers cost/compensation, not field functions.
+     */
+    private static final Map<String, List<Integer>> DRF_SECTIONS;
+    static {
+        DRF_SECTIONS = new LinkedHashMap<>();
+        DRF_SECTIONS.put("Operations", List.of(4, 5, 6, 7, 8, 11, 12, 13));
+        DRF_SECTIONS.put("Planning", List.of(1, 2, 10, 14, 15));
+        DRF_SECTIONS.put("Logistics", List.of(3, 9));
+    }
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON =
             new com.fasterxml.jackson.databind.ObjectMapper();
 
@@ -381,6 +404,10 @@ public class CommandCenterController {
                 """, id));
         out.put("stakeholders", jdbc.queryForList(
                 "select id, name, organization from public.stakeholders where coalesce(is_active, true) order by organization nulls last, name"));
+        // ICS org chart (F05, V140): one entry per standard command role — the active holder
+        // or a vacant flag — plus the static DRF-lane → section-chief grouping for the hierarchy.
+        out.put("command_roles", commandRolesBlock(id));
+        out.put("drf_sections", DRF_SECTIONS);
         out.put("task_statuses", TASK_STATUSES);
         out.put("priorities", PRIORITIES);
         // Doctrine reference: posture -> TEPRP level / alert colour / authoriser (V41 seed)
@@ -497,7 +524,8 @@ public class CommandCenterController {
                 left join public.users u on u.id = l.user_id
                 where l.activation_id = ? and l.action in
                       ('activated','forecast_activated','posture_changed','impact_confirmed',
-                       'inject_fired','inject_resolved','deactivated')
+                       'inject_fired','inject_resolved','deactivated',
+                       'command_role_appointed','command_role_relieved')
                 order by l.created_at
                 """, id));
         aar.put("tasks", jdbc.queryForMap("""
@@ -701,7 +729,131 @@ public class CommandCenterController {
         return Map.of("success", true, "message", "Response " + status + " successfully.");
     }
 
+    // ─── ICS command roles (F05, V140) ───
+
+    /**
+     * Appoint an ICS command-role holder (Incident Commander, section chief, command staff).
+     * The current incumbent — if any — is relieved first, and BOTH events are journalled into
+     * task_activity_log so the After-Action Review shows the command handover.
+     */
+    @PreAuthorize("hasAuthority('tasks.manage')")
+    @PostMapping("/{id}/command-roles")
+    @Transactional
+    public Map<String, Object> appointCommandRole(@PathVariable long id, @RequestBody Map<String, Object> body) {
+        findOr404(id);
+        String role = requireIn(body.get("role"), COMMAND_ROLES, "role");
+        long userId = lng(body.get("user_id"), "user_id");
+        List<String> names = jdbc.queryForList("select name from public.users where id = ?", String.class, userId);
+        if (names.isEmpty()) {
+            throw new BusinessRuleException("The selected user does not exist.");
+        }
+        String name = names.get(0);
+        String note = str(body.get("note"));
+        Long actor = users.actingUserId();
+        // Relieve the incumbent first — one active holder per (activation, role); the partial
+        // unique index uq_activation_command_role_active is the hard guarantee behind this.
+        List<Map<String, Object>> incumbent = jdbc.queryForList("""
+                select r.id, r.user_id, u.name as user_name
+                from public.activation_command_roles r
+                left join public.users u on u.id = r.user_id
+                where r.activation_id = ? and r.role = ? and r.relieved_at is null
+                """, id, role);
+        if (!incumbent.isEmpty()) {
+            if (((Number) incumbent.get(0).get("user_id")).longValue() == userId) {
+                throw new BusinessRuleException(name + " already holds the " + roleTitle(role) + " role.");
+            }
+            jdbc.update("update public.activation_command_roles set relieved_at = now(), relieved_by = ? where id = ?",
+                    actor, incumbent.get(0).get("id"));
+            activations.log(id, actor, "command_role_relieved",
+                    roleTitle(role) + ": " + incumbent.get(0).get("user_name")
+                            + " relieved — handover to " + name + ".", null);
+        }
+        Long roleId = jdbc.queryForObject("""
+                insert into public.activation_command_roles(activation_id, role, user_id, appointed_at, appointed_by, note)
+                values (?,?,?,now(),?,?) returning id
+                """, Long.class, id, role, userId, actor, note);
+        activations.log(id, actor, "command_role_appointed",
+                roleTitle(role) + ": " + name + " appointed." + (note == null ? "" : " " + note), null);
+        return Map.of("success", true, "id", roleId,
+                "message", name + " appointed as " + roleTitle(role) + ".");
+    }
+
+    /** Relieve a command-role holder WITHOUT a replacement — the role goes vacant (journalled). */
+    @PreAuthorize("hasAuthority('tasks.manage')")
+    @PostMapping("/command-roles/{roleId}/relieve")
+    @Transactional
+    public Map<String, Object> relieveCommandRole(@PathVariable long roleId,
+                                                  @RequestBody(required = false) Map<String, Object> body) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select r.*, u.name as user_name from public.activation_command_roles r
+                left join public.users u on u.id = r.user_id
+                where r.id = ?
+                """, roleId);
+        if (rows.isEmpty() || rows.get(0).get("relieved_at") != null) {
+            throw new ResourceNotFoundException("Active command-role appointment not found.");
+        }
+        Map<String, Object> appointment = rows.get(0);
+        long activationId = ((Number) appointment.get("activation_id")).longValue();
+        // Same area-scoped visibility rule as every other board mutation (out-of-area → 404).
+        findOr404(activationId);
+        String role = String.valueOf(appointment.get("role"));
+        String note = body == null ? null : str(body.get("note"));
+        Long actor = users.actingUserId();
+        jdbc.update("update public.activation_command_roles set relieved_at = now(), relieved_by = ? where id = ?",
+                actor, roleId);
+        activations.log(activationId, actor, "command_role_relieved",
+                roleTitle(role) + ": " + appointment.get("user_name") + " relieved — role now vacant."
+                        + (note == null ? "" : " " + note), null);
+        return Map.of("success", true, "message", roleTitle(role) + " relieved. The role is now vacant.");
+    }
+
     // ─── internals ───
+
+    /**
+     * The ICS org-chart block: one entry per standard command role, carrying the ACTIVE holder
+     * (user + who appointed them + when) or vacant = true. Rendered by the board's
+     * 'Incident Command (ICS)' panel.
+     */
+    private List<Map<String, Object>> commandRolesBlock(long activationId) {
+        List<Map<String, Object>> active = jdbc.queryForList("""
+                select r.id, r.role, r.user_id, u.name as user_name, r.appointed_at, r.note,
+                       a.name as appointed_by_name
+                from public.activation_command_roles r
+                left join public.users u on u.id = r.user_id
+                left join public.users a on a.id = r.appointed_by
+                where r.activation_id = ? and r.relieved_at is null
+                """, activationId);
+        List<Map<String, Object>> roles = new ArrayList<>();
+        for (String role : COMMAND_ROLES) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("role", role);
+            row.put("role_title", roleTitle(role));
+            Map<String, Object> holder = active.stream()
+                    .filter(r -> role.equals(r.get("role"))).findFirst().orElse(null);
+            row.put("vacant", holder == null);
+            if (holder != null) {
+                row.putAll(holder);
+            }
+            roles.add(row);
+        }
+        return roles;
+    }
+
+    /** Full institutional title for an ICS role code (journal + UI wording). */
+    private static String roleTitle(String role) {
+        return switch (role) {
+            case "IC" -> "Incident Commander";
+            case "Deputy IC" -> "Deputy Incident Commander";
+            case "Operations" -> "Operations Section Chief";
+            case "Planning" -> "Planning Section Chief";
+            case "Logistics" -> "Logistics Section Chief";
+            case "Finance/Admin" -> "Finance/Admin Section Chief";
+            case "PIO" -> "Public Information Officer";
+            case "Safety" -> "Safety Officer";
+            case "Liaison" -> "Liaison Officer";
+            default -> role;
+        };
+    }
 
     private List<Map<String, Object>> activityQuery(long activationId, Long drfId, String action, int limit) {
         StringBuilder where = new StringBuilder("l.activation_id = ?");
