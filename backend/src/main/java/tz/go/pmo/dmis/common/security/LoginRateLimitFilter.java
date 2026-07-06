@@ -43,6 +43,11 @@ public class LoginRateLimitFilter extends AbstractRateLimitFilter {
     @Override
     protected boolean shouldLimit(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        return "POST".equalsIgnoreCase(request.getMethod()) && uri != null && uri.endsWith(LOGIN_PATH);
+        // The password-reset endpoints share the login limiter: forgot-password would otherwise be
+        // an email-spam vector and reset-password a token-guessing surface.
+        return "POST".equalsIgnoreCase(request.getMethod()) && uri != null
+                && (uri.endsWith(LOGIN_PATH)
+                    || uri.endsWith("/v1/auth/forgot-password")
+                    || uri.endsWith("/v1/auth/reset-password"));
     }
 }

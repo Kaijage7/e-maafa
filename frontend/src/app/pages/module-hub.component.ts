@@ -1,4 +1,5 @@
-import { Component, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { MODULES, Module } from '../core/modules';
@@ -32,6 +33,28 @@ import { qrcodegen } from '../shared/qrcodegen';
         {{ auth.primaryRole() }}
       </span>
     </div>
+
+    @if (sectorQueue().length) {
+      <div class="sector-queue" style="background:#fff;border:1px solid #e3e6ed;border-radius:10px;padding:14px 18px;margin-bottom:1.2rem;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <i class="fas fa-inbox" style="color:#0d3b66"></i>
+          <b style="font-size:0.92rem;color:#1f2937">Sections awaiting your sector</b>
+          <span style="font-size:0.78rem;font-weight:700;background:#fef3c7;color:#92400e;border-radius:10px;padding:1px 9px;">{{ sectorQueue().length }}</span>
+        </div>
+        @for (m of sectorQueue().slice(0, 5); track m.dlna_id + '-' + m.section_key) {
+          <a [routerLink]="['/m/response/dlna', m.dlna_id]" [queryParams]="{section: m.section_key}"
+             style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px dashed #eef1f5;font-size:0.84rem;text-decoration:none;color:#1f2937;">
+            <b style="color:#0d3b66">{{ m.ref_no }}</b>
+            <span style="flex:1">{{ m.incident_title }}</span>
+            <span style="font-size:0.78rem;color:#6c757d">{{ m.sector_lead }}</span>
+            <span style="font-size:0.78rem;font-weight:700;color:#0d3b66"><i class="fas fa-pen"></i> Key section</span>
+          </a>
+        }
+        @if (sectorQueue().length > 5) {
+          <a routerLink="/m/response/dlna" style="font-size:0.8rem;font-weight:600;color:#0d3b66;">View all {{ sectorQueue().length }} in the DLNA registry →</a>
+        }
+      </div>
+    }
 
     <div class="module-grid">
       @for (module of modules; track module.slug) {
@@ -98,10 +121,22 @@ import { qrcodegen } from '../shared/qrcodegen';
     @media (max-width: 575px) { .module-grid { grid-template-columns: 1fr; gap: 0.85rem; } .greeting h1 { font-size: 1.35rem; } }
   `],
 })
-export class ModuleHubComponent {
+export class ModuleHubComponent implements OnInit {
   auth = inject(AuthService);
+  private http = inject(HttpClient);
   // Show each user only the modules their permissions grant (matches the backend ModuleGuardFilter).
   modules = visibleModules(MODULES, this.auth.user());
+  /** DLNA sections assigned to this user's sector, still pending — the sector's feeding inbox. */
+  readonly sectorQueue = signal<any[]>([]);
+
+  ngOnInit(): void {
+    if (this.auth.hasPermission('damage_assessment.view')) {
+      this.http.get<any>('/api/v1/response/dlna/my-sections').subscribe({
+        next: d => this.sectorQueue.set(d.sections ?? []),
+        error: () => { /* hub stays clean if the queue is unavailable */ },
+      });
+    }
+  }
 
   /** "Scan to register" QR for the hub — encodes the register page on the current origin (auto-targets
    *  localhost / LAN / live domain), rendered in-system via the vendored encoder. */

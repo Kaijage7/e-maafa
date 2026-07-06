@@ -38,6 +38,11 @@ export class AuthService {
     );
   }
 
+  /** Self-service password change (VAPT v): POSTs to the authenticated change-password endpoint. */
+  changePassword(currentPassword: string, newPassword: string): Observable<unknown> {
+    return this.http.post('/api/v1/auth/change-password', { currentPassword, newPassword });
+  }
+
   /** The signed bearer token from the last login, or null. */
   token(): string | null {
     return localStorage.getItem(AUTH_TOKEN_KEY);
@@ -66,16 +71,12 @@ export class AuthService {
   }
 
   /**
-   * Whether the user holds a fine-grained permission. Legacy sessions stored before permissions existed
-   * have no permissions array — those fail OPEN (true) so a stale login is never locked out; they get the
-   * real set on next login. An explicit empty array means "genuinely none" → false.
+   * Whether the user holds a fine-grained permission. Fail CLOSED: a session without a permissions array
+   * grants nothing client-side (VAPT i/vii hardening). Normal logins always carry the array (possibly empty);
+   * a legacy pre-permissions session is discarded by {@link restore} so the user re-authenticates.
    */
   hasPermission(permission: string): boolean {
-    const perms = this.user()?.permissions;
-    if (perms == null) {
-      return true;
-    }
-    return perms.includes(permission);
+    return this.user()?.permissions?.includes(permission) ?? false;
   }
 
   private restore(): AuthUser | null {
@@ -84,7 +85,16 @@ export class AuthService {
       return null;
     }
     try {
-      return JSON.parse(raw) as AuthUser;
+      const stored = JSON.parse(raw) as AuthUser;
+      // A session written before fine-grained permissions existed has no permissions array. Rather than
+      // fail OPEN (grant all client-side), discard it so the user re-authenticates and receives the real
+      // permission set (VAPT i/vii hardening). A genuinely-empty array ([]) is a valid "no permissions" session.
+      if (!Array.isArray(stored?.permissions)) {
+        localStorage.removeItem(AUTH_USER_KEY);
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        return null;
+      }
+      return stored;
     } catch {
       // Corrupted localStorage must not crash the app at AuthService construction — self-heal.
       localStorage.removeItem(AUTH_USER_KEY);

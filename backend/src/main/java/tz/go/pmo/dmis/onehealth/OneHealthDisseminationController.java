@@ -61,7 +61,7 @@ public class OneHealthDisseminationController {
     public OneHealthDisseminationController(JdbcTemplate jdbc, OneHealthEventService service,
                                             ObjectMapper objectMapper, ExternalDeliveryService delivery,
                                             AreaGuard areaGuard, JurisdictionScope jurisdiction,
-                                            @Value("${dmis.storage.public-root:./storage}") String publicRoot) {
+                                            @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
         this.jdbc = jdbc;
         this.service = service;
         this.objectMapper = objectMapper;

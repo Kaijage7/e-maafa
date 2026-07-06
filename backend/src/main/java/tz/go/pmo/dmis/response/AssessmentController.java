@@ -79,7 +79,7 @@ public class AssessmentController {
     public AssessmentController(JdbcTemplate jdbc, IncidentWorkflowService users,
                                 ApprovalWorkflowEngine approvals, JurisdictionScope jurisdiction,
                                 AreaGuard areaGuard,
-                                @Value("${dmis.storage.public-root:./storage}") String publicRoot) {
+                                @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
         this.jdbc = jdbc;
         this.users = users;
         this.approvals = approvals;
@@ -108,7 +108,7 @@ public class AssessmentController {
         // national + non-area roles keep the full view. Scope rides on the incident the assessment surveys.
         StringBuilder sql = new StringBuilder("""
                 select da.id, da.assessment_type, da.assessment_date, da.location, da.district,
-                       da.damage_level, da.estimated_loss, da.status, da.created_at,
+                       da.damage_level, da.estimated_loss, da.status, da.created_at, da.immediate_needs,
                        i.title as incident_title, u.name as assessor_name,
                        (select count(*) from public.assessment_categories ac where ac.assessment_id = da.id) as item_count,
                        (select count(*) from public.assessment_photos ap where ap.assessment_id = da.id) as photo_count

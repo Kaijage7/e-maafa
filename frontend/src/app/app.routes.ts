@@ -4,6 +4,8 @@ import { ewAgencyGuard } from './core/ew-agency.guard';
 
 export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./pages/login.component').then(m => m.LoginComponent) },
+  { path: 'forgot-password', loadComponent: () => import('./pages/forgot-password.component').then(m => m.ForgotPasswordComponent) },
+  { path: 'reset-password', loadComponent: () => import('./pages/reset-password.component').then(m => m.ResetPasswordComponent) },
 
   // ---- PUBLIC portal (citizen-facing, no auth) — mirrors Laravel's public routes ----
   {
@@ -94,6 +96,7 @@ export const routes: Routes = [
   { path: 'm/reports-analytics/early-warning-management', canActivate: [authGuard], loadComponent: () => import('./pages/reports/ew-management.component').then(m => m.EwManagementComponent) },
   { path: 'm/reports-analytics/incident-reports', canActivate: [authGuard], loadComponent: () => import('./pages/reports/incident-reports.component').then(m => m.IncidentReportsComponent) },
   { path: 'm/reports-analytics/resource-reports', canActivate: [authGuard], loadComponent: () => import('./pages/reports/resource-reports.component').then(m => m.ResourceReportsComponent) },
+  { path: 'm/reports-analytics/documents', canActivate: [authGuard], loadComponent: () => import('./pages/reports/generated-documents.component').then(m => m.GeneratedDocumentsComponent) },
   { path: 'm/reports-analytics/gis-map', canActivate: [authGuard], loadComponent: () => import('./pages/mitigation/gis-map.component').then(m => m.GisMapComponent) },
   { path: 'm/user-management/approval-workflows', canActivate: [authGuard], loadComponent: () => import('./pages/settings/approval-workflows.component').then(m => m.ApprovalWorkflowsComponent) },
   { path: 'm/user-management/resource-settings', canActivate: [authGuard], loadComponent: () => import('./pages/settings/resource-catalogue.component').then(m => m.ResourceCatalogueComponent) },
@@ -135,7 +138,12 @@ export const routes: Routes = [
   { path: 'm/response/support-needs', canActivate: [authGuard], loadComponent: () => import('./pages/response/support-needs.component').then(m => m.SupportNeedsComponent) },
   { path: 'm/response/assessments', canActivate: [authGuard], loadComponent: () => import('./pages/response/assessments.component').then(m => m.AssessmentsComponent) },
   { path: 'm/response/assessments/create', canActivate: [authGuard], loadComponent: () => import('./pages/response/assessment-form.component').then(m => m.AssessmentFormComponent) },
+  { path: 'm/response/assessments/:id/edit', canActivate: [authGuard], loadComponent: () => import('./pages/response/assessment-form.component').then(m => m.AssessmentFormComponent) },
   { path: 'm/response/assessments/:id', canActivate: [authGuard], loadComponent: () => import('./pages/response/assessment-show.component').then(m => m.AssessmentShowComponent) },
+  { path: 'm/response/dlna', canActivate: [authGuard], loadComponent: () => import('./pages/response/dlna-list.component').then(m => m.DlnaListComponent) },
+  { path: 'm/response/dlna/:id/output', canActivate: [authGuard], loadComponent: () => import('./pages/response/dlna-output.component').then(m => m.DlnaOutputComponent) },
+  { path: 'm/response/dlna/:id', canActivate: [authGuard], loadComponent: () => import('./pages/response/dlna-form.component').then(m => m.DlnaFormComponent) },
+  { path: 'm/response/recovery-plan/:incidentId', canActivate: [authGuard], loadComponent: () => import('./pages/response/recovery-plan.component').then(m => m.RecoveryPlanComponent) },
   { path: 'm/recovery/needs-assessment', canActivate: [authGuard], data: { mode: 'needs' }, loadComponent: () => import('./pages/response/assessments.component').then(m => m.AssessmentsComponent) },
   { path: 'm/recovery/damage-assessments', canActivate: [authGuard], data: { mode: 'report' }, loadComponent: () => import('./pages/response/assessments.component').then(m => m.AssessmentsComponent) },
   { path: 'm/recovery/relief-distributions', canActivate: [authGuard], loadComponent: () => import('./pages/recovery/relief-distributions.component').then(m => m.ReliefDistributionsComponent) },

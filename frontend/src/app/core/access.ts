@@ -36,6 +36,8 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
   ['/m/response/dispatch-approvals', 'resource_allocation.view'],
   ['/m/response/procurement', 'resource_allocation.view'],
   ['/m/response/assessments', 'damage_assessment.view'],
+  ['/m/response/dlna', 'damage_assessment.view'],
+  ['/m/response/recovery-plan', 'damage_assessment.view'],
   ['/m/response/declarations', 'disaster_declarations.view'],
   // Command Post is shared with area approvers; the EOCC Command Center + Executive Watch are command-tier
   // (higher command_post actions) so field/area approvers see Command Post but not the command dashboards.
@@ -58,6 +60,9 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
   ['/m/preparedness', 'preparedness.view'],
   ['/m/one-health/directives', 'one_health.directive'],
   ['/m/one-health', 'one_health.view'],
+  // The two Recovery desks over the assessment registry require the same permission as the API they call.
+  ['/m/recovery/needs-assessment', 'damage_assessment.view'],
+  ['/m/recovery/damage-assessments', 'damage_assessment.view'],
   ['/m/recovery', 'recovery.view'],
   ['/m/reports-analytics', 'reports_and_analytics.view'],
   ['/m/prevention-mitigation', 'prevention_and_mitigation.view'],

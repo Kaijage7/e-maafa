@@ -55,6 +55,9 @@ public class LocalSecurityConfig {
                 // real Authorization: Bearer header (see LocalAuthFilter) so both paths coexist.
                 .addFilterBefore(localAuthFilter, BearerTokenAuthenticationFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
+                        // Restricted operational attachments under /storage are carved out FIRST — they require
+                        // authentication even though public portal content shares the /storage root (VAPT ii).
+                        .requestMatchers(SecurityPaths.restrictedStorageMatchers()).authenticated()
                         .requestMatchers(SecurityPaths.publicMatchers()).permitAll()
                         .anyRequest().authenticated())
                 // Only JWS-shaped bearers reach the JWT decoder; the EW engine's HMAC SSO token is

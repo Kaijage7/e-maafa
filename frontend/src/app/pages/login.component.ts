@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 
 interface Showcase { src: string; tag: string; icon: string; title: string; desc: string; }
@@ -14,7 +14,7 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
 @Component({
   selector: 'page-login',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
     <a href="/" class="back-home"><i class="fas fa-arrow-left"></i> Home</a>
 
@@ -92,7 +92,7 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
               </button>
             </div>
             <div class="options-row" style="justify-content:flex-end;">
-              <span style="font-size:0.8rem;color:var(--text-light,#94a3b8);">Forgot your password? Contact your administrator.</span>
+              <a class="forgot-link" routerLink="/forgot-password">Forgot your password?</a>
             </div>
             <button type="submit" class="btn-primary-tz" [class.is-loading]="loading()">
               <span class="btn-text"><i class="fas fa-right-to-bracket"></i> Sign In</span>

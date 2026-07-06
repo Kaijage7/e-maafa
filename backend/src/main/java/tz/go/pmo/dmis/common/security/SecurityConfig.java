@@ -38,6 +38,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // Login brute-force throttling is handled by LoginRateLimitFilter (auto-registered).
                 .authorizeHttpRequests(authorize -> authorize
+                        // Restricted operational attachments under /storage are carved out FIRST — they require
+                        // authentication even though public portal content shares the /storage root (VAPT ii).
+                        .requestMatchers(SecurityPaths.restrictedStorageMatchers()).authenticated()
                         .requestMatchers(SecurityPaths.publicMatchers()).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))

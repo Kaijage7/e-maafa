@@ -6,6 +6,7 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 import { AuthService } from '../../core/auth.service';
+import { SecureMediaService } from '../../core/secure-media.service';
 
 declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as the Blade page pushes it
 
@@ -35,6 +36,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
     .tl-meta { font-size: 0.75rem; color: var(--text-light); }
     .tl-comment { font-size: 0.78rem; color: #4a5568; background: #f9fafb; border-left: 2px solid #dc3545; border-radius: 6px; padding: 4px 8px; margin-top: 4px; }
     .label-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+    .media-wait { display: inline-flex; align-items: center; justify-content: center; height: 84px; min-width: 84px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; color: #94a3b8; font-size: 0.78rem; }
   `],
   template: `
     @if (data(); as d) {
@@ -118,14 +120,49 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
                   <div class="mt-3"><div class="detail-label">Photos</div>
                     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
                       @for (p of d.incident.photo_paths; track p) {
-                        <a [href]="'/api/storage/' + p" target="_blank"><img [src]="'/api/storage/' + p" style="height:84px;border-radius:8px;object-fit:cover;" alt="Incident photo"></a>
+                        @if (mediaUrls()[p]; as src) {
+                          <img [src]="src" style="height:84px;border-radius:8px;object-fit:cover;cursor:pointer;" alt="Incident photo" (click)="openMedia(p)">
+                        } @else {
+                          <span class="media-wait"><i class="fas fa-image"></i></span>
+                        }
                       }
                     </div>
+                  </div>
+                }
+                @if (d.incident.video_path) {
+                  <div class="mt-3"><div class="detail-label">Video Evidence</div>
+                    @if (mediaUrls()[d.incident.video_path]; as vsrc) {
+                      <video [src]="vsrc" controls preload="metadata" style="max-width:420px;width:100%;border-radius:8px;border:1px solid #e3e6ed;"></video>
+                    } @else {
+                      <span class="media-wait" style="width:180px;"><i class="fas fa-film"></i>&nbsp;Loading video…</span>
+                    }
                   </div>
                 }
               </div>
             </dmis-panel>
           </div>
+
+          @if (canSeeDlna()) {
+          <div class="panel-row full">
+            <dmis-panel title="Damage, Loss &amp; Needs (NDRF)" icon="fa-file-lines" [badge]="dlnas().length + ' DLNA'">
+              <div class="panel-body">
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                  @for (dl of dlnas(); track dl.id) {
+                    <a [routerLink]="['/m/response/dlna', dl.id]" class="btn-add" style="background:#0d3b66;">
+                      <i class="fas fa-file-lines"></i> {{ dl.ref_no ?? ('DLNA #' + dl.id) }} · {{ dl.submitted_count }}/{{ dl.section_count }} · {{ dl.status }}</a>
+                  } @empty {
+                    <span class="detail-value" style="color:#6c757d;"><i class="fas fa-circle-info"></i>
+                      No DLNA opened for this incident yet — the NDRF Annex 1 instrument is keyed per incident by the assigned sectors.</span>
+                  }
+                  <span style="flex:1"></span>
+                  <a routerLink="/m/response/dlna" class="btn-add" style="background:var(--text-mid);"><i class="fas fa-list"></i> DLNA Registry</a>
+                  <a [routerLink]="['/m/response/recovery-plan', d.incident.id]" class="btn-add" style="background:#198754;">
+                    <i class="fas fa-diagram-project"></i> Recovery Plan (Annex 2)</a>
+                </div>
+              </div>
+            </dmis-panel>
+          </div>
+          }
 
           <div class="panel-row full">
             <dmis-panel title="Situation Updates" icon="fa-comment-dots" [badge]="d.updates.length + ' entries'">
@@ -266,9 +303,15 @@ export class IncidentShowComponent implements OnInit {
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
+  private readonly media = inject(SecureMediaService);
   readonly canEdit = computed(() => this.auth.hasPermission('incidents.update'));
+  readonly canSeeDlna = computed(() => this.auth.hasPermission('damage_assessment.view'));
 
   data = signal<any | null>(null);
+  /** path → object URL for token-fetched photo/video evidence. */
+  readonly mediaUrls = signal<Record<string, string>>({});
+  /** NDRF Annex-1 DLNAs opened against this incident (keeps the instrument incident-linked). */
+  readonly dlnas = signal<any[]>([]);
   updateText = '';
   updateType = 'General Update';
 
@@ -282,7 +325,28 @@ export class IncidentShowComponent implements OnInit {
   }
 
   load(): void {
-    this.http.get<any>(`/api/v1/response/incidents/${this.id}`).subscribe(d => this.data.set(d));
+    if (this.canSeeDlna()) {
+    this.http.get<any>(`/api/v1/response/dlna`, { params: { incident_id: this.id } }).subscribe({
+      next: r => this.dlnas.set(r.assessments ?? []),
+      error: () => { /* transient failure: the panel simply stays empty */ },
+    });
+    }
+    this.http.get<any>(`/api/v1/response/incidents/${this.id}`).subscribe(d => {
+      this.data.set(d);
+      // Evidence lives under the authenticated /storage prefixes; fetch through the token.
+      const paths: string[] = [...(d.incident?.photo_paths ?? [])];
+      if (d.incident?.video_path) { paths.push(d.incident.video_path); }
+      for (const p of paths) {
+        this.media.url(p).then(src => {
+          if (src) { this.mediaUrls.update(m => ({ ...m, [p]: src })); }
+        });
+      }
+    });
+  }
+
+  openMedia(path: string): void {
+    const src = this.mediaUrls()[path];
+    if (src) { window.open(src, '_blank'); }
   }
 
   updateTypes(): string[] {

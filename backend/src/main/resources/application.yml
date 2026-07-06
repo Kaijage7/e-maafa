@@ -99,7 +99,12 @@ dmis:
       # provided via env DMIS_AUTH_JWT_SECRET (>= 32 bytes) or startup fails fast; under the local
       # profile a bundled dev default is used. (Relaxed binding maps DMIS_AUTH_JWT_SECRET -> this key.)
       issuer: ${DMIS_AUTH_JWT_ISSUER:dmis}
-      ttl-minutes: ${DMIS_AUTH_JWT_TTL_MINUTES:720}
+      # VAPT iii (excessive session lifetime): default lowered from 720 (12h) to 120 (2h) — a 6x reduction of
+      # the exposure window; deployments tune via DMIS_AUTH_JWT_TTL_MINUTES. NOTE: this is an interim hardening
+      # only. The structural fix the finding calls for — inactivity/idle timeout, short-lived access token +
+      # refresh, and server-side revocation on logout/deactivation — is a separate, dedicated auth change and
+      # is NOT delivered by this value alone (a stateless JWT cannot be revoked before it expires).
+      ttl-minutes: ${DMIS_AUTH_JWT_TTL_MINUTES:120}
   # M-Gov SMS gateway (the proven national delivery path). Secrets come from the environment.
   mgov:
     url: ${MGOV_SMS_URL:https://mgov.gov.go.tz/gateway/sms/v2/send-sms}

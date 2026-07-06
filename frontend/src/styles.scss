@@ -130,3 +130,14 @@ h1 { font-size: 22px; } h2 { font-size: 18px; } h3 { font-size: 15px; }
 .tz-pan-dark .tz-pan-btn { background: #1e293b; color: #cbd5e1; border-color: #334155; }
 .tz-pan-dark .tz-pan-btn:hover { background: #273449; color: #7dd3fc; }
 .tz-pan-dark.tz-pan { box-shadow: 0 1px 6px rgba(0,0,0,0.5); }
+
+/* Official-document pages (NDRF annex outputs) set body.doc-print-page so browser printing
+   captures ONLY the document — the app shell and the emblem watermark stay off paper. */
+@media print {
+  body.doc-print-page .top-bar,
+  body.doc-print-page .sidebar,
+  body.doc-print-page .sidebar-overlay,
+  body.doc-print-page .bg-watermark,
+  body.doc-print-page dmis-page-header { display: none !important; }
+  body.doc-print-page .main-content { margin: 0 !important; padding: 0 !important; }
+}

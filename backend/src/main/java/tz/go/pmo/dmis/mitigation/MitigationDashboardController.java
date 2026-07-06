@@ -29,7 +29,9 @@ public class MitigationDashboardController {
 
     @GetMapping
     @Operation(summary = "Dashboard payload: counts + choropleth + 6 chart datasets + 3 recent tables")
-    @PreAuthorize("isAuthenticated()")
+    // VAPT i (read leak): was isAuthenticated() — any logged-in user could read the P&M dashboard. Gate on the
+    // module permission; all consumers are Prevention & Mitigation pages.
+    @PreAuthorize("hasAuthority('prevention_and_mitigation.view')")
     public Map<String, Object> index() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("hazardsCount", count("select count(*) from public.hazards where is_active = true"));

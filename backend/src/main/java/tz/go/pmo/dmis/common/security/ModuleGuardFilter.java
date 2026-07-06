@@ -35,6 +35,8 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
         MODULE_PERMISSION.put("/v1/response/anticipatory-plans", "anticipatory_action_plans.view");
         MODULE_PERMISSION.put("/v1/response/contingency-plans", "contingency_plans.view");
         MODULE_PERMISSION.put("/v1/response/assessments", "damage_assessment.view");
+        // NDRF Annex 1 DLNA + Annex 2 recovery plan ride the same assessment permission family.
+        MODULE_PERMISSION.put("/v1/response/dlna", "damage_assessment.view");
         MODULE_PERMISSION.put("/v1/response/declarations", "disaster_declarations.view");
         MODULE_PERMISSION.put("/v1/response/coordination", "command_post.view");
         MODULE_PERMISSION.put("/v1/response/executive", "command_post.view");
