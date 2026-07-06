@@ -20,9 +20,9 @@ export const MODULE_PERMISSION: Record<string, string | string[]> = {
   'reports-analytics': 'reports_and_analytics.view',
   'user-management': 'user_management.view',
   'content-management': 'content_management.view',
-  // No dedicated stakeholder permission exists; gate the portal on resource_allocation.view (partner
-  // donations/coordination + command/area-resource roles) so pure EW/comms logins don't see it.
-  'stakeholder-portal': 'resource_allocation.view',
+  // V143: the portal has its own permission now (Partners + national coordination tier) — gating it
+  // on resource_allocation.view leaked the partner-facing module onto every area officer's menu.
+  'stakeholder-portal': 'stakeholder_portal.view',
 };
 
 /** Route prefix -> required permission (longest match wins). Mirrors the backend ModuleGuardFilter. */
@@ -51,6 +51,18 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
   ['/m/response/communication', 'communication_and_alerts.send'],
   ['/m/response/dashboard', 'incidents.view'],
   ['/m/response/warehouse-ops', 'warehouse_and_stock.view'],
+  // EW hub is view-tier (area officers RECEIVE warnings) but the AUTHORING consoles — scanner dispatch,
+  // the 7 agency consoles, bulletin composition — are create-tier (EW entities / PMO / EOCC only).
+  ['/m/preparedness/early-warnings/scanner', 'early_warning.create'],
+  ['/m/preparedness/early-warnings/new-bulletin', 'early_warning.create'],
+  ['/m/preparedness/early-warnings/eocc-bulletin', 'early_warning.create'],
+  ['/m/preparedness/early-warnings/consolidated', 'early_warning.create'],
+  ['/m/preparedness/early-warnings/mow', 'early_warning.create'],
+  ['/m/preparedness/early-warnings/gst', 'early_warning.create'],
+  ['/m/preparedness/early-warnings/moh', 'early_warning.create'],
+  ['/m/preparedness/early-warnings/moa', 'early_warning.create'],
+  ['/m/preparedness/early-warnings/nemc', 'early_warning.create'],
+  ['/m/preparedness/early-warnings/mlf', 'early_warning.create'],
   ['/m/preparedness/early-warnings', 'early_warning.view'],
   ['/m/preparedness/anticipatory-plans', 'anticipatory_action_plans.view'],
   ['/m/preparedness/contingency-plans', 'contingency_plans.view'],
@@ -68,6 +80,7 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
   ['/m/prevention-mitigation', 'prevention_and_mitigation.view'],
   ['/m/user-management', 'user_management.view'],
   ['/m/content-management', 'content_management.view'],
+  ['/m/stakeholder-portal', 'stakeholder_portal.view'],
 ];
 
 /** The permission required to open a route URL, or null if the route is unguarded. */
