@@ -6,13 +6,14 @@
 
 The audit graded every subsystem live (real API + SQL evidence, then an adversarial re-check of every serious accusation). Verdicts: **✅ WORKING** (verified) · **🟡 PARTIAL** (works, stated gaps) · **🔴 GAP** (designed, missing) · **🚨 FAKE** (pretends to work) · **⚫ DEAD** (unreachable/unused). Of 154 findings, **63 were already WORKING**; this plan tracks the **91 non-WORKING items** (plus **F92**, found during the Wave-2 adversarial re-check → 92 tracked) to closure — each fixed item carries live verification evidence, not a claim.
 
-**Backlog health (2026-07-06, after Wave 3):** 93 tracked (91 audit + F92 + F93 found during the campaign) — **23 resolved · 70 open** (🟡PARTIAL 33 · ⚫DEAD 18 · 🔴GAP 18 · ❔UNVERIFIED 1).
+**Backlog health (2026-07-06, after Wave 3 + the RBAC trim):** 94 tracked (91 audit + F92/F93/F94 found during the campaign) — **24 resolved · 70 open** (🟡PARTIAL 33 · ⚫DEAD 18 · 🔴GAP 18 · ❔UNVERIFIED 1).
 
 | Status | Count |
 |---|---|
 | ✅ Fixed & live-verified (Wave 1, committed `924b08e`) | 7 |
 | ✅ Fixed, live-verified + adversarially re-checked (Wave 2, committed `2abb5a5`) | 6 |
 | ✅ Fixed & live-verified + independent re-probes (Wave 3, committed `b7093f5`): F05, F12, F24, F35, F70, F87, F88, F89, F91 (already fixed, closed), F92 | 10 |
+| ✅ Fixed & live-verified — F94 area-role least privilege (committed `55b2a45`, user-driven) | 1 |
 | ⬜ Remaining — P1 (severity 4): F06 scenario library/MSEL | 1 |
 | ⬜ Remaining — P2 (severity 3, incl. new F93) | 29 |
 | ⬜ Remaining — P3 (severity 1–2) | 40 |
@@ -307,3 +308,19 @@ Method: 4 parallel verifier agents (one per track), each running live API + inde
 | F13 MoW inbox | inbox visible to mow@pmo.go.tz with content == API; acknowledge round-trip + exact revert; TMA regression clean; found NEW pre-existing gap → logged as **F92** |
 
 Notes from the re-check worth keeping: the backend was restarted mid-run at 02:43 by another session with identical behavior before/after (confirms the deployed jar carries this code); shared-DB test rows from concurrent verifiers transiently and *correctly* flipped EW classifications (family match working as designed); zero VERIFY-W2 rows remain.
+
+## 12. Validation record — Wave 3 (2026-07-06, committed `b7093f5`) + F94 RBAC trim (committed `55b2a45`)
+
+Method: 5 parallel fixer agents on strictly disjoint file sets → ONE rebuild → boot check (V140/V141 applied cleanly) → each fixer's live VERIFY script executed by the orchestrator → every failure investigated to root cause → independent spot re-probes of each decisive claim with fresh tokens/SQL. Failures triaged honestly, none glossed:
+
+| Track | Result | How it was proven |
+|---|---|---|
+| F05 ICS roles | ✅ 17/17 in substance | appoint→journal→auto-relieve-with-handover→vacant all observed; SQL duplicate-active blocked by the partial unique index; 403 for non-privileged; org-chart panel screenshot. 2 script "fails" were the script expecting 400 where this codebase returns 422; the UI "fail" was the test string-matching lowercase against CSS-uppercased text — panel renders fully. |
+| F12 ops timeline | ✅ 24/25, 1 explained | per-source counts == origin tables; re-probed independently (workflow 18==18, budget 1==1, the 5M disbursement leads the log); the "anonymous 200" is the documented local-profile dev persona — pre-existing show/list endpoints behave identically (F85). |
+| F24+F70 area names | ✅ 12/12 | incidents 88/91 backfilled (Kyela/Mbeya, Handeni/Tanga); fresh convert carries both names; notification reads the real area; area-less incident omits the parenthetical; 0 rows left with id-set-name-null (re-probed 0\|0); historical '(null)' frozen at 7. |
+| F92+F87 scanner | ✅ 30/30 | mow→tma 403 / mow→own 200 / admin→any 200 (re-probed); /stats 404; EOCC dispatch console still lists 12 taskings across 6 agencies (screenshot); MoW inbox unaffected. |
+| F88+F89+F91 dead code | ✅ all | /map 405 (handler gone, sibling /{id} mappings still path-match — expected); portal i18n unchanged at 214 keys; F91 honestly closed as already-fixed (redirects existed, `32a50c5`) — verified, not re-implemented. |
+| F35 dashboard scope (user-reported) | ✅ | TWO causes found: statistics block had NO area predicate; feeds used shared-or-own (region-less incidents leaked to every region). Both /dashboard and /eocc now use the registry's STRICT scope for area tiers, national byte-identical fast path. RAS Dodoma/Arusha/Kigoma/Dar all probed scoped; admin unchanged. En-route gotcha: jsonb `?` operator + bind params → PgJDBC 409 → jsonb_exists(). |
+| F94 RBAC trim (user-reported) | ✅ | Role-level V142/V143 (auto-applies to all 31 RAS + Reg DC/DED/DAS): authority grants revoked, Stakeholder Portal got its own permission, EW authoring consoles route-gated create-tier. RAS hub 10→4 cards (screenshot); backend 403s scanner/scan, eocc/activate, onehealth/events for RAS; 5 sampled regional RAS accounts auto-trimmed; MoW/EOCC/Partners regressions clean. Caveat: sessions logged in before the trim keep their old menu until re-login (JWT carries the permission set). |
+
+Process incidents kept honest: one restart attempt silently failed (backgrounded chain aborted at a stale pid; old jar kept serving) — caught by checking which pid owned :8080 and the jar mtime BEFORE running any verification; without that check the whole wave would have been "verified" against a jar not containing it.
