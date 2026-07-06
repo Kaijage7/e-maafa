@@ -6,15 +6,16 @@
 
 The audit graded every subsystem live (real API + SQL evidence, then an adversarial re-check of every serious accusation). Verdicts: **✅ WORKING** (verified) · **🟡 PARTIAL** (works, stated gaps) · **🔴 GAP** (designed, missing) · **🚨 FAKE** (pretends to work) · **⚫ DEAD** (unreachable/unused). Of 154 findings, **63 were already WORKING**; this plan tracks the **91 non-WORKING items** (plus **F92**, found during the Wave-2 adversarial re-check → 92 tracked) to closure — each fixed item carries live verification evidence, not a claim.
 
-**Backlog health:** 79 items still open — 🟡PARTIAL 40 · ⚫DEAD 21 · 🔴GAP 17 · 🚨FAKE 0 · ❔UNVERIFIED 1.
+**Backlog health (2026-07-06, after Wave 3):** 93 tracked (91 audit + F92 + F93 found during the campaign) — **23 resolved · 70 open** (🟡PARTIAL 33 · ⚫DEAD 18 · 🔴GAP 18 · ❔UNVERIFIED 1).
 
 | Status | Count |
 |---|---|
 | ✅ Fixed & live-verified (Wave 1, committed `924b08e`) | 7 |
 | ✅ Fixed, live-verified + adversarially re-checked (Wave 2, committed `2abb5a5`) | 6 |
-| ⬜ Remaining — P1 (severity 4) | 3 |
-| ⬜ Remaining — P2 (severity 3, incl. new F92) | 31 |
-| ⬜ Remaining — P3 (severity 2) | 45 |
+| ✅ Fixed & live-verified + independent re-probes (Wave 3, committed `b7093f5`): F05, F12, F24, F35, F70, F87, F88, F89, F91 (already fixed, closed), F92 | 10 |
+| ⬜ Remaining — P1 (severity 4): F06 scenario library/MSEL | 1 |
+| ⬜ Remaining — P2 (severity 3, incl. new F93) | 29 |
+| ⬜ Remaining — P3 (severity 1–2) | 40 |
 
 ## 2. Major capability delivered before/around the audit (context)
 
