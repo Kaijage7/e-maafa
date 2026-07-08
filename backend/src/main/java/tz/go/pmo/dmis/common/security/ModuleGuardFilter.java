@@ -17,7 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * requires, and returns 403 "Access denied" if the authenticated user's role (configured in User
  * Management) does not grant it. This is the single enforcement point that makes module visibility
  * controllable from the Roles &amp; Permissions matrix — e.g. an MDA-Focal/EW login with only
- * {@code early_warning.view} can reach Early Warning but is denied Response, Recovery, etc.
+ * {@code early_warning.create} can reach the Early Warning workbench but is denied Response, Recovery, etc.
  *
  * <p>Conservative by design: only paths with a known module mapping are guarded; everything else passes
  * (write-level authorization stays with the method {@code @PreAuthorize} gates). Unauthenticated requests
@@ -51,6 +51,7 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
         MODULE_PERMISSION.put("/v1/alert-subscriptions", "preparedness.view");
         MODULE_PERMISSION.put("/v1/onehealth", "one_health.view");
         MODULE_PERMISSION.put("/v1/recovery", "recovery.view");
+        MODULE_PERMISSION.put("/v1/reports/early-warnings", "early_warning.view");
         MODULE_PERMISSION.put("/v1/reports", "reports_and_analytics.view");
         MODULE_PERMISSION.put("/v1/repository", "reports_and_analytics.view");
         MODULE_PERMISSION.put("/v1/hazards", "prevention_and_mitigation.view");

@@ -163,6 +163,7 @@ export const routes: Routes = [
   { path: 'm/response/coordination', canActivate: [authGuard], loadComponent: () => import('./pages/response/command-center.component').then(m => m.CommandCenterComponent) },
   { path: 'm/response/executive-watch', canActivate: [authGuard], loadComponent: () => import('./pages/response/executive-watch.component').then(m => m.ExecutiveWatchComponent) },
   { path: 'm/response/declarations', canActivate: [authGuard], loadComponent: () => import('./pages/response/declarations.component').then(m => m.DeclarationsComponent) },
+  { path: 'm/response/issued-alerts', canActivate: [authGuard], loadComponent: () => import('./pages/stakeholder/issued-alerts.component').then(m => m.StakeholderIssuedAlertsComponent) },
   { path: 'm/response/public-reports', canActivate: [authGuard], loadComponent: () => import('./pages/response/public-reports.component').then(m => m.PublicReportsComponent) },
   { path: 'm/response/resource-approvals', canActivate: [authGuard], loadComponent: () => import('./pages/response/resource-allocations.component').then(m => m.ResourceAllocationsComponent) },
   { path: 'm/:slug/:item', canActivate: [authGuard], loadComponent: () => import('./pages/not-found.component').then(m => m.NotFoundComponent) },

@@ -2,8 +2,9 @@ import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
-import { MODULES, Module } from '../core/modules';
+import { MODULES, Module, ModuleItem } from '../core/modules';
 import { visibleModules } from '../core/module-access';
+import { routePermission } from '../core/access';
 import { qrcodegen } from '../shared/qrcodegen';
 
 /** Exact reproduction of home-v2.blade.php — the module hub landing. */
@@ -63,8 +64,8 @@ import { qrcodegen } from '../shared/qrcodegen';
           <div class="card-title">{{ module.name }}</div>
           <div class="card-desc">{{ module.description }}</div>
           <div class="card-footer">
-            @if (module.items.length) {
-              <span class="item-count"><i class="fas fa-layer-group"></i> {{ module.items.length }} items</span>
+            @if (visibleItems(module).length) {
+              <span class="item-count"><i class="fas fa-layer-group"></i> {{ visibleItems(module).length }} items</span>
             } @else {
               <span class="item-count"><i class="fas fa-external-link-alt"></i> Direct access</span>
             }
@@ -167,6 +168,14 @@ export class ModuleHubComponent implements OnInit {
     if (module.directPath) {
       return ['/m', ...module.directPath.split('/')];
     }
-    return ['/m', module.slug, module.items[0].path];
+    const first = this.visibleItems(module)[0] ?? module.items[0];
+    return ['/m', module.slug, ...first.path.split('/')];
+  }
+
+  visibleItems(module: Module): ModuleItem[] {
+    return module.items.filter(item => {
+      const perm = routePermission(['/m', module.slug, ...item.path.split('/')].join('/'));
+      return !perm || this.auth.hasPermission(perm);
+    });
   }
 }

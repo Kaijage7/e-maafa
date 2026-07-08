@@ -38,7 +38,7 @@ export const MODULES: Module[] = [
   },
   {
     slug: 'preparedness', name: 'Preparedness', icon: 'fa-hard-hat', color: '#198754',
-    description: 'Early warning systems, training and emergency supplies',
+    description: 'Preparedness planning, logistics readiness and emergency supplies',
     items: [
       { name: 'Early Warning Systems', path: 'early-warnings', icon: 'fa-exclamation-triangle', description: 'Monitor and manage early warnings', legacyRoute: 'admin.early-warnings.index' },
       { name: 'Anticipatory Action Plans', path: 'anticipatory-plans', icon: 'fa-clipboard-list', description: 'Per-area forecast-triggered preparedness plans', legacyRoute: 'admin.anticipatory-plans.index' },
@@ -60,6 +60,7 @@ export const MODULES: Module[] = [
       { name: 'Executive Watch', path: 'executive-watch', icon: 'fa-binoculars', description: 'National situation picture for PM / PS / Directors / President', legacyRoute: 'response.executive.index' },
       { name: 'Command Post', path: 'coordination', icon: 'fa-tower-broadcast', description: 'DRF coordination — anticipatory, live & simulation; posture ladder', legacyRoute: 'response.coordination.index' },
       { name: 'Disaster Declarations', path: 'declarations', icon: 'fa-file-contract', description: 'Disaster Area (s.32) & State of Emergency (s.33) declarations', legacyRoute: 'response.declarations.index' },
+      { name: 'Issued Alerts', path: 'issued-alerts', icon: 'fa-bell', description: 'Read-only government warnings and bulletins issued for action', legacyRoute: 'stakeholders.warnings.index' },
       { name: 'Active Incidents', path: 'incidents', icon: 'fa-exclamation-triangle', description: 'Manage and track active incidents', legacyRoute: 'admin.incidents.index' },
       { name: 'Damage Assessments', path: 'assessments', icon: 'fa-clipboard-check', description: 'File and verify per-incident damage & needs assessments', legacyRoute: 'response.assessment.index' },
       { name: 'DLNA & Recovery Plans', path: 'dlna', icon: 'fa-file-lines', description: 'NDRF Annex 1 sector-keyed DLNA and Annex 2 recovery implementation plans', legacyRoute: 'ndrf.annex (new — no Laravel counterpart)' },

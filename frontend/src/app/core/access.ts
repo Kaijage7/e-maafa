@@ -10,8 +10,9 @@
  *  mapping are always shown. */
 export const MODULE_PERMISSION: Record<string, string | string[]> = {
   'prevention-mitigation': 'prevention_and_mitigation.view',
-  // Preparedness card appears if the user can see ANY of its sub-areas (EW-only logins still reach it).
-  'preparedness': ['preparedness.view', 'early_warning.view', 'warehouse_and_stock.view',
+  // Preparedness card appears if the user can see any operational preparedness sub-area. The EW workbench
+  // is authoring-tier; area officers receive issued warnings through Response, not this module.
+  'preparedness': ['preparedness.view', 'early_warning.create', 'warehouse_and_stock.view',
     'anticipatory_action_plans.view', 'contingency_plans.view'],
   'response': 'incidents.view',
   'recovery': 'recovery.view',
@@ -28,6 +29,7 @@ export const MODULE_PERMISSION: Record<string, string | string[]> = {
 /** Route prefix -> required permission (longest match wins). Mirrors the backend ModuleGuardFilter. */
 const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
   ['/m/budget-finance', 'budget_and_finance.view'],
+  ['/m/response/issued-alerts', 'incidents.view'],
   ['/m/response/incidents', 'incidents.view'],
   ['/m/response/approvals', 'resource_allocation.view'],
   ['/m/response/resource-approvals', 'resource_allocation.view'],
@@ -51,8 +53,8 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
   ['/m/response/communication', 'communication_and_alerts.send'],
   ['/m/response/dashboard', 'incidents.view'],
   ['/m/response/warehouse-ops', 'warehouse_and_stock.view'],
-  // EW hub is view-tier (area officers RECEIVE warnings) but the AUTHORING consoles — scanner dispatch,
-  // the 7 agency consoles, bulletin composition — are create-tier (EW entities / PMO / EOCC only).
+  // EW is the authoring/operations workbench (EW entities / PMO / EOCC). Area officers receive issued
+  // warnings through the read-only Response issued-alerts surface, not the Preparedness EW console.
   ['/m/preparedness/early-warnings/scanner', 'early_warning.create'],
   ['/m/preparedness/early-warnings/new-bulletin', 'early_warning.create'],
   ['/m/preparedness/early-warnings/eocc-bulletin', 'early_warning.create'],
@@ -63,7 +65,7 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
   ['/m/preparedness/early-warnings/moa', 'early_warning.create'],
   ['/m/preparedness/early-warnings/nemc', 'early_warning.create'],
   ['/m/preparedness/early-warnings/mlf', 'early_warning.create'],
-  ['/m/preparedness/early-warnings', 'early_warning.view'],
+  ['/m/preparedness/early-warnings', 'early_warning.create'],
   ['/m/preparedness/anticipatory-plans', 'anticipatory_action_plans.view'],
   ['/m/preparedness/contingency-plans', 'contingency_plans.view'],
   ['/m/preparedness/warehouses', 'warehouse_and_stock.view'],
@@ -76,6 +78,7 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
   ['/m/recovery/needs-assessment', 'damage_assessment.view'],
   ['/m/recovery/damage-assessments', 'damage_assessment.view'],
   ['/m/recovery', 'recovery.view'],
+  ['/m/reports-analytics/early-warning-management', 'early_warning.view'],
   ['/m/reports-analytics', 'reports_and_analytics.view'],
   ['/m/prevention-mitigation', 'prevention_and_mitigation.view'],
   ['/m/user-management', 'user_management.view'],
