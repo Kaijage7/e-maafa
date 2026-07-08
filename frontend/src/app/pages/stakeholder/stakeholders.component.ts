@@ -188,7 +188,10 @@ export class StakeholdersComponent {
   }
 
   verify(s: Stakeholder, verified: boolean): void {
-    this.http.put(`/api/v1/stakeholders/${s.id}/verify`, { verified }).subscribe(() => this.reload());
+    this.http.put<any>(`/api/v1/stakeholders/${s.id}/verify`, { verified }).subscribe({
+      next: r => { this.reload(); window.alert(r?.accountMessage ?? r?.message ?? 'Updated.'); },
+      error: e => window.alert(e?.error?.detail || e?.error?.message || 'Could not update verification.'),
+    });
   }
 
   toggleActive(s: Stakeholder): void {

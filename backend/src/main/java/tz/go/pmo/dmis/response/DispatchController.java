@@ -183,6 +183,14 @@ public class DispatchController {
         out.put("sources", sources.availableSources(
                 ((Number) allocation.get("resource_id")).longValue(),
                 ((Number) allocation.get("incident_id")).longValue()));
+        out.put("agency_request_options", jdbc.queryForList("""
+                select ar.id, ar.agency_id, a.name as agency_name, ar.quantity as available_quantity,
+                       ar.condition_status, ar.location_description
+                from public.agency_resources ar
+                join public.agencies a on a.id = ar.agency_id
+                where ar.resource_id = ? and ar.quantity > 0
+                order by a.name, ar.quantity desc
+                """, allocation.get("resource_id")));
         return out;
     }
 
@@ -554,10 +562,23 @@ public class DispatchController {
         long agencyResourceId = lng(body.get("agency_resource_id"), "agency_resource_id");
         double quantity = positive(body.get("quantity"));
         Map<String, Object> allocation = findOr404(id);
+        List<Map<String, Object>> agencyRows = jdbc.queryForList("""
+                select ar.id, ar.agency_id, a.name as agency_name, r.name as resource_name
+                from public.agency_resources ar
+                join public.agencies a on a.id = ar.agency_id
+                join public.resources r on r.id = ar.resource_id
+                where ar.id = ? and ar.resource_id = ?
+                """, agencyResourceId, allocation.get("resource_id"));
+        if (agencyRows.isEmpty()) {
+            throw new BusinessRuleException("Select an agency stock line for this allocated resource.");
+        }
+        Map<String, Object> agency = agencyRows.get(0);
         List<Map<String, Object>> journal = journal(allocation.get("source_details"));
         Map<String, Object> entry = new LinkedHashMap<>();
         entry.put("source_type", "request_agency");
         entry.put("agency_resource_id", agencyResourceId);
+        entry.put("agency_id", agency.get("agency_id"));
+        entry.put("agency_name", agency.get("agency_name"));
         entry.put("quantity", quantity);
         entry.put("urgency", urgencyOrDefault(body.get("urgency")));
         entry.put("notes", str(body.get("notes")));
@@ -567,7 +588,11 @@ public class DispatchController {
         journal.add(entry);
         saveJournal(id, journal);
         jdbc.update("update public.allocated_resources set status = 'Sourcing', updated_at = now() where id = ?", id);
-        return Map.of("success", true, "message", "Agency request submitted successfully. The agency has been notified.");
+        int notified = notifyAgency(agency.get("agency_id"), id, agency.get("resource_name"), quantity, urgencyOrDefault(body.get("urgency")));
+        String message = notified > 0
+                ? "Agency request submitted successfully. " + notified + " agency user(s) notified."
+                : "Agency request submitted successfully. No linked agency user account was found; follow up with the agency contact.";
+        return Map.of("success", true, "message", message, "notified", notified);
     }
 
     // ─── internals ───
@@ -654,6 +679,22 @@ public class DispatchController {
         notifications.notifyUser(((Number) userId).longValue(),
                 tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(type, title, message,
                         "/m/response/resource-dispatch", "allocation", allocationId, "info"));
+    }
+
+    private int notifyAgency(Object agencyId, long allocationId, Object resourceName, double quantity, String urgency) {
+        if (!(agencyId instanceof Number n)) {
+            return 0;
+        }
+        List<Long> userIds = jdbc.queryForList("select id from public.users where agency_id = ?", Long.class, n.longValue());
+        return notifications.notifyUsers(userIds,
+                tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
+                        "agency_resource_request",
+                        "Agency resource request",
+                        "PMO requested " + fmt(quantity) + " " + resourceName + " (" + urgency + ").",
+                        "/m/response/resource-dispatch",
+                        "allocation",
+                        allocationId,
+                        "warning"));
     }
 
     private Map<String, Object> lockApproval(long id) {

@@ -10,6 +10,7 @@ interface SnapshotIncident {
   locationDescription: string; description: string; actionTaken: string | null; emergencyNeeds: string | null;
   deathsTotal: number; injuredTotal: number; missingTotal: number; displaced: number; childrenAffected: number;
   reportedAt: string; updatedAt: string; hazardName: string; incidentType: string;
+  pinnedToMap?: boolean; publishedViaNews?: boolean;
 }
 interface SnapResource { resource: string; quantity: number; unit: string; status: string; }
 interface SnapUpdate { detail: string; type: string; at: string; }
@@ -18,9 +19,9 @@ interface SnapEscalation { action: string; from: string; to: string; role: strin
 /**
  * Public LIVE incident snapshot ("/incident/{id}") — the page the portal map markers and the
  * News & Events article link to. Read-only public view served by GET /v1/portal/incidents/{id},
- * which only returns incidents an operator has explicitly pushed to the portal map. Shows the
- * situation, the response resources allocated to it, and the live updates timeline; it reflects the
- * system as it is updated (re-fetched on each visit).
+ * which only returns incidents an operator explicitly published to the portal map or linked from an
+ * active News & Events article. Shows the situation, the response resources allocated to it, and the
+ * live/final updates timeline; it reflects the system as it is updated (re-fetched on each visit).
  */
 @Component({
   selector: 'public-incident-snapshot',

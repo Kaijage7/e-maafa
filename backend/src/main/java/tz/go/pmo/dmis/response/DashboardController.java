@@ -2,9 +2,11 @@ package tz.go.pmo.dmis.response;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,7 @@ import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.common.security.SecurityUtils;
 
 /**
  * Port of Response\ResponseDashboardController + EOCCDashboardController —
@@ -169,8 +172,83 @@ public class DashboardController {
                 "select count(*) from public.incidents where "
                 + incidentScope("", "reported_at >= now() - interval '5 minutes'", niP), Long.class, niP.toArray()));
         out.put("my_area", myArea());
+        out.put("needs_action", needsActionQueue());
+        out.put("submitted_by_me", submittedByMeQueue());
         out.put("timestamp", OffsetDateTime.now().toString());
         return out;
+    }
+
+    private List<Map<String, Object>> needsActionQueue() {
+        List<String> stages = actionableWorkflowStages();
+        if (stages.isEmpty()) {
+            return List.of();
+        }
+        String placeholders = String.join(",", Collections.nCopies(stages.size(), "?"));
+        List<Object> params = new ArrayList<>(stages);
+        return incidentQueue("i.workflow_status in (" + placeholders + ")", params, "i.reported_at desc", 12);
+    }
+
+    private List<Map<String, Object>> submittedByMeQueue() {
+        Long userId = users.actingUserId();
+        if (userId == null) {
+            return List.of();
+        }
+        List<Object> params = new ArrayList<>();
+        params.add(userId);
+        return incidentQueue("i.submitted_by_user_id = ?", params, "i.submitted_at desc nulls last, i.reported_at desc", 12);
+    }
+
+    private List<Map<String, Object>> incidentQueue(String extra, List<Object> params, String order, int limit) {
+        String where = incidentScope("i", extra, params);
+        params.add(limit);
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select i.id, i.title, i.workflow_status, i.severity_level, i.status, i.reported_at,
+                       i.submitted_at, i.location_description, i.district_name, i.region_name,
+                       coalesce(it.name, 'Unknown') as hazard_name,
+                       su.name as submitted_by_name
+                from public.incidents i
+                left join public.incident_types it on it.id = i.incident_type_id
+                left join public.users su on su.id = i.submitted_by_user_id
+                where """ + where + """
+                order by """ + order + """
+                limit ?
+                """, params.toArray());
+        for (Map<String, Object> row : rows) {
+            String wf = row.get("workflow_status") == null ? null : String.valueOf(row.get("workflow_status"));
+            row.put("workflow_status_label", IncidentOptions.workflowStatusLabel(wf));
+        }
+        return rows;
+    }
+
+    private List<String> actionableWorkflowStages() {
+        Set<String> roles = SecurityUtils.currentUserRoles();
+        if (roles.contains(Authz.SUPER_ADMIN)) {
+            return List.of("waiting_ddmc", "waiting_ded", "waiting_rdmc", "waiting_ras",
+                    "waiting_eocc", "waiting_director", "waiting_ps");
+        }
+        List<String> stages = new ArrayList<>();
+        if (roles.contains(Authz.DIST_DC)) {
+            stages.add("waiting_ddmc");
+        }
+        if (roles.contains(Authz.DED)) {
+            stages.add("waiting_ded");
+        }
+        if (roles.contains(Authz.REG_DC)) {
+            stages.add("waiting_rdmc");
+        }
+        if (roles.contains(Authz.RAS)) {
+            stages.add("waiting_ras");
+        }
+        if (roles.contains(Authz.EOCC)) {
+            stages.add("waiting_eocc");
+        }
+        if (roles.contains(Authz.DIRECTOR)) {
+            stages.add("waiting_director");
+        }
+        if (roles.contains(Authz.SECRETARY)) {
+            stages.add("waiting_ps");
+        }
+        return stages;
     }
 
     /**

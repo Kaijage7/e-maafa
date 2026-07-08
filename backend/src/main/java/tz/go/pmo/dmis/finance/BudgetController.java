@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -100,22 +101,12 @@ public class BudgetController {
     @Transactional
     public Map<String, Object> createBudget(@RequestBody Map<String, Object> b) {
         Long periodId = lng(req(b, "period_id"));
-        String scope = req(b, "scope_level");           // district | region | national
-        // Bind the area to the caller: a sub-national executive can only create budgets in their OWN area;
-        // body-supplied region/district is ignored. Only the national tier may set the area from the body.
-        Long districtId = lng(b.get("district_id"));
-        Long regionId = lng(b.get("region_id"));
-        JurisdictionScope.Tier tier = jurisdiction.currentTier();
-        if (tier == JurisdictionScope.Tier.REGION || tier == JurisdictionScope.Tier.DISTRICT) {
-            Map<String, Object> area = jurisdiction.currentArea();
-            districtId = lng(area.get("district_id"));
-            regionId = lng(area.get("region_id"));
-        }
+        BudgetScope target = resolveBudgetScope(b);
         Long id = jdbc.queryForObject("""
                 insert into public.disaster_budgets(period_id, scope_level, district_id, region_id, title, total_amount,
                     currency, status, created_by, created_at, updated_at)
                 values (?,?,?,?,?,?, coalesce(?,'TZS'), 'draft', ?, now(), now()) returning id
-                """, Long.class, periodId, scope, districtId, regionId,
+                """, Long.class, periodId, target.scope(), target.districtId(), target.regionId(),
                 str(b.get("title")), dec(b.get("total_amount")), str(b.get("currency")), me());
         return Map.of("success", true, "id", id);
     }
@@ -446,6 +437,13 @@ public class BudgetController {
     @Transactional
     public Map<String, Object> ndmfDisburse(@RequestBody Map<String, Object> b) {
         Long incidentId = lng(req(b, "incident_id"));
+        if (incidentId == null) {
+            throw new BusinessRuleException("A valid incident is required.");
+        }
+        // NDMF incident cash-out is incident-bound: area officers may only pay their own incident, and
+        // table-top simulation incidents cannot move real money.
+        areaGuard.assertOwn("public.incidents", incidentId);
+        simulationGuard.assertNotSimulationIncident(incidentId, "disbursing NDMF cash");
         BigDecimal amount = dec(req(b, "amount"));
         if (amount == null || amount.signum() <= 0) {
             throw new BusinessRuleException("A positive amount is required.");
@@ -495,6 +493,88 @@ public class BudgetController {
 
     /** Stable key for the per-fund advisory lock that serializes NDMF disbursements. */
     private static final long NDMF_FUND_LOCK = 740_111L;
+
+    private record BudgetScope(String scope, Long regionId, Long districtId) {
+    }
+
+    /**
+     * Budget ceilings and row visibility depend on a coherent tier/area tuple. Area-tier callers cannot
+     * choose a higher or lower scope in the body; their own attached area determines it. National callers may
+     * choose a tier, but the posted ids must match that tier.
+     */
+    private BudgetScope resolveBudgetScope(Map<String, Object> b) {
+        String postedScope = req(b, "scope_level").toLowerCase(Locale.ROOT);
+        if (!List.of("national", "region", "district").contains(postedScope)) {
+            throw new BusinessRuleException("The selected budget scope is invalid.");
+        }
+
+        JurisdictionScope.Tier tier = jurisdiction.currentTier();
+        Map<String, Object> area = jurisdiction.currentArea();
+        if (tier == JurisdictionScope.Tier.DISTRICT) {
+            Long districtId = lng(area.get("district_id"));
+            if (districtId == null) {
+                throw new BusinessRuleException("Your account is not attached to a district.");
+            }
+            Long regionId = lng(area.get("region_id"));
+            if (regionId == null) {
+                regionId = regionOfDistrict(districtId);
+            }
+            return new BudgetScope("district", regionId, districtId);
+        }
+        if (tier == JurisdictionScope.Tier.REGION) {
+            Long regionId = lng(area.get("region_id"));
+            if (regionId == null) {
+                throw new BusinessRuleException("Your account is not attached to a region.");
+            }
+            return new BudgetScope("region", regionId, null);
+        }
+        if (tier == JurisdictionScope.Tier.NONE) {
+            throw new BusinessRuleException("Your account is not attached to a budget jurisdiction.");
+        }
+
+        return resolveNationalBudgetScope(postedScope, b);
+    }
+
+    private BudgetScope resolveNationalBudgetScope(String scope, Map<String, Object> b) {
+        Long regionId = lng(b.get("region_id"));
+        Long districtId = lng(b.get("district_id"));
+        return switch (scope) {
+            case "national" -> new BudgetScope("national", null, null);
+            case "region" -> {
+                if (regionId == null || !exists("regions", regionId)) {
+                    throw new BusinessRuleException("A valid region is required for a regional budget.");
+                }
+                yield new BudgetScope("region", regionId, null);
+            }
+            case "district" -> {
+                if (districtId == null) {
+                    throw new BusinessRuleException("A valid district is required for a district budget.");
+                }
+                Long derivedRegion = regionOfDistrict(districtId);
+                if (regionId != null && !regionId.equals(derivedRegion)) {
+                    throw new BusinessRuleException("The selected district does not belong to the selected region.");
+                }
+                yield new BudgetScope("district", derivedRegion, districtId);
+            }
+            default -> throw new BusinessRuleException("The selected budget scope is invalid.");
+        };
+    }
+
+    private Long regionOfDistrict(Long districtId) {
+        List<Long> ids = jdbc.queryForList("select region_id from public.districts where id = ?", Long.class, districtId);
+        if (ids.isEmpty() || ids.get(0) == null) {
+            throw new BusinessRuleException("The selected district is invalid.");
+        }
+        return ids.get(0);
+    }
+
+    private boolean exists(String table, Long id) {
+        if (id == null) {
+            return false;
+        }
+        Long n = jdbc.queryForObject("select count(*) from public." + table + " where id = ?", Long.class, id);
+        return n != null && n > 0;
+    }
 
     /** NDMF cash actually in hand: received/acknowledged donations minus all non-voided disbursements. */
     private BigDecimal fundBalance() {

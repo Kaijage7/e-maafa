@@ -2,7 +2,7 @@ import { DecimalPipe, UpperCasePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { addTanzaniaDarkBase, addMapNav } from '../../core/tz-map';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 
@@ -120,6 +120,10 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
     .ready-item { font-size: 0.76rem; padding: 4px 0; border-bottom: 1px dashed #334155; display: flex; justify-content: space-between; gap: 8px; }
     .pill { font-size: 0.75rem; font-weight: 700; padding: 1px 7px; border-radius: 7px; background: #334155; color: #cbd5e1; }
     .area-chip { font-size: 0.75rem; background: #0c4a6e; color: #7dd3fc; border-radius: 8px; padding: 2px 10px; margin: 0 4px 4px 0; display: inline-block; }
+    .scenario-row { border: 1px solid #334155; border-left: 3px solid #a78bfa; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; background: #17263d; }
+    .scenario-title { color: #f1f5f9; font-size: 0.86rem; font-weight: 800; }
+    .scenario-meta { color: #94a3b8; font-size: 0.75rem; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
+    .scenario-tags { margin-top: 6px; display: flex; gap: 5px; flex-wrap: wrap; }
     .plan-card { border: 1px solid #334155; border-left: 3px solid #38bdf8; border-radius: 8px; padding: 7px 10px; margin-bottom: 6px; font-size: 0.76rem; }
     .plan-card .acts { margin: 4px 0; padding-left: 16px; color: #cbd5e1; }
     .plan-card .acts li { margin: 1px 0; }
@@ -182,16 +186,47 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
         </div>
       </div>
 
+      <div class="card">
+        <h4><i class="fas fa-book-open"></i> Exercise Scenario Library
+          <button class="btn-xs" style="margin-left:auto" (click)="loadScenarios()"><i class="fas fa-rotate"></i> Refresh</button></h4>
+        @for (s of scenarios(); track s.id) {
+          <div class="scenario-row">
+            <div>
+              <div class="scenario-title">{{ s.title }}</div>
+              <div class="scenario-meta">
+                <span>{{ s.hazard }}</span>
+                <span>{{ s.incident_count }} incident templates</span>
+                <span>{{ s.event_count }} MSEL events</span>
+                <span>{{ s.participant_count }} rostered</span>
+                <span>{{ s.default_time_compression }}x clock</span>
+              </div>
+              <div class="scenario-tags">
+                @for (r of listText(s.regions); track r) { <span class="area-chip">{{ r }}</span> }
+                @if (s.last_launched_at) { <span class="pill">last run {{ s.last_launched_at?.substring(0, 16)?.replace('T', ' ') }}</span> }
+              </div>
+            </div>
+            <button class="btn b-blue" (click)="launchScenario(s)"><i class="fas fa-play"></i> Launch Exercise</button>
+          </div>
+        } @empty { <div class="empty">No exercise scenarios are available.</div> }
+      </div>
+
       <!-- Anticipatory activation launcher (the cyclone-coming scenario) -->
       @if (showForecast()) {
         <div class="card">
           <h4><i class="fas fa-hurricane"></i> Open the Command Post from a forecast</h4>
           <div class="split">
             <div>
+              <label class="fld">Issued warning</label>
+              <select style="width:100%" [(ngModel)]="fWarningId" (ngModelChange)="applySelectedWarning()">
+                <option value="">Manual / off-platform forecast</option>
+                @for (w of issuedWarnings(); track w.warning_id) {
+                  <option [value]="w.warning_id">{{ w.warning_code }} · {{ w.hazard || 'Warning' }} · {{ w.affected_areas || w.regions || 'area pending' }}</option>
+                }
+              </select>
               <label class="fld">Forecast hazard</label>
-              <input style="width:100%" [(ngModel)]="fHazard" placeholder="e.g. Tropical Cyclone — heavy rain + destructive winds">
+              <input style="width:100%" [(ngModel)]="fHazard" [readonly]="!!fWarningId" placeholder="e.g. Tropical Cyclone — heavy rain + destructive winds">
               <label class="fld">Forecast-impact areas (regions, comma-separated)</label>
-              <input style="width:100%" [(ngModel)]="fAreas" placeholder="e.g. Mtwara, Lindi, Pwani">
+              <input style="width:100%" [(ngModel)]="fAreas" [readonly]="!!fWarningId" placeholder="e.g. Mtwara, Lindi, Pwani">
               <label class="fld">Expected impact / landfall (ETA)</label>
               <input style="width:100%" type="datetime-local" [(ngModel)]="fEta">
               <label class="fld" style="display:flex; align-items:center; gap:8px; margin-top:10px">
@@ -207,7 +242,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
                 @if (fTrack().length) { · <a style="color:#f87171; cursor:pointer" (click)="clearTrack()">clear</a> }</div>
               <div style="margin-top:10px; display:flex; gap:6px">
                 <button class="btn b-outline" (click)="loadCycloneDemo()"><i class="fas fa-wand-magic-sparkles"></i> Load SWIO cyclone demo</button>
-                <button class="btn b-blue" [disabled]="!fHazard.trim() || !fAreas.trim()" (click)="submitForecast()">
+                <button class="btn b-blue" [disabled]="!fWarningId && (!fHazard.trim() || !fAreas.trim())" (click)="submitForecast()">
                   <i class="fas fa-tower-broadcast"></i> Open Command Post
                 </button>
               </div>
@@ -226,6 +261,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
               <span class="badge" [class]="a.is_simulation ? 'b-sim' : (a.trigger_type === 'forecast' ? 'b-fcast' : 'b-live')">
                 {{ a.is_simulation ? 'SIMULATION' : (a.trigger_type === 'forecast' ? 'ANTICIPATORY' : 'LIVE') }}</span>
               <span class="pill" [style.color]="colour(a.posture)" [style.border]="'1px solid ' + colour(a.posture)" style="background:transparent">{{ (a.posture || 'disaster') | uppercase }}</span>
+              @if (a.scenario_title) { <span class="pill" style="background:#2e1065;color:#c4b5fd">{{ a.run_code }}</span> }
               <b class="act-title">{{ a.incident_title }}</b>
               <button class="btn b-red" (click)="openBoard(a.id)">Open Post</button>
             </div>
@@ -418,7 +454,8 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
           <b style="font-size:1rem; margin-left:8px">{{ b.activation.incident_title }}</b>
           <div style="color:#94a3b8; font-size:0.75rem; margin-top:2px">
             {{ b.activation.region_name ?? '' }} · activated {{ b.activation.activated_at?.substring(0, 16)?.replace('T', ' ') }}
-            by {{ b.activation.activated_by_name }} · {{ b.summary.assigned_stakeholders }} agencies engaged</div>
+            by {{ b.activation.activated_by_name }} · {{ b.summary.assigned_stakeholders }} agencies engaged
+            @if (b.activation.scenario_title) { · {{ b.activation.scenario_title }} · {{ b.activation.run_code }} }</div>
         </div>
         <div style="text-align:center">
           <div class="clock" [class.danger]="clockDanger()">{{ clock72() }}</div>
@@ -580,6 +617,8 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
                 <div class="feed" [style.opacity]="j.status === 'resolved' ? 0.6 : 1">
                   <span class="inj-st" [attr.data-s]="j.status">{{ j.status }}</span> <b>{{ j.title }}</b>
                   @if (j.detail) { <br><small>{{ j.detail }}</small> }
+                  @if (j.target_drf_number) { <br><small style="color:#7dd3fc">DRF {{ j.target_drf_number }} — {{ j.target_drf_name }}</small> }
+                  @if (j.expected_action) { <br><small style="color:#c4b5fd">Expected: {{ j.expected_action }}</small> }
                   @if (j.due_at && j.status === 'pending') { <br><small style="color:#f59e0b">fires {{ j.due_at?.substring(0, 16)?.replace('T', ' ') }}</small> }
                   @if (j.resolution) { <br><small style="color:#4ade80">↳ {{ j.resolution }}</small> }
                   <div style="margin-top:3px">
@@ -653,8 +692,10 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
 })
 export class CommandCenterComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
+  private readonly route = inject(ActivatedRoute);
 
   readonly index = signal<any>({});
+  readonly scenarios = signal<any[]>([]);
   readonly board = signal<any | null>(null);
   readonly lane = signal<any | null>(null);
   readonly readiness = signal<any | null>(null);
@@ -663,6 +704,8 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
 
   // Anticipatory-activation form state
   readonly showForecast = signal(false);
+  readonly issuedWarnings = signal<any[]>([]);
+  fWarningId = '';
   fHazard = '';
   fAreas = '';
   fEta = '';
@@ -738,6 +781,10 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     ensureSweetAlert();
     this.load();
+    const activationId = Number(this.route.snapshot.queryParamMap.get('activation'));
+    if (Number.isFinite(activationId) && activationId > 0) {
+      setTimeout(() => this.openBoard(activationId), 0);
+    }
     this.timer = setInterval(() => this.now.set(Date.now()), 1000);
   }
 
@@ -762,6 +809,9 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
     if (Array.isArray(raw)) { return raw; }
     try { return JSON.parse(raw); } catch { return String(raw).split(',').map(s => s.trim()).filter(Boolean); }
   }
+  listText(raw: any): string[] {
+    return this.parseAreas(raw).slice(0, 5);
+  }
   private hms(ms: number): string {
     const neg = ms < 0; const abs = Math.abs(ms);
     const h = Math.floor(abs / 3600_000), m = Math.floor((abs % 3600_000) / 60_000), s = Math.floor((abs % 60_000) / 1000);
@@ -772,6 +822,14 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   // ── index / board lifecycle ──
   load(): void {
     this.http.get<any>('/api/v1/response/coordination').subscribe(d => this.index.set(d));
+    this.loadScenarios();
+  }
+
+  loadScenarios(): void {
+    this.http.get<any>('/api/v1/response/coordination/scenarios').subscribe({
+      next: d => this.scenarios.set(d.scenarios ?? []),
+      error: () => this.scenarios.set([]),
+    });
   }
 
   openBoard(id: number): void {
@@ -883,6 +941,7 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   toggleForecastForm(): void {
     this.showForecast.update(v => !v);
     if (this.showForecast()) {
+      this.loadIssuedWarnings();
       setTimeout(() => this.initFormMap(), 60);
     } else {
       this.destroyFormMap();
@@ -894,7 +953,23 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
     if (this.formLayer) { this.formLayer.clearLayers(); }
   }
 
+  private loadIssuedWarnings(): void {
+    this.http.get<any>('/api/v1/response/coordination/warnings').subscribe({
+      next: r => this.issuedWarnings.set(r.warnings ?? []),
+      error: () => this.issuedWarnings.set([]),
+    });
+  }
+
+  applySelectedWarning(): void {
+    const w = this.issuedWarnings().find(x => String(x.warning_id) === String(this.fWarningId));
+    if (!w) { return; }
+    this.fHazard = `${w.hazard || 'Issued warning'} — ${w.warning_code}`;
+    this.fAreas = w.affected_areas || w.districts || w.regions || '';
+    this.fEta = this.localInputValue(w.validity_start);
+  }
+
   loadCycloneDemo(): void {
+    this.fWarningId = '';
     this.fHazard = 'Tropical Cyclone — heavy rain + destructive winds';
     this.fAreas = 'Mtwara, Lindi, Pwani';
     const eta = new Date(this.now() + 30 * 3600_000);          // ~30h to landfall
@@ -918,6 +993,7 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
       return [p[0], p[1], new Date(t).toISOString()];
     });
     const body = {
+      warning_id: this.fWarningId || null,
       hazard_description: this.fHazard.trim(),
       affected_areas: areas,
       expected_impact_at: eta ? eta.toISOString() : null,
@@ -929,11 +1005,43 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
       next: res => {
         this.showForecast.set(false);
         this.destroyFormMap();
-        this.fHazard = ''; this.fAreas = ''; this.fEta = ''; this.fSim = false; this.fRealOps = false; this.fTrack.set([]);
+        this.fWarningId = ''; this.fHazard = ''; this.fAreas = ''; this.fEta = ''; this.fSim = false; this.fRealOps = false; this.fTrack.set([]);
         this.openBoard(res.activation_id);
       },
       error: err => ensureSweetAlert().then(() => this.swal({ title: 'Error', text: err?.error?.detail ?? 'Could not open the post.', icon: 'error' })),
     });
+  }
+
+  launchScenario(s: any): void {
+    ensureSweetAlert().then(() => this.swal({
+      title: `Launch exercise: ${s.title}`,
+      html: `<label style="display:block;text-align:left;font-size:0.78rem;color:#94a3b8;margin:4px 0 3px">Time compression</label>
+             <input id="scFactor" type="number" min="0.1" step="0.1" class="swal2-input" value="${s.default_time_compression || 1}">
+             <label style="display:block;text-align:left;font-size:0.82rem;margin:8px 0">
+               <input id="scRealOps" type="checkbox"> Full-scale exercise — allow real operations
+             </label>
+             <input id="scNotes" class="swal2-input" placeholder="Launch note (optional)">`,
+      icon: 'warning', showCancelButton: true, confirmButtonColor: '#2563eb',
+      preConfirm: () => {
+        const factor = Number((document.getElementById('scFactor') as HTMLInputElement).value);
+        if (!factor || factor <= 0) { Swal.showValidationMessage('Enter a positive compression factor'); return false; }
+        return {
+          time_compression_factor: factor,
+          allow_real_ops: (document.getElementById('scRealOps') as HTMLInputElement).checked,
+          notes: (document.getElementById('scNotes') as HTMLInputElement).value.trim() || null,
+        };
+      },
+    }).then((r: any) => {
+      if (!r.isConfirmed) { return; }
+      this.http.post<any>(`/api/v1/response/coordination/scenarios/${s.id}/launch`, r.value).subscribe({
+        next: res => {
+          this.load();
+          const first = res.activations?.[0]?.activation_id;
+          if (first) { this.openBoard(first); }
+        },
+        error: err => this.swal({ title: 'Error', text: err?.error?.detail ?? 'Could not launch exercise.', icon: 'error' }),
+      });
+    }));
   }
 
   // ── maps (Leaflet) ──
@@ -954,6 +1062,13 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
     });
     setTimeout(() => this.formMap?.invalidateSize(), 80);
     this.redrawFormTrack();
+  }
+
+  private localInputValue(value: string | null | undefined): string {
+    if (!value) { return ''; }
+    const d = new Date(value);
+    if (isNaN(d.getTime())) { return ''; }
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
   }
 
   private redrawFormTrack(): void {
@@ -1244,7 +1359,7 @@ ${rows(aar.timeline, (e: any) => `<tr><td>${dt(e.created_at)}</td><td>${esc(e.us
 </table>
 <h2>Scenario injects</h2>
 <table><tr><th>Inject</th><th style="width:70px">Type</th><th style="width:105px">Fired</th><th style="width:105px">Resolved</th><th>Decision / response</th></tr>
-${rows(b.injects, (j: any) => `<tr><td><b>${esc(j.title)}</b>${j.detail ? '<br>' + esc(j.detail) : ''}</td><td>${esc(j.inject_type)}</td><td>${dt(j.fired_at)}</td><td>${dt(j.resolved_at)}</td><td>${esc(j.resolution ?? '—')}</td></tr>`, 'No injects were scripted.')}
+${rows(b.injects, (j: any) => `<tr><td><b>${esc(j.title)}</b>${j.detail ? '<br>' + esc(j.detail) : ''}${j.expected_action ? '<br><small>Expected: ' + esc(j.expected_action) + '</small>' : ''}</td><td>${esc(j.target_drf_number ? 'DRF ' + j.target_drf_number : j.inject_type)}</td><td>${dt(j.fired_at)}</td><td>${dt(j.resolved_at)}</td><td>${esc(j.resolution ?? '—')}</td></tr>`, 'No injects were scripted.')}
 </table>
 <h2>DRF lane performance (NDPRP 2022)</h2>
 <table><tr><th style="width:40px">DRF</th><th>Function</th><th style="width:90px">Completed</th><th style="width:130px">Progress</th></tr>

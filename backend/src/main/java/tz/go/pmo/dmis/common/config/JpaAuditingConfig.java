@@ -10,7 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 /**
  * Supplies the current principal name for the {@code created_by} / {@code updated_by}
  * audit columns. Resolves the authenticated subject (Keycloak username/subject) or
- * falls back to {@code system} for unauthenticated background work (e.g. the outbox relay).
+ * falls back to {@code system} for unauthenticated background work.
  */
 @Configuration
 public class JpaAuditingConfig {

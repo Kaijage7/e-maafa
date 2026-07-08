@@ -63,6 +63,21 @@ public class DisasterEventController {
                 .body(csv);
     }
 
+    @GetMapping("/incident-worklist")
+    @Operation(summary = "Resolved/closed incidents that still need a disaster repository card/link")
+    @PreAuthorize(CAN_WRITE)
+    public Map<String, Object> incidentWorklist() {
+        return service.incidentWorklist();
+    }
+
+    @PostMapping("/from-incident/{incidentId}")
+    @Operation(summary = "Create a repository event card from a resolved/closed incident and link it")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize(CAN_WRITE)
+    public Map<String, Object> createFromIncident(@PathVariable long incidentId) {
+        return service.createFromIncident(incidentId, SecurityUtils.currentUserName());
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Full event card: effects, linked records, totals, response investment")
     @PreAuthorize("isAuthenticated()")

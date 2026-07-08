@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,7 @@ public class InventoryService {
     private final WarehouseRepository warehouses;
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
+    private final CurrentUserResolver currentUser;
 
     /**
      * Warehouse ids the caller may see — own area + NULL-area national/shared stores. Returns {@code null}
@@ -120,6 +122,9 @@ public class InventoryService {
                 req.quantity(), req.minimumThreshold() == null ? 0 : req.minimumThreshold(),
                 blankToNull(req.batchNumber()), blankToNull(req.expiryDate()),
                 req.status() == null || req.status().isBlank() ? "Good Condition" : req.status());
+        if (req.quantity() > 0) {
+            recordIntake(id, req);
+        }
         return Map.of("id", id, "message", "Item created");
     }
 
@@ -153,6 +158,23 @@ public class InventoryService {
         if (req.quantity() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity cannot be negative");
         }
+        List<Map<String, Object>> existingRows = jdbc.queryForList("""
+                select id, resource_id, warehouse_id, quantity, item_name
+                from public.inventory_items where id = ? for update
+                """, id);
+        if (existingRows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found");
+        }
+        Map<String, Object> existing = existingRows.get(0);
+        Long oldResourceId = longOrNull(existing.get("resource_id"));
+        Long oldWarehouseId = longOrNull(existing.get("warehouse_id"));
+        int oldQuantity = intOrZero(existing.get("quantity"));
+        boolean resourceChanged = oldResourceId == null || !oldResourceId.equals(req.resourceId());
+        if (resourceChanged && oldQuantity > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Resource cannot be changed while this stock line has quantity; create a new item or adjust quantity to zero first");
+        }
+
         int n = jdbc.update(
                 "update public.inventory_items set resource_id=?, warehouse_id=?, item_name=?, category=?, "
                         + "quantity=?, minimum_threshold=?, batch_number=?, expiry_date=?::date, status=?, updated_at=now() "
@@ -164,7 +186,57 @@ public class InventoryService {
         if (n == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found");
         }
+        recordEditMovements(id, req.resourceId(), oldWarehouseId, req.warehouseId(), oldQuantity, req.quantity(),
+                existing.get("item_name"), req.itemName());
         return Map.of("id", id, "message", "Item updated");
+    }
+
+    private void recordIntake(Long itemId, InventoryWriteRequest req) {
+        Long userId = currentUser.actingUserId();
+        jdbc.update("""
+                insert into public.stock_movements(resource_id, inventory_item_id, quantity, movement_type,
+                    to_warehouse_id, warehouse_type, batch_number, expiry_date, reason, notes, status,
+                    user_id, completed_at, completed_by, created_at, updated_at)
+                values (?,?,?,'Intake',?, 'zonal', ?, ?::date, 'emergency_supplies_create', ?,
+                    'Completed', ?, now(), ?, now(), now())
+                """, req.resourceId(), itemId, req.quantity(), req.warehouseId(), blankToNull(req.batchNumber()),
+                blankToNull(req.expiryDate()), "Emergency Supplies item created: " + req.itemName().trim(),
+                userId, userId);
+    }
+
+    private void recordEditMovements(Long itemId, Long resourceId, Long oldWarehouseId, Long newWarehouseId,
+                                     int oldQuantity, int newQuantity, Object oldName, String newName) {
+        Long userId = currentUser.actingUserId();
+        String name = newName == null || newName.isBlank() ? safeObj(oldName) : newName.trim();
+        if (!sameId(oldWarehouseId, newWarehouseId) && oldQuantity > 0 && newQuantity > 0) {
+            jdbc.update("""
+                    insert into public.stock_movements(resource_id, inventory_item_id, quantity, movement_type,
+                        from_warehouse_id, to_warehouse_id, notes, status, user_id, completed_at, completed_by,
+                        created_at, updated_at)
+                    values (?,?,?,'Transfer',?,?,?, 'Completed', ?, now(), ?, now(), now())
+                    """, resourceId, itemId, oldQuantity, oldWarehouseId, newWarehouseId,
+                    "Emergency Supplies edit moved stock line: " + name, userId, userId);
+        }
+
+        int difference = newQuantity - oldQuantity;
+        if (difference == 0) {
+            return;
+        }
+        Long adjustmentWarehouseId = !sameId(oldWarehouseId, newWarehouseId) && newQuantity == 0
+                ? oldWarehouseId
+                : newWarehouseId;
+        jdbc.update("""
+                insert into public.stock_movements(resource_id, inventory_item_id, quantity, movement_type,
+                    %s, warehouse_type, reason, notes, status, user_id, completed_at, completed_by,
+                    created_at, updated_at)
+                values (?,?,?,?,?, 'zonal', 'emergency_supplies_edit', ?, 'Completed', ?, now(), ?, now(), now())
+                """.formatted(difference > 0 ? "to_warehouse_id" : "from_warehouse_id"),
+                resourceId, itemId, Math.abs(difference),
+                difference > 0 ? "Adjustment_Increase" : "Adjustment_Decrease",
+                adjustmentWarehouseId,
+                "Emergency Supplies edit adjusted quantity from " + oldQuantity + " to " + newQuantity
+                        + " for " + name,
+                userId, userId);
     }
 
     private static String safe(String s) {
@@ -173,6 +245,22 @@ public class InventoryService {
 
     private static String blankToNull(String v) {
         return (v == null || v.isBlank()) ? null : v;
+    }
+
+    private static boolean sameId(Long a, Long b) {
+        return a == null ? b == null : a.equals(b);
+    }
+
+    private static Long longOrNull(Object v) {
+        return v instanceof Number n ? n.longValue() : null;
+    }
+
+    private static int intOrZero(Object v) {
+        return v instanceof Number n ? n.intValue() : 0;
+    }
+
+    private static String safeObj(Object v) {
+        return v == null ? "" : String.valueOf(v);
     }
 
     private InventoryResponse.ItemRow toRow(InventoryItem i, Map<Long, String> resourceName,

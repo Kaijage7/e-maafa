@@ -68,22 +68,27 @@ public class PublicReportsController {
                 select r.id, r.report_code, r.hazard_type, r.description, r.location_description,
                        r.latitude, r.longitude, r.urgency_level, r.reporter_name, r.reporter_phone,
                        r.status, r.review_notes, r.linked_incident_id, r.created_at, r.reviewed_at,
+                       coalesce(r.region_id, d.region_id) as region_id, r.district_id,
+                       rg.name as region_name, d.name as district_name,
                        u.name as reviewed_by_name, i.title as linked_incident_title
                 from public.public_hazard_reports r
                 left join public.users u on u.id = r.reviewed_by
                 left join public.incidents i on i.id = r.linked_incident_id
+                left join public.districts d on d.id = r.district_id
+                left join public.regions rg on rg.id = coalesce(r.region_id, d.region_id)
                 where %s
                 order by case r.status when 'new' then 0 when 'reviewing' then 1 else 2 end,
                          r.created_at desc limit 200
                 """.formatted(where), params.toArray()));
         out.put("stats", jdbc.queryForMap("""
                 select count(*) as total,
-                       count(*) filter (where status = 'new') as new_reports,
-                       count(*) filter (where status = 'reviewing') as reviewing,
-                       count(*) filter (where status = 'converted') as converted,
-                       count(*) filter (where status = 'dismissed') as dismissed
-                from public.public_hazard_reports
-                """));
+                       count(*) filter (where r.status = 'new') as new_reports,
+                       count(*) filter (where r.status = 'reviewing') as reviewing,
+                       count(*) filter (where r.status = 'converted') as converted,
+                       count(*) filter (where r.status = 'dismissed') as dismissed
+                from public.public_hazard_reports r
+                where %s
+                """.formatted(where), params.toArray()));
         return out;
     }
 
@@ -139,19 +144,9 @@ public class PublicReportsController {
         // DDMC "approve presence": the converted incident enters the ladder at the DED stage (the DDMC has
         // confirmed it by converting). It needs a district to be scopable — taken from the report if tagged,
         // else assigned by the DDMC in the convert request.
-        Long districtId = firstLong(report.get("district_id"), body == null ? null : body.get("district_id"));
-        Long regionId = firstLong(report.get("region_id"), body == null ? null : body.get("region_id"));
-        if (districtId == null) {
-            throw new BusinessRuleException(
-                    "Assign the incident's district before converting — the citizen report is not geo-tagged.");
-        }
-        // Region is authoritative from the district (a district belongs to exactly one region) — derive it
-        // when the report/convert body carried only the district, so region-stage routing and the map's
-        // region-centroid fallback both work for converted incidents.
-        if (regionId == null) {
-            regionId = jdbc.query("select region_id from public.districts where id = ?",
-                    rs -> rs.next() ? rs.getObject("region_id", Long.class) : null, districtId);
-        }
+        AreaSelection area = resolveConversionArea(report, body);
+        Long districtId = area.districtId();
+        Long regionId = area.regionId();
         String severity = body != null && body.get("severity_level") != null
                 ? String.valueOf(body.get("severity_level")) : "Moderate";
         Long incidentTypeId = jdbc.query("""
@@ -211,6 +206,47 @@ public class PublicReportsController {
         return rows.get(0);
     }
 
+    private AreaSelection resolveConversionArea(Map<String, Object> report, Map<String, Object> body) {
+        Long districtId = firstLong(report.get("district_id"), body == null ? null : body.get("district_id"));
+        Long postedRegionId = firstLong(report.get("region_id"), body == null ? null : body.get("region_id"));
+        if (districtId == null) {
+            throw new BusinessRuleException(
+                    "Assign the incident's district before converting — the citizen report is not geo-tagged.");
+        }
+        List<Map<String, Object>> districtRows = jdbc.queryForList(
+                "select region_id from public.districts where id = ?", districtId);
+        if (districtRows.isEmpty()) {
+            throw new BusinessRuleException("The selected district is invalid.");
+        }
+        Long regionId = toLong(districtRows.get(0).get("region_id"));
+        if (postedRegionId != null && regionId != null && !postedRegionId.equals(regionId)) {
+            throw new BusinessRuleException("The selected district does not belong to the selected region.");
+        }
+        if (regionId == null) {
+            throw new BusinessRuleException("The selected district is not attached to a region.");
+        }
+        assertConversionTargetArea(regionId, districtId);
+        return new AreaSelection(regionId, districtId);
+    }
+
+    private void assertConversionTargetArea(Long regionId, Long districtId) {
+        JurisdictionScope.Tier tier = jurisdiction.currentTier();
+        Map<String, Object> area = jurisdiction.currentArea();
+        if (tier == JurisdictionScope.Tier.DISTRICT) {
+            Long myDistrict = toLong(area.get("district_id"));
+            if (myDistrict == null || !myDistrict.equals(districtId)) {
+                throw new BusinessRuleException("You can only convert public reports into incidents for your own district.");
+            }
+        } else if (tier == JurisdictionScope.Tier.REGION) {
+            Long myRegion = toLong(area.get("region_id"));
+            if (myRegion == null || !myRegion.equals(regionId)) {
+                throw new BusinessRuleException("You can only convert public reports into incidents for your own region.");
+            }
+        } else if (tier == JurisdictionScope.Tier.NONE) {
+            throw new BusinessRuleException("Your account is not attached to an incident reporting area.");
+        }
+    }
+
     private static String str(Object v) {
         if (v == null) {
             return null;
@@ -238,4 +274,6 @@ public class PublicReportsController {
             return null;
         }
     }
+
+    private record AreaSelection(Long regionId, Long districtId) {}
 }

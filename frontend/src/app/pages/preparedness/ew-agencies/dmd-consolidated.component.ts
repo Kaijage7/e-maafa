@@ -7,6 +7,7 @@ import { EwAgencyService, Consolidated } from './ew-agency.service';
 import { EwCrossAgencyPanelComponent } from './ew-cross-agency-panel.component';
 import { EwPreviewModalComponent } from './ew-preview-modal.component';
 import { ALERT_LEVELS, alertColor, AGENCIES, AGENCY_HAZARDS, HAZ_ICON } from './ew-agency.model';
+import { addDmisBaseLayer } from '../../../core/tz-map';
 
 /** type-key -> icon file, flattened across all agencies' hazards (for the overlay markers). */
 const ICON_BY_TYPE: Record<string, string> = Object.values(AGENCY_HAZARDS).flat()
@@ -485,8 +486,7 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
     if (typeof L === 'undefined') return;
     this.map = L.map('dmdmap', { minZoom: 5, maxZoom: 9 }).setView([-6.4, 35.0], 6);
     this.map.setMaxBounds([[-12.5, 28.0], [1.0, 41.5]]);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-      { attribution: '© OpenStreetMap, © CARTO', subdomains: 'abcd' }).addTo(this.map);
+    addDmisBaseLayer(this.map, this.http, 'light');
     this.map.createPane('overlayicons'); this.map.getPane('overlayicons').style.zIndex = 650;
     this.map.createPane('ewshapes'); this.map.getPane('ewshapes').style.zIndex = 550;  // PMO shapes above district fills
     this.overlayLayer = L.layerGroup().addTo(this.map);

@@ -67,6 +67,7 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
             <a routerLink="/" [class.active]="active === 'home'" style="font-size: 1rem;"><i class="fas fa-home me-1"></i> {{ L.t('lbl_home') }}</a>
             <a routerLink="/about" [class.active]="active === 'about'" style="font-size: 1rem;"><i class="fas fa-info-circle me-1"></i> {{ L.t('lbl_about') }}</a>
             <a routerLink="/portal" [class.active]="active === 'portal'" style="font-size: 1rem;"><i class="fas fa-globe-africa me-1"></i> {{ L.t('lbl_portal') }}</a>
+            <a routerLink="/track-report" [class.active]="active === 'track-report'" style="font-size: 1rem;"><i class="fas fa-magnifying-glass-location me-1"></i> {{ L.t('lbl_track_report') }}</a>
             <a routerLink="/publications/Policies" [class.active]="active === 'publications'" style="font-size: 1rem;"><i class="fas fa-book-open me-1"></i> {{ L.t('lbl_publication') }}</a>
             <a routerLink="/education" [class.active]="active === 'education'" style="font-size: 1rem;"><i class="fas fa-graduation-cap me-1"></i> {{ L.t('lbl_education') }}</a>
             <button (click)="L.toggle()" style="font-size: 1rem;"><i class="fas fa-language me-1"></i> {{ L.lang() === 'en' ? 'Swahili' : 'English' }}</button>
@@ -191,6 +192,7 @@ export class PublicLayoutComponent implements OnDestroy {
     { path: '/', icon: 'fa-home', label: 'lbl_home' },
     { path: '/about', icon: 'fa-info-circle', label: 'lbl_about' },
     { path: '/portal', icon: 'fa-globe-africa', label: 'lbl_portal' },
+    { path: '/track-report', icon: 'fa-magnifying-glass-location', label: 'lbl_track_report' },
     { path: '/publications/Policies', icon: 'fa-book-open', label: 'lbl_publication' },
     { path: '/education', icon: 'fa-graduation-cap', label: 'lbl_education' },
     { path: '/subscribe', icon: 'fa-bell', label: 'lbl_subscribe_to_alerts' },

@@ -386,10 +386,31 @@ public class OneHealthDisseminationController {
 
     @PreAuthorize("hasAuthority('one_health.acknowledge')")
     @PostMapping("/disseminations/{id}/acknowledge")
+    @Transactional
     public ResponseEntity<Map<String, Object>> acknowledge(@PathVariable long id) {
         findOr404(id);
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("success", false, "message", "You are not associated with a stakeholder."));
+        Long stakeholderId = currentOneHealthStakeholderId();
+        if (stakeholderId == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("success", false, "message", "You are not associated with a stakeholder."));
+        }
+        Long userId = service.actingUserId();
+        int updated = jdbc.update("""
+                update public.oh_dissemination_stakeholders
+                   set acknowledgement_status = 'acknowledged',
+                       acknowledged_at = coalesce(acknowledged_at, now()),
+                       acknowledged_by = coalesce(acknowledged_by, ?),
+                       updated_at = now()
+                 where dissemination_id = ? and stakeholder_id = ?
+                """, userId, id, stakeholderId);
+        if (updated == 0) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("success", false, "message",
+                            "This dissemination was not sent to your stakeholder."));
+        }
+        return ResponseEntity.ok(Map.of("success", true,
+                "message", "Dissemination acknowledged.",
+                "stakeholder_id", stakeholderId));
     }
 
     // ─── Resend ───
@@ -641,6 +662,50 @@ public class OneHealthDisseminationController {
             throw new ResourceNotFoundException("Dissemination not found.");
         }
         return rows.get(0);
+    }
+
+    /**
+     * Resolve the institution represented by the current login. Partner-style accounts use
+     * users.stakeholder_id/stakeholders.user_id, while MDA focal accounts use users.agency_id and the
+     * One Health recipient table stores the matching institution in stakeholders.
+     */
+    private Long currentOneHealthStakeholderId() {
+        Long userId = service.actingUserId();
+        if (userId == null) {
+            return null;
+        }
+        List<Long> direct = jdbc.queryForList("""
+                select stakeholder_id from public.users
+                where id = ? and stakeholder_id is not null
+                """, Long.class, userId);
+        if (!direct.isEmpty()) {
+            return direct.get(0);
+        }
+        List<Long> reverse = jdbc.queryForList("""
+                select id from public.stakeholders
+                where user_id = ? and coalesce(is_active, true) = true
+                order by id limit 1
+                """, Long.class, userId);
+        if (!reverse.isEmpty()) {
+            return reverse.get(0);
+        }
+        List<Long> agency = jdbc.queryForList("""
+                select s.id
+                from public.users u
+                join public.agencies a on a.id = u.agency_id
+                join public.stakeholders s on coalesce(s.is_active, true) = true
+                 and (lower(s.organization) = lower(a.name)
+                      or lower(s.name) = lower(a.acronym)
+                      or lower(s.email) = lower(a.acronym || '@pmo.go.tz'))
+                where u.id = ?
+                order by case
+                    when lower(s.organization) = lower(a.name) then 0
+                    when lower(s.name) = lower(a.acronym) then 1
+                    else 2
+                end, s.id
+                limit 1
+                """, Long.class, userId);
+        return agency.isEmpty() ? null : agency.get(0);
     }
 
     private String name(Object userId) {

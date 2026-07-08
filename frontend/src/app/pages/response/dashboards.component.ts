@@ -3,11 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
-import { addMapNav, addTanzaniaDarkBase, addTanzaniaGisBase } from '../../core/tz-map';
+import { addMapNav, addTanzaniaDarkBase, addTanzaniaGisBase, applyDmisMapJurisdiction } from '../../core/tz-map';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 
-declare const L: any;     // Leaflet, loaded on demand (map standard: CartoDB voyager + TZ mask)
+declare const L: any;     // Leaflet, loaded on demand through the governed Tanzania map helper
 declare const Swal: any;  // SweetAlert2
 
 /** Severity palette from the enhanced EOCC board (merged board spec). */
@@ -38,6 +38,13 @@ const POLL_MS = 30_000; // verbatim source cadence
     .bar { height: 10px; border-radius: 5px; background: #dc3545; min-width: 2px; }
     .crit { background: #fee2e2; border-left: 3px solid #dc2626; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 0.8rem; }
     .pill { font-size: 0.75rem; color: #16a34a; font-weight: 700; }
+    .queue-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    .queue-item { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:8px 0; border-bottom:1px dashed #e3e6ed; font-size:0.8rem; }
+    .queue-item:last-child { border-bottom:none; }
+    .queue-item a { font-weight:700; color:#0d6efd; text-decoration:none; }
+    .queue-meta { color:#64748b; font-size:0.74rem; margin-top:2px; }
+    .wf-chip { border-radius:8px; background:#fff7ed; color:#9a3412; font-size:0.72rem; padding:2px 7px; font-weight:700; white-space:nowrap; }
+    @media (max-width: 900px) { .queue-grid, .split { grid-template-columns:1fr; } .stat-strip { grid-template-columns: repeat(2, 1fr); } }
   `],
   template: `
     <dmis-page-header title="Response Dashboard" icon="fa-tachometer-alt"
@@ -52,6 +59,33 @@ const POLL_MS = 30_000; // verbatim source cadence
       <div class="stat"><b>{{ d().statistics?.pending_tasks ?? 0 }}</b><span>Pending Tasks</span></div>
       <div class="stat"><b style="color:#dc2626">{{ d().statistics?.critical_incidents ?? 0 }}</b><span>Critical</span></div>
       <div class="stat"><b>{{ d().statistics?.assessments_pending ?? 0 }}</b><span>Assessments Pending</span></div>
+    </div>
+
+    <div class="queue-grid">
+      <dmis-panel title="Needs Your Action" icon="fa-person-circle-exclamation" [badge]="(d().needs_action?.length ?? 0) + ''">
+        @for (i of d().needs_action ?? []; track i.id) {
+          <div class="queue-item">
+            <span class="sev" [style.background]="color(i.severity_level)">{{ i.severity_level }}</span>
+            <div>
+              <a [routerLink]="['/m/response/incidents', i.id]">{{ i.title }}</a>
+              <div class="queue-meta">{{ i.hazard_name }} · {{ area(i) }} · {{ when(i.reported_at) }}</div>
+            </div>
+            <span class="wf-chip">{{ i.workflow_status_label }}</span>
+          </div>
+        } @empty { <div style="font-size:0.8rem;color:#94a3b8;padding:10px 0">No incidents are currently waiting at your workflow stage.</div> }
+      </dmis-panel>
+      <dmis-panel title="Submitted By Me" icon="fa-paper-plane" [badge]="(d().submitted_by_me?.length ?? 0) + ''">
+        @for (i of d().submitted_by_me ?? []; track i.id) {
+          <div class="queue-item">
+            <span class="sev" [style.background]="color(i.severity_level)">{{ i.severity_level }}</span>
+            <div>
+              <a [routerLink]="['/m/response/incidents', i.id]">{{ i.title }}</a>
+              <div class="queue-meta">{{ i.status }} · {{ area(i) }} · {{ when(i.submitted_at ?? i.reported_at) }}</div>
+            </div>
+            <span class="wf-chip">{{ i.workflow_status_label }}</span>
+          </div>
+        } @empty { <div style="font-size:0.8rem;color:#94a3b8;padding:10px 0">No submitted incidents are attached to your login yet.</div> }
+      </dmis-panel>
     </div>
 
     <dmis-panel title="Recent Incidents (24h)" icon="fa-clock-rotate-left">
@@ -147,6 +181,17 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
   pctRegion(total: number): number {
     const max = Math.max(1, ...(this.d().regional_data ?? []).map((t: any) => t.total));
     return Math.max(3, (total / max) * 100);
+  }
+
+  area(i: any): string {
+    return i?.district_name || i?.region_name || i?.location_description || 'Area not set';
+  }
+
+  when(value: unknown): string {
+    if (!value) {
+      return '-';
+    }
+    return String(value).substring(0, 16).replace('T', ' ');
   }
 }
 
@@ -355,8 +400,8 @@ function ensureLeaflet(): Promise<void> {
 /**
  * The SYSTEM map standard (same base as the landing/portal/EW maps): official local GIS layers via
  * addTanzaniaGisBase — no external tile CDN, works offline. When the caller's jurisdiction is known
- * (my_area from the dashboard payload), the map FOCUSES on it: a DED opens framed on their district,
- * an RAS on their region (own-area outline + fitBounds); national logins keep the country view.
+ * (my_area from the dashboard payload), the shared map helper clips and bounds the map to the caller's
+ * district/region; national logins keep the country view.
  */
 function buildTanzaniaMap(elementId: string, http: HttpClient,
                           myArea?: { scope?: string; region_name?: string; district_name?: string },
@@ -366,40 +411,8 @@ function buildTanzaniaMap(elementId: string, http: HttpClient,
     maxBounds: [[-12.0, 29.0], [-0.8, 41.0]], attributionControl: false,
   });
   if (dark) { addTanzaniaDarkBase(map, http); } else { addTanzaniaGisBase(map, http); }
-  focusJurisdiction(map, myArea, dark);
+  applyDmisMapJurisdiction(map, http, myArea, { dark });
   return map;
-}
-
-/** GIS split-file name rule (same as tz-map's safeName, which is module-private). */
-const gisFileName = (name: string) => name.replace(/ /g, '_').replace(/\//g, '_').replace(/'/g, '');
-/** Registry names carry admin-type suffixes the GIS layer omits ("Dodoma Urban" vs "Dodoma"). */
-const normArea = (n: string) => (n || '').toLowerCase()
-  .replace(/\s+(urban|rural|municipal|city|town|cbd|dc|mc|tc)\b/gi, '').replace(/[^a-z]/g, '');
-
-/** Outline + zoom the officer's own district/region so their live map opens focused on their area. */
-function focusJurisdiction(map: any, myArea?: { scope?: string; region_name?: string; district_name?: string },
-                           dark = false): void {
-  if (!myArea?.region_name) { return; }   // national / unassigned → country view
-  const outline = { color: dark ? '#7dd3fc' : '#0d3b66', weight: 2.5, fill: false, dashArray: undefined };
-  if (myArea.scope === 'DISTRICT' && myArea.district_name) {
-    fetch(`/geojson/adm2_district/by_region/${gisFileName(myArea.region_name)}.geojson`)
-      .then(r => r.json())
-      .then(data => {
-        const feat = (data.features ?? []).find((f: any) => normArea(f.properties.dist_name) === normArea(myArea.district_name!));
-        if (!feat) { return; }
-        const layer = L.geoJSON(feat, { style: outline, interactive: false }).addTo(map);
-        map.fitBounds(layer.getBounds(), { padding: [24, 24], maxZoom: 11 });
-      }).catch(() => { /* GIS file missing — stay at the national view */ });
-  } else {
-    fetch('/geojson/tz_regions_gis.geojson')
-      .then(r => r.json())
-      .then(data => {
-        const feat = (data.features ?? []).find((f: any) => normArea(f.properties.Region_Nam) === normArea(myArea.region_name!));
-        if (!feat) { return; }
-        const layer = L.geoJSON(feat, { style: outline, interactive: false }).addTo(map);
-        map.fitBounds(layer.getBounds(), { padding: [24, 24], maxZoom: 9 });
-      }).catch(() => { /* GIS file missing — stay at the national view */ });
-  }
 }
 
 let swalPromise: Promise<void> | null = null;

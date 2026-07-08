@@ -3,7 +3,7 @@ import { Component, ElementRef, OnDestroy, OnInit, computed, inject, signal, vie
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { OhReportEventModalComponent } from './report-event-modal.component';
-import { addMapNav } from '../../core/tz-map';
+import { addDmisBaseLayer, addMapNav } from '../../core/tz-map';
 
 declare const Chart: any;  // Chart.js, loaded per-page from the CDN exactly as the Blade page pushes it
 declare const L: any;      // Leaflet (global, as the Blade page loads it)
@@ -716,9 +716,7 @@ export class OhDashboardComponent implements OnInit, OnDestroy {
     });
     this.map = map;
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd', maxZoom: 19,
-    }).addTo(map);
+    addDmisBaseLayer(map, this.http, 'standard');
 
     addMapNav(this.map, { home: [-6.5, 35.0, 6] });
 

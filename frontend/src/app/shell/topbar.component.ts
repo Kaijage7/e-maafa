@@ -29,8 +29,39 @@ import { AuthService } from '../core/auth.service';
           <div class="bell-dropdown" [class.show]="bellOpen()" (click)="$event.stopPropagation()">
             <div class="bell-head">
               <b>Notifications</b>
-              @if (unread() > 0) { <a class="bell-readall" (click)="markAllRead()">Mark all read</a> }
+              <span style="display:flex;align-items:center;gap:10px;">
+                <button type="button" class="bell-settings" (click)="togglePrefs()" title="Notification preferences" aria-label="Notification preferences">
+                  <i class="fas fa-sliders"></i>
+                </button>
+                @if (unread() > 0) { <a class="bell-readall" (click)="markAllRead()">Mark all read</a> }
+              </span>
             </div>
+            @if (prefsOpen()) {
+              <form class="bell-prefs" (ngSubmit)="savePrefs()">
+                <div class="pref-title"><i class="fas fa-sliders"></i> Channel preferences</div>
+                <label class="pref-row">
+                  <span><b>In-app</b><em>Show notices in this bell</em></span>
+                  <input type="checkbox" name="prefInApp" [(ngModel)]="pref.notify_in_app">
+                </label>
+                <label class="pref-row">
+                  <span><b>Email</b><em>{{ pref.email || 'No email on account' }}</em></span>
+                  <input type="checkbox" name="prefEmail" [(ngModel)]="pref.notify_email">
+                </label>
+                <label class="pref-row">
+                  <span><b>SMS</b><em>Use the phone number below</em></span>
+                  <input type="checkbox" name="prefSms" [(ngModel)]="pref.notify_sms">
+                </label>
+                <label class="pref-phone">
+                  <span>Phone</span>
+                  <input name="prefPhone" [(ngModel)]="pref.phone" placeholder="0712345678">
+                </label>
+                @if (prefMsg()) { <div class="pref-msg" [class.err]="prefErr()">{{ prefMsg() }}</div> }
+                <div class="pref-actions">
+                  <button type="button" class="pref-cancel" (click)="prefsOpen.set(false)">Close</button>
+                  <button type="submit" class="pref-save" [disabled]="prefBusy()">{{ prefBusy() ? 'Saving...' : 'Save' }}</button>
+                </div>
+              </form>
+            }
             <div class="bell-list">
               @for (n of notifs(); track n.id) {
                 <a class="bell-item" [class.unread]="!n.is_read" (click)="open(n)">
@@ -93,6 +124,24 @@ import { AuthService } from '../core/auth.service';
     .bell-dropdown.show { display: block; }
     .bell-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid #eef1f5; color: #1f2937; font-size: 0.86rem; }
     .bell-readall { font-size: 0.78rem; color: #2563eb; cursor: pointer; font-weight: 600; }
+    .bell-settings { background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+    .bell-settings:hover { background: #eef2f7; color: #003366; }
+    .bell-prefs { padding: 10px 14px 12px; border-bottom: 1px solid #eef1f5; background: #fbfdff; color: #1f2937; display: grid; gap: 8px; }
+    .pref-title { font-size: 0.82rem; font-weight: 800; color: #334155; display: flex; align-items: center; gap: 7px; }
+    .pref-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 0.82rem; margin: 0; }
+    .pref-row span { display: flex; flex-direction: column; min-width: 0; }
+    .pref-row b { color: #1f2937; font-size: 0.82rem; }
+    .pref-row em { color: #64748b; font-size: 0.75rem; font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px; }
+    .pref-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: #003366; flex-shrink: 0; }
+    .pref-phone { display: grid; gap: 3px; font-size: 0.78rem; font-weight: 700; color: #475569; margin: 0; }
+    .pref-phone input { border: 1px solid #cbd5e1; border-radius: 6px; padding: 7px 9px; font-size: 0.84rem; }
+    .pref-msg { font-size: 0.78rem; color: #16a34a; font-weight: 700; }
+    .pref-msg.err { color: #dc2626; }
+    .pref-actions { display: flex; justify-content: flex-end; gap: 7px; }
+    .pref-cancel, .pref-save { border-radius: 6px; padding: 7px 11px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+    .pref-cancel { background: #fff; border: 1px solid #cbd5e1; color: #475569; }
+    .pref-save { background: #003366; border: 1px solid #003366; color: #fff; }
+    .pref-save:disabled { opacity: 0.6; cursor: default; }
     .bell-list { max-height: 380px; overflow-y: auto; }
     .bell-item { display: flex; gap: 10px; padding: 10px 14px; border-bottom: 1px dashed #eef1f5; text-decoration: none; color: #1f2937; cursor: pointer; }
     .bell-item:hover { background: #f8fafc; }
@@ -138,6 +187,11 @@ export class TopbarComponent implements OnInit, OnDestroy {
   bellOpen = signal(false);
   notifs = signal<any[]>([]);
   unread = signal(0);
+  prefsOpen = signal(false);
+  prefBusy = signal(false);
+  prefErr = signal(false);
+  prefMsg = signal('');
+  pref = { notify_in_app: true, notify_email: true, notify_sms: false, phone: '', email: '' };
   private pollTimer: any;
 
   ngOnInit(): void {
@@ -168,6 +222,52 @@ export class TopbarComponent implements OnInit, OnDestroy {
     this.menuOpen.set(false);
     this.bellOpen.update(v => !v);
     if (this.bellOpen()) { this.loadNotifs(); }
+  }
+
+  togglePrefs(): void {
+    this.prefsOpen.update(v => !v);
+    this.prefMsg.set('');
+    if (this.prefsOpen()) { this.loadPrefs(); }
+  }
+
+  private loadPrefs(): void {
+    this.http.get<any>('/api/v1/notifications/preferences').subscribe({
+      next: r => {
+        this.pref = {
+          notify_in_app: r.notify_in_app ?? true,
+          notify_email: r.notify_email ?? true,
+          notify_sms: r.notify_sms ?? false,
+          phone: r.phone ?? '',
+          email: r.email ?? '',
+        };
+      },
+      error: () => {
+        this.prefErr.set(true);
+        this.prefMsg.set('Could not load preferences.');
+      },
+    });
+  }
+
+  savePrefs(): void {
+    this.prefBusy.set(true);
+    this.prefMsg.set('');
+    this.http.post('/api/v1/notifications/preferences', {
+      notify_in_app: this.pref.notify_in_app,
+      notify_email: this.pref.notify_email,
+      notify_sms: this.pref.notify_sms,
+      phone: this.pref.phone || null,
+    }).subscribe({
+      next: () => {
+        this.prefBusy.set(false);
+        this.prefErr.set(false);
+        this.prefMsg.set('Preferences saved.');
+      },
+      error: err => {
+        this.prefBusy.set(false);
+        this.prefErr.set(true);
+        this.prefMsg.set(err?.error?.message || err?.error?.detail || 'Could not save preferences.');
+      },
+    });
   }
 
   /** Open a notification: mark it read and follow its deep link. */
@@ -247,5 +347,6 @@ export class TopbarComponent implements OnInit, OnDestroy {
   closeMenu(): void {
     this.menuOpen.set(false);
     this.bellOpen.set(false);
+    this.prefsOpen.set(false);
   }
 }

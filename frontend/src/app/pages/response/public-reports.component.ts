@@ -13,8 +13,10 @@ interface ReportRow {
   urgency_level: string | null; reporter_name: string | null; reporter_phone: string | null;
   status: string; review_notes: string | null; linked_incident_id: number | null;
   linked_incident_title: string | null; reviewed_by_name: string | null;
+  region_id: number | null; district_id: number | null; region_name: string | null; district_name: string | null;
   created_at: string; reviewed_at: string | null;
 }
+interface Opt { id: number; name: string; }
 
 const STATUS_BADGE: Record<string, string> = {
   new: 'badge-pending', reviewing: 'badge-approved', converted: 'badge-approved', dismissed: 'badge-muted',
@@ -66,7 +68,8 @@ const STATUS_BADGE: Record<string, string> = {
                 <tr class="data-row">
                   <td style="font-family:monospace;font-size:0.78rem;">{{ r.report_code }}</td>
                   <td><span class="r-badge" style="background:rgba(220,53,69,0.1);color:#dc3545;">{{ r.hazard_type }}</span></td>
-                  <td style="font-size:0.82rem;max-width:200px;">{{ r.location_description || '—' }}</td>
+                  <td style="font-size:0.82rem;max-width:200px;">{{ r.location_description || '—' }}
+                    <div style="font-size:0.74rem;color:var(--text-light);margin-top:2px;">{{ areaLabel(r) }}</div></td>
                   <td style="font-size:0.8rem;color:var(--text-mid);">{{ r.reporter_name || 'Anonymous' }}<br>
                     <span style="font-size:0.75rem;color:var(--text-light);">{{ r.reporter_phone || '' }}</span></td>
                   <td style="text-align:center;"><span class="r-badge" [class.badge-pending]="r.urgency_level==='High'||r.urgency_level==='Critical'">{{ r.urgency_level || '—' }}</span></td>
@@ -107,6 +110,7 @@ const STATUS_BADGE: Record<string, string> = {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;font-size:0.84rem;">
             <div style="grid-column:1/3;"><div class="f-lbl">Location</div>{{ r.location_description || '—' }}
               @if (r.latitude && r.longitude) { <span style="color:var(--text-light);font-size:0.78rem;"> ({{ r.latitude }}, {{ r.longitude }})</span> }</div>
+            <div style="grid-column:1/3;"><div class="f-lbl">Area</div>{{ areaLabel(r) }}</div>
             <div style="grid-column:1/3;"><div class="f-lbl">Description</div>{{ r.description || '—' }}</div>
             <div><div class="f-lbl">Reporter</div>{{ r.reporter_name || 'Anonymous' }}</div>
             <div><div class="f-lbl">Phone</div>{{ r.reporter_phone || '—' }}</div>
@@ -124,17 +128,44 @@ const STATUS_BADGE: Record<string, string> = {
 
     <!-- Convert -->
     @if (convertRow(); as r) {
-      <div class="modal-backdrop" (click)="convertRow.set(null)">
+      <div class="modal-backdrop" (click)="closeConvert()">
         <div class="modal-card" (click)="$event.stopPropagation()" style="max-width:480px;">
           <h5 style="font-weight:800;margin:0 0 0.4rem;"><i class="fas fa-arrow-right-arrow-left me-2"></i>Convert to incident</h5>
           <p style="font-size:0.84rem;color:var(--text-mid);">Create a formal incident from citizen report <strong>{{ r.report_code }}</strong> ({{ r.hazard_type }} at {{ r.location_description }}). It enters the incident approval workflow.</p>
+          @if (r.district_id) {
+            <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:0.7rem;margin-bottom:0.8rem;font-size:0.84rem;">
+              <div class="f-lbl">Incident area</div>{{ areaLabel(r) }}
+            </div>
+          } @else {
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.8rem;">
+              <div>
+                <label class="f-lbl">Region <span class="text-danger">*</span></label>
+                <select class="form-select" [(ngModel)]="convRegionId" (ngModelChange)="onConvertRegionChange($event)">
+                  <option [ngValue]="null">Select Region</option>
+                  @for (rg of regions(); track rg.id) { <option [ngValue]="rg.id">{{ rg.name }}</option> }
+                </select>
+              </div>
+              <div>
+                <label class="f-lbl">District <span class="text-danger">*</span></label>
+                <select class="form-select" [(ngModel)]="convDistrictId" [disabled]="!convRegionId">
+                  <option [ngValue]="null">Select District</option>
+                  @for (d of districts(); track d.id) { <option [ngValue]="d.id">{{ d.name }}</option> }
+                </select>
+              </div>
+            </div>
+          }
           <label class="f-lbl">Severity level</label>
           <select class="form-select" [(ngModel)]="convSeverity">
             <option value="Minor">Minor</option><option value="Moderate">Moderate</option>
             <option value="Major">Major</option><option value="Catastrophic">Catastrophic</option>
           </select>
+          @if (convError()) {
+            <div style="margin-top:0.75rem;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:8px;padding:0.65rem;font-size:0.84rem;">
+              {{ convError() }}
+            </div>
+          }
           <div style="display:flex;justify-content:flex-end;gap:0.6rem;margin-top:1.1rem;">
-            <button class="btn-cancel" (click)="convertRow.set(null)">Cancel</button>
+            <button class="btn-cancel" (click)="closeConvert()">Cancel</button>
             <button class="btn-add" [disabled]="saving()" (click)="confirmConvert()">
               <i class="fas" [class.fa-arrow-right]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i> Convert
             </button>
@@ -160,12 +191,17 @@ export class PublicReportsComponent {
 
   reports = signal<ReportRow[]>([]);
   stats = signal<Record<string, number>>({});
+  regions = signal<Opt[]>([]);
+  districts = signal<Opt[]>([]);
   detail = signal<ReportRow | null>(null);
   convertRow = signal<ReportRow | null>(null);
+  convError = signal('');
   saving = signal(false);
 
   fStatus = ''; fSearch = '';
   convSeverity = 'Moderate';
+  convRegionId: number | null = null;
+  convDistrictId: number | null = null;
   openMenu = signal<number | null>(null);
 
   constructor() { this.reload(); }
@@ -181,6 +217,7 @@ export class PublicReportsComponent {
   }
 
   badge(s: string): string { return STATUS_BADGE[s] ?? 'badge-pending'; }
+  areaLabel(r: ReportRow): string { return [r.district_name, r.region_name].filter(Boolean).join(', ') || 'Area not assigned'; }
 
   view(r: ReportRow): void { this.detail.set(r); }
 
@@ -201,22 +238,73 @@ export class PublicReportsComponent {
     });
   }
 
-  openConvert(r: ReportRow): void { this.convSeverity = 'Moderate'; this.convertRow.set(r); }
+  openConvert(r: ReportRow): void {
+    this.convSeverity = 'Moderate';
+    this.convError.set('');
+    this.convRegionId = r.region_id ?? null;
+    this.convDistrictId = r.district_id ?? null;
+    this.districts.set([]);
+    this.loadRegions();
+    if (this.convRegionId) { this.loadDistricts(this.convRegionId, this.convDistrictId); }
+    this.convertRow.set(r);
+  }
+
+  closeConvert(): void {
+    this.convertRow.set(null);
+    this.convError.set('');
+  }
+
+  loadRegions(): void {
+    if (this.regions().length) { return; }
+    this.http.get<Opt[]>('/api/v1/portal/regions').subscribe({
+      next: r => this.regions.set(r ?? []),
+      error: () => this.regions.set([]),
+    });
+  }
+
+  onConvertRegionChange(regionId: number | null): void {
+    this.loadDistricts(regionId, null);
+  }
+
+  loadDistricts(regionId: number | null, keepDistrict: number | null = null): void {
+    this.convDistrictId = keepDistrict;
+    this.districts.set([]);
+    if (!regionId) { return; }
+    this.http.get<Opt[]>(`/api/v1/portal/regions/${regionId}/districts`).subscribe({
+      next: d => {
+        this.districts.set(d ?? []);
+        if (keepDistrict) { this.convDistrictId = keepDistrict; }
+      },
+      error: () => this.districts.set([]),
+    });
+  }
 
   confirmConvert(): void {
     const r = this.convertRow();
     if (!r) { return; }
+    const payload: any = { severity_level: this.convSeverity };
+    if (!r.district_id) {
+      if (!this.convDistrictId) {
+        this.convError.set('Select the incident district before converting this untagged public report.');
+        return;
+      }
+      payload.region_id = this.convRegionId;
+      payload.district_id = this.convDistrictId;
+    }
     this.saving.set(true);
-    this.http.post<any>(`${this.base}/${r.id}/convert`, { severity_level: this.convSeverity }).subscribe({
+    this.convError.set('');
+    this.http.post<any>(`${this.base}/${r.id}/convert`, payload).subscribe({
       next: res => {
         this.saving.set(false); this.convertRow.set(null); this.reload();
         if (res.incident_id && confirm(`${res.message}\n\nOpen the new incident now?`)) {
           this.router.navigate(['/m/response/incidents', res.incident_id]);
         }
       },
-      error: err => { this.saving.set(false); alert(err?.error?.detail ?? 'Could not convert the report.'); },
+      error: err => { this.saving.set(false); this.convError.set(this.msg(err, 'Could not convert the report.')); },
     });
   }
+
+  private msg(err: any, fallback: string): string { return err?.error?.detail ?? err?.error?.message ?? fallback; }
 
   goIncident(id: number): void { this.router.navigate(['/m/response/incidents', id]); }
 

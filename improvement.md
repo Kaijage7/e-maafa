@@ -1,22 +1,66 @@
 # e-MAAFA / DMIS — Improvement Plan & Progress Ledger
 
-> Living document. Source of truth for the honest full-system audit (`DMIS-LINKAGE-AUDIT.md`, 154 findings) and the fix campaign that follows it (`DMIS-AUDIT-FIX-LOG.md`). Last updated 2026-07-06.
+> Living document. Source of truth for the honest full-system audit (`DMIS-LINKAGE-AUDIT.md`, 154 findings) and the fix campaign that follows it (`DMIS-AUDIT-FIX-LOG.md`). Last updated 2026-07-08.
 
 ## 1. How to read this
 
-The audit graded every subsystem live (real API + SQL evidence, then an adversarial re-check of every serious accusation). Verdicts: **✅ WORKING** (verified) · **🟡 PARTIAL** (works, stated gaps) · **🔴 GAP** (designed, missing) · **🚨 FAKE** (pretends to work) · **⚫ DEAD** (unreachable/unused). Of 154 findings, **63 were already WORKING**; this plan tracks the **91 non-WORKING items** (plus **F92**, found during the Wave-2 adversarial re-check → 92 tracked) to closure — each fixed item carries live verification evidence, not a claim.
+The audit graded every subsystem live (real API + SQL evidence, then an adversarial re-check of every serious accusation). Verdicts: **✅ WORKING** (verified) · **🟡 PARTIAL** (works, stated gaps) · **🔴 GAP** (designed, missing) · **🚨 FAKE** (pretends to work) · **⚫ DEAD** (unreachable/unused). Of 154 findings, **63 were already WORKING**; this plan tracks the **91 non-WORKING items** plus F92-F116 found during the fix campaign and fresh reassessments — each fixed item carries live verification evidence, not a claim.
 
-**Backlog health (2026-07-06, after Wave 3 + the RBAC trim):** 94 tracked (91 audit + F92/F93/F94 found during the campaign) — **24 resolved · 70 open** (🟡PARTIAL 33 · ⚫DEAD 18 · 🔴GAP 18 · ❔UNVERIFIED 1).
+**Backlog health (2026-07-08, after Wave 3 + the RBAC trim + fresh reassessment pass + F06/F15/F17/F18/F19/F20/F22/F37/F38/F39/F40/F41/F42/F43/F44/F45/F46 live fixes + F93/F100/F101/F103/F104/F106/F109/F110/F111 code guards):** 116 tracked (91 audit + F92/F93/F94 found during the campaign + F95-F116 fresh reassessment) — **40 resolved · 76 open** (🟡PARTIAL 46 · ⚫DEAD 13 · 🔴GAP 16 · ❔UNVERIFIED 1).
 
 | Status | Count |
 |---|---|
 | ✅ Fixed & live-verified (Wave 1, committed `924b08e`) | 7 |
 | ✅ Fixed, live-verified + adversarially re-checked (Wave 2, committed `2abb5a5`) | 6 |
 | ✅ Fixed & live-verified + independent re-probes (Wave 3, committed `b7093f5`): F05, F12, F24, F35, F70, F87, F88, F89, F91 (already fixed, closed), F92 | 10 |
-| ✅ Fixed & live-verified — F94 area-role least privilege (committed `55b2a45`, user-driven) | 1 |
-| ⬜ Remaining — P1 (severity 4): F06 scenario library/MSEL | 1 |
-| ⬜ Remaining — P2 (severity 3, incl. new F93) | 29 |
-| ⬜ Remaining — P3 (severity 1–2) | 40 |
+| ✅ Fixed & live-verified (2026-07-08 continuation): F06, F15, F17, F18, F19, F20, F22, F37, F38, F39, F40, F41, F42, F43, F44, F45, F46 | 17 |
+| ⬜ Remaining — P1 (severity 4): reopened F94 area-role RBAC residue | 1 |
+| ⬜ Remaining — P2 (priority 2: severity 3 plus promoted F93; incl. new F93/F95/F96/F99/F101/F102/F104/F105/F106/F107/F108/F110/F111/F112/F113/F114/F115/F116) | 30 |
+| ⬜ Remaining — P3 (priority 3: severity 1–2 cleanup/polish, excluding promoted F93; incl. new F97/F98/F100/F103/F109) | 45 |
+
+**Ledger reconciliation (2026-07-08):**
+- `DMIS-AUDIT-FIX-LOG.md` has **116 F-headings** and all 116 have status lines.
+- Status parity after the F19/F20 closure: **40 fixed/closed**, **76 open**, zero missing/unknown statuses.
+- Open by type tag: **PARTIAL 46**, **DEAD 13**, **GAP 16**, **UNVERIFIED 1**.
+- Open by raw severity tag: **s4 = 1**, **s3 = 29**, **s2 = 44**, **s1 = 2**.
+- Fix-order buckets: **P1 = 1**, **P2 = 30**, **P3 = 45**. P2 is one larger than raw s3 because **F93** is severity 2 but promoted into the incident-lifecycle P2 workstream.
+- Newer findings **F92-F116**: **1 fixed** (`F92`) and **24 open** (`F93`, reopened `F94`, `F95-F116`).
+- This is exact for documented findings only; it is not a claim that no further issue can be discovered through deeper tests.
+
+**Resolved-item confidence audit (2026-07-08):**
+- The 40 resolved IDs are: `F01`, `F02`, `F03`, `F04`, `F05`, `F06`, `F07`, `F08`, `F09`, `F10`, `F11`, `F12`, `F13`, `F14`, `F15`, `F16`, `F17`, `F18`, `F19`, `F20`, `F21`, `F22`, `F24`, `F35`, `F37`, `F38`, `F39`, `F40`, `F41`, `F42`, `F43`, `F44`, `F45`, `F46`, `F70`, `F87`, `F88`, `F89`, `F91`, `F92`.
+- None of those 40 IDs appear as active bullets in the Remaining sections.
+- Strongest confidence: 16 items have live verification plus adversarial/independent re-checks (`F03`, `F04`, `F05`, `F10`, `F11`, `F12`, `F13`, `F16`, `F24`, `F35`, `F70`, `F87`, `F88`, `F89`, `F91`, `F92`).
+- Live-verified but not independently re-smoked in this reconciliation pass: 24 items (`F01`, `F02`, `F06`, `F07`, `F08`, `F09`, `F14`, `F15`, `F17`, `F18`, `F19`, `F20`, `F21`, `F22`, `F37`, `F38`, `F39`, `F40`, `F41`, `F42`, `F43`, `F44`, `F45`, `F46`). Keep them resolved, but re-run their smoke checks before any production release sign-off.
+- Known caveats do not reopen the fixed items, but remain important: `F12` intentionally relies on F05 journal events for command-role history; `F13` exposed and then led to fixed `F92`; `F24` exposed still-open official-source follow-up `F93`; `F91` was already fixed by redirect behavior rather than new code.
+- Challenge-review correction: `F94` is **reopened**. The RAS/Reg DC/DED/DAS trim and stakeholder-portal route gate are valid partial fixes, but the original finding was broader than the verified scope: `Dist DC` was not included in V142/V143, and V103+V105 can leave a district-command role with reachable One Health action/view authority.
+- Reexamination 2026-07-08: current source still supports the 40 resolved statuses by static code/route/migration review, and no resolved ID appears as a Remaining bullet. Frontend production build passed. Backend compile also passed with the local Maven/JDK path. Full backend tests remain blocked by F102: `mvn test` compiles main/test sources, then Spring tests repeatedly retry Hikari against local Postgres and do not complete without the live DB.
+- Reexamination caveat: `F01` production handlers remain removed, but `SecurityEnforcementTest.ewDisseminateDeniesFieldRole()` still references the deleted `/ew/disseminate` endpoint. This is tracked under open `F102` test-suite cleanup, not as an F01 reopen.
+
+**Whole-ledger reassessment (2026-07-08):**
+- Scope: all **116** documented F-items were rechecked at the documentation + static source level: fix-log headings, `- Status:` lines, active Remaining bullets, backend routes/services, migrations, frontend route/API references, and the highest-risk implementation surfaces.
+- Result: **one resolved item was reopened (`F94`)** by the current source review, then **F06, F15, F17, F18, F19, F20, F22, F37, F38, F39, F40, F41, F42, F43, F44, F45, and F46 were fixed and live-verified**; **no new F117** was justified by this pass. The exact production picture is now **40 resolved / 76 open**.
+- Reconfirmed fixed side: the 40 fixed/closed IDs are still absent from active Remaining bullets; key fixed-path checks still line up for deleted EW boundary handlers, user area/stakeholder attachment, per-incident forecast linkage, backbone SMS eligibility for critical incident workflow handoffs, stakeholder-scoped One Health dissemination acknowledgments, dead outbox scaffold removal with V153 table drop, bulk resource approval, scoped fulfilment-source redirects, exercise scenario library/MSEL launch, partner approval-to-login provisioning, district-precise EW report matching, warning-linked anticipatory activation, resolved-incident repository intake, Sendai analytics quality, knowledge repository document upload/download/incident linkage, relief distribution incident/source/stock-journal linkage, active news article to incident snapshot continuity, partner registration-to-login/Open Needs continuity, targeted scanner tasking notifications, cost-used aggregation, ICS command roles, ops timeline, MoW taskings + agency scoping, real warehouse stock counts, Emergency Supplies stock-journal reconciliation, dashboard scope fix, and stale route removals/redirects.
+- Reconfirmed open side: reopened `F94` now has V144 implemented but still needs migrated-DB/fresh-login retest before closure; `F96` storage hardening is auth-only for restricted prefixes, not row/jurisdiction scoped; `F104` now has a governed local-first map base registry and direct tile bypasses removed, but still needs browser map-smoke before closure; `F105`/`F114` have INFORM and deterministic scanner engines but no governed model-inference, satellite-scene, exposure-dataset, or impact-layer contracts; `F107`/`F115` still have raw SweetAlert/Leaflet HTML interpolation; `F100`, `F101`, `F103`, `F106`, `F109`, `F110`, and `F111` now have guards/invariants aligned in code but still need migrated-DB/live role/simulation/browser smoke before closure.
+- Test evidence: frontend `npm run build -- --configuration production` passed on 2026-07-08 after the F103 route cleanup, after the F104 map-base registry cleanup, after the F106 public-report conversion UI, after the F38 EW report UI update, after the F39 command-post/EOCC linkage UI, after the F40 repository-intake UI, after the F41 Sendai analytics quality UI, after the F43 knowledge repository document UI, after the F44 relief distribution source-selection UI, after the F45 incident-snapshot contract update, after the F46 registration/approval UI update, after the F06 scenario-library UI update, and after the F15 notification preference/UI update. Backend `JAVA_HOME=/home/kaijage/tools/jdk /home/kaijage/tools/maven/bin/mvn -q -DskipTests compile` passed on 2026-07-08 after the F37 service fix, after the F38 report/forecast fix, after the F39 warning-link implementation, after the F40 repository-intake implementation, after the F41 analytics-quality implementation, after the F42 scanner-recipient targeting implementation, after the F43 knowledge repository upload/download implementation, after the F44 relief distribution stock-link implementation, after the F45 portal snapshot fix, after the F22/F46 partner-login provisioning fix, after the F06 scenario-library launch fix, and after the F15 incident-notification SMS eligibility fix. F37 was live-smoked through the inventory API and SQL after Flyway applied V146/V147. F38 was live-smoked through the EW report API, a SQL old-vs-new area comparison, and an incident forecast negative case. F39 was live-smoked through Flyway V148, issued-warning picker/API list, warning-code activation creation, duplicate live-post rejection, board/readiness readback, and stand-down retaining `warning_id`/`warning_code`. F40 was live-smoked through the repository incident-worklist API, one-click creation of `DE-2026-0137` from incident `31`, card/link readback, worklist removal, and duplicate-create HTTP 409 guard. F41 was live-smoked through Flyway V149, `/repository/analytics` API, SQL hazard normalization (`Floods=30`, no `Flood`), real-region ranking exclusion of `National (...)`, data-quality counts `74/1/2`, and replacement of the false loss-concentration insight with a sparse-loss completeness insight. F42 was live-smoked with a controlled scanner detection through dispatch->acknowledge->respond->return->re-respond->accept; SQL proved `scanner_tasking`, `scanner_returned`, and `scanner_accepted` went only to NEMC+EOCC (`2/2`, zero unexpected/missing), `scanner_response` went EOCC-only (`1/1`, zero unexpected/missing), and the controlled rows were deleted with follow-up SQL confirming zero leftovers. F43 was live-smoked through Flyway V150, knowledge list incidents/stats, multipart document upload linked to incident `31`, authenticated download returning a 133-byte PDF attachment, downloads_count increment `0 -> 1`, approve transition to Approved, and exact cleanup of the two controlled rows/files with follow-up checks confirming zero leftovers. F44 was live-smoked through Flyway V151, relief distribution list `stock_sources`, controlled create for incident `31` / resource `1` / temporary warehouse `1`, pending row proof with inventory unchanged at `90`, confirmation movement `76` as `Removal` / `relief_distribution` / `Completed`, inventory decrement `90 -> 89`, repeat-confirm idempotence, missing-incident 422 rejection, and exact cleanup/restoration with zero controlled leftovers. F45 was live-smoked with the real active article `market-fire-kariakoo-trading-area-2`: `/portal/news/...` returned HTTP 200 with `/incident/2`, `/portal/incidents/2` returned HTTP 200 with `Resolved`, `pinnedToMap=false`, `publishedViaNews=true`, and unpublished/nonlinked incident `1` still returned HTTP 404. F22/F46 were live-smoked with a controlled public registration `codex-f46-1783509948@example.test`: register HTTP 201, first verify HTTP 200 with `accountProvisioned=true` and user `114`, repeated verify HTTP 200 with the Partners role count staying `1->1`, one unused future reset token before reset, reset HTTP 200, login HTTP 200 as `Partners`, real JWT Open Needs HTTP 200 with `stats.canPledge=true`, SQL mirror links `41 <-> 114`, `partner_role_count=1`, and `reset_used=true`, then exact cleanup with zero controlled leftovers. F15 was live-smoked with a controlled Dist DC preference and Critical incident workflow handoff: blank-phone SMS opt-in returned HTTP 422, valid phone opt-in returned HTTP 200, Critical incident `102` produced one in-app row plus one pending `sms_logs` row through the backbone, Moderate control `103` produced zero SMS rows, and cleanup restored user `4` plus deleted all controlled incident/notification/SMS/email rows. Backend regression tests remain **blocked by F102**: `mvn test` compiles sources but then repeatedly retries Hikari against local Postgres and was interrupted after more than two minutes; the stale `/ew/disseminate` security test under `F102` still must be cleaned before backend tests can be trusted.
+- F06 live-smoke evidence: Flyway V152 applied on the local DB; API listed seeded scenario `TZ-CYCLONE-FLOOD-HEALTH-72H` with 3 incident templates and 6 MSEL events; controlled scenario `CODEX-F06-1783510520` created 2 incident templates, 3 MSEL events, and 1 IC roster entry; launch returned run `1`, activations `48/49`, incidents `100/101`, 190 DRF tasks, 4 copied injects, 2 roster enrollments, and board reads proved scenario metadata, EOCC Officer as IC, expected-action injects, 15 DRF lanes, and compressed due-time firing. SQL totals matched exactly, then cleanup removed the controlled scenario/run/incident/activation/inject rows and follow-up SQL showed zero `CODEX-F06` leftovers while the seeded scenario remained.
+- F17 live-smoke evidence: controlled One Health event `CODEX-F17-1783517460` and dissemination `11` targeted TMA stakeholder `1`; PMO/admin without stakeholder got HTTP 403, `X-Local-Roles: MDA Focal` got HTTP 200, SQL showed `acknowledgement_status='acknowledged'`, `acknowledged_by=5`, and a non-null ack timestamp; non-recipient dissemination `12` to MoH stakeholder `4` returned HTTP 403 and stayed pending; cleanup removed the controlled event/disseminations/pivots and follow-up SQL showed zero leftovers.
+- F18 fixed evidence: removed the unused AggregateRoot/domain-event/outbox runtime classes, removed active-outbox claims from application/config comments, and added V153 to drop `platform.outbox_event`. Backend compile passed and source grep found no remaining Java references to the deleted event/outbox classes. Live DB verification now passed: local Docker backend started against the migrated `dmis-pg` database, `platform.flyway_schema_history` shows V153 success, `to_regclass('platform.outbox_event')` returned null, and there are zero failed Flyway migrations.
+- F19/F20 fixed evidence: controlled live API smoke against the rebuilt prod-profile backend proved bulk approval approved two valid controlled requests, reported a bad id as a per-id failure, and refreshed the pending queue truthfully. Fulfilment-source smoke proved warehouse, procurement, and agency persistence; non-pending update rejection; strict parent-incident scoping; scoped RAS warehouse options; out-of-area warehouse 404; and own-region warehouse success. Headless Chrome smoke on the Angular approvals page proved pending checkboxes, Bulk Approve enablement after selection, and Warehouse/Agency/Procurement drawer controls with zero failed requests/page errors. Controlled rows and the temporary RAS approval grant were cleaned up, with follow-up SQL showing zero leftovers.
+- Production honesty: this reassessment is strong static/code-ledger evidence plus clean frontend/backend compile gates, not a final release certificate. A production sign-off still needs backend regression tests in a DB-capable/hermetic environment, a migrated database, API smoke tests for the 40 resolved items, and role-based browser walkthroughs for the high-risk open modules.
+
+**179-claim revalidation program (started 2026-07-08):**
+- Full claim universe: **154 original audit claims + 25 later/fresh claims = 179 claims**. The 116 F-items are only the non-working/fresh issue ledger; the original **63 WORKING** claims are not honorary closures.
+- Working-claim rule: every original `✅ WORKING` claim is now treated as an affirmative production claim that must survive fresh source, migration, role, route, API, and smoke-test review. If a working claim has an uncovered production gap, create the next F-number; if an existing F already covers the gap, cross-reference it instead of duplicating.
+- First crosswalk corrections: original claim #107, "Drill-isolation seal ... sims cannot move real stock/money/comms", remains **qualified** because `F111` only has backend guard code so far and still needs live finance/drill smoke verification. Original claim #75, "Budget & Finance module ... working", is real but not production-clean because `F110` and `F111` remain open pending migrated/live verification. Original claims #133/#134, frontend dead-code hygiene and API mapping, do not prove role-consistent usability because `F95`, `F103`, `F109`, `F112`, and `F113` show permission/fallback mismatches. Original claims #149/#150, incident portal push/news, no longer carry the F45 dead-snapshot caveat after live public API verification, but they still need full working-claim crosswalk review before production sign-off. Original claim #53/#80, EW analytics, no longer has the F38 district-precision or F39 anticipatory-linkage caveats, but public warning/incident map linkage remains open under `F26`. Original claim #11, partner registration row creation, is no longer accepted as sufficient by itself; F22/F46 now add the missing verified approval-to-login/Open Needs round-trip.
+- Next audit action: build a working-claim crosswalk for all 63 original WORKING claims before treating any of them as production-complete, then use role-by-role browser/API smoke tests to confirm or downgrade each claim.
+
+**Documentation consistency rules:**
+- This file summarizes; `DMIS-AUDIT-FIX-LOG.md` carries the per-finding evidence.
+- Do not mark an item resolved here unless its fix-log status is `FIXED` or `CLOSED` with verification.
+- If a new issue is discovered, assign the next F-number in the fix log first, then update this summary count and the correct P1/P2/P3 bucket.
+- If a fixed item still appears under a Remaining section, remove it from Remaining but keep its validation evidence below.
+- State uncertainty directly: use `OPEN`, `UNVERIFIED`, or an explicit caveat instead of implying production readiness.
 
 ## 2. Major capability delivered before/around the audit (context)
 
@@ -61,55 +105,41 @@ Six items, each verified live AND independently re-checked by a second skeptic a
 
 ## 5. ⬜ Remaining — P1 (severity 4, do next)
 
-### Incident Command Post + Virtual Simulations
-- **F05** 🔴 — No ICS organization structure: no incident commander, no section chiefs, no per-activation org chart or named command roles
-  - *Fix:* M: add activation_command_roles table (activation_id, role e.g. IC/Ops/Planning/Logistics/Finance/PIO/Safety, user_id, appointed_at, journal on appoint/relieve), an org-chart panel on the board, and appointment events in
-- **F06** 🔴 — Simulation at scale is single-incident only: no scenario library, no exercise templates/MSEL, no multi-incident composite exercises, no participants roster, no time compression
-  - *Fix:* L: add exercise_scenarios (title, hazard, regions, objectives) + scenario_events (MSEL: offset_minutes, inject payload, target DRF, expected_action) tables; a launcher that spawns N drill-clone incidents/activations via 
-- **F12** 🟡 — Per-incident action tracing today = three DISCONNECTED trails, no unified operations log (the user's 'traced well virtually' is only partially met)
-  - *Fix:* M: build a read-side union timeline endpoint per incident (task_activity_log + incident_workflow_histories + allocated_resources source_details journal + sms/email logs + warehouse ledger, all filtered by incident_id) an
+### RBAC / least privilege
+- **F94** 🟡 — Area coordinator RBAC trim was only partially closed: RAS/Reg DC/DED/DAS + Stakeholder Portal/EW authoring gates are fixed, but `Dist DC` was omitted from the One Health trim path
+  - *Fix:* V144 implemented the full area-role trim in code/migrations. Keep F94 open until live verification applies the migration and confirms fresh-login menus + backend 403s for the affected role family.
 
-## 6. ⬜ Remaining — P2 (severity 3)
+## 6. ⬜ Remaining — P2 (priority 2; mostly severity 3)
 
 ### Dead code + unproductive endpoints hunt
-- **F18** ⚫ — Entire domain-event/outbox pipeline is dead machinery: AggregateRoot, DomainEvent, DomainEventLogger, OutboxAppender, OutboxDispatcher, OutboxEnvelope, OutboxEvent, OutboxEventRepository, OutboxRelay
-  - *Fix:* Either wire aggregates to registerEvent (the notification backbone could ride it) or remove the 9 classes + platform.outbox_event table and the 2s scheduler.
-- **F19** ⚫ — POST /v1/response/approvals/bulk-approve - real PMO bulk fast-track logic with per-id area scoping, no UI consumer
-  - *Fix:* Add multi-select + bulk approve to the approvals queue UI, or drop the endpoint.
-- **F20** ⚫ — POST /v1/response/approvals/{id}/update-source - approver source-redirect (warehouse/agency/procurement) with warehouse area guard, no UI consumer
-  - *Fix:* Surface a 'redirect source' control in the approval drawer, or remove.
 - **F32** 🔴 — GET+POST /v1/notifications/preferences - self-service channel preferences (in-app/email/SMS + phone) fully implemented, no UI anywhere
-  - *Fix:* Add a small preferences popover to the topbar bell (backend contract already complete) - matches the Agent-2 backbone 'control plane' follow-on.
+  - *Progress 2026-07-08:* Added topbar bell preferences panel wired to `GET/POST /v1/notifications/preferences` for in-app/email/SMS toggles and phone. Frontend production build passed. Still OPEN until live browser/API smoke proves load/save persistence and notification read/read-all behavior remains intact.
 - **F33** 🔴 — POST /v1/response/dispatch/allocations/{id}/agency-request - the 'agency' fulfilment channel writes a journal entry + flips status to Sourcing, but the dispatch console never offers it
-  - *Fix:* Either build the agency-sourcing tab in the dispatch console or remove the channel; today the endpoint's success message ('agency has been notified') also overstates - no notification is dispatched, only a journal entry.
+  - *Progress 2026-07-08:* Added the agency-request channel to the dispatch drawer, populated agency stock-line options, and hardened the backend to validate the selected stock line plus return real agency-user notification counts. Backend compile + frontend production build passed. Still OPEN until live smoke proves option visibility, mismatch rejection, journal/status write, and truthful notification behavior.
 
 ### Incident lifecycle depth
 - **F23** 🔴 — Officer pending queue on DED/RAS landing (what is reported to them / what they reported)
-  - *Fix:* Add a 'Needs your action' card on the response dashboard: incidents where workflow_status = the caller's stage in their area, plus a 'submitted by me' tab.
-- **F24** 🔴 — Citizen-report-converted incidents have NULL region_name/district_name — blank area columns, '(null)' in officer notifications, broken centroid fallback
-  - *Fix:* In the conversion INSERT, also select the names from regions/districts by the ids already in hand.
-- **F35** 🟡 — Response dashboard stat cards are national while the feeds beside them are area-scoped
-  - *Fix:* Apply incidentScope() to the statistics block (or label the cards 'National').
+  - *Progress 2026-07-08:* Added `needs_action` and `submitted_by_me` to `GET /v1/response/dashboard` using strict incident scope, no-simulation filtering, current role-to-workflow-stage mapping, and `submitted_by_user_id = actingUserId()`. Added dashboard cards with links, severity, workflow label, area, and timestamp. Backend compile + frontend production build passed. Still OPEN until live role smoke proves DED/District/RAS/Regional/national users only see their own actionable rows and submitted-by-me follows the real submitter.
 - **F36** 🟡 — Operational status track vs workflow status — dual axes visible but unreconciled
   - *Fix:* Define reconciliation rules (e.g. op-Close freezes the ladder; approval of a Resolved incident warns) and reflect the caller's permissions in the op buttons.
+- **F93** 🟡 — Official-source portal report INSERT also omits region_name/district_name
+  - *Fix:* Implemented in `PortalPublicService.reportHazard`: official-source incidents now resolve/store area names like F24. Keep open until live submission verifies the inserted incident carries `region_name`/`district_name`.
+- **F101** 🟡 — Manual incident creation is not guarded against out-of-area targets; form-data also exposes all assignable users
+  - *Fix:* Implemented in `IncidentController`: create/update validate region/district existence and own-area targeting for area-tier callers; assignable users are permission + area scoped and `assigned_to_user_id` is server-validated. Keep open until live role-smoke confirms own-area create, foreign-area rejection, foreign-assignee rejection, and national behavior.
+- **F106** 🟡 — Public Reports conversion UI cannot assign a district for untagged citizen reports, even though the backend conversion contract requires/allows it
+  - *Fix:* Implemented in code 2026-07-08: public-report rows expose area ids/names; untagged report conversion now has Region -> District assignment, posts `district_id`, validates target district/region/caller area server-side, and shows inline errors. Keep open until live role/browser smoke proves the convert path and out-of-area rejects.
 
 ### Dissemination flows — EW bulletins, subscribers, stakeholders/partners, Communication Center, One Health, approval chains, scanner tasking, warehouse dispatch
-- **F17** ⚫ — One Health dissemination acknowledge endpoint (stakeholder ack round-trip)
-  - *Fix:* Resolve the caller's stakeholder via users.agency/stakeholder link (V95) and record the ack, or remove the endpoint.
+- **F17** ✅ — One Health dissemination acknowledge endpoint (stakeholder ack round-trip)
+  - *Fixed 2026-07-08:* Acknowledge now resolves the caller's One Health stakeholder from user/stakeholder/agency links and updates only that stakeholder's dissemination row. Verified with backend compile, local API smoke for stakeholderless 403, recipient MDA Focal 200 + SQL ack proof, non-recipient 403 with pending row preserved, and exact cleanup of controlled One Health rows.
 - **F28** 🔴 — EW → subscribers on publish (alert_subscriptions auto SMS/email when a warning is published)
   - *Fix:* Wire publish() afterCommit to AudienceService.resolve('subscribers_by_hazard') + resolveAreas for the warned districts, reusing the existing disseminate machinery.
-- **F42** 🟡 — Scanner detection → entity tasking round-trip (V131: dispatch→acknowledge→respond→EOCC review/return)
-  - *Fix:* Target notifyUsers to the entity's users (users.agency_id) + EOCC role instead of notifyAllUsers; consider email eligibility for Immediate-urgency taskings.
-- **F92** 🟡 — *(new, found by the Wave-2 F13 adversarial re-check)* GET /v1/ew/scanner/entity-taskings is not agency-scoped for READS — any authenticated agency user can read other agencies' taskings (mutations ARE guarded by assertOwnAgency); live-proven: mow read agency=tma taskings 200
-  - *Fix:* Apply assertOwnAgency (with an EOCC/national bypass) to the GET handler, mirroring the mutation guards.
+- **F42** ✅ — Scanner detection → entity tasking round-trip (V131: dispatch→acknowledge→respond→EOCC review/return)
+  - *Fixed 2026-07-08:* Scanner tasking notifications now use targeted recipients instead of `notifyAllUsers`: tasking/returned/accepted go to the tasked agency users plus EOCC, response goes to EOCC reviewers, and Immediate taskings are email-eligible only for that targeted audience. Verified with backend compile, controlled API round-trip through both review outcomes, exact SQL recipient checks against 107 users, and cleanup of the smoke rows.
 
 ### EW ↔ incident linkage
 - **F26** 🔴 — Public portal map: warnings + incidents + bulletins co-plotted but NO linkage indicator
-  - *Fix:* Cheapest: in initMap(), reuse buildAlertFills()'s bestRegion/bestDistrict maps — key each incident by norm(region)+'|'+normDist(district) and add an 'Inside warned area (severity)' row to the popup; proper: backend adds 
-- **F38** 🟡 — Warned-area match is region-granularity only — wh.district_id fetched but never used
-  - *Fix:* When wh.district_id is not null, require i.district_id = wh.district_id (fall back to region match when the warning is region-wide); expose an 'in_warned_district' boolean per matched incident.
-- **F39** 🟡 — Anticipatory (forecast) activation lifecycle — real, but NOT wired to issued warnings
-  - *Fix:* Add a warning picker to the forecast form (prefill hazard_description/affected_areas/expected_impact from the selected warnings/early_warnings row) and persist response_activations.warning_id; add an 'Open anticipatory p
+  - *Progress 2026-07-08:* Added `districtName` to the public incident-map payload and an "Inside warned area" popup row for pinned incidents whose region/district matches active warning coverage, using warning severity precedence and district-name normalization. Backend compile + frontend production build passed. Still OPEN until live public-map smoke proves district-level and region-level matches render correctly while outside-area incidents stay unflagged.
 
 ### Incident Command Post + Virtual Simulations
 - **F29** 🔴 — No real-time tracing anywhere: zero SSE/WebSocket in the entire codebase; board data refreshes only on user action
@@ -121,41 +151,112 @@ Six items, each verified live AND independently re-checked by a second skeptic a
 
 ### portal ↔ system linkage integrity
 - **F34** 🔴 — Citizen PHR reference-code tracking
-  - *Fix:* Add GET /v1/portal/report-status/{code} returning public-safe status (received/under review/converted→linked incident if published/dismissed) + a small 'Track my report' box on the landing wizard; optionally SMS the code
-- **F45** 🟡 — Active news article links citizens to a dead incident snapshot (news↔snapshot decoupled)
-  - *Fix:* On unpin/close either deactivate the linked article (reuse removeNews) or rewrite the body link to a static summary; alternatively let incidentSnapshot serve a final read-only state for incidents that WERE published (e.g
-- **F46** 🟡 — Register-partner → approval → login round-trip
-  - *Fix:* On verify, offer 'create login' (provision users row with set-password email) or extend link-user to create-and-link; otherwise the advertised partner self-service (Open Needs donations) is unreachable for organically re
+  - *Progress 2026-07-08:* Implemented public-safe `GET /v1/portal/report-status/{code}`, `/track-report` page, nav/hero entry points, and report-success deep link. Backend compile + frontend production build passed. Still OPEN until live migrated smoke proves status transitions and published-only incident linking; optional SMS/email code delivery remains follow-up.
+- **F45** ✅ — Active news article links citizens to a dead incident snapshot (news↔snapshot decoupled)
+  - *Fixed 2026-07-08:* Public incident snapshots now serve incidents published either by portal map pin or by an active linked News & Events article, while unpublished/nonlinked incidents still 404. Verified with backend compile, frontend production build, SQL proof for active article `market-fire-kariakoo-trading-area-2` linking `/incident/2`, live `/portal/news/...` 200, live `/portal/incidents/2` 200 with `pinnedToMap=false` and `publishedViaNews=true`, and live `/portal/incidents/1` 404 as the unpublished control.
+- **F46** ✅ — Register-partner → approval → login round-trip
+  - *Fixed 2026-07-08:* Public partner registration now requires email, approval provisions the linked Partners login and set-password invite, the admin UI reports the account-provisioning result, and the resulting partner can sign in and reach Open Needs as its own stakeholder. Verified with backend compile, frontend production build, controlled registration/approval/reset/login/Open Needs API smoke, SQL link/role/token evidence, local pending email logs with live gateways disabled, and zero controlled leftovers.
 
 ### notifications + email/SMS coverage
-- **F15** ⚫ — Backbone SMS channel + per-user notify_sms preference — never exercised by any event
-  - *Fix:* Either mark critical notices SMS-eligible (e.g. Critical-severity incident stages, EW publish) and seed officer phone numbers, or delete the dead per-user SMS branch and preference toggle so the settings UI stops promisi
+- **F15** ✅ — Backbone SMS channel + per-user notify_sms preference — never exercised by any event
+  - *Fixed 2026-07-08:* Critical incident workflow handoffs now make the central notification backbone SMS-eligible, still gated by each recipient's `notify_sms` preference and valid phone. The preference API rejects SMS opt-in without a Tanzanian mobile number, and the topbar shows that validation message. Verified with backend compile, frontend production build, blank-phone 422, valid opt-in 200, Critical incident workflow smoke producing an audited pending `sms_logs` row with M-Gov intentionally unconfigured, Moderate negative control producing zero SMS rows, and exact cleanup/restoration of all controlled rows.
 - **F27** 🔴 — Silent events: disaster declarations, CP/AAP activation, assessments, support pledges accept/decline, budget/finance, recovery/relief, content publication — no notification at all
   - *Fix:* Wire notifyStage-style calls into declaration approval, ActivationService, pledge review, and budget-tier approvals; or correct the two javadoc claims so the dispatcher's contract matches reality.
+- **F95** 🟡 — Communication Center permission split: route/menu is Content Management, overview/audience APIs require Communication & Alerts, log APIs require Content Management, send APIs require Communication & Alerts
+  - *Fix:* Pick one canonical module permission model for the Communication Center (likely `communication_and_alerts.view/send`), mirror it in `access.ts`, `ModuleGuardFilter`, and the content log controllers, and hide/disable compose tabs for view-only users.
+- **F108** 🟡 — Risk Frameworks/Publications permissions are split between Content Management and Prevention & Mitigation, while `/v1/frameworks` reads are only `isAuthenticated()`; 2026-07-07 live re-check proved a no-permission local persona gets `200` on frameworks while a mapped content API returns `403`
+  - *Fix:* Decide whether `disaster_risk_frameworks` belongs to Content/Publications, Prevention & Mitigation, or an explicit shared permission set; then align frontend route guards, `ModuleGuardFilter`, and `FrameworkController` read/write authorities.
+- **F112** 🟡 — Hazard Monitor is routed as Content Management but its real actions require the separate Hazards domain permission
+  - *Fix:* Decide whether Threat/Hazard Monitor belongs to Content Management or Hazards/Prevention; align the frontend route, `ModuleGuardFilter`, controller authorities, and action-button visibility to that one permission model.
+- **F113** 🟡 — Content Management still hosts Settings/User-Management submodules with different backend permission families
+  - *Fix:* Move Translations/Agencies to their owning modules or change their backend gates to content permissions; align menu, route guard, `ModuleGuardFilter`, controller authorities, and button visibility.
+
+### Frontend security / production hardening
+- **F107** 🟡 — SweetAlert raw HTML strings bypass Angular escaping across operational dialogs
+  - *Fix:* Replace raw `html:` string interpolation with Angular-owned modals or safe DOM construction/`escHtml` for every API value used in SweetAlert titles/options/bodies; add a regression case with HTML in names/messages.
+- **F115** 🟡 — Leaflet tooltips still interpolate live API/operator values outside Angular escaping in Response, DMD, and cross-agency maps
+  - *Fix:* Standardize every `bindTooltip`/`bindPopup`/`divIcon.html` string on the existing `escapeHtml` helper or DOM `textContent`; add a map-regression fixture with HTML in incident titles, locations, agency areas, and reference-marker names so these paths cannot silently regress.
+
+### File/attachment authorization
+- **F96** 🔴 — Restricted `/storage/**` operational files are auth-only, not row/jurisdiction-scoped
+  - *Fix:* Replace direct static links for `reports/`, `assessments/`, `incident_photos/`, `incident_videos/`, `warnings/`, and `dissemination_uploads/` with authorized download endpoints that look up the owning row and run the same area/module guard before streaming bytes.
 
 ### Warehouse management
 - **F25** 🔴 — Allocation 'Returned' discards deducted stock — no re-intake, no movement
-  - *Fix:* On Returned, re-intake to the originating store (dispatch_approvals.source_id / journal source_id) via DispatchSupportService.addStock + a 'Return' stock_movements row, or force the operator to pick a receiving store.
-- **F37** 🟡 — Emergency Supplies (preparedness) edits ledger with no journal — unaudited drift side-door
-  - *Fix:* Route Emergency Supplies quantity changes through an Adjustment movement (like stock-taking does), or make quantity read-only there and point users at warehouse-ops intake/remove.
+  - *Progress 2026-07-08:* Implemented Returned handling for dispatched allocations: warehouse/temporary stock is re-intaked to the original source, agency dispatches restore agency_resources, Return stock_movements are written, and the dispatch journal records returned quantity/time/user/notes. Backend compile passed. Still OPEN until live migrated smoke proves stock restoration, movement rows, and idempotence for warehouse, temporary warehouse, and agency sources.
+- **F37** ✅ — Emergency Supplies (preparedness) edits ledger with no journal — unaudited drift side-door
+  - *Fixed 2026-07-08:* Emergency Supplies creates now journal positive new stock as `Intake`; edits lock the existing line, block resource reclassification while stock is present, journal warehouse moves as `Transfer`, and journal quantity deltas as `Adjustment_Increase` / `Adjustment_Decrease`. V146 posts one-time `emergency_supplies_reconciliation_20260708` adjustments for historical zonal warehouse/resource drift; V147 adds an idempotent actor fallback for deployments without the local admin seed. Verified with backend compile, live API create/edit/reject/move/zero-out smoke, Flyway V146/V147, and SQL reconciliation returning `0` drift pairs / `0` units.
 
 ### Disaster Repository + Reports & Analytics
-- **F40** 🟡 — Repository feeding model: MANUAL EOCC entry + seeders; NOT auto-fed by resolved incidents/warnings
-  - *Fix:* Add a nudge at incident-close (offer 'record in Disaster Repository' with pre-linked incident) or a periodic EOCC worklist of resolved incidents with no repository card; the 3-links reality means the designed operational
-- **F41** 🟡 — Repository data quality: seeded pseudo-regions + near-empty loss figures distort analytics
-  - *Fix:* Re-seed national-scope effects distributed to real regions or exclude pseudo-regions from regionRanking/insights; unify 'Flood'/'Floods'.
+- **F40** ✅ — Repository feeding model: MANUAL EOCC entry + seeders; NOT auto-fed by resolved incidents/warnings
+  - *Fixed 2026-07-08:* Repository now has an EOCC "Resolved Incident Intake" worklist of resolved/closed live incidents with no repository link, candidate-card linking, and a one-click `from-incident` create path that opens an event card and writes the `incident` link in one transaction. Verified with backend compile, frontend production build, live worklist API, `DE-2026-0137` creation from incident `31`, card/link readback, worklist removal, and duplicate-create HTTP 409 guard.
+- **F41** ✅ — Repository data quality: seeded pseudo-regions + near-empty loss figures distort analytics
+  - *Fixed 2026-07-08:* V149 normalizes repository `Flood` to `Floods`; Sendai analytics excludes `National` / `National (...)` effects from regional rankings, suppresses the false loss-concentration insight when real-region loss is absent, and surfaces sparse-loss/pseudo-region data quality. Verified with backend compile, frontend production build, Flyway V149, `/repository/analytics` API, and SQL checks showing `Floods=30`, no `Flood`, real-region ranking without pseudo-national rows, and counted/loss-bearing/pseudo-region effects `74/1/2`.
 
 ### assignments/tasks/provisions + information & knowledge
-- **F43** 🟡 — Knowledge repository (recovery/knowledge-repository.component.ts + KnowledgeRepositoryController.java)
-  - *Fix:* Add file upload/download (reuse frameworks storage pattern), an incident_id link, and hide or implement downloads_count.
-- **F44** 🟡 — Relief distributions = provisions (recovery/relief-distributions.component.ts + ReliefDistributionController.java) — incident + warehouse linkage
-  - *Fix:* Bridge to the response ledger (write a stock_movement / consume a dispatched allocation), populate damage_assessment_id + distributed_by_user_id, scope the aggregates.
+- **F43** ✅ — Knowledge repository (recovery/knowledge-repository.component.ts + KnowledgeRepositoryController.java)
+  - *Fixed 2026-07-08:* V150 adds incident/document metadata to the repository table; the backend accepts multipart PDF/DOC/DOCX uploads, serves authorized downloads while incrementing `downloads_count`, and returns incident/file metadata; the UI exposes incident selection, document upload, document actions, a documents stat, and incident links. Verified with backend compile, frontend production build, Flyway V150, live multipart upload/download/approve API smoke, SQL row/file verification, and cleanup of the controlled rows/files.
+- **F44** ✅ — Relief distributions = provisions (recovery/relief-distributions.component.ts + ReliefDistributionController.java) — incident + warehouse linkage
+  - *Fixed 2026-07-08:* V151 links relief distributions to a single warehouse or temporary warehouse source and stored stock movement. The backend now requires incident/source/resource linkage, blocks simulation incidents, scopes list stats/lookups, records actor/assessment/incident area metadata, and confirms by deducting source inventory plus writing one completed `relief_distribution` stock movement idempotently. The UI requires incident/resource/source selection and exposes incident/source/movement/actor fields. Verified with backend compile, frontend production build, Flyway V151, live create/confirm/idempotence/negative API smoke, SQL movement/inventory proof, and exact cleanup/restoration of the controlled smoke row.
 
 ### User roles & registration
-- **F22** 🔴 — Partner approval does NOT create a login — a working partner login requires two undocumented manual admin steps
-  - *Fix:* On verify (or a 'create login' action beside it), optionally mint a Partners-role user from the stakeholder's email, set BOTH link columns, and send credentials/reset link.
+- **F22** ✅ — Partner approval now creates and links a login for organic registrations
+  - *Fixed 2026-07-08:* Verification now provisions a Partners-role `users` row from the stakeholder email, mirrors `stakeholders.user_id` and `users.stakeholder_id`, records a hashed one-time set-password token, and sends/logs a partner-login invite. Existing conflicting user emails are not silently merged. Verified with the same F46 live smoke: register 201, verify 200/user created, reset 200, login 200 as `Partners`, Open Needs `canPledge=true`, SQL mirror/role/reset proof, and zero controlled leftovers.
 
-## 7. ⬜ Remaining — P3 (severity 2, polish/cleanup)
+### Budget & Finance / NDMF controls
+- **F110** 🟡 — Budget creation lets area finance actors misstate the budget tier/scope used by approval ceilings
+  - *Fix:* Implemented in `BudgetController` + V145: sub-national budget scope is derived from the caller's actual area, national scope choices validate matching ids, and `disaster_budgets_scope_area_chk` enforces scope-vs-area consistency. Keep open until V145/live role-smoke verifies it.
+- **F111** 🟡 — Direct NDMF incident disbursement skips incident area guard and simulation isolation
+  - *Fix:* Implemented in `BudgetController.ndmfDisburse()`: requires a valid incident, applies strict incident area guard, and blocks table-top simulation incidents before cash moves. Keep open until live role-smoke proves in-area success, out-of-area rejection, and simulation blocking.
+
+### Production readiness / CI, integrations & AI/ML
+- **F102** 🟡 — Backend regression tests are not self-contained; Spring tests still require a live dev Postgres even though Testcontainers dependencies exist
+  - *Fix:* Move `@SpringBootTest` suites to Testcontainers/dynamic datasource wiring, or split live-DB smoke tests from hermetic CI gates. The default developer command should compile and fail fast without a manually running `localhost:5440` database.
+- **F104** 🟡 — Centralized national map base is the right concept; the direct tile bypasses are removed but visual map smoke is still pending
+  - *Fix:* Implemented in code 2026-07-08: `tz-map.ts` now owns a local-first governed base-layer helper, optional third-party basemaps sit behind `environment.mapTiles`, and feature components no longer call `L.tileLayer(...)` directly. Additional hardening now centralizes internal map jurisdiction presentation in `applyDmisMapJurisdiction()`: district maps are masked/bounded to one district, region maps are masked/bounded to one region and draw that region's districts, and national maps keep the Tanzania view. Keep open until affected map pages are visually smoked in production config, district/region/national role map-smoke passes, and CSP/network policy is documented.
+- **F105** 🔴 — AI/ML readiness is not architected yet: current analytics are real deterministic engines/scanners, not a governed model-inference platform
+  - *Fix:* Add an ML integration contract before presenting AI-assisted features: model registry/versioning, feature snapshot references, prediction event/audit tables, confidence/explanation fields, human review/disposition, RBAC, retention policy, and an async integration bus that is actually wired.
+- **F114** 🔴 — DMD Impact Analysis lacks a real satellite/exposure geospatial layer and direct INFORM-context overlay
+  - *Fix:* Build the centralized map concept into a national GIS impact-analysis layer: satellite/EO layer catalogue, scene metadata, exposure datasets, hazard footprint storage, backend overlay/intersection results, direct INFORM risk + operational signal overlays, and a DMD layer switcher that can compare satellite view, hazard footprint, population/assets/exposure, preparedness resources, and INFORM context before generating the impact bulletin.
+- **F116** 🟡 — Component linkage, AI-readiness, and multiscale production capacity are not captured as executable contracts
+  - *Fix:* Create a system-linkage control plane before extracting microservices or shipping AI: component dependency matrix, API/event contracts, wired outbox/event bus, shared rate limits/cache/read models, SLO/load-test profile for district/region/national/surge usage, AI feature-snapshot/prediction contracts, and operator-facing degradation states for external GIS/notification/AI dependencies.
+
+### Supporting documentation / architecture control
+- **F99** 🟡 — System Design Document is materially stale against current migrations, RBAC, incident ladder and outbox reality
+  - *Fix:* Refresh the SDD from the current code/migrations before using it as an implementation contract: migration corpus is now V1-V151 (135 files), permission-matrix/`hasAuthority` gates are live, the incident ladder is DDMC→DED→RDMC→RAS→EOCC→Director→PS with skip-if-unstaffed automation, and the outbox is designed but still not wired as the actual module-integration backbone.
+
+## 7. Target Architecture Plan — Linkage, AI, And Multiscale Scale-Up
+
+This is the production plan for making every component highly linked, captured, and safe to scale.
+
+**Current verdict:** the technology choice is viable as a modular monolith: Spring Boot 3 / Java 21, Angular 18, PostgreSQL, Flyway, OpenAPI, Actuator health, async notification delivery, and a configurable Hikari pool are all acceptable foundations. It should not be presented as crash-proof international infrastructure yet. The missing pieces are mostly platform primitives, not a need to throw away the stack.
+
+**Component-linkage control plane:**
+- Build a canonical component map for each module: owner, frontend routes, API paths, database tables, permissions, row-scope rule, emitted events, consumed events, public/stakeholder exposure, and known audit items.
+- Convert the existing dead outbox into the integration spine: every major operational fact should emit an event (`IncidentCreated`, `WarningPublished`, `BulletinGenerated`, `AssessmentVerified`, `StockMoved`, `BudgetCommitted`, `DonationDisbursed`, `PartnerVerified`, `AiPredictionReviewed`).
+- Add contract tests for every event/API payload and require each new workflow to declare its upstream/downstream dependencies.
+- Create read-model projections for dashboards, public portal counters, command board state, Sendai analytics, and executive watch instead of recomputing everything from live operational tables during surge.
+
+**AI/ML production plan:**
+- Phase 0 — data governance: classify all incident, EW, finance, GIS, health, stakeholder, and public-report fields; define retention, PII rules, and RBAC for AI outputs.
+- Phase 1 — feature snapshots: create immutable `feature_snapshot` records for incident/EW/GIS/INFORM/resource state at the time a model runs.
+- Phase 2 — model registry: add `model_registry`, `model_version`, `model_run`, and `prediction_event` tables with checksum, input snapshot id, confidence, explanation, suggested action, and expiry.
+- Phase 3 — human-in-command review: no AI output should directly publish warnings, disburse money, move stock, or close incidents. Operators accept/reject suggestions, and that disposition becomes audit data.
+- Phase 4 — priority use cases: incident triage assist, warning-to-incident likelihood, DMD impact severity estimate, exposure summarization from satellite/GIS layers, resource-demand forecast, missing-data detection, and public-report duplicate clustering.
+- Phase 5 — monitoring: drift, hallucination/quality review for any LLM text, model-performance dashboards, rollback to deterministic rules, and offline fallback when model services are unavailable.
+
+**Multiscale capacity model:**
+- District scale: form submissions, incident list/detail, local warehouse and public-report triage must stay low-latency with strict row scope.
+- Regional scale: RAS/RC dashboards should use precomputed regional read models and not national live aggregates.
+- National scale: EOCC/Director/PMO dashboards should use cached/read-model state with explicit staleness timestamps.
+- Surge scale: public landing, public report intake, warning maps, stakeholder issued-alerts, SMS/email fan-out, PDFs, GIS layers, and command dashboards should be protected by edge caching, shared rate limiting, async workers, and queue-depth monitoring.
+- AI/GIS scale: satellite scenes, exposure intersections, INFORM overlays, and model predictions should run as async jobs against immutable snapshots, not inside user click request threads.
+
+**Microservice sequence after hardening:**
+- Extract notification/integration first, then analytics/read models, then EW ingestion, then public/stakeholder portal services.
+- Keep incident command, finance ledger, stock movement, and approval workflows in the monolith until idempotency, event contracts, row scoping, and audit timelines are proven.
+
+## 8. ⬜ Remaining — P3 (priority 3, polish/cleanup)
 
 ### Dead code + unproductive endpoints hunt
 - **F50** ⚫ — GET /v1/response/communication/analytics - real alert analytics aggregates, zero consumers
@@ -178,14 +279,8 @@ Six items, each verified live AND independently re-checked by a second skeptic a
   - *Fix:* Port the comment thread (table is ready incl. threading) or drop the table.
 - **F85** ❔ — Live-probe caveat: 'anonymous' 200s on /ew endpoints are the local-profile dev persona, not a production auth hole
   - *Fix:* When removing the 5 dead /ew handlers, no prod security change is needed; if they are kept, re-verify the !local chain blocks them anonymously in a staging deploy.
-- **F87** ⚫ — GET /v1/ew/scanner/stats - redundant duplicate of the stats block already embedded in the /detections payload the UI consumes
-  - *Fix:* Remove the standalone /stats handler.
-- **F88** ⚫ — GET /v1/settings/translations/map - full EN/SW key map endpoint with no consumer (public uses /v1/portal/i18n, admin uses the paged list)
-  - *Fix:* Delete, or repoint PortalLabels hydration at it if a single authoritative map is wanted.
-- **F89** ⚫ — LocationDto record - referenced by nothing in main or test
-  - *Fix:* Delete the file.
-- **F91** 🟡 — Standalone routes m/content-management/sms-management + email-management reachable only by typing the URL - components now live embedded in Communication Center
-  - *Fix:* Remove the leftover standalone routes or add redirects to communication-center.
+- **F103** 🟡 — Generic `/m/:slug` fallback masks bad or legacy module URLs as polished but nonfunctional pages
+  - *Fix:* Implemented in code 2026-07-08: unknown authenticated `/m/:slug` and `/m/:slug/:item` routes now load a real not-found screen and the placeholder `ScreenComponent` was deleted; frontend production build passed. Keep open until browser smoke proves bad module URLs show not-found while known explicit module URLs still load real screens.
 
 ### Dissemination flows — EW bulletins, subscribers, stakeholders/partners, Communication Center, One Health, approval chains, scanner tasking, warehouse dispatch
 - **F60** 🔴 — SMS/email delivery reports (DLR) — confirmed-delivered status from the gateway
@@ -221,8 +316,6 @@ Six items, each verified live AND independently re-checked by a second skeptic a
 ### notifications + email/SMS coverage
 - **F59** 🔴 — Delivery status tracking / DLR — absent (confirmed still true); no retry of failed/pending sends
   - *Fix:* Add an M-Gov DLR callback (they return messageId → external_id already stored) and a bounded retry sweep over status='failed' logs; surface failed-stage-email counts on the Communication overview.
-- **F70** 🟡 — Incident stage notification body renders area as literal "(null)" for portal-origin incidents
-  - *Fix:* Fall back to joining region/district names by id (or omit the parenthetical when both are null) in notifyStage.
 - **F71** 🟡 — Warehouse loan notifications bypass the ONE dispatcher (direct insert, ignores notify_in_app preference)
   - *Fix:* Route through notifications.notifyUser with Notice.inApp to restore the single-dispatcher invariant.
 - **F72** 🟡 — notifyAllUsers broadcasts for scanner/EW ingest events flood every account's feed
@@ -237,8 +330,8 @@ Six items, each verified live AND independently re-checked by a second skeptic a
   - *Fix:* Rank linkSuggestions by area+hazard overlap (reuse the report's match SQL) and add a one-click 'auto-link matched warnings' on the event card; until curated, footnote the 1.4% figure as 'links pending' rather than presen
 
 ### User roles & registration
-- **F47** ⚫ — V96 roles (Regional/District Planning Officer, Regional/District Logistic Officer, District Commissioner) — dormant; their promised 'comment' capability was deleted
-  - *Fix:* Either seed/document these as future workflow-stage placeholders and hide them from the create form, or delete them; if kept, they need the same area-attachment fix as the other area roles plus a real comment endpoint.
+- **F47** ⚫ — V96 planning/logistic/advisory roles are semantically unfinished: comment capability was deleted, but User Management can now assign them with areas and V99 gives planning/logistic variants real finance permissions
+  - *Fix:* Either hide/delete these roles until advisory workflows exist, or rebuild the comment/advisory capability and include planning/logistic variants in the RBAC + finance guard review (`F94`, `F110`, `F111`).
 - **F61** 🟡 — Dist DC is NOT a viewer — it is the working DDMC entry-stage approver (design mismatch with 'DC = area viewer')
   - *Fix:* Decide which DC role is canonical; if Dist DC is the DDMC approver by design, update the documented 'RC/DC are area viewers' doctrine; if not, move waiting_ddmc ownership and strip the write permissions.
 
@@ -260,27 +353,37 @@ Six items, each verified live AND independently re-checked by a second skeptic a
 - **F82** 🟡 — Relief distributions 'Confirm receipt' UI silent failure
   - *Fix:* Add error callbacks surfacing e.error.detail like save() already does.
 
+### Recovery scope/data integrity
+- **F97** 🟡 — Recovery list rows are partly area-scoped, but stat cards, breakdowns, incident pickers and some mutations stay national / unguarded
+  - *Fix:* Apply the same recovery area predicate to `stats`, `by_*`, and incident form-data queries; on create/status/confirm, area-guard any supplied `incident_id` and the target row before mutation.
+- **F98** 🟡 — Strategic Projects `entry_id` uses `max(id)+1` before insert; uniqueness exists, but concurrent creates race into a duplicate-key failure
+  - *Fix:* Generate `SP-` ids from the inserted row id, a sequence, or retry-on-conflict; keep the existing unique constraint as the last line of defense.
+
 ### portal ↔ system linkage integrity
+- **F100** 🟡 — Public Reports triage list is area-scoped, but its stat cards are national
+  - *Fix:* Implemented in `PublicReportsController.index()`: stats now reuse the same scoped/status/search predicate and params as the visible triage list. Keep open until live area-role smoke proves card totals match the scoped rows.
+- **F109** 🟡 — Public Reports frontend route permission requires Communication & Alerts while the backend treats the desk as incident triage
+  - *Fix:* Implemented in `access.ts`: `/m/response/public-reports` now requires `incidents.view`, matching the backend. Keep open until live browser/API role-smoke confirms incident users can enter and communications-only users cannot.
 - **F83** 🟡 — Public subscribe → alert delivery chain
   - *Fix:* Honor channel prefs in AudienceService.collect (skip phone when channels excludes sms, etc.); consider an optional auto-disseminate hook on warning publish filtered by alert_level_priority.
 - **F84** 🟡 — PHR report_code generation: count(*)+1 with no unique index
   - *Fix:* Unique index on report_code + generate from a sequence (or retry-on-conflict), matching the fix pattern used elsewhere.
 
-## 8. Larger builds flagged by the audit (new modules, sized)
+## 9. Larger builds flagged by the audit (new modules, sized)
 
 These exceed a defect-fix — they are net-new capability the audit recommends for the user's stated ambitions:
 
 - **ICS command structure (M)** — incident commander / section chiefs / org chart per activation; today tasks assign to users but nobody commands the incident. (F05)
-- **Scenario library & MSEL exercise engine (L)** — multi-region composite drills, reusable exercise scripts, participant rosters, time compression; today a simulation is one cloned incident + ad-hoc injects. (F06)
 - **Unified per-incident operations timeline (M)** — one master log merging workflow history + tasks + dispatch + warehouse movements + comms; today these are 3 disconnected trails. (F12)
 - **Real-time tracing (M)** — no SSE/WebSocket anywhere; the Command Post board is poll-only. (F29)
+- **System-linkage and AI control plane (L)** — component dependency map, event/API contracts, capacity model, read-model projections, and governed AI prediction workflow. (F105/F116)
 
-## 9. Working method (the honesty gate)
+## 10. Working method (the honesty gate)
 
 Every wave: parallel fixers on disjoint files → one rebuild → boot check → **run each fixer's live VERIFY script** (with a regression check on adjacent behavior) → mark the ledger item FIXED *only* with the observed evidence → commit with explicit staging. No item is 'done' on a code diff alone.
 
 
-## 10. Re-validation record — Wave 1 (2026-07-06)
+## 11. Re-validation record — Wave 1 (2026-07-06)
 
 The 7 "Done" items were **re-verified a second time** against the live backend (not trusting the original fixer output). Method: independent re-run of each item's VERIFY script + a direct API-vs-DB truth check.
 
@@ -296,7 +399,7 @@ The 7 "Done" items were **re-verified a second time** against the live backend (
 
 All 7 hold. Wave 2 passed the same gate on 2026-07-06 — see below.
 
-## 11. Validation record — Wave 2 (2026-07-06, committed `2abb5a5`)
+## 12. Validation record — Wave 2 (2026-07-06, committed `2abb5a5`)
 
 Method: 4 parallel verifier agents (one per track), each running live API + independent SQL cross-checks + UI screenshots via real-login Puppeteer, followed by **4 independent skeptic agents instructed to REFUTE each pass** (fresh tokens, own SQL, own test rows). All 4 verdicts: **CONFIRMED** — the skeptics reproduced the decisive observations byte-for-byte.
 
@@ -309,7 +412,7 @@ Method: 4 parallel verifier agents (one per track), each running live API + inde
 
 Notes from the re-check worth keeping: the backend was restarted mid-run at 02:43 by another session with identical behavior before/after (confirms the deployed jar carries this code); shared-DB test rows from concurrent verifiers transiently and *correctly* flipped EW classifications (family match working as designed); zero VERIFY-W2 rows remain.
 
-## 12. Validation record — Wave 3 (2026-07-06, committed `b7093f5`) + F94 RBAC trim (committed `55b2a45`)
+## 13. Validation record — Wave 3 (2026-07-06, committed `b7093f5`) + F94 partial RBAC trim (committed `55b2a45`)
 
 Method: 5 parallel fixer agents on strictly disjoint file sets → ONE rebuild → boot check (V140/V141 applied cleanly) → each fixer's live VERIFY script executed by the orchestrator → every failure investigated to root cause → independent spot re-probes of each decisive claim with fresh tokens/SQL. Failures triaged honestly, none glossed:
 
@@ -321,6 +424,6 @@ Method: 5 parallel fixer agents on strictly disjoint file sets → ONE rebuild �
 | F92+F87 scanner | ✅ 30/30 | mow→tma 403 / mow→own 200 / admin→any 200 (re-probed); /stats 404; EOCC dispatch console still lists 12 taskings across 6 agencies (screenshot); MoW inbox unaffected. |
 | F88+F89+F91 dead code | ✅ all | /map 405 (handler gone, sibling /{id} mappings still path-match — expected); portal i18n unchanged at 214 keys; F91 honestly closed as already-fixed (redirects existed, `32a50c5`) — verified, not re-implemented. |
 | F35 dashboard scope (user-reported) | ✅ | TWO causes found: statistics block had NO area predicate; feeds used shared-or-own (region-less incidents leaked to every region). Both /dashboard and /eocc now use the registry's STRICT scope for area tiers, national byte-identical fast path. RAS Dodoma/Arusha/Kigoma/Dar all probed scoped; admin unchanged. En-route gotcha: jsonb `?` operator + bind params → PgJDBC 409 → jsonb_exists(). |
-| F94 RBAC trim (user-reported) | ✅ | Role-level V142/V143 (auto-applies to all 31 RAS + Reg DC/DED/DAS): authority grants revoked, Stakeholder Portal got its own permission, EW authoring consoles route-gated create-tier. RAS hub 10→4 cards (screenshot); backend 403s scanner/scan, eocc/activate, onehealth/events for RAS; 5 sampled regional RAS accounts auto-trimmed; MoW/EOCC/Partners regressions clean. Caveat: sessions logged in before the trim keep their old menu until re-login (JWT carries the permission set). |
+| F94 RBAC trim (user-reported) | ⚠️ partial, reopened | Role-level V142/V143 remain proven for RAS + Reg DC/DED/DAS: authority grants revoked, Stakeholder Portal got its own permission, EW authoring consoles route-gated create-tier. RAS hub 10→4 cards (screenshot); backend 403s scanner/scan, eocc/activate, onehealth/events for RAS; 5 sampled regional RAS accounts auto-trimmed; MoW/EOCC/Partners regressions clean. Reopened 2026-07-08 because `Dist DC` was not included in the One Health trim path; old sessions also keep their old menu until re-login because JWT carries the permission set. |
 
 Process incidents kept honest: one restart attempt silently failed (backgrounded chain aborted at a stale pid; old jar kept serving) — caught by checking which pid owned :8080 and the jar mtime BEFORE running any verification; without that check the whole wave would have been "verified" against a jar not containing it.

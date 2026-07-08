@@ -1,5 +1,7 @@
 package tz.go.pmo.dmis.response;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,6 +32,8 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
 @RestController
 @RequestMapping("/v1/response/allocations")
 public class ResourceAllocationController {
+    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final TypeReference<List<Map<String, Object>>> JOURNAL = new TypeReference<>() {};
 
     /** AllocatedResource::$statusOptions — operational vocabulary, verbatim. */
     static final List<String> STATUS_OPTIONS = List.of(
@@ -50,16 +54,19 @@ public class ResourceAllocationController {
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
     private final SimulationGuard simulationGuard;
+    private final DispatchSupportService stock;
 
     public ResourceAllocationController(JdbcTemplate jdbc, IncidentWorkflowService incidents,
                                         ApprovalWorkflowEngine approvals, JurisdictionScope jurisdiction,
-                                        AreaGuard areaGuard, SimulationGuard simulationGuard) {
+                                        AreaGuard areaGuard, SimulationGuard simulationGuard,
+                                        DispatchSupportService stock) {
         this.jdbc = jdbc;
         this.incidents = incidents;
         this.approvals = approvals;
         this.jurisdiction = jurisdiction;
         this.areaGuard = areaGuard;
         this.simulationGuard = simulationGuard;
+        this.stock = stock;
     }
 
     // ─── Index: the three operational queues + stock summary ───
@@ -343,6 +350,7 @@ public class ResourceAllocationController {
                     """, userId, id);
             case "Delivered" -> jdbc.update(
                     "update public.allocated_resources set delivered_at = now() where id = ?", id);
+            case "Returned" -> returnDispatchedStock(allocation, notes);
             default -> { }
         }
         if (notes != null) {
@@ -410,6 +418,118 @@ public class ResourceAllocationController {
             throw new ResourceNotFoundException("Allocation not found.");
         }
         return rows.get(0);
+    }
+
+    private void returnDispatchedStock(Map<String, Object> allocation, String notes) {
+        String current = String.valueOf(allocation.get("status"));
+        if (!List.of("In Transit", "Deployed").contains(current)) {
+            throw new BusinessRuleException("Only in-transit or deployed allocations can be returned.");
+        }
+        long allocationId = ((Number) allocation.get("id")).longValue();
+        long resourceId = ((Number) allocation.get("resource_id")).longValue();
+        String resourceName = jdbc.queryForObject("select name from public.resources where id = ?",
+                String.class, resourceId);
+        List<Map<String, Object>> journal = journal(allocation.get("source_details"));
+        Long userId = incidents.actingUserId();
+        double totalReturned = 0;
+
+        for (Map<String, Object> entry : journal) {
+            double dispatched = dbl(entry.get("quantity_dispatched"));
+            if (dispatched <= 0 || dbl(entry.get("returned_quantity")) >= dispatched) {
+                continue;
+            }
+            String sourceType = strOf(entry.get("source_type"));
+            Long sourceId = longOf(entry.get("source_id"));
+            if (sourceType == null || sourceId == null) {
+                continue;
+            }
+            double returnQty = dispatched - dbl(entry.get("returned_quantity"));
+            switch (sourceType) {
+                case "warehouse" -> {
+                    stock.addStock("zonal", sourceId, resourceId, returnQty, resourceName, userId);
+                    recordReturnMovement(resourceId, returnQty, allocationId, null, null, sourceId, null, notes);
+                }
+                case "temporary_warehouse" -> {
+                    stock.addStock("temporary", sourceId, resourceId, returnQty, resourceName, userId);
+                    recordReturnMovement(resourceId, returnQty, allocationId, null, null, null, sourceId, notes);
+                }
+                case "agency" -> {
+                    int updated = jdbc.update("""
+                            update public.agency_resources set quantity = quantity + ?, updated_at = now()
+                            where id = ? and resource_id = ?
+                            """, returnQty, sourceId, resourceId);
+                    if (updated == 0) {
+                        throw new BusinessRuleException("The original agency stock line no longer exists.");
+                    }
+                    recordReturnMovement(resourceId, returnQty, allocationId, null, null, null, null, notes);
+                }
+                default -> throw new BusinessRuleException("Cannot return stock for source type " + sourceType + ".");
+            }
+            entry.put("returned_quantity", dispatched);
+            entry.put("returned_at", java.time.OffsetDateTime.now().toString());
+            entry.put("returned_by", userId);
+            if (notes != null) {
+                entry.put("return_notes", notes);
+            }
+            totalReturned += returnQty;
+        }
+
+        if (totalReturned <= 0) {
+            throw new BusinessRuleException("No dispatched stock was found to return.");
+        }
+        saveJournal(allocationId, journal);
+    }
+
+    private void recordReturnMovement(long resourceId, double quantity, long allocationId,
+                                      Long fromWarehouseId, Long fromTempWarehouseId,
+                                      Long toWarehouseId, Long toTempWarehouseId, String notes) {
+        Long userId = incidents.actingUserId();
+        jdbc.update("""
+                insert into public.stock_movements(resource_id, quantity, movement_type, from_warehouse_id,
+                    from_temporary_warehouse_id, to_warehouse_id, to_temporary_warehouse_id,
+                    allocation_id, notes, status, user_id, completed_at, completed_by, created_at, updated_at)
+                values (?,?,'Return',?,?,?,?,?,?, 'Completed', ?, now(), ?, now(), now())
+                """, resourceId, (int) Math.round(quantity), fromWarehouseId, fromTempWarehouseId,
+                toWarehouseId, toTempWarehouseId, allocationId,
+                notes == null ? "Allocation returned to source." : notes, userId, userId);
+    }
+
+    private void saveJournal(long allocationId, List<Map<String, Object>> journal) {
+        try {
+            jdbc.update("update public.allocated_resources set source_details = ?, updated_at = now() where id = ?",
+                    JSON.writeValueAsString(journal), allocationId);
+        } catch (Exception e) {
+            throw new BusinessRuleException("Could not record return details.");
+        }
+    }
+
+    private static List<Map<String, Object>> journal(Object raw) {
+        if (raw == null) {
+            return new ArrayList<>();
+        }
+        String s = String.valueOf(raw).trim();
+        if (!s.startsWith("[")) {
+            return new ArrayList<>();
+        }
+        try {
+            return JSON.readValue(s, JOURNAL);
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    private static double dbl(Object v) {
+        if (v == null) {
+            return 0;
+        }
+        if (v instanceof Number n) {
+            return n.doubleValue();
+        }
+        try {
+            return Double.parseDouble(String.valueOf(v));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private static String strOf(Object v) {

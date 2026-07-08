@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { AfterViewInit, Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
-import { addMapNav } from '../../core/tz-map';
+import { addDmisBaseLayer, addMapNav } from '../../core/tz-map';
 
 declare const L: any;     // Leaflet (global, as the Blade page loads it)
 declare const Chart: any; // Chart.js 4.4.0, loaded per-page from the same CDN
@@ -533,7 +533,7 @@ export class MitigationDashboardComponent implements AfterViewInit, OnDestroy {
     this.map.createPane('maskPane');
     this.map.getPane('maskPane').style.zIndex = 250;
     this.map.getPane('maskPane').style.pointerEvents = 'none';
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(this.map);
+    addDmisBaseLayer(this.map, this.http, 'standard');
     addMapNav(this.map, { home: [-6.5, 35.0, 6] });
 
     fetch('/geojson/tz_boundary_simple.geojson').then(r => r.json()).then(data => {

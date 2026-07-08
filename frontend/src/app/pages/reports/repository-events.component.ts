@@ -15,6 +15,18 @@ interface EventRow {
   costUsedTzs: number;
 }
 interface Hazard { id: number; name: string; }
+interface CandidateEvent {
+  id: number; eventCode: string; name: string; status: string;
+  hazardType: string | null; startedOn: string; primaryRegion: string | null; linkCount: number;
+}
+interface IncidentWorkItem {
+  id: number; title: string; hazardType: string | null; startedOn: string; endedOn: string | null;
+  resolvedOn: string | null; status: string; workflowStatus: string; severityLevel: string | null;
+  regionName: string | null; districtName: string | null; locationDescription: string | null;
+  affected: number; deaths: number; injured: number; missing: number; displaced: number;
+  responseValueTzs: number; assessmentCount: number; allocationCount: number;
+  candidateEvents: CandidateEvent[];
+}
 
 const STATUS_BADGE: Record<string, string> = {
   Open: 'badge-pending', Validated: 'badge-approved', Archived: 'badge-rejected',
@@ -43,6 +55,65 @@ const STATUS_BADGE: Record<string, string> = {
       <dmis-stat-card [value]="stats()['validated'] ?? 0" label="Validated (in Sendai figures)" icon="fa-check-double" color="#059669" />
       <dmis-stat-card [value]="stats()['archived'] ?? 0" label="Archived" icon="fa-box-archive" color="#64748b" />
     </div>
+
+    @if (worklist().length) {
+      <div class="panel-row">
+        <dmis-panel title="Resolved Incident Intake" icon="fa-clipboard-check" [badge]="worklist().length + ' unrecorded'">
+          <div class="panel-body" style="padding:0;">
+            <table class="r-table">
+              <thead><tr>
+                <th>Incident</th><th>Hazard</th><th>Area</th><th>Resolved</th>
+                <th style="text-align:right;">Impact</th><th>Repository action</th>
+              </tr></thead>
+              <tbody>
+                @for (i of worklist(); track i.id) {
+                  <tr class="data-row">
+                    <td>
+                      <div class="r-title">{{ i.title }}</div>
+                      <div class="r-subtitle">INC-{{ i.id }} · {{ i.status }}{{ i.workflowStatus ? ' / ' + i.workflowStatus : '' }}</div>
+                    </td>
+                    <td style="font-size:0.82rem;">{{ i.hazardType || '—' }}</td>
+                    <td style="font-size:0.82rem;">
+                      {{ i.districtName || i.regionName || i.locationDescription || '—' }}
+                      @if (i.districtName && i.regionName) { <div class="r-subtitle">{{ i.regionName }}</div> }
+                    </td>
+                    <td style="font-size:0.8rem;color:var(--text-mid);">
+                      {{ i.resolvedOn || i.endedOn || i.startedOn || '—' }}
+                    </td>
+                    <td style="text-align:right;font-size:0.82rem;">
+                      <b>{{ i.deaths | number }}</b> deaths
+                      <div class="r-subtitle">{{ i.affected | number }} affected · {{ i.assessmentCount }} assessments · {{ i.allocationCount }} allocations</div>
+                    </td>
+                    <td>
+                      <div style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;">
+                        @for (c of i.candidateEvents; track c.id) {
+                          <button class="btn-add" type="button" style="padding:0.28rem 0.65rem;font-size:0.76rem;background:#0f766e;"
+                                  [disabled]="linkingIncident() === i.id + ':' + c.id"
+                                  (click)="linkIncident(i, c)">
+                            <i class="fas" [class.fa-link]="linkingIncident() !== i.id + ':' + c.id"
+                               [class.fa-spinner]="linkingIncident() === i.id + ':' + c.id"
+                               [class.fa-spin]="linkingIncident() === i.id + ':' + c.id"></i>
+                            Link {{ c.eventCode }}
+                          </button>
+                        }
+                        <button class="btn-add" type="button" style="padding:0.28rem 0.65rem;font-size:0.76rem;"
+                                [disabled]="creatingFromIncident() === i.id"
+                                (click)="createFromIncident(i)">
+                          <i class="fas" [class.fa-database]="creatingFromIncident() !== i.id"
+                             [class.fa-spinner]="creatingFromIncident() === i.id"
+                             [class.fa-spin]="creatingFromIncident() === i.id"></i>
+                          {{ creatingFromIncident() === i.id ? 'Creating…' : 'Create card' }}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </dmis-panel>
+      </div>
+    }
 
     <div class="panel-row">
       <dmis-panel title="Disaster Event Cards" icon="fa-layer-group" [badge]="events().length + ' shown'">
@@ -168,8 +239,11 @@ export class RepositoryEventsComponent {
   stats = signal<Record<string, number>>({});
   hazardTypes = signal<string[]>([]);
   hazards = signal<Hazard[]>([]);
+  worklist = signal<IncidentWorkItem[]>([]);
   drawerOpen = signal(false);
   saving = signal(false);
+  creatingFromIncident = signal<number | null>(null);
+  linkingIncident = signal<string | null>(null);
 
   fHazard = signal(''); fYear = signal(''); fStatus = signal('');
   fName = signal(''); fHazardId = signal(''); fStart = signal(''); fEnd = signal('');
@@ -181,6 +255,7 @@ export class RepositoryEventsComponent {
 
   constructor() {
     this.reload();
+    this.reloadWorklist();
     this.http.get<{ hazards: Hazard[] }>('/api/v1/hazards?page=1')
       .subscribe({ next: r => this.hazards.set(r.hazards ?? []), error: () => this.hazards.set([]) });
   }
@@ -196,6 +271,11 @@ export class RepositoryEventsComponent {
         this.stats.set(r.stats);
         this.hazardTypes.set(r.hazardTypes);
       });
+  }
+
+  reloadWorklist(): void {
+    this.http.get<{ incidents: IncidentWorkItem[] }>('/api/v1/repository/events/incident-worklist')
+      .subscribe({ next: r => this.worklist.set(r.incidents ?? []), error: () => this.worklist.set([]) });
   }
 
   /** A2: download the repository as CSV honouring the current filters (HttpClient → Bearer token → blob). */
@@ -216,6 +296,37 @@ export class RepositoryEventsComponent {
 
   statusBadge(s: string): string { return STATUS_BADGE[s] ?? 'badge-pending'; }
   open(id: number): void { this.router.navigate(['/m/reports-analytics/repository', id]); }
+
+  createFromIncident(i: IncidentWorkItem): void {
+    this.creatingFromIncident.set(i.id);
+    this.http.post<{ id: number }>(`/api/v1/repository/events/from-incident/${i.id}`, {}).subscribe({
+      next: r => {
+        this.creatingFromIncident.set(null);
+        this.reload();
+        this.reloadWorklist();
+        this.open(r.id);
+      },
+      error: () => this.creatingFromIncident.set(null),
+    });
+  }
+
+  linkIncident(i: IncidentWorkItem, c: CandidateEvent): void {
+    const key = `${i.id}:${c.id}`;
+    this.linkingIncident.set(key);
+    this.http.post(`/api/v1/repository/events/${c.id}/links`, {
+      entityType: 'incident',
+      entityId: i.id,
+      note: 'Linked from resolved incident intake',
+    }).subscribe({
+      next: () => {
+        this.linkingIncident.set(null);
+        this.reload();
+        this.reloadWorklist();
+        this.open(c.id);
+      },
+      error: () => this.linkingIncident.set(null),
+    });
+  }
 
   save(): void {
     this.saving.set(true);

@@ -348,17 +348,21 @@ public class EwProductController {
                                      @RequestParam(required = false) String type) {
         StringBuilder where = new StringBuilder("1=1");
         java.util.List<Object> args = new java.util.ArrayList<>();
-        if (severity != null && !severity.isBlank()) { where.append(" and severity = ?"); args.add(severity); }
-        if (type != null && !type.isBlank()) { where.append(" and bulletin_type = ?"); args.add(type); }
+        if (severity != null && !severity.isBlank()) { where.append(" and p.severity = ?"); args.add(severity); }
+        if (type != null && !type.isBlank()) { where.append(" and p.bulletin_type = ?"); args.add(type); }
         Map<String, Object> out = new LinkedHashMap<>();
         List<Map<String, Object>> rows = jdbc.queryForList(("""
-                select id, title, bulletin_type, warning_code, issue_date, issue_time, severity, regions,
-                       centroid_lat, centroid_lng, pdf_path, generated_at, description,
-                       is_published, published_at, show_on_map,
+                select p.id, p.title, p.bulletin_type, p.warning_code, w.status as warning_status,
+                       p.issue_date, p.issue_time, p.severity, p.regions,
+                       p.centroid_lat, p.centroid_lng, p.pdf_path, p.generated_at, p.description,
+                       p.is_published, p.published_at, p.show_on_map,
                        exists(select 1 from public.disaster_risk_frameworks drf
-                              where drf.repository_entry_id = 'EOCC-BULLETIN-' || ew_generated_products.id) as on_publications,
-                       envelope->'days'->0->'hazards'->0->>'type' as hazard_type
-                from public.ew_generated_products where %s order by generated_at desc limit 300
+                              where drf.repository_entry_id = 'EOCC-BULLETIN-' || p.id) as on_publications,
+                       p.envelope->'days'->0->'hazards'->0->>'type' as hazard_type
+                from public.ew_generated_products p
+                left join public.warnings w on lower(w.warning_code) = lower(p.warning_code)
+                                           and w.deleted_at is null
+                where %s order by p.generated_at desc limit 300
                 """).formatted(where), args.toArray());
         rows.forEach(r -> { parseJson(r, "regions"); r.put("pdf_url", "/api/storage/" + r.get("pdf_path")); });
         out.put("products", rows);

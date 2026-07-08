@@ -21,7 +21,7 @@ interface PortalWarning {
 
 interface PortalIncident {
   id: number; title: string; severityLevel: string; status: string;
-  latitude: number | null; longitude: number | null; regionName?: string | null;
+  latitude: number | null; longitude: number | null; regionName?: string | null; districtName?: string | null;
   pinnedToMap?: boolean;
 }
 interface PortalAreaPoint { name: string; lat: number; lng: number; level: string; }
@@ -189,11 +189,11 @@ interface PortalBulletin {
                 <input class="form-control" [placeholder]="L.t('pp_region_state_province')" [value]="rRegion()" (input)="rRegion.set($any($event.target).value)">
               }
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-                <input class="form-control" [placeholder]="L.t('pp_email')" [value]="rEmail()" (input)="rEmail.set($any($event.target).value)">
-                <input class="form-control" [placeholder]="L.t('pp_phone')" [value]="rPhone()" (input)="rPhone.set($any($event.target).value)">
+                <input type="email" class="form-control" [placeholder]="L.t('pp_email_required')" [value]="rEmail()" (input)="rEmail.set($any($event.target).value)">
+                <input class="form-control" [placeholder]="L.t('pp_phone_optional')" [value]="rPhone()" (input)="rPhone.set($any($event.target).value)">
               </div>
               @if (regError()) { <div style="color:#dc2626;font-size:0.9rem;">{{ regError() }}</div> }
-              <button class="btn-gold" style="justify-content:center;" [disabled]="!rOrg().trim() || !rName().trim() || regSaving()" (click)="register()">
+              <button class="btn-gold" style="justify-content:center;" [disabled]="!registerValid() || regSaving()" (click)="register()">
                 <i class="fas" [class.fa-paper-plane]="!regSaving()" [class.fa-spinner]="regSaving()" [class.fa-spin]="regSaving()"></i>
                 {{ regSaving() ? L.t('pp_submitting') : L.t('pp_submit_registration') }}
               </button>
@@ -282,11 +282,16 @@ export class PublicLivePortalComponent {
     this.http.post('/api/v1/portal/register-stakeholder', {
       organization: this.rOrg().trim(), name: this.rName().trim(), type: this.rType(),
       country: this.rCountry() || null, region: this.rRegion() || null,
-      district: this.rDistrict() || null, email: this.rEmail() || null, phone: this.rPhone() || null,
+      district: this.rDistrict() || null, email: this.rEmail().trim(), phone: this.rPhone().trim() || null,
     }).subscribe({
       next: () => { this.regSaving.set(false); this.regDone.set(true); },
-      error: e => { this.regSaving.set(false); this.regError.set(e?.error?.message || this.L.t('pp_could_not_register')); },
+      error: e => { this.regSaving.set(false); this.regError.set(e?.error?.detail || e?.error?.message || this.L.t('pp_could_not_register')); },
     });
+  }
+
+  registerValid(): boolean {
+    return !!this.rOrg().trim() && !!this.rName().trim()
+      && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(this.rEmail().trim());
   }
 
   openRegister(): void {
@@ -419,6 +424,7 @@ export class PublicLivePortalComponent {
     for (const inc of this.incidents()) {
       if (inc.latitude == null || inc.longitude == null) { continue; }
       const lc = incidentLifecycle(inc.status);
+      const coverage = this.incidentWarningCoverage(inc);
       const im = L.circleMarker([inc.latitude, inc.longitude],
           { radius: 7, fillColor: '#7c3aed', color: '#fff', weight: 2, fillOpacity: 0.85, dashArray: '3' })
         .addTo(this.map)
@@ -426,7 +432,8 @@ export class PublicLivePortalComponent {
           `<div class="mp-head" style="background:#7c3aed;"><i class="fas fa-exclamation-circle"></i> ${this.L.t('pp_incident_label')} ${this.escHtml(inc.title)}</div>`
           + `<div class="mp-body">`
           + `<div class="mp-row"><i class="fas fa-signal"></i><span>${this.escHtml(inc.severityLevel ?? '')} · <b style="color:${lc.color};">${lc.label}</b></span></div>`
-          + (inc.regionName ? `<div class="mp-row"><i class="fas fa-map-marker-alt"></i><span>${this.escHtml(inc.regionName)}</span></div>` : '')
+          + (inc.regionName ? `<div class="mp-row"><i class="fas fa-map-marker-alt"></i><span>${this.escHtml(inc.regionName)}${inc.districtName ? ' · ' + this.escHtml(inc.districtName) : ''}</span></div>` : '')
+          + (coverage ? `<div class="mp-row"><i class="fas fa-triangle-exclamation"></i><span>${this.L.t('pp_inside_warned_area')} ${this.escHtml(coverage.severityLevel)}${coverage.hazardType ? ' · ' + this.escHtml(coverage.hazardType) : ''}</span></div>` : '')
           + `</div>`
           // the detailed public snapshot exists only for incidents an operator explicitly pushed to the map
           + (inc.pinnedToMap ? `<div class="mp-actions"><a class="mp-btn" href="/incident/${inc.id}"><i class="fas fa-satellite-dish"></i> ${this.L.t('pp_view_live_status')}</a></div>` : ''),
@@ -472,5 +479,41 @@ export class PublicLivePortalComponent {
           { className: 'map-pop', maxWidth: 360 });
       this.warningMarkers.push(marker);
     }
+  }
+
+  private incidentWarningCoverage(inc: PortalIncident): { severityLevel: string; hazardType?: string | null } | null {
+    const rank: Record<string, number> = { Emergency: 3, Warning: 2, Watch: 1 };
+    const incRegion = this.normArea(this.cleanArea(inc.regionName));
+    const incDistrict = this.normDistrict(this.cleanArea(inc.districtName));
+    let best: { severityLevel: string; hazardType?: string | null; rank: number } | null = null;
+    for (const w of this.warnings()) {
+      const warningRank = rank[w.severityLevel] ?? 0;
+      if (!warningRank) { continue; }
+      const warningRegions = this.splitAreas(w.affectedRegions).map(r => this.normArea(r));
+      const warningDistricts = this.splitAreas(w.affectedDistricts).map(d => this.normDistrict(d));
+      const regionMatches = !warningRegions.length || (!!incRegion && warningRegions.includes(incRegion));
+      const districtMatches = !!incDistrict && warningDistricts.includes(incDistrict);
+      const matched = warningDistricts.length ? (districtMatches && regionMatches) : regionMatches;
+      if (matched && (!best || warningRank > best.rank)) {
+        best = { severityLevel: w.severityLevel, hazardType: w.hazardType, rank: warningRank };
+      }
+    }
+    return best ? { severityLevel: best.severityLevel, hazardType: best.hazardType } : null;
+  }
+
+  private splitAreas(value?: string | null): string[] {
+    return String(value ?? '').split(/[,;]/).map(v => this.cleanArea(v)).filter(Boolean);
+  }
+
+  private cleanArea(value?: string | null): string {
+    return String(value ?? '').replace(/\(.*\)/, '').trim();
+  }
+
+  private normArea(value?: string | null): string {
+    return String(value ?? '').toLowerCase().replace(/[^a-z]/g, '');
+  }
+
+  private normDistrict(value?: string | null): string {
+    return this.normArea(String(value ?? '').replace(/\s+(urban|rural|municipal|city|town|dc|mc|tc)\b/gi, ''));
   }
 }

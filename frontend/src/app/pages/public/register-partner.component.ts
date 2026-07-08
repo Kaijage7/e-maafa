@@ -9,7 +9,7 @@ const TYPES = ['Government Institution', 'Non-Governmental Organization (NGO)', 
 /**
  * Public partner / stakeholder self-registration ("/register-partner") — the page the outreach QR code
  * opens on a phone. Posts to the public portal API (no login); the backend records the partner as
- * pending-verification and sends a genuine confirmation SMS/email via the M-Gov gateway.
+ * pending-verification and sends a genuine confirmation email plus optional SMS via the shared delivery path.
  */
 @Component({
   selector: 'public-register-partner',
@@ -47,7 +47,7 @@ const TYPES = ['Government Institution', 'Non-Governmental Organization (NGO)', 
           <i class="fas fa-landmark seal"></i>
           <div class="rp-eyebrow"><i class="fas fa-shield-halved me-1"></i> Prime Minister's Office · Disaster Management</div>
           <div class="rp-title">Partner &amp; Stakeholder Registration</div>
-          <div class="rp-sub">Register your institution with the e-MAAFA national disaster-management platform to coordinate on preparedness, early warning and response. On submission you'll receive a confirmation SMS, and PMO will review and verify your details.</div>
+          <div class="rp-sub">Register your institution with the e-MAAFA national disaster-management platform to coordinate on preparedness, early warning and response. On submission you'll receive a confirmation email, and PMO will review and verify your details.</div>
         </div>
         <div class="rp-card">
           <div class="rp-section">Organization details</div>
@@ -65,11 +65,11 @@ const TYPES = ['Government Institution', 'Non-Governmental Organization (NGO)', 
           <div class="rp-section" style="margin-top:1.3rem;">Contact</div>
           <div class="rp-grid">
             <div class="rp-field">
-              <label>Phone number <span class="req">*</span></label>
+              <label>Phone number <span style="font-weight:500;color:#94a3b8;">(optional SMS)</span></label>
               <input class="form-control" placeholder="0712 345 678" inputmode="tel" [value]="phone()" (input)="phone.set($any($event.target).value)">
             </div>
             <div class="rp-field">
-              <label>Email <span style="font-weight:500;color:#94a3b8;">(optional)</span></label>
+              <label>Email <span class="req">*</span></label>
               <input type="email" class="form-control" placeholder="name@organization.org" [value]="email()" (input)="email.set($any($event.target).value)">
             </div>
           </div>
@@ -111,7 +111,7 @@ const TYPES = ['Government Institution', 'Non-Governmental Organization (NGO)', 
           <p style="color:#475569;max-width:30rem;margin:0 auto;">{{ doneMsg() }}</p>
           <div class="rp-steps">
             <span class="rp-step"><i class="fas fa-1 me-1"></i> Submitted</span>
-            <span class="rp-step"><i class="fas fa-2 me-1"></i> SMS confirmation sent</span>
+            <span class="rp-step"><i class="fas fa-2 me-1"></i> Email confirmation sent</span>
             <span class="rp-step"><i class="fas fa-3 me-1"></i> PMO verification</span>
           </div>
           <a routerLink="/" class="btn-outline-gold" style="margin-top:1.3rem;justify-content:center;display:inline-flex;"><i class="fas fa-house me-1"></i> Back to home</a>
@@ -136,7 +136,7 @@ export class RegisterPartnerComponent {
       .subscribe({ next: r => this.regions.set(r || []), error: () => { /* form still works without the cascade */ } });
   }
 
-  valid = computed(() => this.orgName().trim().length > 1 && this.phone().trim().length >= 9);
+  valid = computed(() => this.orgName().trim().length > 1 && this.validEmail(this.email()));
 
   onRegion(id: string): void {
     this.regionId.set(id);
@@ -154,11 +154,15 @@ export class RegisterPartnerComponent {
     this.error.set('');
     this.http.post<{ id: number; message: string }>('/api/v1/portal/register-stakeholder', {
       name: this.orgName().trim(), organization: this.orgName().trim(), type: this.type(),
-      phone: this.phone().trim(), email: this.email().trim() || null,
+      phone: this.phone().trim() || null, email: this.email().trim(),
       region: this.regionName() || null, district: this.districtName() || null, country: 'Tanzania',
     }).subscribe({
       next: r => { this.saving.set(false); this.done.set(true); this.doneMsg.set(r.message); },
       error: e => { this.saving.set(false); this.error.set(e?.error?.detail || e?.error?.message || 'Could not register — please check your details and try again.'); },
     });
+  }
+
+  private validEmail(value: string): boolean {
+    return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
   }
 }

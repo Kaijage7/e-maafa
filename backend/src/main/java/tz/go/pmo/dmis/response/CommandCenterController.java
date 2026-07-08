@@ -95,10 +95,14 @@ public class CommandCenterController {
         StringBuilder activeSql = new StringBuilder("""
                 select ra.*, coalesce(i.title, ra.hazard_description) as incident_title,
                        i.severity_level, i.region_name, u.name as activated_by_name,
+                       ew.warning_code, s.title as scenario_title, er.run_code,
                        (select count(*) from public.incident_tasks t where t.activation_id = ra.id) as total_tasks,
                        (select count(*) from public.incident_tasks t where t.activation_id = ra.id and t.status = 'Completed') as completed_tasks
                 from public.response_activations ra
                 left join public.incidents i on i.id = ra.incident_id
+                left join public.warnings ew on ew.id = ra.warning_id
+                left join public.exercise_runs er on er.id = ra.exercise_run_id
+                left join public.exercise_scenarios s on s.id = ra.scenario_id
                 left join public.users u on u.id = ra.activated_by
                 where ra.status = 'active'""");
         List<Object> activeParams = new ArrayList<>();
@@ -107,9 +111,13 @@ public class CommandCenterController {
         out.put("active", jdbc.queryForList(activeSql.toString(), activeParams.toArray())
                 .stream().map(CommandCenterController::cleanActivationJson).toList());
         StringBuilder completedSql = new StringBuilder("""
-                select ra.*, coalesce(i.title, ra.hazard_description) as incident_title, u.name as activated_by_name
+                select ra.*, coalesce(i.title, ra.hazard_description) as incident_title,
+                       ew.warning_code, s.title as scenario_title, er.run_code, u.name as activated_by_name
                 from public.response_activations ra
                 left join public.incidents i on i.id = ra.incident_id
+                left join public.warnings ew on ew.id = ra.warning_id
+                left join public.exercise_runs er on er.id = ra.exercise_run_id
+                left join public.exercise_scenarios s on s.id = ra.scenario_id
                 left join public.users u on u.id = ra.activated_by
                 where ra.status in ('completed','deactivated')""");
         List<Object> completedParams = new ArrayList<>();
@@ -154,6 +162,32 @@ public class CommandCenterController {
                         + "72-hour clock has started — " + result.get("tasks_created") + " DRF tasks created.");
     }
 
+    /** Issued warnings eligible to open an anticipatory command post. */
+    @PreAuthorize("hasAuthority('command_post.activate')")
+    @GetMapping("/warnings")
+    public Map<String, Object> issuedWarningsForActivation() {
+        return Map.of("warnings", jdbc.queryForList("""
+                select w.id as warning_id, w.warning_code, w.status,
+                       string_agg(distinct h.name, ' / ') as hazard,
+                       (array_agg(wh.warning_level order by case lower(coalesce(wh.warning_level,''))
+                            when 'major warning' then 1 when 'warning' then 2 when 'advisory' then 3 else 4 end))[1] as warning_level,
+                       min(wh.validity_start) as validity_start,
+                       max(wh.validity_end) as validity_end,
+                       string_agg(distinct r.name, ', ') filter (where r.name is not null) as regions,
+                       string_agg(distinct d.name, ', ') filter (where d.name is not null) as districts,
+                       string_agg(distinct coalesce(d.name, r.name), ', ') filter (where coalesce(d.name, r.name) is not null) as affected_areas
+                from public.warnings w
+                join public.warning_hazards wh on wh.warning_id = w.id and wh.deleted_at is null
+                left join public.hazards h on h.id = wh.hazard_id
+                left join public.regions r on r.id = wh.region_id
+                left join public.districts d on d.id = wh.district_id
+                where w.deleted_at is null and lower(w.status) in ('approved','published')
+                group by w.id, w.warning_code, w.status
+                order by max(wh.validity_start) desc nulls last, w.id desc
+                limit 50
+                """));
+    }
+
     // ─── Forecast lifecycle (NDPRP 2022 anticipatory activation, V30) ───
 
     /**
@@ -166,21 +200,39 @@ public class CommandCenterController {
     @PostMapping("/forecast")
     @Transactional
     public Map<String, Object> activateFromForecast(@RequestBody Map<String, Object> body) throws Exception {
-        String hazard = require(body.get("hazard_description"), "hazard_description");
-        if (!(body.get("affected_areas") instanceof List<?> areas) || areas.isEmpty()) {
+        Map<String, Object> warning = linkedWarning(body);
+        Long warningId = warning == null ? null : ((Number) warning.get("warning_id")).longValue();
+        String warningCode = warning == null ? null : str(warning.get("warning_code"));
+        String hazard = warning == null
+                ? require(body.get("hazard_description"), "hazard_description")
+                : firstNonBlank(str(warning.get("hazard")), "Issued warning") + " — " + warningCode;
+        List<String> areas = warning == null ? requestAreas(body.get("affected_areas"))
+                : splitCsv(str(warning.get("affected_areas")));
+        if (areas.isEmpty()) {
             throw new BusinessRuleException("At least one forecast-impact area is required.");
         }
         boolean simulation = "simulation".equals(body.get("mode"));
         boolean allowRealOps = simulation && Boolean.parseBoolean(String.valueOf(body.get("allow_real_ops")));
+        if (warningId != null && !simulation) {
+            Long active = jdbc.queryForObject("""
+                    select count(*) from public.response_activations
+                    where warning_id = ? and status = 'active' and trigger_type = 'forecast'
+                      and coalesce(is_simulation, false) = false
+                    """, Long.class, warningId);
+            if (active != null && active > 0) {
+                throw new BusinessRuleException("A live anticipatory command post is already open for " + warningCode + ".");
+            }
+        }
         Long userId = users.actingUserId();
+        Object expectedImpactAt = warning == null ? str(body.get("expected_impact_at")) : warning.get("validity_start");
         Long activationId = jdbc.queryForObject("""
                 insert into public.response_activations(incident_id, activated_by, activated_at, status,
-                    posture, trigger_type, hazard_description, affected_areas, expected_impact_at,
+                    posture, trigger_type, warning_id, hazard_description, affected_areas, expected_impact_at,
                     forecast_track, is_simulation, allow_real_ops, notes, created_at, updated_at)
-                values (null, ?, now(), 'active', 'monitoring', 'forecast', ?, ?::json, ?::timestamptz,
+                values (null, ?, now(), 'active', 'monitoring', 'forecast', ?, ?, ?::json, ?::timestamptz,
                         ?::json, ?, ?, ?, now(), now()) returning id
-                """, Long.class, userId, hazard,
-                JSON.writeValueAsString(body.get("affected_areas")), str(body.get("expected_impact_at")),
+                """, Long.class, userId, warningId, hazard,
+                JSON.writeValueAsString(areas), expectedImpactAt,
                 body.get("forecast_track") == null ? null : JSON.writeValueAsString(body.get("forecast_track")),
                 simulation, allowRealOps, str(body.get("notes")));
         // Every DRF goes on call: seed the NDPRP default tasks as lanes (no incident yet)
@@ -193,10 +245,12 @@ public class CommandCenterController {
                 from public.drf_default_tasks t
                 """, activationId, userId);
         activations.log(activationId, userId, "forecast_activated",
-                (simulation ? "[SIMULATION] " : "") + "Anticipatory activation — " + hazard
-                        + ". Areas: " + body.get("affected_areas") + ". All 15 DRFs on call ("
+                (simulation ? "[SIMULATION] " : "") + "Anticipatory activation"
+                        + (warningCode == null ? "" : " from " + warningCode) + " — " + hazard
+                        + ". Areas: " + areas + ". All 15 DRFs on call ("
                         + tasks + " preparedness tasks).", null);
         return Map.of("success", true, "activation_id", activationId,
+                "warning_id", warningId == null ? "" : warningId, "warning_code", warningCode == null ? "" : warningCode,
                 "message", "Anticipatory activation opened at MONITORING posture. All DRFs are on call.");
     }
 
@@ -358,9 +412,13 @@ public class CommandCenterController {
         out.put("activation", cleanActivationJson(jdbc.queryForMap("""
                 select ra.*, coalesce(i.title, ra.hazard_description) as incident_title,
                        i.severity_level, i.region_name, i.location_description, i.latitude, i.longitude,
-                       i.status as incident_status, u.name as activated_by_name
+                       i.status as incident_status, ew.warning_code, s.title as scenario_title,
+                       er.run_code, u.name as activated_by_name
                 from public.response_activations ra
                 left join public.incidents i on i.id = ra.incident_id
+                left join public.warnings ew on ew.id = ra.warning_id
+                left join public.exercise_runs er on er.id = ra.exercise_run_id
+                left join public.exercise_scenarios s on s.id = ra.scenario_id
                 left join public.users u on u.id = ra.activated_by
                 where ra.id = ?
                 """, id)));
@@ -421,9 +479,13 @@ public class CommandCenterController {
             activations.log(id, users.actingUserId(), "inject_fired",
                     fired + " scheduled scenario inject(s) fired.", null);
         }
-        out.put("injects", jdbc.queryForList(
-                "select * from public.activation_injects where activation_id = ? "
-                + "order by coalesce(due_at, created_at), id", id));
+        out.put("injects", jdbc.queryForList("""
+                select ai.*, drf.number as target_drf_number, drf.name as target_drf_name
+                from public.activation_injects ai
+                left join public.disaster_response_functions drf on drf.id = ai.target_drf_id
+                where ai.activation_id = ?
+                order by coalesce(ai.due_at, ai.created_at), ai.id
+                """, id));
         // After-action review once the activation is closed (drill or live — both are worth reviewing).
         if (!"active".equals(String.valueOf(activation.get("status")))) {
             out.put("aar", buildAar(id));
@@ -909,6 +971,85 @@ public class CommandCenterController {
                 && jurisdiction.currentTier() != JurisdictionScope.Tier.NATIONAL) {
             throw new ResourceNotFoundException("Activation not found.");
         }
+    }
+
+    private Map<String, Object> linkedWarning(Map<String, Object> body) {
+        Long warningId = optionalLong(body.get("warning_id"), "warning_id");
+        String warningCode = str(body.get("warning_code"));
+        if (warningId == null && warningCode == null) {
+            return null;
+        }
+        StringBuilder where = new StringBuilder("w.deleted_at is null and lower(w.status) in ('approved','published')");
+        List<Object> params = new ArrayList<>();
+        if (warningId != null) {
+            where.append(" and w.id = ?");
+            params.add(warningId);
+        } else {
+            where.append(" and lower(w.warning_code) = lower(?)");
+            params.add(warningCode);
+        }
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select w.id as warning_id, w.warning_code, w.status,
+                       string_agg(distinct h.name, ' / ') as hazard,
+                       (array_agg(wh.warning_level order by case lower(coalesce(wh.warning_level,''))
+                            when 'major warning' then 1 when 'warning' then 2 when 'advisory' then 3 else 4 end))[1] as warning_level,
+                       min(wh.validity_start) as validity_start,
+                       max(wh.validity_end) as validity_end,
+                       string_agg(distinct coalesce(d.name, r.name), ', ') filter (where coalesce(d.name, r.name) is not null) as affected_areas
+                from public.warnings w
+                join public.warning_hazards wh on wh.warning_id = w.id and wh.deleted_at is null
+                left join public.hazards h on h.id = wh.hazard_id
+                left join public.regions r on r.id = wh.region_id
+                left join public.districts d on d.id = wh.district_id
+                where %s
+                group by w.id, w.warning_code, w.status
+                """.formatted(where), params.toArray());
+        if (rows.isEmpty()) {
+            throw new ResourceNotFoundException("Issued warning not found.");
+        }
+        return rows.get(0);
+    }
+
+    private static List<String> requestAreas(Object raw) {
+        if (raw instanceof List<?> list) {
+            return list.stream().map(CommandCenterController::str).filter(s -> s != null).toList();
+        }
+        return splitCsv(str(raw));
+    }
+
+    private static List<String> splitCsv(String raw) {
+        List<String> out = new ArrayList<>();
+        if (raw == null || raw.isBlank()) {
+            return out;
+        }
+        for (String part : raw.split(",")) {
+            String value = str(part);
+            if (value != null) {
+                out.add(value);
+            }
+        }
+        return out;
+    }
+
+    private static Long optionalLong(Object v, String field) {
+        String s = str(v);
+        if (s == null) {
+            return null;
+        }
+        try {
+            return (long) Double.parseDouble(s);
+        } catch (NumberFormatException e) {
+            throw new BusinessRuleException("The " + field + " field is invalid.");
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private static String requireIn(Object v, List<String> allowed, String field) {

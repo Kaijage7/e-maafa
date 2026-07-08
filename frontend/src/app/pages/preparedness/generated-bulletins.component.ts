@@ -1,11 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 
 interface Product {
-  id: number; title: string; bulletin_type: string; warning_code: string | null;
+  id: number; title: string; bulletin_type: string; warning_code: string | null; warning_status?: string | null;
   issue_date: string; issue_time: string; severity: string; regions: string[]; hazard_type: string | null;
   pdf_url: string; generated_at: string; description?: string | null;
   is_published: boolean; published_at?: string | null; show_on_map: boolean; on_publications: boolean;
@@ -96,6 +97,11 @@ const isEoccBulletin = (p: Product): boolean =>
             <button class="gb-btn disseminate" (click)="openDisseminate(p)">
               <i class="fas fa-tower-broadcast"></i> Disseminate to affected areas
             </button>
+            @if (canOpenCommandPost(p)) {
+              <button class="gb-btn command" [disabled]="openingPost() === p.id" (click)="openCommandPost(p)">
+                <i class="fas fa-helmet-safety"></i> {{ openingPost() === p.id ? 'Opening…' : 'Open anticipatory post' }}
+              </button>
+            }
           </div>
         }
       </div>
@@ -223,6 +229,8 @@ const isEoccBulletin = (p: Product): boolean =>
     .gb-btn.dl { background: rgba(5,150,105,0.08); color: #059669; border-color: rgba(5,150,105,0.2); }
     .gb-btn.disseminate { width: 100%; margin-top: 0.4rem; background: rgba(5,150,105,0.09); color: #047857; border-color: rgba(5,150,105,0.25); cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
     .gb-btn.disseminate:disabled { opacity: 0.55; cursor: default; }
+    .gb-btn.command { width: 100%; margin-top: 0.4rem; background: rgba(124,58,237,0.08); color: #6d28d9; border-color: rgba(124,58,237,0.22); cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
+    .gb-btn.command:disabled { opacity: 0.55; cursor: default; }
     .gb-empty { font-size: 0.8rem; color: var(--text-mid); padding: 1rem; }
     .pb-modal.dm { width: min(520px, 94vw); max-height: 88vh; overflow-y: auto; }
     .dm-sec { font-size: 0.75rem; font-weight: 800; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.3px; margin: 0.7rem 0 0.35rem; }
@@ -240,11 +248,13 @@ const isEoccBulletin = (p: Product): boolean =>
 })
 export class GeneratedBulletinsComponent {
   private http = inject(HttpClient);
+  private router = inject(Router);
 
   products = signal<Product[]>([]);
   stats = signal<Record<string, number>>({});
   uploading = signal(false);
   uploadError = signal('');
+  openingPost = signal<number | null>(null);
   publishing = signal<Product | null>(null);
   tgtPublications = signal(false);
   tgtMap = signal(false);
@@ -271,6 +281,9 @@ export class GeneratedBulletinsComponent {
   sevColor(s: string): string { return SEV[s]?.color ?? '#64748b'; }
   sevLabel(s: string): string { return SEV[s]?.label ?? s; }
   hazIcon(type: string | null): string { return HAZ_ICON(type); }
+  canOpenCommandPost(p: Product): boolean {
+    return !!p.warning_code && ['approved', 'published'].includes(String(p.warning_status ?? '').toLowerCase());
+  }
 
   reload(): void {
     this.http.get<any>('/api/v1/ew/products').subscribe(r => {
@@ -350,6 +363,24 @@ export class GeneratedBulletinsComponent {
   }
 
   closeDisseminate(): void { this.disseminating.set(null); this.dResult.set(null); }
+
+  /** Open a linked anticipatory command post from an issued warning product. */
+  openCommandPost(p: Product): void {
+    if (!p.warning_code) { return; }
+    this.uploadError.set('');
+    this.openingPost.set(p.id);
+    this.http.post<any>('/api/v1/response/coordination/forecast',
+      { warning_code: p.warning_code, mode: 'live' }).subscribe({
+      next: res => {
+        this.openingPost.set(null);
+        this.router.navigate(['/m/response/coordination'], { queryParams: { activation: res.activation_id } });
+      },
+      error: err => {
+        this.openingPost.set(null);
+        this.uploadError.set(err?.error?.detail ?? err?.error?.message ?? 'Could not open the anticipatory command post.');
+      },
+    });
+  }
 
   /** Send the bulletin to the affected areas through the Communication Center (SMS + email + in-app). */
   confirmDisseminate(): void {

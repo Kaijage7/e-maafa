@@ -6,17 +6,20 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 
-interface MatchedIncident { id: number; title: string; reported_at: string; severity_level: string; status: string; region_name: string; hazard?: string; }
+interface MatchedIncident {
+  id: number; title: string; reported_at: string; severity_level: string; status: string;
+  region_name: string; district_name?: string; hazard?: string; in_warned_district?: boolean;
+}
 interface PrepActivity { kind: string; name: string; status: string; starts: string; ends: string; area: string; }
 interface WarningRow {
   id: number; warning_code: string; hazard: string; area: string; warning_level: string;
   validity_start: string; validity_end: string; ew_class: string; incident_count: number;
   incidents: MatchedIncident[]; preparedness: PrepActivity[]; lead_time_hours?: number;
   // one row per warning × warned region (districts aggregated server-side):
-  warning_id?: number; districts?: string; district_count?: number;
+  warning_id?: number; districts?: string; district_count?: number; area_scope?: string;
   different_hazard_incidents?: MatchedIncident[]; // same area+window, but not the warned hazard
 }
-interface UnwarnedRow { id: number; title: string; hazard: string; severity_level: string; status: string; reported_at: string; region_name: string; }
+interface UnwarnedRow { id: number; title: string; hazard: string; severity_level: string; status: string; reported_at: string; region_name: string; district_name?: string; }
 interface EwAnalysis {
   summary: Record<string, number>;
   warnings: WarningRow[];
@@ -120,10 +123,10 @@ interface EwAnalysis {
                   </td>
                   <td>
                     @for (i of w.incidents; track i.id) {
-                      <div class="inc-line">• {{ i.title }} <span class="t">— {{ i.reported_at | date:'MMM d, HH:mm' }} · {{ i.severity_level }}</span></div>
+                      <div class="inc-line">• {{ i.title }} <span class="t">— {{ i.reported_at | date:'MMM d, HH:mm' }} · {{ i.severity_level }}@if (i.district_name) { <span> · {{ i.district_name }}</span> }@if (i.in_warned_district) { <span> · warned district</span> }</span></div>
                     }
                     @for (i of (w.different_hazard_incidents || []); track i.id) {
-                      <div class="inc-line diff">• {{ i.title }} <span class="t">— {{ i.reported_at | date:'MMM d, HH:mm' }} · {{ i.hazard || 'unclassified' }} — different hazard, not counted</span></div>
+                      <div class="inc-line diff">• {{ i.title }} <span class="t">— {{ i.reported_at | date:'MMM d, HH:mm' }} · {{ i.hazard || 'unclassified' }}@if (i.district_name) { <span> · {{ i.district_name }}</span> }@if (i.in_warned_district) { <span> · warned district</span> } — different hazard, not counted</span></div>
                     }
                     @if (!w.incidents.length && !(w.different_hazard_incidents || []).length) { <span class="muted">none</span> }
                   </td>
@@ -147,7 +150,7 @@ interface EwAnalysis {
             <thead><tr><th>Incident</th><th>Hazard</th><th>Area</th><th>Reported</th><th>Severity</th></tr></thead>
             <tbody>
               @for (i of unwarned(); track i.id) {
-                <tr><td>{{ i.title || ('Incident #' + i.id) }}</td><td>{{ i.hazard || '—' }}</td><td>{{ i.region_name || '—' }}</td>
+                <tr><td>{{ i.title || ('Incident #' + i.id) }}</td><td>{{ i.hazard || '—' }}</td><td>{{ i.district_name || i.region_name || '—' }}@if (i.district_name && i.region_name) { <span class="muted"> · {{ i.region_name }}</span> }</td>
                     <td style="white-space:nowrap">{{ i.reported_at | date:'MMM d, HH:mm' }}</td><td>{{ i.severity_level || '—' }}</td></tr>
               }
               @if (!unwarned().length && !loading()) { <tr><td colspan="5" class="muted" style="text-align:center;padding:24px">No unwarned incidents — every incident was preceded by a warning.</td></tr> }

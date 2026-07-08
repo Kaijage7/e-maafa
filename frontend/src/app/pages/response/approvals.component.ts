@@ -32,6 +32,18 @@ interface ApprovalRow {
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
     .q-badge { background: rgba(220,53,69,0.1); color: #dc3545; border-radius: 10px; padding: 0 6px; font-size: 0.75rem; margin-left: 4px; }
     .actions button { font-size: 0.8rem; padding: 0.4rem 0.75rem; border-radius: 6px; }
+    .bulk-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-bottom:1px solid #eef2f7; background:#f8fafc; }
+    .bulk-check { display:inline-flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--text-mid); font-weight:600; }
+    .bulk-check input, .row-check { width:16px; height:16px; accent-color:#dc3545; cursor:pointer; }
+    .bulk-action { border:1px solid #198754; background:#198754; color:#fff; border-radius:6px; padding:0.38rem 0.7rem; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:6px; min-height:32px; }
+    .bulk-action:disabled { opacity:0.45; cursor:not-allowed; }
+    .source-box { border:1px solid #eef2f7; background:#f8fafc; border-radius:8px; padding:10px; margin:10px 0 14px; }
+    .source-grid { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end; }
+    .source-box label { display:block; font-size:0.72rem; font-weight:700; color:var(--text-light); text-transform:uppercase; margin-bottom:4px; }
+    .source-box select { width:100%; border:1px solid #dfe5ee; border-radius:6px; padding:0.38rem 0.5rem; font-size:0.8rem; background:#fff; min-height:32px; }
+    .source-save { border:1px solid #0d6efd; background:#0d6efd; color:#fff; border-radius:6px; padding:0.38rem 0.7rem; font-size:0.78rem; font-weight:700; min-height:32px; white-space:nowrap; }
+    .source-save:disabled { opacity:0.45; cursor:not-allowed; }
+    @media (max-width: 560px) { .source-grid { grid-template-columns:1fr; } }
     /* Detail drawer */
     .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 1090; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
     .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
@@ -57,23 +69,40 @@ interface ApprovalRow {
     </dmis-page-header>
 
     <div class="queue-tabs">
-      <button [class.active]="tab() === 'pending'" (click)="tab.set('pending')">Pending My Approval <span class="q-badge">{{ pending().length }}</span></button>
-      <button [class.active]="tab() === 'all'" (click)="tab.set('all')">All Requests <span class="q-badge">{{ all().length }}</span></button>
-      <button [class.active]="tab() === 'mine'" (click)="tab.set('mine'); loadMine()">My Requests & Notifications <span class="q-badge">{{ mine().length }}</span></button>
+      <button [class.active]="tab() === 'pending'" (click)="setTab('pending')">Pending My Approval <span class="q-badge">{{ pending().length }}</span></button>
+      <button [class.active]="tab() === 'all'" (click)="setTab('all')">All Requests <span class="q-badge">{{ all().length }}</span></button>
+      <button [class.active]="tab() === 'mine'" (click)="setTab('mine'); loadMine()">My Requests & Notifications <span class="q-badge">{{ mine().length }}</span></button>
     </div>
 
     @if (tab() !== 'mine') {
       <div class="panel-row">
         <dmis-panel [title]="tab() === 'pending' ? 'Requests Awaiting Approval' : 'All Requests'" icon="fa-database" [badge]="visible().length + ''">
           <div class="panel-body" style="padding:0;">
+            @if (tab() === 'pending') {
+              <div class="bulk-bar">
+                <label class="bulk-check">
+                  <input type="checkbox" [checked]="allPendingSelected()" (change)="toggleAllPending($any($event.target).checked)">
+                  <span>{{ selectedCount() ? selectedCount() + ' selected' : 'Select all visible' }}</span>
+                </label>
+                <button class="bulk-action" [disabled]="selectedCount() === 0" (click)="bulkApprove()">
+                  <i class="fas fa-forward"></i><span>Bulk Approve</span>
+                </button>
+              </div>
+            }
             <div style="overflow-x:auto;">
               <table class="r-table">
                 <thead>
-                  <tr><th>#</th><th>Incident</th><th>Resource</th><th>Qty</th><th>Current Stage</th><th>Status</th><th>Requested By</th><th></th></tr>
+                  <tr>
+                    @if (tab() === 'pending') { <th style="width:42px;"></th> }
+                    <th>#</th><th>Incident</th><th>Resource</th><th>Qty</th><th>Current Stage</th><th>Status</th><th>Requested By</th><th></th>
+                  </tr>
                 </thead>
                 <tbody>
                   @for (a of visible(); track a.id) {
                     <tr class="data-row">
+                      @if (tab() === 'pending') {
+                        <td><input class="row-check" type="checkbox" [checked]="isSelected(a.id)" (change)="toggleSelected(a.id, $any($event.target).checked)"></td>
+                      }
                       <td style="font-size:0.82rem;color:var(--text-mid);">{{ a.id }}</td>
                       <td>
                         <a [routerLink]="['/m/response/incidents', a.incident_id]" style="text-decoration:none;">
@@ -89,7 +118,7 @@ interface ApprovalRow {
                       <td><button class="r-view" style="font-size:0.8rem;padding:0.3rem 0.65rem;" (click)="open(a)"><i class="fas fa-eye"></i> Review</button></td>
                     </tr>
                   } @empty {
-                    <tr><td colspan="8"><div class="empty-state"><i class="fas fa-clipboard-check"></i> No requests here.</div></td></tr>
+                    <tr><td [attr.colspan]="tab() === 'pending' ? 9 : 8"><div class="empty-state"><i class="fas fa-clipboard-check"></i> No requests here.</div></td></tr>
                   }
                 </tbody>
               </table>
@@ -155,6 +184,32 @@ interface ApprovalRow {
             <strong>Requested by:</strong> {{ d.requested_by_name ?? '-' }} ·
             <strong>Source:</strong> {{ d.warehouse_name ?? d.source_details ?? 'TBD' }}
           </div>
+          @if (d.can_approve) {
+            <div class="source-box">
+              <div class="source-grid">
+                <div>
+                  <label>Fulfilment Source</label>
+                  <select [ngModel]="redirectSource()" (ngModelChange)="setRedirectSource($event)">
+                    <option value="warehouse">Warehouse</option>
+                    <option value="agency">Agency</option>
+                    <option value="procurement">Procurement</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Warehouse</label>
+                  <select [disabled]="redirectSource() !== 'warehouse'" [ngModel]="redirectWarehouseId()" (ngModelChange)="redirectWarehouseId.set($event)">
+                    <option value="">Select warehouse</option>
+                    @for (w of d.warehouses ?? []; track w.id) {
+                      <option [value]="w.id">{{ w.name }}</option>
+                    }
+                  </select>
+                </div>
+                <button class="source-save" [disabled]="redirectSource() === 'warehouse' && !redirectWarehouseId()" (click)="updateSource()">
+                  <i class="fas fa-random me-1"></i>Update Source
+                </button>
+              </div>
+            </div>
+          }
           <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:0.4rem;">
             Approval Chain — {{ d.workflow.progress }}%
           </div>
@@ -196,10 +251,18 @@ export class ResponseApprovalsComponent implements OnInit {
   all = signal<ApprovalRow[]>([]);
   mine = signal<ApprovalRow[]>([]);
   notifications = signal<any[]>([]);
+  selectedIds = signal<Set<number>>(new Set());
   drawerOpen = signal(false);
   detail = signal<any | null>(null);
+  redirectSource = signal<'warehouse' | 'agency' | 'procurement'>('warehouse');
+  redirectWarehouseId = signal('');
 
   visible = computed(() => this.tab() === 'pending' ? this.pending() : this.all());
+  selectedCount = computed(() => this.selectedIds().size);
+  allPendingSelected = computed(() => {
+    const rows = this.pending();
+    return rows.length > 0 && rows.every(a => this.selectedIds().has(a.id));
+  });
 
   ngOnInit(): void {
     ensureSweetAlert();
@@ -211,7 +274,15 @@ export class ResponseApprovalsComponent implements OnInit {
     this.http.get<any>('/api/v1/response/approvals', { params }).subscribe(d => {
       this.pending.set(d.pending_approvals);
       this.all.set(d.all_requests);
+      this.pruneSelection();
     });
+  }
+
+  setTab(next: 'pending' | 'all' | 'mine'): void {
+    this.tab.set(next);
+    if (next !== 'pending') {
+      this.selectedIds.set(new Set());
+    }
   }
 
   loadMine(): void {
@@ -223,6 +294,7 @@ export class ResponseApprovalsComponent implements OnInit {
 
   open(a: ApprovalRow): void {
     this.http.get<any>(`/api/v1/response/approvals/${a.id}`).subscribe(d => {
+      this.resetSourceForm(d);
       this.detail.set(d);
       this.drawerOpen.set(true);
     });
@@ -232,6 +304,79 @@ export class ResponseApprovalsComponent implements OnInit {
     this.http.post<any>(`/api/v1/response/approvals/${a.id}/resubmit`, {}).subscribe({
       next: r => ensureSweetAlert().then(() => Swal.fire({ icon: 'success', title: 'Resubmitted', text: r.message, timer: 2200, showConfirmButton: false }).then(() => this.loadMine())),
       error: err => ensureSweetAlert().then(() => Swal.fire('Error', err?.error?.detail ?? 'An error occurred.', 'error')),
+    });
+  }
+
+  isSelected(id: number): boolean {
+    return this.selectedIds().has(id);
+  }
+
+  toggleSelected(id: number, checked: boolean): void {
+    const next = new Set(this.selectedIds());
+    if (checked) {
+      next.add(id);
+    } else {
+      next.delete(id);
+    }
+    this.selectedIds.set(next);
+  }
+
+  toggleAllPending(checked: boolean): void {
+    this.selectedIds.set(checked ? new Set(this.pending().map(a => a.id)) : new Set());
+  }
+
+  bulkApprove(): void {
+    const ids = Array.from(this.selectedIds());
+    if (!ids.length) {
+      return;
+    }
+    ensureSweetAlert().then(() => {
+      Swal.fire({
+        title: `Approve ${ids.length} request${ids.length === 1 ? '' : 's'}?`,
+        icon: 'question',
+        input: 'textarea',
+        inputLabel: 'Remarks (optional)',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+      }).then((res: any) => {
+        if (!res.isConfirmed) { return; }
+        const body: any = { ids };
+        if (res.value) { body.remarks = res.value; }
+        this.http.post<any>('/api/v1/response/approvals/bulk-approve', body).subscribe({
+          next: r => {
+            const failures = Array.isArray(r.failures) && r.failures.length ? ` ${r.failures.length} failed.` : '';
+            Swal.fire({ icon: r.failures?.length ? 'warning' : 'success', title: 'Bulk approval complete', text: `${r.message}${failures}`, timer: 2600, showConfirmButton: false })
+              .then(() => { this.selectedIds.set(new Set()); this.load(); });
+          },
+          error: err => Swal.fire('Error', err?.error?.detail ?? err?.error?.message ?? 'Bulk approval failed.', 'error'),
+        });
+      });
+    });
+  }
+
+  setRedirectSource(source: string): void {
+    const normalized = this.validSource(source);
+    this.redirectSource.set(normalized);
+    if (normalized !== 'warehouse') {
+      this.redirectWarehouseId.set('');
+    }
+  }
+
+  updateSource(): void {
+    const d = this.detail();
+    if (!d) {
+      return;
+    }
+    const body: any = { source: this.redirectSource() };
+    if (this.redirectSource() === 'warehouse' && this.redirectWarehouseId()) {
+      body.warehouse_id = Number(this.redirectWarehouseId());
+    }
+    ensureSweetAlert().then(() => {
+      this.http.post<any>(`/api/v1/response/approvals/${d.id}/update-source`, body).subscribe({
+        next: r => Swal.fire({ icon: 'success', title: 'Source updated', text: r.message, timer: 2000, showConfirmButton: false })
+          .then(() => { this.load(); this.open({ id: d.id } as ApprovalRow); }),
+        error: err => Swal.fire('Error', err?.error?.detail ?? err?.error?.message ?? 'Could not update source.', 'error'),
+      });
     });
   }
 
@@ -287,6 +432,23 @@ export class ResponseApprovalsComponent implements OnInit {
 
   limit(s: string, max: number): string {
     return s.length <= max ? s : s.substring(0, max).trimEnd() + '...';
+  }
+
+  private pruneSelection(): void {
+    const valid = new Set(this.pending().map(a => a.id));
+    this.selectedIds.set(new Set(Array.from(this.selectedIds()).filter(id => valid.has(id))));
+  }
+
+  private resetSourceForm(d: any): void {
+    const current = this.validSource(String(d?.source ?? ''));
+    this.redirectSource.set(current);
+    const warehouseId = d?.warehouse_id ?? d?.deployed_from_warehouse ?? '';
+    this.redirectWarehouseId.set(current === 'warehouse' && warehouseId ? String(warehouseId) : '');
+  }
+
+  private validSource(value: string): 'warehouse' | 'agency' | 'procurement' {
+    const normalized = value.toLowerCase().trim();
+    return normalized === 'agency' || normalized === 'procurement' ? normalized : 'warehouse';
   }
 }
 

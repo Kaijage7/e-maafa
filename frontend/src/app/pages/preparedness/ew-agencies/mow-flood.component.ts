@@ -11,6 +11,7 @@ import { EntityTaskingsComponent } from './entity-taskings.component';
 import { CATCHMENT_BASINS, BASIN_BY_KEY } from './catchment-basins';
 import { ALERT_LEVELS, ALERT_RANK, alertColor, AGENCIES, HAZ_ICON, LIKELIHOOD, IMPACT } from './ew-agency.model';
 import { loadCrossAgencyRef, renderCrossAgencyRef, RefMarker } from './cross-agency-ref';
+import { addDmisBaseLayer } from '../../../core/tz-map';
 
 declare const L: any;
 
@@ -288,8 +289,7 @@ export class MowFloodComponent implements OnInit, OnDestroy {
     this.map = L.map('mowmap', { minZoom: 5, maxZoom: 9, zoomControl: true })
       .setView([-6.4, 35.0], 6);
     this.map.setMaxBounds([[-12.5, 28.0], [1.0, 41.5]]);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-      { attribution: '© OpenStreetMap, © CARTO', subdomains: 'abcd' }).addTo(this.map);
+    addDmisBaseLayer(this.map, this.http, 'light');
     this.map.createPane('ewshapes'); this.map.getPane('ewshapes').style.zIndex = 550;  // shapes above district fills
     this.drawnGroup = L.featureGroup().addTo(this.map);
     this.initDraw();

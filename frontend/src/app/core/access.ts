@@ -44,7 +44,7 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
   ['/m/response/coordination', 'command_post.view'],
   ['/m/response/eocc', 'command_post.activate'],
   ['/m/response/executive-watch', 'command_post.posture'],
-  ['/m/response/public-reports', 'communication_and_alerts.view'],
+  ['/m/response/public-reports', 'incidents.view'],
   ['/m/response/donations', 'resource_allocation.view'],
   ['/m/response/support-needs', 'resource_allocation.view'],
   ['/m/response/tasks', 'tasks.view'],

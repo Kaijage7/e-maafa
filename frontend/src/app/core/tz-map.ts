@@ -1,15 +1,101 @@
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 
 declare const L: any;
 
+export type DmisMapBaseVariant = 'standard' | 'light';
+
+function addMapBaseNotice(map: any, message: string): void {
+  if (map._dmisBaseNotice || !L?.control) { return; }
+  const notice = L.control({ position: 'bottomleft' });
+  notice.onAdd = () => {
+    const div = L.DomUtil.create('div', 'dmis-map-base-notice');
+    div.style.cssText = 'background:rgba(15,23,42,.82);color:#fff;border-radius:4px;padding:4px 7px;font-size:11px;box-shadow:0 1px 4px rgba(15,23,42,.25);';
+    div.textContent = message;
+    return div;
+  };
+  notice.addTo(map);
+  map._dmisBaseNotice = notice;
+}
+
+function ensureBasePane(map: any, name: string, zIndex: number): void {
+  if (!map.getPane(name)) {
+    map.createPane(name);
+  }
+  map.getPane(name).style.zIndex = String(zIndex);
+  map.getPane(name).style.pointerEvents = 'none';
+}
+
+function addLocalVectorBase(map: any, http: HttpClient, variant: DmisMapBaseVariant): void {
+  const light = variant === 'light';
+  ensureBasePane(map, 'dmisBaseLandPane', 180);
+  ensureBasePane(map, 'dmisBaseWaterPane', 185);
+  ensureBasePane(map, 'dmisBaseBoundaryPane', 190);
+  http.get<any>('/geojson/tz_country.geojson').subscribe((c: any) => {
+    const land = L.geoJSON(c, {
+      pane: 'dmisBaseLandPane',
+      style: {
+        fillColor: light ? '#f3f6f9' : '#eef2f5',
+        fillOpacity: 1,
+        color: light ? '#cbd5e1' : '#d5dee8',
+        weight: light ? 0.6 : 0.4,
+      },
+      interactive: false,
+    }).addTo(map);
+    land.bringToBack();
+  });
+  http.get<any>('/geojson/tz_water_gis.geojson').subscribe((w: any) => {
+    L.geoJSON(w, {
+      pane: 'dmisBaseWaterPane',
+      style: {
+        fillColor: light ? '#c8e2f3' : '#a5cde8',
+        fillOpacity: 0.92,
+        color: light ? '#8dbfe0' : '#7EB8DA',
+        weight: 0.5,
+      },
+      interactive: false,
+    }).addTo(map);
+  });
+  http.get<any>('/geojson/tz_boundary_gis.geojson').subscribe((b: any) => {
+    L.geoJSON(b, {
+      pane: 'dmisBaseBoundaryPane',
+      style: { color: light ? '#64748b' : '#8a99a8', weight: 1.1, fill: false },
+      interactive: false,
+    }).addTo(map);
+  });
+}
+
+export function addDmisBaseLayer(map: any, http: HttpClient, variant: DmisMapBaseVariant = 'standard'): void {
+  const cfg = environment.mapTiles;
+  const url = variant === 'light' ? cfg.lightUrl : cfg.voyagerUrl;
+  if (!cfg.allowExternal || !url) {
+    addLocalVectorBase(map, http, variant);
+    return;
+  }
+
+  let fallbackAdded = false;
+  const layer = L.tileLayer(url, {
+    attribution: cfg.attribution,
+    subdomains: cfg.subdomains,
+    maxZoom: 19,
+  }).addTo(map);
+  layer.on('tileerror', () => {
+    if (fallbackAdded) { return; }
+    fallbackAdded = true;
+    addLocalVectorBase(map, http, variant);
+    addMapBaseNotice(map, 'Base map offline: local Tanzania layers active');
+  });
+}
+
 /**
  * Adds the STANDARD Tanzania map base — the exact same base as Risk Mapping / the Mitigation dashboard
- * (the standard map base): CartoDB Voyager raster tiles + a NEIGHBOR MASK that greys out
- * everything outside Tanzania (so the country reads clean) + the canonical lakes + region outlines, all
- * from the canonical GeoJSON. Panes match Risk Mapping's z-order; screen markers added by each feature
+ * (the standard map base): governed DMIS base layer + a NEIGHBOR MASK that greys out everything outside
+ * Tanzania (so the country reads clean) + the canonical lakes + region outlines, all from the canonical
+ * GeoJSON. Panes match Risk Mapping's z-order; screen markers added by each feature
  * (default overlayPane, z400) stay on top. Shared by every Preparedness/public map (Evacuation Centers,
  * Warehouses, …) so the whole system renders ONE consistent base — change it here once, every map updates.
- * Uses an online raster basemap (needs the tile CDN) so every map reads like the Risk Mapping view.
+ * Production defaults to local Tanzania vector layers; optional third-party tiles are controlled only by
+ * environment.mapTiles.
  */
 export function addTanzaniaGisBase(map: any, http: HttpClient): void {
   // EXCEPTION — the home hero map (#hero-map) sits OVER a crossfading photo slider and must stay
@@ -26,9 +112,8 @@ export function addTanzaniaGisBase(map: any, http: HttpClient): void {
     http.get<any>('/geojson/tz_boundary_gis.geojson').subscribe((b: any) => { L.geoJSON(b, { style: { color: '#8a99a8', weight: 1.2, fill: false }, interactive: false }).addTo(map); });
     return;
   }
-  // 1) Standard raster basemap.
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
-    { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
+  // 1) Governed DMIS base layer: local vector by default, optional third-party tiles via environment only.
+  addDmisBaseLayer(map, http, 'standard');
   // Panes — same z-order as Risk Mapping (mask < lakes < regions < the default overlayPane=400 markers).
   const pane = (name: string, z: number) => {
     if (!map.getPane(name)) { map.createPane(name); map.getPane(name).style.zIndex = String(z); map.getPane(name).style.pointerEvents = 'none'; }
@@ -120,6 +205,187 @@ export function addMapNav(map: any, _opts: { dark?: boolean; home?: [number, num
 /** Region/district names → split-file names (same rule as the admin GIS map). */
 function safeName(name: string): string {
   return name.replace(/ /g, '_').replace(/\//g, '_').replace(/'/g, '');
+}
+
+export interface DmisMapJurisdictionArea {
+  scope?: string;
+  region_name?: string;
+  district_name?: string;
+  regionName?: string;
+  districtName?: string;
+  [key: string]: any;
+}
+
+export interface DmisMapJurisdictionOptions {
+  dark?: boolean;
+  restrictPan?: boolean;
+  showRegionDistricts?: boolean;
+}
+
+export const TANZANIA_MAP_BOUNDS: [[number, number], [number, number]] = [[-12.0, 29.0], [-0.8, 41.0]];
+
+function areaProp(area: DmisMapJurisdictionArea | undefined, snake: string, camel: string): string {
+  return String(area?.[snake] ?? area?.[camel] ?? '').trim();
+}
+
+/** Registry names can carry admin-type suffixes the GIS source omits ("Dodoma Urban" vs "Dodoma"). */
+function normArea(n: string): string {
+  return (n || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+(urban|rural|municipal|city|town|cbd|dc|mc|tc)\b/gi, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function featureName(feature: any, ...names: string[]): string {
+  for (const name of names) {
+    const value = feature?.properties?.[name];
+    if (value != null && String(value).trim()) {
+      return String(value).trim();
+    }
+  }
+  return '';
+}
+
+function findFeature(data: any, expected: string, ...propertyNames: string[]): any {
+  const want = normArea(expected);
+  return (data?.features ?? []).find((f: any) => normArea(featureName(f, ...propertyNames)) === want);
+}
+
+function maskHoles(feature: any): any[] {
+  const geom = feature?.geometry ?? feature;
+  const holes: any[] = [];
+  if (!geom) { return holes; }
+  if (geom.type === 'FeatureCollection') {
+    (geom.features ?? []).forEach((f: any) => holes.push(...maskHoles(f)));
+  } else if (geom.type === 'MultiPolygon') {
+    (geom.coordinates ?? []).forEach((poly: any) => {
+      if (poly?.[0]) { holes.push(poly[0].map((c: number[]) => [c[1], c[0]])); }
+    });
+  } else if (geom.type === 'Polygon' && geom.coordinates?.[0]) {
+    holes.push(geom.coordinates[0].map((c: number[]) => [c[1], c[0]]));
+  }
+  return holes;
+}
+
+function addJurisdictionMask(map: any, feature: any, dark: boolean): void {
+  const holes = maskHoles(feature);
+  if (!holes.length) { return; }
+  ensureBasePane(map, 'dmisScopeMaskPane', 305);
+  const world = [[-90, -180], [90, -180], [90, 180], [-90, 180], [-90, -180]];
+  L.polygon([world].concat(holes), {
+    pane: 'dmisScopeMaskPane',
+    fillColor: dark ? '#020617' : '#e8edf2',
+    fillOpacity: dark ? 0.68 : 0.86,
+    stroke: false,
+    interactive: false,
+  }).addTo(map);
+}
+
+function scopeStyles(dark: boolean): any {
+  return {
+    fill: {
+      pane: 'dmisScopeFillPane',
+      fillColor: dark ? '#0ea5e9' : '#2f80ed',
+      fillOpacity: dark ? 0.13 : 0.11,
+      color: dark ? '#7dd3fc' : '#0d3b66',
+      weight: 2.6,
+      opacity: dark ? 0.95 : 0.9,
+      interactive: false,
+    },
+    outline: {
+      pane: 'dmisScopeOutlinePane',
+      fill: false,
+      color: dark ? '#7dd3fc' : '#0d3b66',
+      weight: 2.8,
+      opacity: 0.95,
+      interactive: false,
+    },
+    district: {
+      pane: 'dmisScopeDistrictPane',
+      fill: false,
+      color: dark ? '#bae6fd' : '#2563eb',
+      weight: dark ? 1.1 : 1,
+      opacity: dark ? 0.68 : 0.55,
+      dashArray: '4 3',
+      interactive: false,
+    },
+  };
+}
+
+function prepareJurisdictionPanes(map: any): void {
+  ensureBasePane(map, 'dmisScopeFillPane', 315);
+  ensureBasePane(map, 'dmisScopeDistrictPane', 325);
+  ensureBasePane(map, 'dmisScopeOutlinePane', 330);
+}
+
+function fitAndBound(map: any, layer: any, scope: 'REGION' | 'DISTRICT',
+                     opts: DmisMapJurisdictionOptions): void {
+  const bounds = layer.getBounds();
+  map.fitBounds(bounds, { padding: scope === 'DISTRICT' ? [28, 28] : [34, 34], maxZoom: scope === 'DISTRICT' ? 11 : 9 });
+  if (opts.restrictPan === false) { return; }
+  map.setMaxBounds(bounds.pad(scope === 'DISTRICT' ? 0.35 : 0.2));
+  map.options.maxBoundsViscosity = Math.max(map.options.maxBoundsViscosity ?? 0, 0.9);
+}
+
+function drawRegionDistricts(map: any, http: HttpClient, region: string, dark: boolean): void {
+  http.get<any>(`/geojson/adm2_district/by_region/${safeName(region)}.geojson`).subscribe({
+    next: data => {
+      L.geoJSON(data, { style: () => scopeStyles(dark).district }).addTo(map);
+    },
+    error: () => { /* district layer missing — the region boundary still scopes the map */ },
+  });
+}
+
+/**
+ * Visual jurisdiction standard for internal operational maps. Server predicates remain the security wall;
+ * this helper makes the map match them: district users are clipped to one district, region users to one
+ * region with all of its districts visible, and national users keep the whole Tanzania view.
+ */
+export function applyDmisMapJurisdiction(map: any, http: HttpClient,
+                                         area?: DmisMapJurisdictionArea,
+                                         opts: DmisMapJurisdictionOptions = {}): void {
+  const scope = String(area?.scope ?? 'NATIONAL').toUpperCase();
+  const region = areaProp(area, 'region_name', 'regionName');
+  const district = areaProp(area, 'district_name', 'districtName');
+  const dark = !!opts.dark;
+  if (!region || scope === 'NATIONAL') {
+    if (opts.restrictPan !== false) {
+      map.setMaxBounds(TANZANIA_MAP_BOUNDS);
+      map.options.maxBoundsViscosity = Math.max(map.options.maxBoundsViscosity ?? 0, 0.9);
+    }
+    return;
+  }
+
+  prepareJurisdictionPanes(map);
+  if (scope === 'DISTRICT' && district) {
+    http.get<any>(`/geojson/adm2_district/by_region/${safeName(region)}.geojson`).subscribe({
+      next: data => {
+        const feature = findFeature(data, district, 'dist_name', 'district_name', 'District_N');
+        if (!feature) { return; }
+        addJurisdictionMask(map, feature, dark);
+        const layer = L.geoJSON(feature, { style: () => scopeStyles(dark).fill }).addTo(map);
+        L.geoJSON(feature, { style: () => scopeStyles(dark).outline }).addTo(map);
+        fitAndBound(map, layer, 'DISTRICT', opts);
+      },
+      error: () => { /* GIS file missing — keep the country-level base rather than failing the dashboard */ },
+    });
+    return;
+  }
+
+  http.get<any>('/geojson/adm1_region/adm1.geojson').subscribe({
+    next: data => {
+      const feature = findFeature(data, region, 'reg_name', 'Region_Nam', 'region_name');
+      if (!feature) { return; }
+      addJurisdictionMask(map, feature, dark);
+      const layer = L.geoJSON(feature, { style: () => scopeStyles(dark).fill }).addTo(map);
+      if (opts.showRegionDistricts !== false) {
+        drawRegionDistricts(map, http, region, dark);
+      }
+      L.geoJSON(feature, { style: () => scopeStyles(dark).outline }).addTo(map);
+      fitAndBound(map, layer, 'REGION', opts);
+    },
+    error: () => { /* GIS file missing — keep the country-level base rather than failing the dashboard */ },
+  });
 }
 
 /**

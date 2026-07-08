@@ -33,7 +33,7 @@ import tz.go.pmo.dmis.notification.NotificationService.Notice;
  *       'draft'); a focal point/officer then submits it and it rides the DAS→RAS→AsstDir→Director approval chain.</li>
  *   <li><b>entity</b> — an online hazard NOT reported by an entity (earthquake, El&nbsp;Niño…) or an external
  *       SHOC/IGAD/AU alert is routed to the RELEVANT warning entity via the hazard→entity map: a tasking is
- *       created (public.scanner_entity_taskings) and every user is notified to verify + issue an official
+ *       created (public.scanner_entity_taskings) and the entity + EOCC are notified to verify + issue an official
  *       assessment. The entity then authors its normal bulletin (closing the loop).</li>
  *   <li><b>dismiss</b> — false alarm / not actionable.</li>
  * </ul>
@@ -269,10 +269,11 @@ public class ScannerController {
         jdbc.update("update public.scanner_detections set status='dispatched', dispatched_as=?, assigned_entity=? where id=?",
             "entity:" + agency, agency, id);
         String urgTag = urgency != null ? "[" + urgency + "] " : "";
-        notifications.notifyAllUsers(Notice.inApp("scanner_tasking",
+        notifications.notifyUsers(entityAndEoccUsers(agency), Notice.inApp("scanner_tasking",
             AGENCY_NAME.get(agency) + ": " + urgTag + "verify online " + hazardLabel + " report",
             message, consolePath(agency), "scanner_detection", id,
-            "Immediate".equals(urgency) ? "critical" : "high"));
+            "Immediate".equals(urgency) ? "critical" : "high")
+            .withChannels(false, "Immediate".equals(urgency)));
         return Map.of("success", true, "id", id, "dispatched_as", "entity", "agency", agency, "tasking_id", taskingId,
             "message", "Routed to " + AGENCY_NAME.get(agency) + (urgency != null ? " (" + urgency + ")" : "")
                 + " for verification & official assessment.");
@@ -353,7 +354,7 @@ public class ScannerController {
         Map<String, Object> t = jdbc.queryForMap("select agency, hazard_type, region, detection_id "
             + "from public.scanner_entity_taskings where id=?", id);
         String hazard = str(t.get("hazard_type")) == null ? "hazard" : str(t.get("hazard_type")).replace('_', ' ');
-        notifications.notifyAllUsers(Notice.inApp("scanner_response",
+        notifications.notifyUsers(eoccUsers(), Notice.inApp("scanner_response",
             AGENCY_NAME.getOrDefault(str(t.get("agency")), String.valueOf(t.get("agency")).toUpperCase(Locale.ROOT))
                 + " responded — assessment for review",
             hazard + (t.get("region") != null ? " in " + t.get("region") : "")
@@ -384,12 +385,12 @@ public class ScannerController {
         String hazard = str(t.get("hazard_type")) == null ? "hazard" : str(t.get("hazard_type")).replace('_', ' ');
         String where = t.get("region") != null ? " in " + t.get("region") : "";
         if (outcome.equals("returned")) {
-            notifications.notifyAllUsers(Notice.inApp("scanner_returned",
+            notifications.notifyUsers(entityAndEoccUsers(str(t.get("agency"))), Notice.inApp("scanner_returned",
                 entity + ": assessment returned for revision",
                 hazard + where + " — " + (note != null && !note.isBlank() ? note : "please revise and re-send."),
                 consolePath(str(t.get("agency"))), "scanner_detection", parseLong(t.get("detection_id")), "high"));
         } else {
-            notifications.notifyAllUsers(Notice.inApp("scanner_accepted",
+            notifications.notifyUsers(entityAndEoccUsers(str(t.get("agency"))), Notice.inApp("scanner_accepted",
                 entity + ": assessment accepted",
                 hazard + where + " — verified & accepted by EOCC; the entity's assessment is recorded.",
                 "/m/preparedness/early-warnings/scanner", "scanner_detection", parseLong(t.get("detection_id")), "low"));
@@ -398,6 +399,30 @@ public class ScannerController {
     }
 
     // ── helpers ──
+    private List<Long> entityAndEoccUsers(String agency) {
+        java.util.LinkedHashSet<Long> ids = new java.util.LinkedHashSet<>();
+        ids.addAll(entityUsers(agency));
+        ids.addAll(eoccUsers());
+        return new ArrayList<>(ids);
+    }
+
+    private List<Long> entityUsers(String agency) {
+        if (agency == null || agency.isBlank()) {
+            return List.of();
+        }
+        return jdbc.queryForList(
+            "select distinct u.id from public.users u join public.agencies a on a.id = u.agency_id "
+                + "where lower(a.acronym) = ?",
+            Long.class, agency.trim().toLowerCase(Locale.ROOT));
+    }
+
+    private List<Long> eoccUsers() {
+        return jdbc.queryForList(
+            "select distinct mhr.model_id from public.model_has_roles mhr "
+                + "join public.roles r on r.id = mhr.role_id where r.name = ?",
+            Long.class, Authz.EOCC);
+    }
+
     private String resolveAgency(String hazardType, String text) {
         String t = text == null ? "" : text.toLowerCase(Locale.ROOT);
         if (t.contains("el nino") || t.contains("el niño") || t.contains("elnino")) return "moa";  // El Niño → agriculture (+ TMA)

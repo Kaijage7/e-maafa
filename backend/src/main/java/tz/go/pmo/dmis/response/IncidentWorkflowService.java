@@ -537,12 +537,13 @@ public class IncidentWorkflowService {
                 rs -> rs.next() ? rs.getLong(1) : null);
     }
 
-    // ─── Stage notifications: ping the officers who now own the incident (in-app + email, never SMS) ───
+    // ─── Stage notifications: ping the officers who now own the incident. ───
 
     /**
      * After a transition, notify the officers who now own the incident's new stage — area-scoped (the DED
      * of its district, the RAS of its region) or national (Asst.Director/Director/PS), plus the reporter on
-     * final approval. In-app + email only; SMS stays silent by design. Never fails the workflow transaction.
+     * final approval. Critical actionable handoffs are also SMS-eligible, but each recipient's notify_sms
+     * preference and phone number still decide whether a text is sent. Never fails the workflow transaction.
      */
     private void notifyStage(Map<String, Object> incident, String stage) {
         try {
@@ -563,10 +564,11 @@ public class IncidentWorkflowService {
                       + "' stage and is pending your review.";
             String severity = "Critical".equalsIgnoreCase(str(incident.get("severity_level")))
                     ? "critical" : "warning";
+            boolean smsEligible = "critical".equals(severity) && STAGE_ROLES.containsKey(stage);
             NotificationService.Notice notice = new NotificationService.Notice(
                     "incident_workflow", noticeTitle, message,
                     "/m/response/incidents/" + incidentId, "incident", incidentId, severity,
-                    false, true);   // sms=false (silent) · email=true · in-app always delivered
+                    smsEligible, true);   // in-app always delivered; SMS remains user-opt-in.
             notifications.notifyUsers(recipients, notice);
         } catch (Exception notifyFailureMustNotBreakWorkflow) {
             log.warn("Incident stage-notify failed (workflow continues): {}",

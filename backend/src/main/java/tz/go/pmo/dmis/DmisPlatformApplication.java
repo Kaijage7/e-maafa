@@ -10,9 +10,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * Entry point for the DMIS platform backend.
  *
  * <p>The application is a modular monolith: each disaster-management bounded context
- * (population registry, early warning, incidents, logistics, ...) lives in its own
- * package and communicates with others only through domain events on the outbox.
- * Scheduling is enabled for the outbox relay and stock-reconciliation jobs.
+ * (population registry, early warning, incidents, logistics, ...) lives in its own package.
+ * Current cross-module coordination is explicit service/database integration plus selected
+ * asynchronous notification work; no transactional outbox is active until a real event contract
+ * is introduced.
  */
 @SpringBootApplication
 @ConfigurationPropertiesScan

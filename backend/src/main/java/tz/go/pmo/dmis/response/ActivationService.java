@@ -1,5 +1,6 @@
 package tz.go.pmo.dmis.response;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -69,12 +70,42 @@ public class ActivationService {
             }
         }
 
-        Long userId = users.actingUserId();
+        return createActivation(targetIncidentId, users.actingUserId(), notes, simulation,
+                simulation && allowRealOps, null, null, null);
+    }
+
+    /**
+     * Open a Command Post for a pre-authored exercise incident from the scenario library. The incident is
+     * already a simulation clone, so this path reuses the same activation/task/log machinery without
+     * cloning it a second time.
+     */
+    @Transactional
+    public Map<String, Object> activateScenarioDrill(long incidentId, long exerciseRunId, long scenarioId,
+                                                     long scenarioIncidentId, boolean allowRealOps,
+                                                     String notes) {
+        List<Boolean> flags = jdbc.queryForList(
+                "select is_simulation from public.incidents where id = ?", Boolean.class, incidentId);
+        if (flags.isEmpty()) {
+            throw new BusinessRuleException("Incident not found.");
+        }
+        if (!Boolean.TRUE.equals(flags.get(0))) {
+            throw new BusinessRuleException("Scenario exercises must launch against simulation incidents.");
+        }
+        return createActivation(incidentId, users.actingUserId(), notes, true, allowRealOps,
+                exerciseRunId, scenarioId, scenarioIncidentId);
+    }
+
+    private Map<String, Object> createActivation(long incidentId, Long userId, String notes,
+                                                 boolean simulation, boolean allowRealOps,
+                                                 Long exerciseRunId, Long scenarioId,
+                                                 Long scenarioIncidentId) {
         Long activationId = jdbc.queryForObject("""
                 insert into public.response_activations(incident_id, activated_by, activated_at, status,
-                    notes, is_simulation, allow_real_ops, created_at, updated_at)
-                values (?,?,now(),'active',?,?,?,now(),now()) returning id
-                """, Long.class, targetIncidentId, userId, notes, simulation, simulation && allowRealOps);
+                    notes, is_simulation, allow_real_ops, exercise_run_id, scenario_id, scenario_incident_id,
+                    created_at, updated_at)
+                values (?,?,now(),'active',?,?,?,?,?,?,now(),now()) returning id
+                """, Long.class, incidentId, userId, notes, simulation, simulation && allowRealOps,
+                exerciseRunId, scenarioId, scenarioIncidentId);
 
         // Snapshot every DRF's default tasks as coordination lanes (unified 'To Do' status)
         int tasks = jdbc.update("""
@@ -85,15 +116,24 @@ public class ActivationService {
                        t.is_72hr_critical, t.sort_order, ?, now(), now()
                 from public.drf_default_tasks t
                 join public.disaster_response_functions f on f.id = t.drf_id
-                """, targetIncidentId, activationId, userId);
+                """, incidentId, activationId, userId);
 
         log(activationId, userId, "activated",
                 (simulation
                         ? "SIMULATION " + (allowRealOps ? "FULL-SCALE exercise" : "table-top drill") + " activated"
                         : "Disaster response activated")
                         + " — 15 DRFs and " + tasks + " tasks created.", null);
-        return Map.of("activation_id", activationId, "incident_id", targetIncidentId,
-                "tasks_created", tasks, "is_simulation", simulation);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("activation_id", activationId);
+        out.put("incident_id", incidentId);
+        out.put("tasks_created", tasks);
+        out.put("is_simulation", simulation);
+        if (exerciseRunId != null) {
+            out.put("exercise_run_id", exerciseRunId);
+            out.put("scenario_id", scenarioId);
+            out.put("scenario_incident_id", scenarioIncidentId);
+        }
+        return out;
     }
 
     /** Append to the activation's coordination timeline (TaskActivityLog::log). */

@@ -5,6 +5,7 @@ import java.time.Year;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -77,7 +78,7 @@ public class PortalPublicService {
         List<Map<String, Object>> incidents = safeList(
                 "select id, title, severity_level as \"severityLevel\", status,"
                         + " workflow_status as \"workflowStatus\","
-                        + " latitude, longitude, region_name as \"regionName\","
+                        + " latitude, longitude, region_name as \"regionName\", district_name as \"districtName\","
                         + " show_on_portal_map as \"pinnedToMap\""
                         + " from public.incidents"
                         + " where latitude is not null"
@@ -190,10 +191,10 @@ public class PortalPublicService {
     // ------------------------------------------------- live incident snapshot
 
     /**
-     * Live, public-safe snapshot of an incident an operator has pushed to the portal (map / news): the
-     * situation plus its <b>response status</b>, the <b>resources allocated</b> to it and recent updates —
-     * re-queried on every call so it reflects current state as the incident is worked. Returns
-     * {@code null} (→ 404) when the incident is not published, so un-pushed incidents are never exposed.
+     * Live/final public-safe snapshot of an incident an operator has published to citizens: either on the
+     * public map or through an active News & Events article linked by {@code incidents.portal_news_id}.
+     * Returns {@code null} (-> 404) when neither public surface points at the incident, so un-published
+     * incidents are never exposed.
      */
     @Transactional(readOnly = true)
     public Map<String, Object> incidentSnapshot(long id) {
@@ -206,12 +207,19 @@ public class PortalPublicService {
                         + " i.deaths_total as \"deathsTotal\", i.injured_total as \"injuredTotal\","
                         + " i.missing_total as \"missingTotal\", i.displaced, i.children_affected as \"childrenAffected\","
                         + " i.reported_at as \"reportedAt\", i.updated_at as \"updatedAt\","
-                        + " h.name as \"hazardName\", it.name as \"incidentType\""
+                        + " h.name as \"hazardName\", it.name as \"incidentType\","
+                        + " coalesce(i.show_on_portal_map, false) as \"pinnedToMap\","
+                        + " exists(select 1 from public.portal_news n"
+                        + "     where n.id = i.portal_news_id and n.is_active = true and n.published_at <= now())"
+                        + "     as \"publishedViaNews\""
                         + " from public.incidents i"
                         + " left join public.hazards h on h.id = i.hazard_id"
                         + " left join public.incident_types it on it.id = i.incident_type_id"
-                        + " where i.id = ? and i.show_on_portal_map = true"
-                        + "   and coalesce(i.is_simulation, false) = false", id);
+                        + " where i.id = ? and coalesce(i.is_simulation, false) = false"
+                        + "   and (coalesce(i.show_on_portal_map, false) = true"
+                        + "        or exists(select 1 from public.portal_news n"
+                        + "             where n.id = i.portal_news_id and n.is_active = true"
+                        + "               and n.published_at <= now()))", id);
         if (found.isEmpty()) {
             return null;
         }
@@ -267,6 +275,10 @@ public class PortalPublicService {
         // convert time.
         Long regionId = asId(req.get("regionId"));
         Long districtId = asId(req.get("districtId"));
+        if (regionId == null && districtId != null) {
+            regionId = jdbc.query("select region_id from public.districts where id = ?",
+                    rs -> rs.next() ? rs.getObject("region_id", Long.class) : null, districtId);
+        }
         Long n = jdbc.queryForObject("select count(*) from public.public_hazard_reports", Long.class);
         String code = String.format("PHR-%d-%05d", Year.now().getValue(), (n == null ? 0 : n) + 1);
         Long reportId = jdbc.queryForObject("insert into public.public_hazard_reports(report_code,hazard_type,"
@@ -293,13 +305,16 @@ public class PortalPublicService {
                 + " (official report via public portal)";
         Long incidentId = jdbc.queryForObject(
                 "insert into public.incidents(title, description, incident_type_id, severity_level, status, "
-                + "workflow_status, origin_level, region_id, district_id, location_description, latitude, longitude, reported_at, "
+                + "workflow_status, origin_level, region_id, district_id, region_name, district_name, "
+                + "location_description, latitude, longitude, reported_at, "
                 + "reported_by_name, reported_by_contact, source_of_report, submitted_at, created_at, updated_at) "
-                + "values (?,?,?,?, 'Reported', 'waiting_eocc', 'national', ?,?, ?,?,?, now(), ?,?,?, now(), now(), now()) "
+                + "values (?,?,?,?, 'Reported', 'waiting_eocc', 'national', ?,?, "
+                + "(select name from public.regions where id = ?), (select name from public.districts where id = ?), "
+                + "?,?,?, now(), ?,?,?, now(), now(), now()) "
                 + "returning id", Long.class,
                 "Official report: " + hazardType + (str(req.get("location")) == null ? "" : " — " + str(req.get("location"))),
                 description, incidentTypeId, urgencyToSeverity(str(req.get("urgency"))), regionId, districtId,
-                str(req.get("location")), num(req.get("latitude")), num(req.get("longitude")),
+                regionId, districtId, str(req.get("location")), num(req.get("latitude")), num(req.get("longitude")),
                 str(req.get("reporterName")), str(req.get("reporterPhone")), src);
         // (No incident_workflow_histories row: that table requires a user_id and a portal report has no acting
         // user. The incident's origin is fully captured in source_of_report + the linked PHR report below.)
@@ -307,6 +322,80 @@ public class PortalPublicService {
                 + "updated_at=now() where id=?", incidentId, reportId);
         return Map.of("reportCode", code, "incidentId", incidentId,
                 "message", "Official report received — routed straight to the EOCC as incident #" + incidentId + ".");
+    }
+
+    /**
+     * Public-safe report tracking by the one-time PHR reference code. This deliberately excludes reporter
+     * name/phone/email and only exposes a linked incident URL when the incident has been explicitly
+     * published to the public portal.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> reportStatus(String rawCode) {
+        String code = str(rawCode);
+        if (code == null || !code.matches("(?i)^PHR-\\d{4}-\\d{5}$")) {
+            return null;
+        }
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select r.report_code as "reportCode",
+                       r.hazard_type as "hazardType",
+                       r.location_description as "locationDescription",
+                       r.urgency_level as "urgencyLevel",
+                       r.status,
+                       r.review_notes as "reviewNotes",
+                       r.created_at as "submittedAt",
+                       r.reviewed_at as "reviewedAt",
+                       rg.name as "regionName",
+                       d.name as "districtName",
+                       i.id as "incidentId",
+                       i.title as "incidentTitle",
+                       i.status as "incidentStatus",
+                       i.workflow_status as "incidentWorkflowStatus",
+                       coalesce(i.show_on_portal_map, false) as "incidentPublished"
+                from public.public_hazard_reports r
+                left join public.districts d on d.id = r.district_id
+                left join public.regions rg on rg.id = coalesce(r.region_id, d.region_id)
+                left join public.incidents i on i.id = r.linked_incident_id
+                where upper(r.report_code) = upper(?)
+                limit 1
+                """, code);
+        if (rows.isEmpty()) {
+            return null;
+        }
+
+        Map<String, Object> row = rows.get(0);
+        String status = String.valueOf(row.getOrDefault("status", "new"));
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("reportCode", row.get("reportCode"));
+        out.put("hazardType", row.get("hazardType"));
+        out.put("locationDescription", row.get("locationDescription"));
+        out.put("urgencyLevel", row.get("urgencyLevel"));
+        out.put("status", status);
+        out.put("statusLabel", publicReportStatusLabel(status));
+        out.put("submittedAt", row.get("submittedAt"));
+        out.put("reviewedAt", row.get("reviewedAt"));
+        out.put("reviewNotes", row.get("reviewNotes"));
+        out.put("area", Map.of(
+                "regionName", row.get("regionName") == null ? "" : row.get("regionName"),
+                "districtName", row.get("districtName") == null ? "" : row.get("districtName")));
+
+        Object incidentId = row.get("incidentId");
+        boolean published = Boolean.TRUE.equals(row.get("incidentPublished"));
+        out.put("linkedIncident", incidentId == null ? null : Map.of(
+                "id", incidentId,
+                "title", row.get("incidentTitle") == null ? "" : row.get("incidentTitle"),
+                "status", row.get("incidentStatus") == null ? "" : row.get("incidentStatus"),
+                "workflowStatus", row.get("incidentWorkflowStatus") == null ? "" : row.get("incidentWorkflowStatus"),
+                "publicUrl", published ? "/incident/" + incidentId : ""));
+        return out;
+    }
+
+    private static String publicReportStatusLabel(String status) {
+        return switch ((status == null ? "" : status).toLowerCase()) {
+            case "reviewing" -> "Under review";
+            case "converted" -> "Converted to an incident";
+            case "dismissed" -> "Closed after review";
+            default -> "Received";
+        };
     }
 
     /** Normalise the wizard's "reported by" to one of: public | institution | sector | ministry | region.
@@ -483,20 +572,26 @@ public class PortalPublicService {
         }
         String phone = str(req.get("phone"));
         String email = str(req.get("email"));
+        if (email == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Enter a valid email address so PMO can send the set-password link after approval.");
+        }
         if (phone != null && !phone.replaceAll("[\\s-]", "").matches("^(\\+?255|0)[67]\\d{8}$")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Enter a valid Tanzanian phone number (e.g. 0712 345 678) so we can send your confirmation.");
         }
-        if (email != null && !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a valid email address.");
         }
+        email = email.toLowerCase(Locale.ROOT);
         Long id = jdbc.queryForObject("insert into public.stakeholders(name,organization,type,email,phone,region,district,country,"
                         + "is_active,is_verified,created_at,updated_at)"
                         + " values (?,?,?,?,?,?,?,?,true,false,now(),now()) returning id", Long.class,
                 name, organization, str(req.get("type")) == null ? "NGO" : str(req.get("type")),
                 email, phone, str(req.get("region")),
                 str(req.get("district")), str(req.get("country")));
-        // Genuine confirmation via the same live M-Gov SMS / SMTP channels every other notification uses
+        // Genuine confirmation via the same live M-Gov SMS / SMTP channels every other notification uses.
+        // Email is required because approval now creates a partner login and sends a one-time set-password link.
         // (best-effort: the registration is saved regardless of whether the gateway accepts the message).
         String congrats = "Congratulations " + name + "! You are registered as a partner with PMO e-MAAFA "
                 + "(Tanzania Disaster Management). Your details are under review — you will be notified once verified.";
@@ -505,16 +600,15 @@ public class PortalPublicService {
             try { smsSent = sms.sendBulk(List.of(phone), congrats, "partner_register", id).success(); }
             catch (Exception ignore) { /* confirmation is best-effort; the record is already saved */ }
         }
-        if (email != null && !email.isBlank()) {
-            try { mail.send(email, "e-MAAFA — partner registration received",
-                    MailService.wrap("Registration received", congrats), "partner_register", id, null); }
-            catch (Exception ignore) { /* best-effort */ }
-        }
+        try { mail.send(email, "e-MAAFA — partner registration received",
+                MailService.wrap("Registration received", congrats), "partner_register", id, null); }
+        catch (Exception ignore) { /* best-effort */ }
         return Map.of("id", id, "smsSent", smsSent, "message",
                 (phone != null && !phone.isBlank())
-                        ? "Registration received — a confirmation SMS has been sent to " + phone
+                        ? "Registration received — confirmation messages have been sent to " + email + " and " + phone
                           + ". PMO will verify your details shortly."
-                        : "Registration received — pending verification by PMO.");
+                        : "Registration received — a confirmation email has been sent to " + email
+                          + ". PMO will verify your details shortly.");
     }
 
     /** Public Tanzania regions for the stakeholder-registration cascade (reuses public.regions). */

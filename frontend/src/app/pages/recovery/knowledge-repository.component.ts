@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -10,7 +11,10 @@ interface Row {
   id: number; title: string; description: string | null; content_type: string; hazard_type: string | null;
   published_on: string | null; location: string | null; region: string | null; contributor: string | null;
   organization: string | null; approval_status: string; downloads_count: number;
+  incident_id: number | null; incident_title: string | null;
+  file_name: string | null; file_size_bytes: number | null;
 }
+interface IncidentOption { id: number; title: string; severity_level: string | null; status: string | null; }
 
 const TYPE_COLOR: Record<string, string> = {
   'Lesson Learned': '#dc2626', 'Best Practice': '#059669', 'Case Study': '#0d6efd',
@@ -25,7 +29,7 @@ const TYPE_COLOR: Record<string, string> = {
 @Component({
   selector: 'page-knowledge-repository',
   standalone: true,
-  imports: [FormsModule, DatePipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+  imports: [FormsModule, DatePipe, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
   template: `
     <dmis-page-header title="Lessons Learned" icon="fa-book"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Recovery'}, {label:'Lessons Learned'}]">
@@ -37,6 +41,7 @@ const TYPE_COLOR: Record<string, string> = {
       <dmis-stat-card [value]="s()['lessons'] ?? 0" label="Lessons learned" icon="fa-lightbulb" color="#dc2626" />
       <dmis-stat-card [value]="s()['approved'] ?? 0" label="Approved" icon="fa-circle-check" color="#059669" />
       <dmis-stat-card [value]="s()['pending'] ?? 0" label="Pending review" icon="fa-hourglass-half" color="#d97706" />
+      <dmis-stat-card [value]="s()['documents'] ?? 0" label="Documents" icon="fa-file-lines" color="#0d6efd" />
     </div>
 
     <div class="panel-row">
@@ -53,15 +58,25 @@ const TYPE_COLOR: Record<string, string> = {
         </div>
         <div class="panel-body" style="padding:0;">
           <table class="r-table">
-            <thead><tr><th>Title</th><th>Type</th><th>Hazard</th><th>Contributor</th><th>Published</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Title</th><th>Type</th><th>Hazard</th><th>Incident</th><th>Document</th><th>Published</th><th>Status</th><th></th></tr></thead>
             <tbody>
               @for (r of rows(); track r.id) {
                 <tr class="data-row">
                   <td class="r-title" style="max-width:300px;">{{ r.title }}
-                    <div class="r-subtitle">{{ (r.description || '').slice(0,90) }}{{ (r.description || '').length > 90 ? '…' : '' }}</div></td>
+                    <div class="r-subtitle">{{ (r.description || '').slice(0,90) }}{{ (r.description || '').length > 90 ? '…' : '' }}</div>
+                    <div class="r-subtitle">{{ r.organization || r.contributor || '—' }}</div></td>
                   <td><span class="r-badge" [style.background]="color(r.content_type) + '1a'" [style.color]="color(r.content_type)">{{ r.content_type }}</span></td>
                   <td style="font-size:0.8rem;color:var(--text-mid);">{{ r.hazard_type || '—' }}</td>
-                  <td style="font-size:0.8rem;color:var(--text-mid);">{{ r.organization || r.contributor || '—' }}</td>
+                  <td style="font-size:0.8rem;color:var(--text-mid);">
+                    @if (r.incident_id) { <a [routerLink]="['/m/response/incidents', r.incident_id]" class="r-link">#{{ r.incident_id }} — {{ r.incident_title || 'Incident' }}</a> }
+                    @else { — }
+                  </td>
+                  <td style="font-size:0.8rem;color:var(--text-mid);">
+                    @if (r.file_name) {
+                      <button class="doc-btn" type="button" (click)="download(r)"><i class="fas fa-download"></i> {{ r.file_name }}</button>
+                      <div class="r-subtitle">{{ formatBytes(r.file_size_bytes) }} · {{ r.downloads_count || 0 }} downloads</div>
+                    } @else { — }
+                  </td>
                   <td style="font-size:0.78rem;color:var(--text-mid);">{{ r.published_on | date:'dd MMM yyyy' }}</td>
                   <td><span class="r-badge {{ r.approval_status === 'Approved' ? 'badge-approved' : 'badge-pending' }}">{{ r.approval_status }}</span></td>
                   <td style="text-align:right;">
@@ -69,12 +84,13 @@ const TYPE_COLOR: Record<string, string> = {
                       <button class="ctx-trigger" type="button" (click)="toggleMenu(r.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
                       <div class="ctx-menu" [class.open]="openMenu() === r.id">
                         <a class="ctx-item" (click)="view(r)"><i class="fas fa-eye"></i> Read</a>
+                        @if (r.file_name) { <a class="ctx-item" (click)="download(r)"><i class="fas fa-download"></i> Download document</a> }
                         @if (r.approval_status !== 'Approved') { <a class="ctx-item success" (click)="approve(r)"><i class="fas fa-check-double"></i> Approve & publish</a> }
                       </div>
                     </div>
                   </td>
                 </tr>
-              } @empty { <tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2.5rem;">No knowledge entries yet.</td></tr> }
+              } @empty { <tr><td colspan="8" style="text-align:center;color:var(--text-light);padding:2.5rem;">No knowledge entries yet.</td></tr> }
             </tbody>
           </table>
         </div>
@@ -91,6 +107,13 @@ const TYPE_COLOR: Record<string, string> = {
             <div><label class="f-lbl">Hazard</label><input class="form-control" [(ngModel)]="m.hazard_type" placeholder="Floods / Cyclone…"></div>
             <div><label class="f-lbl">Region</label><input class="form-control" [(ngModel)]="m.region"></div>
             <div><label class="f-lbl">Contributor org</label><input class="form-control" [(ngModel)]="m.organization"></div>
+            <div><label class="f-lbl">Linked incident</label><select class="form-select" [(ngModel)]="m.incident_id">
+              <option [ngValue]="null">No incident link</option>
+              @for (i of incidents(); track i.id) { <option [ngValue]="i.id">#{{ i.id }} — {{ i.title }}</option> }
+            </select></div>
+            <div><label class="f-lbl">Document</label><input class="form-control" type="file" accept=".pdf,.doc,.docx" (change)="pickFile($any($event.target).files)">
+              @if (selectedFile(); as f) { <div class="r-subtitle">{{ f.name }} · {{ formatBytes(f.size) }}</div> }
+            </div>
             <div style="grid-column:1/3;"><label class="f-lbl">Summary / lesson *</label><textarea class="form-control" rows="4" [(ngModel)]="m.description"></textarea></div>
           </div>
           <div style="display:flex;justify-content:flex-end;gap:0.6rem;margin-top:1.1rem;">
@@ -112,6 +135,12 @@ const TYPE_COLOR: Record<string, string> = {
           </div>
           <div style="font-size:0.8rem;color:var(--text-mid);margin-bottom:0.6rem;">
             {{ r.hazard_type }} · {{ r.region }} · {{ r.organization || r.contributor }} · {{ r.published_on | date:'dd MMM yyyy' }}</div>
+          @if (r.incident_id || r.file_name) {
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+              @if (r.incident_id) { <a [routerLink]="['/m/response/incidents', r.incident_id]" class="doc-btn linklike">Incident #{{ r.incident_id }}</a> }
+              @if (r.file_name) { <button class="doc-btn" type="button" (click)="download(r)"><i class="fas fa-download"></i> {{ r.file_name }}</button> }
+            </div>
+          }
           <p style="font-size:0.88rem;line-height:1.55;">{{ r.description }}</p>
           <div style="text-align:right;margin-top:1rem;"><button class="btn-cancel" (click)="detail.set(null)">Close</button></div>
         </div>
@@ -124,6 +153,9 @@ const TYPE_COLOR: Record<string, string> = {
     .modal-card { background: #fff; border-radius: 16px; max-width: 680px; width: 100%; padding: 1.4rem 1.5rem; }
     .btn-cancel { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; }
     .r-subtitle { font-size: 0.75rem; color: var(--text-light); }
+    .r-link { color: #0d6efd; text-decoration: none; font-weight: 700; }
+    .doc-btn { border: 0; background: transparent; color: #0d6efd; padding: 0; font-size: 0.8rem; font-weight: 800; cursor: pointer; text-align: left; }
+    .doc-btn.linklike { text-decoration: none; display: inline-flex; align-items: center; }
   `],
 })
 export class KnowledgeRepositoryComponent {
@@ -135,12 +167,14 @@ export class KnowledgeRepositoryComponent {
   detail = signal<Row | null>(null);
   saving = signal(false);
   openMenu = signal<number | null>(null);
+  selectedFile = signal<File | null>(null);
   fType = ''; fApproval = ''; fSearch = '';
   m: any = {};
 
   s = computed<Record<string, number>>(() => this.data()?.stats ?? {});
   rows = computed<Row[]>(() => this.data()?.entries ?? []);
   types = computed<string[]>(() => this.data()?.types ?? []);
+  incidents = computed<IncidentOption[]>(() => this.data()?.incidents ?? []);
 
   constructor() { this.reload(); }
 
@@ -154,17 +188,48 @@ export class KnowledgeRepositoryComponent {
 
   color(t: string): string { return TYPE_COLOR[t] ?? '#64748b'; }
   view(r: Row): void { this.detail.set(r); }
-  openForm(): void { this.m = { content_type: 'Lesson Learned' }; this.formOpen.set(true); }
+  openForm(): void { this.m = { content_type: 'Lesson Learned', incident_id: null }; this.selectedFile.set(null); this.formOpen.set(true); }
+  pickFile(files: FileList | null): void { this.selectedFile.set(files && files.length ? files.item(0) : null); }
 
   save(): void {
     this.saving.set(true);
-    this.http.post<any>(this.base, this.m).subscribe({
+    const fd = new FormData();
+    for (const [key, value] of Object.entries(this.m)) {
+      if (value !== null && value !== undefined && String(value).trim() !== '') {
+        fd.set(key, String(value));
+      }
+    }
+    const file = this.selectedFile();
+    if (file) { fd.set('document', file); }
+    this.http.post<any>(this.base, fd).subscribe({
       next: () => { this.saving.set(false); this.formOpen.set(false); this.reload(); },
       error: e => { this.saving.set(false); alert(e?.error?.detail ?? 'Could not submit entry.'); },
     });
   }
 
   approve(r: Row): void { this.http.post(`${this.base}/${r.id}/approve`, {}).subscribe({ next: () => this.reload() }); }
+  download(r: Row): void {
+    this.http.get(`${this.base}/${r.id}/download`, { responseType: 'blob' }).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = r.file_name || `knowledge-${r.id}`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.reload();
+      },
+      error: e => alert(e?.error?.detail ?? 'Could not download document.'),
+    });
+  }
+  formatBytes(bytes: number | null | undefined): string {
+    if (!bytes || bytes <= 0) { return '0 B'; }
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let n = bytes;
+    let i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return `${n.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+  }
 
   toggleMenu(id: number, event: Event): void { event.stopPropagation(); this.openMenu.update(c => (c === id ? null : id)); }
   @HostListener('document:click') closeMenu(): void { this.openMenu.set(null); }

@@ -51,6 +51,7 @@ public final class SecurityPaths {
      *   <li>{@code incident_photos/}, {@code incident_videos/} — incident media — IncidentController</li>
      *   <li>{@code dissemination_uploads/} — One Health dissemination files — OneHealthDisseminationController</li>
      *   <li>{@code warnings/} — raw EW bulletin ingest attachments — EwBulletinIngestController</li>
+     *   <li>{@code knowledge/} — Recovery knowledge repository documents — KnowledgeRepositoryController</li>
      * </ul>
      * This enforces AUTHENTICATION only. Per-record jurisdiction scoping of the raw bytes (so a district
      * cannot fetch another district's file by URL) needs an authorized download endpoint and is tracked
@@ -62,6 +63,7 @@ public final class SecurityPaths {
             "/storage/incident_videos/**",
             "/storage/dissemination_uploads/**",
             "/storage/warnings/**",
+            "/storage/knowledge/**",
             // Generated official documents (DlnaController.storeGenerated → generated_reports registry).
             "/storage/reports/**",
     };

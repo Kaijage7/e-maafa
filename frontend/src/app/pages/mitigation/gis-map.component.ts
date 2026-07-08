@@ -3,7 +3,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, inject, signal, viewCh
 import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
-import { addMapNav } from '../../core/tz-map';
+import { addDmisBaseLayer, addMapNav } from '../../core/tz-map';
 
 declare const L: any;
 
@@ -324,7 +324,7 @@ export class GisMapComponent implements AfterViewInit, OnDestroy {
     this.map.createPane('choroplethPane');
     this.map.getPane('choroplethPane').style.zIndex = 270;
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(this.map);
+    addDmisBaseLayer(this.map, this.http, 'standard');
 
     addMapNav(this.map, { home: [-6.5, 35.0, 6] });
 

@@ -39,9 +39,9 @@ spring:
 
   flyway:
     enabled: true
-    # `platform` holds shared infrastructure (the event outbox); each bounded context
-    # gets its own schema (`registry` is the first). The Flyway history table lives in
-    # `platform`. The legacy Laravel `public` tables are never touched.
+    # `platform` holds Flyway history and shared infrastructure; each bounded context
+    # gets its own schema (`registry` is the first). The legacy Laravel `public` tables
+    # are never touched by Flyway-owned schema creation.
     schemas: platform,registry,incident,ew,dissemination,notification
     default-schema: platform
     create-schemas: true

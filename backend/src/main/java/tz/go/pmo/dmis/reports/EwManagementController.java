@@ -27,10 +27,11 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  *
  * <p>Row granularity: ONE row per warning × warned region — the underlying warning_hazards rows (one per
  * district) are aggregated (min validity_start / max validity_end / district list), so a warning covering
- * 7 districts of one region is ONE row, not seven, and headline counts are per DISTINCT warning.
+ * 7 districts of one region is ONE row, not seven, and headline counts are per DISTINCT warning. When those
+ * rows name districts, incident matching is still district-precise inside the aggregate row.
  *
- * <p>Match key: warned AREA (region_id, or region name) + TIME (incident.reported_at within the warning's
- * validity window, with a short tail) + HAZARD compatibility (exact hazard_id equality, or the related
+ * <p>Match key: warned AREA (district_id when warning_hazards names districts; otherwise region_id/name)
+ * + TIME (incident.reported_at within the warning's validity window, with a short tail) + HAZARD compatibility (exact hazard_id equality, or the related
  * family map in {@link #hazardFamily}; a side without hazard info cannot be refuted and is kept).
  * Area+time matches that FAIL hazard compatibility are reported in the row's
  * {@code different_hazard_incidents} bucket ("same area, different hazard") instead of counting as
@@ -85,7 +86,10 @@ public class EwManagementController {
             "       wh.region_id, r.name as area, " +
             "       case when count(distinct wh.district_id) = 1 then min(wh.district_id) end as district_id, " +
             "       count(distinct wh.district_id) as district_count, " +
-            "       string_agg(distinct d.name, ', ') as districts, " +
+            "       string_agg(distinct wh.district_id::text, ',') filter (where wh.district_id is not null) as district_ids, " +
+            "       string_agg(distinct lower(d.name), '|') filter (where wh.district_id is not null and d.name is not null) as district_keys, " +
+            "       case when count(distinct wh.district_id) > 0 then 'district' else 'region' end as area_scope, " +
+            "       string_agg(distinct d.name, ', ') filter (where d.name is not null) as districts, " +
             "       string_agg(distinct coalesce(wh.hazard_id::text,'') || '~' || coalesce(h.name,''), '|') as hazard_pairs, " +
             "       min(wh.validity_start) as validity_start, max(wh.validity_end) as validity_end " +
             "from public.warning_hazards wh " +
@@ -105,20 +109,10 @@ public class EwManagementController {
         for (Map<String, Object> w : warnings) {
             allW.add(w.get("warning_id"));
             List<Object[]> warnedHaz = parseHazardPairs((String) w.remove("hazard_pairs"));
+            List<Long> districtIds = parseLongCsv(w.remove("district_ids"));
+            List<String> districtKeys = parsePipeList(w.remove("district_keys"));
             // incidents in the warned area during the window (+1 day tail)
-            List<Map<String, Object>> inc = jdbc.queryForList(
-                "select i.id, i.title, i.hazard_id, hi.name as hazard, i.severity_level, i.status, i.reported_at, " +
-                "       coalesce(i.region_name, ri.name) as region_name " +
-                "from public.incidents i " +
-                "left join public.regions ri on ri.id = i.region_id " +
-                "left join public.hazards hi on hi.id = i.hazard_id " +
-                "where i.reported_at >= ?::timestamptz and i.reported_at < (?::timestamptz + interval '1 day') " +
-                "  and coalesce(i.is_simulation, false) = false " +
-                "  and ( (i.region_id is not null and i.region_id = ?) " +
-                "        or (? is not null and lower(coalesce(i.region_name, ri.name, '')) = lower(?)) ) " +
-                "order by i.reported_at",
-                w.get("validity_start"), w.get("validity_end"),
-                w.get("region_id"), w.get("area"), w.get("area"));
+            List<Map<String, Object>> inc = incidentsInWarnedArea(w, districtIds, districtKeys);
             // split area+time matches by hazard compatibility — only compatible ones are true positives
             List<Map<String, Object>> matched = new ArrayList<>();
             List<Map<String, Object>> otherHazard = new ArrayList<>();
@@ -177,9 +171,10 @@ public class EwManagementController {
         if (myRegion != null) { uRegion = " and i.region_id = ? "; uParams.add(myRegion); }
         List<Map<String, Object>> unwarned = jdbc.queryForList(
             "select i.id, i.title, i.hazard_id, h.name as hazard, i.severity_level, i.status, i.reported_at, " +
-            "       coalesce(i.region_name, ri.name) as region_name " +
+            "       coalesce(i.region_name, ri.name) as region_name, coalesce(i.district_name, di.name) as district_name " +
             "from public.incidents i " +
             "left join public.regions ri on ri.id = i.region_id " +
+            "left join public.districts di on di.id = i.district_id " +
             "left join public.hazards h on h.id = i.hazard_id " +
             "where i.reported_at >= ?::timestamptz and i.reported_at < (?::timestamptz + interval '1 day') " +
                 "  and coalesce(i.is_simulation, false) = false " +
@@ -188,10 +183,16 @@ public class EwManagementController {
             "     join public.warnings w on w.id = wh.warning_id and w.deleted_at is null " +
             "          and lower(w.status) in ('approved','published') " +
             "     left join public.regions r on r.id = wh.region_id " +
+            "     left join public.districts wd on wd.id = wh.district_id " +
             "     where wh.deleted_at is null " +
             "       and i.reported_at >= wh.validity_start and i.reported_at < (wh.validity_end + interval '1 day') " +
-            "       and ( (i.region_id is not null and i.region_id = wh.region_id) " +
-            "             or lower(coalesce(i.region_name, ri.name, '')) = lower(coalesce(r.name,'~')) ) ) " +
+            "       and ( (wh.district_id is not null and (i.district_id = wh.district_id " +
+            "              or (i.district_id is null " +
+            "                  and lower(coalesce(i.district_name, di.name, '')) = lower(coalesce(wd.name,'~')) " +
+            "                  and ((i.region_id is not null and i.region_id = wh.region_id) " +
+            "                       or lower(coalesce(i.region_name, ri.name, '')) = lower(coalesce(r.name,'~')))))) " +
+            "             or (wh.district_id is null and ((i.region_id is not null and i.region_id = wh.region_id) " +
+            "                 or lower(coalesce(i.region_name, ri.name, '')) = lower(coalesce(r.name,'~')))) ) ) " +
             uRegion +
             "order by i.reported_at desc",
             uParams.toArray());
@@ -230,6 +231,56 @@ public class EwManagementController {
         return Map.of("summary", summary, "warnings", warnings, "unwarned_incidents", unwarned, "drr", drr);
     }
 
+    private List<Map<String, Object>> incidentsInWarnedArea(
+            Map<String, Object> warningRow, List<Long> districtIds, List<String> districtKeys) {
+        boolean districtScoped = !districtIds.isEmpty() || !districtKeys.isEmpty();
+        List<Object> params = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("""
+            select i.id, i.title, i.hazard_id, hi.name as hazard, i.severity_level, i.status, i.reported_at,
+                   coalesce(i.region_name, ri.name) as region_name, coalesce(i.district_name, di.name) as district_name
+            from public.incidents i
+            left join public.regions ri on ri.id = i.region_id
+            left join public.districts di on di.id = i.district_id
+            left join public.hazards hi on hi.id = i.hazard_id
+            where i.reported_at >= ?::timestamptz and i.reported_at < (?::timestamptz + interval '1 day')
+              and coalesce(i.is_simulation, false) = false
+            """);
+        params.add(warningRow.get("validity_start"));
+        params.add(warningRow.get("validity_end"));
+        if (districtScoped) {
+            List<String> districtBranches = new ArrayList<>();
+            if (!districtIds.isEmpty()) {
+                districtBranches.add("i.district_id in (" + placeholders(districtIds.size()) + ")");
+                params.addAll(districtIds);
+            }
+            if (!districtKeys.isEmpty()) {
+                districtBranches.add("(i.district_id is null and lower(coalesce(i.district_name, di.name, '')) in ("
+                        + placeholders(districtKeys.size()) + ") "
+                        + "and ((i.region_id is not null and i.region_id = ?) "
+                        + "or (? is not null and lower(coalesce(i.region_name, ri.name, '')) = lower(?))))");
+                params.addAll(districtKeys);
+                params.add(warningRow.get("region_id"));
+                params.add(warningRow.get("area"));
+                params.add(warningRow.get("area"));
+            }
+            sql.append("  and (").append(String.join(" or ", districtBranches)).append(")\n");
+        } else {
+            sql.append("""
+                  and ( (i.region_id is not null and i.region_id = ?)
+                        or (? is not null and lower(coalesce(i.region_name, ri.name, '')) = lower(?)) )
+                """);
+            params.add(warningRow.get("region_id"));
+            params.add(warningRow.get("area"));
+            params.add(warningRow.get("area"));
+        }
+        sql.append("order by i.reported_at");
+        List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
+        for (Map<String, Object> row : rows) {
+            row.put("in_warned_district", districtScoped);
+        }
+        return rows;
+    }
+
     /** Parses the SQL-aggregated "id~name|id~name" warned-hazard pairs of one warning × region row. */
     private static List<Object[]> parseHazardPairs(String pairsCsv) {
         List<Object[]> out = new ArrayList<>();
@@ -241,6 +292,36 @@ public class EwManagementController {
             out.add(new Object[]{ idS.isBlank() ? null : Long.valueOf(idS), nm.isBlank() ? null : nm });
         }
         return out;
+    }
+
+    private static List<Long> parseLongCsv(Object csv) {
+        List<Long> out = new ArrayList<>();
+        if (csv == null || csv.toString().isBlank()) return out;
+        for (String raw : csv.toString().split(",")) {
+            String value = raw.trim();
+            if (value.isEmpty()) continue;
+            out.add(Long.valueOf(value));
+        }
+        return out;
+    }
+
+    private static List<String> parsePipeList(Object pipeList) {
+        List<String> out = new ArrayList<>();
+        if (pipeList == null || pipeList.toString().isBlank()) return out;
+        for (String raw : pipeList.toString().split("\\|")) {
+            String value = raw.trim();
+            if (!value.isEmpty()) out.add(value);
+        }
+        return out;
+    }
+
+    private static String placeholders(int count) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            if (i > 0) out.append(", ");
+            out.append("?");
+        }
+        return out.toString();
     }
 
     /**

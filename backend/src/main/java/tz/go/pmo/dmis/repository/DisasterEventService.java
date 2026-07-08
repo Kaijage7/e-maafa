@@ -173,6 +173,117 @@ public class DisasterEventService {
         return quote ? "\"" + s + "\"" : s;
     }
 
+    // ------------------------------------------------------------------ resolved-incident intake
+
+    /**
+     * EOCC worklist for the missing operational-to-repository hand-off: live incidents that reached a
+     * resolved/closed end state but are not linked to any disaster repository card yet.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> incidentWorklist() {
+        List<Map<String, Object>> incidents = jdbc.queryForList("""
+                select i.id, i.title, coalesce(h.name, it.name, 'Unspecified') as "hazardType",
+                    i.hazard_id as "hazardId",
+                    coalesce(to_char(i.occurred_at,'YYYY-MM-DD'),
+                             to_char(i.reported_at,'YYYY-MM-DD'),
+                             to_char(i.created_at,'YYYY-MM-DD')) as "startedOn",
+                    coalesce(to_char(i.ended_at,'YYYY-MM-DD'), to_char(i.updated_at,'YYYY-MM-DD')) as "endedOn",
+                    to_char(coalesce(i.ended_at, i.updated_at, i.reported_at, i.created_at), 'DD Mon YYYY') as "resolvedOn",
+                    i.status, i.workflow_status as "workflowStatus", i.severity_level as "severityLevel",
+                    i.region_name as "regionName", i.district_name as "districtName",
+                    i.location_description as "locationDescription",
+                    coalesce(i.people_affected,
+                             coalesce(i.deaths_total,0) + coalesce(i.injured_total,0)
+                             + coalesce(i.missing_total,0) + coalesce(i.displaced,0)
+                             + coalesce(i.children_affected,0), 0) as affected,
+                    coalesce(i.deaths_total,0) as deaths,
+                    coalesce(i.injured_total,0) as injured,
+                    coalesce(i.missing_total,0) as missing,
+                    coalesce(i.displaced,0) as displaced,
+                    coalesce((select sum(ar.quantity_allocated * coalesce(r.unit_cost,0))
+                        from public.allocated_resources ar
+                        join public.resources r on r.id = ar.resource_id
+                        where ar.incident_id = i.id), 0) as "responseValueTzs",
+                    (select count(*) from public.damage_assessments a where a.incident_id = i.id) as "assessmentCount",
+                    (select count(*) from public.allocated_resources ar where ar.incident_id = i.id) as "allocationCount"
+                from public.incidents i
+                left join public.hazards h on h.id = i.hazard_id
+                left join public.incident_types it on it.id = i.incident_type_id
+                where coalesce(i.is_simulation, false) = false
+                  and lower(coalesce(i.workflow_status, '')) <> 'closed_rumor'
+                  and (
+                    lower(coalesce(i.workflow_status, '')) = 'resolved'
+                    or lower(coalesce(i.status, '')) in ('resolved', 'closed')
+                  )
+                  and not exists (
+                    select 1 from public.disaster_event_links l
+                    where l.entity_type = 'incident' and l.entity_id = i.id
+                  )
+                order by coalesce(i.ended_at, i.updated_at, i.reported_at, i.created_at) desc, i.id desc
+                limit 50
+                """);
+        for (Map<String, Object> incident : incidents) {
+            incident.put("candidateEvents", candidateEventsForIncident(incident));
+        }
+        return Map.of("incidents", incidents, "count", incidents.size());
+    }
+
+    /**
+     * One-click card creation from the worklist. The incident is linked immediately; effects figures
+     * remain review-and-save via {@link #pullFromLinks(long)} so EOCC still controls Sendai data quality.
+     */
+    @Transactional
+    public Map<String, Object> createFromIncident(long incidentId, String actor) {
+        Map<String, Object> incident = repositoryIncidentOr404(incidentId);
+        if (!incidentReadyForRepository(incident)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Only resolved or closed live incidents can be recorded in the disaster repository from this queue.");
+        }
+        List<Map<String, Object>> linked = jdbc.queryForList("""
+                select e.id, e.event_code as "eventCode"
+                from public.disaster_event_links l
+                join public.disaster_events e on e.id = l.event_id
+                where l.entity_type = 'incident' and l.entity_id = ?
+                order by l.created_at desc
+                limit 1
+                """, incidentId);
+        if (!linked.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Incident is already linked to repository card " + linked.get(0).get("eventCode") + ".");
+        }
+
+        String hazardType = firstNonBlank(str(incident.get("hazardName")), str(incident.get("incidentType")));
+        String region = str(incident.get("region_name"));
+        String district = str(incident.get("district_name"));
+        String title = firstNonBlank(str(incident.get("title")), "Incident #" + incidentId);
+        String description = firstNonBlank(str(incident.get("description")), str(incident.get("location_description")));
+        if (description == null) {
+            description = "Created from resolved DMIS incident #" + incidentId + ".";
+        } else {
+            description = description + "\n\nCreated from resolved DMIS incident #" + incidentId + ".";
+        }
+
+        Map<String, Object> req = new LinkedHashMap<>();
+        req.put("name", title);
+        req.put("hazardId", incident.get("hazard_id"));
+        req.put("hazardType", hazardType);
+        req.put("startedOn", incident.get("startedOnForRepository"));
+        req.put("endedOn", incident.get("endedOnForRepository"));
+        req.put("primaryRegion", region);
+        req.put("scope", district != null ? "District" : (region != null ? "Regional" : "National"));
+        req.put("description", description);
+        req.put("triggeringEvent", "DMIS incident #" + incidentId + (hazardType == null ? "" : " - " + hazardType));
+        req.put("dataSource", "DMIS incident #" + incidentId + " repository intake");
+
+        Map<String, Object> created = create(req, actor);
+        long eventId = ((Number) created.get("id")).longValue();
+        addLink(eventId, "incident", incidentId, "Created from resolved incident worklist", actor);
+        return Map.of("id", eventId,
+                "eventCode", created.get("eventCode"),
+                "incidentId", incidentId,
+                "message", "Repository card created and linked to the incident.");
+    }
+
     // ------------------------------------------------------------------ event card
 
     @Transactional(readOnly = true)
@@ -508,6 +619,78 @@ public class DisasterEventService {
                         + " from disaster_event_links l where l.event_id=? order by l.created_at", eventId);
     }
 
+    /** Nearby repository cards the EOCC can link to instead of creating a duplicate card. */
+    private List<Map<String, Object>> candidateEventsForIncident(Map<String, Object> incident) {
+        String startedOn = str(incident.get("startedOn"));
+        if (startedOn == null) {
+            return List.of();
+        }
+        String hazard = str(incident.get("hazardType"));
+        String region = str(incident.get("regionName"));
+        return jdbc.queryForList("""
+                select e.id, e.event_code as "eventCode", e.name, e.status, e.hazard_type as "hazardType",
+                    to_char(e.started_on, 'YYYY-MM-DD') as "startedOn",
+                    e.primary_region as "primaryRegion",
+                    (select count(*) from public.disaster_event_links l where l.event_id = e.id) as "linkCount"
+                from public.disaster_events e
+                where e.started_on between (?::date - interval '14 days') and (?::date + interval '14 days')
+                  and (
+                    cast(? as text) is null
+                    or e.hazard_type is null
+                    or lower(e.hazard_type) = lower(cast(? as text))
+                    or lower(e.name) like concat('%', lower(cast(? as text)), '%')
+                  )
+                  and (
+                    cast(? as text) is null
+                    or e.primary_region is null
+                    or lower(e.primary_region) = lower(cast(? as text))
+                    or exists (
+                        select 1 from public.disaster_event_effects x
+                        where x.event_id = e.id and lower(x.region) = lower(cast(? as text))
+                    )
+                  )
+                  and not exists (
+                    select 1 from public.disaster_event_links l
+                    where l.event_id = e.id and l.entity_type = 'incident' and l.entity_id = ?
+                  )
+                order by case e.status when 'Open' then 0 when 'Validated' then 1 else 2 end,
+                    case when lower(coalesce(e.primary_region, '')) = lower(coalesce(cast(? as text), '')) then 0 else 1 end,
+                    e.started_on desc, e.id desc
+                limit 3
+                """, startedOn, startedOn, hazard, hazard, hazard, region, region, region,
+                incident.get("id"), region);
+    }
+
+    private Map<String, Object> repositoryIncidentOr404(long incidentId) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select i.*, h.name as "hazardName", it.name as "incidentType",
+                    coalesce(to_char(i.occurred_at,'YYYY-MM-DD'),
+                             to_char(i.reported_at,'YYYY-MM-DD'),
+                             to_char(i.created_at,'YYYY-MM-DD')) as "startedOnForRepository",
+                    coalesce(to_char(i.ended_at,'YYYY-MM-DD'), to_char(i.updated_at,'YYYY-MM-DD')) as "endedOnForRepository"
+                from public.incidents i
+                left join public.hazards h on h.id = i.hazard_id
+                left join public.incident_types it on it.id = i.incident_type_id
+                where i.id = ?
+                """, incidentId);
+        if (rows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Incident not found");
+        }
+        return rows.get(0);
+    }
+
+    private static boolean incidentReadyForRepository(Map<String, Object> incident) {
+        if (Boolean.TRUE.equals(incident.get("is_simulation"))) {
+            return false;
+        }
+        String workflow = str(incident.get("workflow_status"));
+        String status = str(incident.get("status"));
+        return !"closed_rumor".equalsIgnoreCase(workflow)
+                && ("resolved".equalsIgnoreCase(workflow)
+                || "resolved".equalsIgnoreCase(status)
+                || "closed".equalsIgnoreCase(status));
+    }
+
     /**
      * What the response cost: dispatched quantities × unit cost for allocations tied to linked
      * incidents — the "DMD intervention value" figure the analytics surfaces per event.
@@ -627,5 +810,14 @@ public class DisasterEventService {
         } catch (NumberFormatException e) {
             return 0;
         }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 }

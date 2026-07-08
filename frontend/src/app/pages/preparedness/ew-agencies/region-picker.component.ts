@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { alertColor, HAZ_ICON } from './ew-agency.model';
+import { addDmisBaseLayer } from '../../../core/tz-map';
 
 declare const L: any;
 
@@ -48,8 +49,7 @@ export class RegionPickerComponent implements OnInit, OnChanges, OnDestroy {
     if (typeof L === 'undefined') return;
     this.map = L.map(this.mapId, { minZoom: 5, maxZoom: 9, zoomControl: true }).setView([-6.4, 35.0], 6);
     this.map.setMaxBounds([[-12.5, 28.0], [1.0, 41.5]]);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-      { attribution: '© OpenStreetMap, © CARTO', subdomains: 'abcd' }).addTo(this.map);
+    addDmisBaseLayer(this.map, this.http, 'light');
     // dedicated pane so drawn delineations sit ABOVE the region fills (else they are occluded → look blank);
     // z 550 keeps them under the marker pane (600) so the hazard icon stays on top of its shape.
     this.map.createPane('ewshapes'); this.map.getPane('ewshapes').style.zIndex = 550;

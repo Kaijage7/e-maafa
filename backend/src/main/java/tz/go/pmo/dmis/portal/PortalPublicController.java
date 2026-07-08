@@ -49,7 +49,7 @@ public class PortalPublicController {
     }
 
     @GetMapping("/incidents/{id}")
-    @Operation(summary = "Live public snapshot of an incident published to the portal (situation + response + resources)")
+    @Operation(summary = "Public snapshot of an incident published to the portal map or active linked news")
     public Map<String, Object> incident(@PathVariable long id) {
         Map<String, Object> snapshot = service.incidentSnapshot(id);
         if (snapshot == null) {
@@ -69,6 +69,16 @@ public class PortalPublicController {
     @Operation(summary = "Citizen hazard report (the landing's Report Hazard wizard)")
     public Map<String, Object> reportHazard(@RequestBody Map<String, Object> request) {
         return service.submitHazardReport(request);
+    }
+
+    @GetMapping("/report-status/{code}")
+    @Operation(summary = "Public-safe citizen hazard report status by reference code")
+    public Map<String, Object> reportStatus(@PathVariable String code) {
+        Map<String, Object> status = service.reportStatus(code);
+        if (status == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Report reference not found.");
+        }
+        return status;
     }
 
     @PostMapping("/subscribe")

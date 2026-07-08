@@ -51,6 +51,8 @@ public class IncidentController {
     private static final Logger log = LoggerFactory.getLogger(IncidentController.class);
     private static final DateTimeFormatter D_M_Y_HI =
             DateTimeFormatter.ofPattern("dd MMM uuuu, HH:mm", Locale.ENGLISH);
+    private static final Set<String> ASSIGNABLE_INCIDENT_PERMISSIONS = Set.of(
+            "incidents.view", "incidents.create", "incidents.update", "incidents.approve", "incidents.close");
 
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService workflow;
@@ -181,7 +183,7 @@ public class IncidentController {
         out.put("hazards", jdbc.queryForList("select id, name from public.hazards order by name"));
         out.put("incident_types", jdbc.queryForList("select id, name, default_severity from public.incident_types order by name"));
         out.put("regions", jdbc.queryForList("select id, name from public.regions order by name"));
-        out.put("assignable_users", jdbc.queryForList("select id, name from public.users order by name"));
+        out.put("assignable_users", assignableUsers());
         out.put("severity_levels", IncidentOptions.SEVERITY_LEVELS);
         out.put("statuses", IncidentOptions.STATUSES);
         out.put("sources_of_report", IncidentOptions.SOURCES_OF_REPORT);
@@ -209,15 +211,23 @@ public class IncidentController {
                     .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
         }
 
-        List<String> photoPaths = storePhotos(photos);
-        String videoPath = storeVideo(video);
-
-        Long regionId = parseLong(form.get("region_id"));
-        Long districtId = parseLong(form.get("district_id"));
+        Long regionId = parseOptionalId(errors, form, "region_id", "region");
+        Long districtId = parseOptionalId(errors, form, "district_id", "district");
         // Region is authoritative from the chosen district (a district belongs to exactly one region). Derive
         // region_id from it, overriding a missing/mismatched region, so the incident always routes to the correct
         // RAS at the region stage and stays visible to that region. Region-only incidents keep their region_id.
         regionId = regionOfDistrict(districtId, regionId);
+        validateTargetArea(errors, regionId, districtId);
+        Long assignedToUserId = parseOptionalId(errors, form, "assigned_to_user_id", "assignee");
+        validateAssignableUser(errors, assignedToUserId);
+        if (!errors.isEmpty()) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
+        }
+
+        List<String> photoPaths = storePhotos(photos);
+        String videoPath = storeVideo(video);
+
         // The form selects region/district by ID and posts no *_name — resolve the names so district-scoped
         // readiness and the incident situation map work for form-created incidents (not just seeded ones).
         String regionName = coalesceName(trim(form.get("region_name")), "regions", regionId);
@@ -242,7 +252,7 @@ public class IncidentController {
                 form.get("reported_at"), trim(form.get("description")), form.get("severity_level"), form.get("status"),
                 form.getOrDefault("origin_level", "district"),
                 trim(form.get("reported_by_name")), trim(form.get("reported_by_contact")),
-                trim(form.get("source_of_report")), parseLong(form.get("assigned_to_user_id")),
+                trim(form.get("source_of_report")), assignedToUserId,
                 toJson(photoPaths), photoPaths.isEmpty() ? null : photoPaths.get(0), videoPath,
                 intOr0(form.get("deaths_male")), intOr0(form.get("deaths_female")), intOr0(form.get("deaths_total")),
                 intOr0(form.get("injured_male")), intOr0(form.get("injured_female")), intOr0(form.get("injured_total")),
@@ -277,6 +287,15 @@ public class IncidentController {
             return ResponseEntity.unprocessableEntity()
                     .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
         }
+        Long updDistrictId = parseOptionalId(errors, form, "district_id", "district");
+        Long updRegionId = regionOfDistrict(updDistrictId, parseOptionalId(errors, form, "region_id", "region"));
+        validateTargetArea(errors, updRegionId, updDistrictId);
+        Long assignedToUserId = parseOptionalId(errors, form, "assigned_to_user_id", "assignee");
+        validateAssignableUser(errors, assignedToUserId);
+        if (!errors.isEmpty()) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
+        }
 
         // Photo set = (existing − removed) + newly uploaded, as in the source update()
         List<String> existing = parseJsonList(incident.get("photo_paths"));
@@ -293,8 +312,6 @@ public class IncidentController {
         }
 
         // Keep region authoritative from the district on edit too (see create) so the chain never mis-routes.
-        Long updDistrictId = parseLong(form.get("district_id"));
-        Long updRegionId = regionOfDistrict(updDistrictId, parseLong(form.get("region_id")));
         jdbc.update("""
                 update public.incidents set title = ?, hazard_id = ?, incident_type_id = ?,
                     location_description = ?, district_name = ?, region_name = ?, region_id = ?, district_id = ?,
@@ -318,7 +335,7 @@ public class IncidentController {
                 parseDouble(form.get("latitude")), parseDouble(form.get("longitude")),
                 form.get("reported_at"), trim(form.get("description")), form.get("severity_level"), form.get("status"),
                 trim(form.get("reported_by_name")), trim(form.get("reported_by_contact")),
-                trim(form.get("source_of_report")), parseLong(form.get("assigned_to_user_id")),
+                trim(form.get("source_of_report")), assignedToUserId,
                 toJson(existing), existing.isEmpty() ? null : existing.get(0), videoPath,
                 intOr0(form.get("deaths_male")), intOr0(form.get("deaths_female")), intOr0(form.get("deaths_total")),
                 intOr0(form.get("injured_male")), intOr0(form.get("injured_female")), intOr0(form.get("injured_total")),
@@ -406,8 +423,8 @@ public class IncidentController {
     /**
      * Answers "was this incident forecast?" against the issued-warning corpus, mirroring the
      * EW-management report's matching semantics (EwManagementController): same warned AREA
-     * (a district-level warning row must match the incident's district; region-level rows — or
-     * incidents without a district — fall back to region) AND reported_at inside the warning's
+     * (a district-level warning row must match the incident's district; region-level rows fall
+     * back to region) AND reported_at inside the warning's
      * validity window with a 48-hour tail. On top of that a hazard-compatibility guard (audit
      * F11): exact hazard_id match or same related-hazard family (rainfall→floods etc.) — a
      * Drought warning must not claim a Cholera incident. Best match = highest warning level,
@@ -438,15 +455,14 @@ public class IncidentController {
                     where wh.deleted_at is null
                       and ?::timestamptz >= wh.validity_start
                       and ?::timestamptz < wh.validity_end + interval '48 hours'
-                      and ( (wh.district_id is not null and cast(? as bigint) is not null and wh.district_id = cast(? as bigint))
-                            or ((wh.district_id is null or cast(? as bigint) is null) and wh.region_id = cast(? as bigint)) )
+                      and ( (wh.district_id is not null and wh.district_id = cast(? as bigint))
+                            or (wh.district_id is null and wh.region_id = cast(? as bigint)) )
                     order by case wh.warning_level when 'Major Warning' then 0 when 'Warning' then 1
                                   when 'Advisory' then 2 else 3 end,
                              wh.validity_start
                     """,
                     reportedAt, reportedAt, reportedAt,
-                    incident.get("district_id"), incident.get("district_id"), incident.get("district_id"),
-                    incident.get("region_id"));
+                    incident.get("district_id"), incident.get("region_id"));
         } catch (Exception e) {
             // The badge is advisory context — never let it break the incident page itself.
             log.warn("forecast-coverage lookup failed for incident {}: {}", incident.get("id"), e.getMessage());
@@ -862,6 +878,118 @@ public class IncidentController {
         return errors;
     }
 
+    private List<Map<String, Object>> assignableUsers() {
+        String placeholders = String.join(",", Collections.nCopies(ASSIGNABLE_INCIDENT_PERMISSIONS.size(), "?"));
+        StringBuilder sql = new StringBuilder("""
+                select distinct u.id, u.name
+                from public.users u
+                where u.name is not null
+                  and u.stakeholder_id is null
+                  and exists (
+                    select 1
+                    from public.model_has_roles mhr
+                    join public.role_has_permissions rhp on rhp.role_id = mhr.role_id
+                    join public.permissions p on p.id = rhp.permission_id
+                    where mhr.model_id = u.id and p.name in (%s)
+                  )
+                """.formatted(placeholders));
+        List<Object> params = new ArrayList<>();
+        params.addAll(ASSIGNABLE_INCIDENT_PERMISSIONS);
+        appendAssignableUserAreaScope(sql, params);
+        sql.append(" order by u.name");
+        return jdbc.queryForList(sql.toString(), params.toArray());
+    }
+
+    private void validateTargetArea(Map<String, List<String>> errors, Long regionId, Long districtId) {
+        if (regionId != null && count("regions", regionId) == 0) {
+            add(errors, "region_id", "The selected region is invalid.");
+        }
+        if (districtId != null) {
+            List<Long> parent = jdbc.queryForList("select region_id from public.districts where id = ?",
+                    Long.class, districtId);
+            if (parent.isEmpty()) {
+                add(errors, "district_id", "The selected district is invalid.");
+            } else if (regionId != null && parent.get(0) != null && !parent.get(0).equals(regionId)) {
+                add(errors, "district_id", "The selected district does not belong to the selected region.");
+            }
+        }
+
+        JurisdictionScope.Tier tier = jurisdiction.currentTier();
+        Map<String, Object> area = jurisdiction.currentArea();
+        if (tier == JurisdictionScope.Tier.DISTRICT) {
+            Long myDistrict = asLong(area.get("district_id"));
+            if (myDistrict == null) {
+                add(errors, "district_id", "Your account is not attached to a district.");
+            } else if (districtId == null || !myDistrict.equals(districtId)) {
+                add(errors, "district_id", "You can only log incidents for your own district.");
+            }
+        } else if (tier == JurisdictionScope.Tier.REGION) {
+            Long myRegion = asLong(area.get("region_id"));
+            if (myRegion == null) {
+                add(errors, "region_id", "Your account is not attached to a region.");
+            } else if (regionId == null || !myRegion.equals(regionId)) {
+                add(errors, "region_id", "You can only log incidents for your own region.");
+            }
+        } else if (tier == JurisdictionScope.Tier.NONE) {
+            add(errors, "region_id", "Your account is not attached to an incident reporting area.");
+        }
+    }
+
+    private void validateAssignableUser(Map<String, List<String>> errors, Long assignedToUserId) {
+        if (assignedToUserId == null) {
+            return;
+        }
+        String placeholders = String.join(",", Collections.nCopies(ASSIGNABLE_INCIDENT_PERMISSIONS.size(), "?"));
+        StringBuilder sql = new StringBuilder("""
+                select count(distinct u.id)
+                from public.users u
+                where u.id = ?
+                  and u.stakeholder_id is null
+                  and exists (
+                    select 1
+                    from public.model_has_roles mhr
+                    join public.role_has_permissions rhp on rhp.role_id = mhr.role_id
+                    join public.permissions p on p.id = rhp.permission_id
+                    where mhr.model_id = u.id and p.name in (%s)
+                  )
+                """.formatted(placeholders));
+        List<Object> params = new ArrayList<>();
+        params.add(assignedToUserId);
+        params.addAll(ASSIGNABLE_INCIDENT_PERMISSIONS);
+        appendAssignableUserAreaScope(sql, params);
+        Long n = jdbc.queryForObject(sql.toString(), Long.class, params.toArray());
+        if (n == null || n == 0) {
+            add(errors, "assigned_to_user_id", "The selected assignee is not valid for your incident area.");
+        }
+    }
+
+    private void appendAssignableUserAreaScope(StringBuilder sql, List<Object> params) {
+        JurisdictionScope.Tier tier = jurisdiction.currentTier();
+        Map<String, Object> area = jurisdiction.currentArea();
+        switch (tier) {
+            case NATIONAL -> { /* every incident-capable staff user */ }
+            case REGION -> {
+                Long regionId = asLong(area.get("region_id"));
+                if (regionId == null) {
+                    sql.append(" and 1=0");
+                } else {
+                    sql.append(" and u.region_id = ?");
+                    params.add(regionId);
+                }
+            }
+            case DISTRICT -> {
+                Long districtId = asLong(area.get("district_id"));
+                if (districtId == null) {
+                    sql.append(" and 1=0");
+                } else {
+                    sql.append(" and u.district_id = ?");
+                    params.add(districtId);
+                }
+            }
+            default -> sql.append(" and 1=0");
+        }
+    }
+
     private List<String> storePhotos(List<MultipartFile> photos) {
         List<String> paths = new ArrayList<>();
         if (photos == null) {
@@ -1019,6 +1147,20 @@ public class IncidentController {
         return s == null ? null : (long) Double.parseDouble(s);
     }
 
+    private static Long parseOptionalId(Map<String, List<String>> errors, Map<String, String> form,
+                                        String field, String label) {
+        String raw = trim(form.get(field));
+        if (raw == null) {
+            return null;
+        }
+        try {
+            return (long) Double.parseDouble(raw);
+        } catch (NumberFormatException e) {
+            add(errors, field, "The selected " + label + " is invalid.");
+            return null;
+        }
+    }
+
     private static Double parseDouble(String s) {
         s = trim(s);
         return s == null ? null : Double.parseDouble(s);
@@ -1069,5 +1211,9 @@ public class IncidentController {
 
     private static int asInt(Object v) {
         return v instanceof Number n ? n.intValue() : 0;
+    }
+
+    private static Long asLong(Object v) {
+        return v instanceof Number n ? n.longValue() : null;
     }
 }

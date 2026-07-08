@@ -18,6 +18,10 @@ interface DispatchSource {
   level: string | null; available_quantity: number | null; source_type_label: string;
   requires_approval: boolean; distance_km: number | null;
 }
+interface AgencyRequestOption {
+  id: number; agency_id: number; agency_name: string; available_quantity: number;
+  condition_status: string; location_description: string;
+}
 interface ApprovalRow {
   id: number; status: string; quantity: number; source_type: string; source_name: string;
   incident_title: string; resource_name: string; unit_of_measure: string;
@@ -228,6 +232,34 @@ interface ProcurementRow {
             }
 
             <hr style="margin:18px 0; border:none; border-top:1px solid #e3e6ed">
+            <b style="font-size:0.85rem"><i class="fas fa-building-user" style="color:#dc3545"></i> Request from agency</b>
+            @if (drawer()!.agency_request_options.length) {
+              <label>Agency stock line</label>
+              <select [(ngModel)]="agencyReq.agency_resource_id">
+                <option [ngValue]="null">Select agency stock...</option>
+                @for (a of drawer()!.agency_request_options; track a.id) {
+                  <option [ngValue]="a.id">{{ a.agency_name }} - {{ a.available_quantity }} available ({{ a.condition_status }})</option>
+                }
+              </select>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 10px">
+                <div><label>Quantity</label><input type="number" min="1" [(ngModel)]="agencyReq.quantity"></div>
+                <div><label>Urgency</label>
+                  <select [(ngModel)]="agencyReq.urgency">
+                    <option value="low">Low</option><option value="medium">Medium</option>
+                    <option value="high">High</option><option value="critical">Critical</option>
+                  </select></div>
+              </div>
+              <label>Notes</label><textarea rows="2" [(ngModel)]="agencyReq.notes"></textarea>
+              <button class="btn-sm b-outline" style="margin-top:10px; width:100%; padding:8px"
+                      [disabled]="!agencyReq.agency_resource_id" (click)="submitAgencyRequest()">
+                Send Agency Request</button>
+            } @else {
+              <p style="font-size:0.78rem; color:#6c757d; margin:6px 0 0">
+                No agency stock line currently advertises this resource.
+              </p>
+            }
+
+            <hr style="margin:18px 0; border:none; border-top:1px solid #e3e6ed">
             <b style="font-size:0.85rem"><i class="fas fa-cart-shopping" style="color:#dc3545"></i> External procurement</b>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 10px">
               <div><label>Quantity</label><input type="number" min="1" [(ngModel)]="proc.quantity"></div>
@@ -337,7 +369,7 @@ export class DispatchConsoleComponent implements OnInit {
   readonly pendingApprovalCount = signal(0);
   readonly approvals = signal<ApprovalRow[]>([]);
   readonly procurement = signal<ProcurementRow[]>([]);
-  readonly drawer = signal<{ allocation: any; sources: DispatchSource[]; journal: any[]; quantity_needed: number } | null>(null);
+  readonly drawer = signal<{ allocation: any; sources: DispatchSource[]; journal: any[]; quantity_needed: number; agency_request_options: AgencyRequestOption[] } | null>(null);
   readonly selected = signal<DispatchSource | null>(null);
   /** Only sources that actually hold stock are pickable rows; channels render as forms. */
   readonly stockedSources = computed(() =>
@@ -347,6 +379,7 @@ export class DispatchConsoleComponent implements OnInit {
 
   form = { quantity: null as number | null, estimated_arrival: '', notes: '' };
   proc = { quantity: null as number | null, urgency: 'medium', estimated_cost: null as number | null, preferred_vendor: '', notes: '' };
+  agencyReq = { agency_resource_id: null as number | null, quantity: null as number | null, urgency: 'medium', notes: '' };
   pub = { bid_deadline: '', priority: 'medium', notes: '' };
 
   ngOnInit(): void {
@@ -372,9 +405,12 @@ export class DispatchConsoleComponent implements OnInit {
     this.selected.set(null);
     this.form = { quantity: null, estimated_arrival: '', notes: '' };
     this.proc = { quantity: null, urgency: 'medium', estimated_cost: null, preferred_vendor: '', notes: '' };
+    this.agencyReq = { agency_resource_id: null, quantity: null, urgency: 'medium', notes: '' };
     this.http.get<any>(`/api/v1/response/dispatch/allocations/${allocationId}/sources`).subscribe(d => {
       this.form.quantity = d.quantity_needed;
       this.proc.quantity = d.quantity_needed;
+      this.agencyReq.quantity = d.quantity_needed;
+      d.agency_request_options = d.agency_request_options ?? [];
       this.drawer.set(d);
     });
   }
@@ -390,6 +426,10 @@ export class DispatchConsoleComponent implements OnInit {
 
   submitProcurement(): void {
     this.post(`/api/v1/response/dispatch/allocations/${this.drawer()!.allocation.id}/procurement`, { ...this.proc });
+  }
+
+  submitAgencyRequest(): void {
+    this.post(`/api/v1/response/dispatch/allocations/${this.drawer()!.allocation.id}/agency-request`, { ...this.agencyReq });
   }
 
   // ── Stakeholder bidding (channel 3) ──

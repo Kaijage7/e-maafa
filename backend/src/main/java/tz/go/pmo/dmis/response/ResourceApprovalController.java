@@ -92,9 +92,9 @@ public class ResourceApprovalController {
                 join public.resources r on r.id = ar.resource_id
                 left join public.users u on u.id = ar.requested_by
                 where 1=1 and """).append('(').append(where).append(')');
-        // Jurisdiction visibility: area officers (DED/DAS/RAS/RC) see only requests tied to incidents in
-        // their own area; national + the logistics/PMO roles who run the resource chain see all.
-        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        // Jurisdiction visibility: resource approvals inherit the parent incident's strict area. A district
+        // officer sees only that district, a regional officer sees only that region, and national roles see all.
+        jurisdiction.appendAreaScope("i", sql, params);
         if (search != null && !search.isBlank()) {
             sql.append(" and (r.name ilike ? or i.title ilike ? or coalesce(u.name,'') ilike ?)");
             String like = "%" + search + "%";
@@ -125,7 +125,7 @@ public class ResourceApprovalController {
                 where ar.id = ?
                 """, id));
         out.put("workflow", engine.workflowStatus(id));
-        out.put("warehouses", jdbc.queryForList("select id, name from public.warehouses order by name"));
+        out.put("warehouses", warehouseOptions());
         // Local sessions act as Super Admin (can approve/edit anything, as in the source)
         out.put("can_approve", "pending_approval".equals(allocation.get("workflow_status")));
         out.put("can_edit", "requires_revision".equals(allocation.get("workflow_status")));
@@ -193,25 +193,33 @@ public class ResourceApprovalController {
     @PostMapping("/{id}/update-source")
     @Transactional
     public Map<String, Object> updateSource(@PathVariable long id, @RequestBody Map<String, Object> body) {
-        findOr404(id);
+        Map<String, Object> allocation = findOr404(id);
+        if (!"pending_approval".equals(allocation.get("workflow_status"))) {
+            throw new tz.go.pmo.dmis.common.error.BusinessRuleException(
+                    "Only requests pending approval can have their fulfilment source changed.");
+        }
         String source = strOf(body.get("source"));
         if (source == null || !List.of("warehouse", "agency", "procurement").contains(source)) {
             throw new tz.go.pmo.dmis.common.error.BusinessRuleException("The selected source is invalid.");
         }
         Long warehouseId = body.get("warehouse_id") == null ? null
                 : (long) Double.parseDouble(String.valueOf(body.get("warehouse_id")));
+        if (!"warehouse".equals(source)) {
+            warehouseId = null;
+        }
         // The redirected fulfilment warehouse must be in the caller's area (NULL area = national/shared).
         // Out-of-area target 404s rather than letting an officer redirect into a foreign warehouse.
         if (warehouseId != null) {
             areaGuard.assertWarehouseVisible("public.warehouses", warehouseId);
         }
+        String sourceDetails = "warehouse".equals(source)
+                ? (warehouseId == null ? "warehouse:pending" : "warehouse:" + warehouseId)
+                : source;
         jdbc.update("""
-                update public.allocated_resources set source = ?, warehouse_id = ?,
-                    source_details = case when ? = 'warehouse' and ? is not null then 'warehouse:' || ?
-                                          when ? = 'warehouse' then 'warehouse:pending' else ? end,
+                update public.allocated_resources set source = ?, warehouse_id = ?, source_details = ?,
                     updated_at = now()
                 where id = ?
-                """, source, warehouseId, source, warehouseId, warehouseId, source, source, id);
+                """, source, warehouseId, sourceDetails, id);
         return Map.of("success", true, "message", "Source updated successfully.");
     }
 
@@ -249,10 +257,18 @@ public class ResourceApprovalController {
             throw new ResourceNotFoundException("Allocation not found.");
         }
         // Jurisdiction: an allocation is visible/actionable only when its parent incident is in the
-        // caller's area (national sees all). Mirrors the list's appendAreaScopeSharedOrOwn("i").
-        // Out-of-area resolves to 404, never 403.
-        areaGuard.assertParentOwnOrShared("public.allocated_resources", "incident_id", "public.incidents", id);
+        // caller's strict area (national sees all). Out-of-area resolves to 404, never 403.
+        areaGuard.assertParentOwn("public.allocated_resources", "incident_id", "public.incidents", id);
         return rows.get(0);
+    }
+
+    private List<Map<String, Object>> warehouseOptions() {
+        StringBuilder where = new StringBuilder("1=1");
+        List<Object> params = new ArrayList<>();
+        jurisdiction.appendWarehouseScope("w", where, params);
+        String sql = "select w.id, w.name, w.region_id, w.district_id "
+                + "from public.warehouses w where " + where + " order by w.name";
+        return jdbc.queryForList(sql, params.toArray());
     }
 
     private static String remarks(Map<String, Object> body) {

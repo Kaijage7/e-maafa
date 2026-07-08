@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import tz.go.pmo.dmis.common.security.CurrentUserResolver;
-import org.springframework.security.access.prepost.PreAuthorize;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 
 /**
  * The signed-in user's notification feed (the bell) + their channel preferences. Reads the unified
@@ -96,16 +97,34 @@ public class NotificationController {
     @PostMapping("/preferences")
     public Map<String, Object> saveMyPreferences(@RequestBody Map<String, Object> body) {
         long uid = currentUser.actingUserId();
+        boolean notifyInApp = boolOf(body.get("notify_in_app"), true);
+        boolean notifyEmail = boolOf(body.get("notify_email"), true);
+        boolean notifySms = boolOf(body.get("notify_sms"), false);
+        String phone = body.get("phone") == null ? null : body.get("phone").toString().trim();
+        if (phone != null && phone.isBlank()) {
+            phone = null;
+        }
+        String effectivePhone = phone;
+        if (effectivePhone == null) {
+            effectivePhone = jdbc.query("select phone from public.users where id = ?",
+                    rs -> rs.next() ? rs.getString(1) : null, uid);
+        }
+        if (phone != null && !validTanzanianMobile(phone)) {
+            throw new BusinessRuleException("Enter a valid Tanzanian phone number, e.g. 0712345678 or +255712345678.");
+        }
+        if (notifySms && (effectivePhone == null || effectivePhone.isBlank())) {
+            throw new BusinessRuleException("Add a phone number before enabling SMS notifications.");
+        }
+        if (notifySms && !validTanzanianMobile(effectivePhone)) {
+            throw new BusinessRuleException("Enter a valid Tanzanian phone number before enabling SMS notifications.");
+        }
         jdbc.update("""
                 update public.users set
                     notify_in_app = ?, notify_email = ?, notify_sms = ?,
                     phone = coalesce(?, phone), updated_at = now()
                 where id = ?
                 """,
-                boolOf(body.get("notify_in_app"), true),
-                boolOf(body.get("notify_email"), true),
-                boolOf(body.get("notify_sms"), false),
-                body.get("phone") == null ? null : body.get("phone").toString().trim(),
+                notifyInApp, notifyEmail, notifySms, phone,
                 uid);
         return Map.of("success", true);
     }
@@ -115,5 +134,12 @@ public class NotificationController {
         if (o instanceof Boolean b) return b;
         String s = o.toString();
         return "true".equalsIgnoreCase(s) || "1".equals(s) || "t".equalsIgnoreCase(s) || "on".equalsIgnoreCase(s);
+    }
+
+    private static boolean validTanzanianMobile(String phone) {
+        if (phone == null) {
+            return false;
+        }
+        return phone.replaceAll("[\\s-]", "").matches("^(\\+?255|0)[67]\\d{8}$");
     }
 }

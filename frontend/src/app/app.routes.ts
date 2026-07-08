@@ -15,6 +15,7 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', loadComponent: () => import('./pages/public/landing.component').then(m => m.LandingComponent) },
       { path: 'about', loadComponent: () => import('./pages/public/about.component').then(m => m.AboutComponent) },
       { path: 'portal', loadComponent: () => import('./pages/public/public-portal.component').then(m => m.PublicLivePortalComponent) },
+      { path: 'track-report', loadComponent: () => import('./pages/public/report-status.component').then(m => m.ReportStatusComponent) },
       { path: 'subscribe', loadComponent: () => import('./pages/public/subscribe.component').then(m => m.SubscribeComponent) },
       { path: 'register-partner', loadComponent: () => import('./pages/public/register-partner.component').then(m => m.RegisterPartnerComponent) },
       { path: 'education', loadComponent: () => import('./pages/public/education.component').then(m => m.EducationComponent) },
@@ -164,7 +165,7 @@ export const routes: Routes = [
   { path: 'm/response/declarations', canActivate: [authGuard], loadComponent: () => import('./pages/response/declarations.component').then(m => m.DeclarationsComponent) },
   { path: 'm/response/public-reports', canActivate: [authGuard], loadComponent: () => import('./pages/response/public-reports.component').then(m => m.PublicReportsComponent) },
   { path: 'm/response/resource-approvals', canActivate: [authGuard], loadComponent: () => import('./pages/response/resource-allocations.component').then(m => m.ResourceAllocationsComponent) },
-  { path: 'm/:slug/:item', canActivate: [authGuard], loadComponent: () => import('./pages/screen.component').then(m => m.ScreenComponent) },
-  { path: 'm/:slug', canActivate: [authGuard], loadComponent: () => import('./pages/screen.component').then(m => m.ScreenComponent) },
+  { path: 'm/:slug/:item', canActivate: [authGuard], loadComponent: () => import('./pages/not-found.component').then(m => m.NotFoundComponent) },
+  { path: 'm/:slug', canActivate: [authGuard], loadComponent: () => import('./pages/not-found.component').then(m => m.NotFoundComponent) },
   { path: '**', redirectTo: 'home' },
 ];

@@ -47,6 +47,10 @@ const TARGET_COLORS: Record<string, string> = {
           <strong>{{ quality()['counted'] ?? 0 }}</strong> validated event cards feed these figures ·
           <strong>{{ quality()['awaiting'] ?? 0 }}</strong> awaiting EOCC validation ·
           <strong>{{ quality()['effectsRecords'] ?? 0 }}</strong> effects records ·
+          <strong>{{ quality()['lossBearingEffects'] ?? 0 }}</strong> loss-bearing effects ·
+          @if ((quality()['pseudoRegionEffects'] ?? 0) > 0) {
+            <strong>{{ quality()['pseudoRegionEffects'] ?? 0 }}</strong> national-scope effects held out of region ranking ·
+          }
           <strong>{{ quality()['links'] ?? 0 }}</strong> operational links
         </div>
         <a routerLink="/m/reports-analytics/repository" style="margin-left:auto;color:#fff;font-size:0.8rem;font-weight:700;text-decoration:none;border:1px solid rgba(255,255,255,0.4);border-radius:8px;padding:0.35rem 0.9rem;">

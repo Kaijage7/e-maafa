@@ -3,7 +3,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, inject, signal, viewCh
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
-import { addMapNav } from '../../core/tz-map';
+import { addDmisBaseLayer, addMapNav } from '../../core/tz-map';
 
 declare const L: any;
 declare const Swal: any;
@@ -499,7 +499,7 @@ export class RiskAssessmentFormComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.map = L.map(el, { maxBounds: [[-12.0, 29.0], [-0.8, 41.0]], maxBoundsViscosity: 1.0, maxZoom: 14 }).setView([-6.37, 34.89], 6);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 18 }).addTo(this.map);
+    addDmisBaseLayer(this.map, this.http, 'standard');
     addMapNav(this.map, { home: [-6.37, 34.89, 6] });
     fetch('/geojson/adm0_national/adm0.geojson').then(r => r.json())
       .then(data => L.geoJSON(data, { style: { color: '#003366', weight: 2, fillColor: '#003366', fillOpacity: 0.05 } }).addTo(this.map)).catch(() => {});

@@ -25,6 +25,12 @@ public class SendaiAnalyticsService {
 
     /** Cards whose figures are allowed into the national numbers. */
     private static final String COUNTED = "('Validated','Archived')";
+    private static final String REAL_REGION_EFFECT = "x.region is not null and btrim(x.region) <> ''"
+            + " and lower(x.region) <> 'national' and lower(x.region) not like 'national (%'";
+    private static final String HAZARD_LABEL = "case"
+            + " when lower(coalesce(e.hazard_type,'')) in ('flood','floods') then 'Floods'"
+            + " when e.hazard_type is null or btrim(e.hazard_type) = '' then 'Unclassified'"
+            + " else e.hazard_type end";
 
     private final JdbcTemplate jdbc;
 
@@ -162,7 +168,7 @@ public class SendaiAnalyticsService {
     /** Which hazards actually hurt Tanzania — frequency, mortality and loss share. */
     private List<Map<String, Object>> hazardProfile(int year) {
         return jdbc.queryForList(
-                "select coalesce(e.hazard_type,'Unclassified') as hazard, count(distinct e.id) as events,"
+                "select " + HAZARD_LABEL + " as hazard, count(distinct e.id) as events,"
                         + " coalesce(sum(x.deaths_total + x.missing_total),0) as deaths,"
                         + " coalesce(sum(x.directly_affected + x.displaced),0) as affected,"
                         + " coalesce(sum(x.total_loss_tzs),0) as \"lossTzs\""
@@ -180,6 +186,7 @@ public class SendaiAnalyticsService {
                         + " coalesce(sum(x.total_loss_tzs),0) as \"lossTzs\""
                         + " from disaster_event_effects x join disaster_events e on e.id = x.event_id"
                         + " where e.status in " + COUNTED
+                        + " and " + REAL_REGION_EFFECT
                         + " group by 1 order by deaths desc, \"lossTzs\" desc limit 10");
     }
 
@@ -248,6 +255,15 @@ public class SendaiAnalyticsService {
                             regions.get(0).get("region"), regions.get(1).get("region"), regions.get(2).get("region"),
                             top3 * 100.0 / totalLoss)));
         }
+        Map<String, Object> quality = dataQuality();
+        if (n(quality, "countedEffects") > 0 && n(quality, "lossBearingEffects") < 3) {
+            insights.add(insight("fa-clipboard-list", "#b45309", "Loss data completeness",
+                    String.format("%d of %d counted effects records carry non-zero economic loss. "
+                                    + "%d national-scope effects are excluded from the regional priority ranking, "
+                                    + "so add district/region loss records before quoting regional loss concentration.",
+                            n(quality, "lossBearingEffects"), n(quality, "countedEffects"),
+                            n(quality, "pseudoRegionEffects"))));
+        }
 
         // 5 — citizen pipeline (public reports → incidents → repository)
         Map<String, Object> citizen = jdbc.queryForMap(
@@ -284,7 +300,18 @@ public class SendaiAnalyticsService {
                         + " count(*) filter (where status in " + COUNTED + ") as counted,"
                         + " count(*) filter (where status = 'Open') as awaiting,"
                         + " (select count(*) from disaster_event_links) as links,"
-                        + " (select count(*) from disaster_event_effects) as \"effectsRecords\""
+                        + " (select count(*) from disaster_event_effects) as \"effectsRecords\","
+                        + " (select count(*) from disaster_event_effects x join disaster_events e on e.id = x.event_id"
+                        + "   where e.status in " + COUNTED + ") as \"countedEffects\","
+                        + " (select count(*) from disaster_event_effects x join disaster_events e on e.id = x.event_id"
+                        + "   where e.status in " + COUNTED + " and coalesce(x.total_loss_tzs,0) > 0)"
+                        + "   as \"lossBearingEffects\","
+                        + " (select count(*) from disaster_event_effects x join disaster_events e on e.id = x.event_id"
+                        + "   where e.status in " + COUNTED + " and x.region is not null and not (" + REAL_REGION_EFFECT + "))"
+                        + "   as \"pseudoRegionEffects\","
+                        + " (select coalesce(sum(x.total_loss_tzs),0) from disaster_event_effects x join disaster_events e on e.id = x.event_id"
+                        + "   where e.status in " + COUNTED + " and x.region is not null and not (" + REAL_REGION_EFFECT + "))"
+                        + "   as \"pseudoRegionLossTzs\""
                         + " from disaster_events");
     }
 
