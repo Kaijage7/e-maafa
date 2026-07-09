@@ -808,11 +808,9 @@ export class OhEventsComponent implements OnInit {
     this.openMenuId.set(this.openMenuId() === id ? null : id);
   }
 
-  /** PMO roles per OhEvent::canIssueDirectiveBy (locally the admin has Super Admin). */
+  /** Mirrors the backend gate for directive issuance; controlled in Roles & Permissions. */
   canIssueDirective(): boolean {
-    const roles = this.auth.user()?.roles ?? [];
-    if (!roles.length) { return true; } // local sessions without role claims behave as admin
-    return ['Super Admin', 'ICT Admin', 'EOCC', 'Director', 'Asst. Director'].some(r => roles.includes(r));
+    return this.auth.hasPermission('one_health.directive');
   }
 
   // ── quick view ──

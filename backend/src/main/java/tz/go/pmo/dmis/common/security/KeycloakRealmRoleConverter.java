@@ -11,7 +11,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 /**
  * Maps Keycloak realm roles ({@code realm_access.roles} in the JWT) onto Spring Security
  * authorities prefixed with {@code ROLE_}, so the DMIS roles (Director, DAS, Dist DC, ...)
- * can be enforced with {@code @PreAuthorize("hasRole('Director')")} at method level.
+ * can still support workflow ladders and area tiers. Fine-grained permission claims are also mapped
+ * as plain authorities, which is what the RBAC module/action gates enforce.
  */
 public class KeycloakRealmRoleConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
 

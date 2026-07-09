@@ -29,9 +29,10 @@ import tz.go.pmo.dmis.common.security.Authz;
  * across the system's functional areas (V44 catalogue). The matrix here is the single place the
  * who-can-do-what policy is governed.
  *
- * <p>Honest scope: the Spring backend authorizes by ROLE ({@code hasAnyRole}); the permission rows
- * document and govern the model (and can drive finer-grained enforcement later). Guard rails keep
- * the Super Admin role intact and stop deletion of a role still held by users.</p>
+ * <p>The Spring backend consumes those permission grants as authorities for module and action gates
+ * ({@code hasAuthority('module.action')}). Named roles still matter for workflow ladders and area
+ * attachment, but the operational capability surface is this matrix. Guard rails keep the Super Admin
+ * role intact and stop deletion of a role still held by users.</p>
  */
 @RestController
 @RequestMapping("/v1/settings/roles")

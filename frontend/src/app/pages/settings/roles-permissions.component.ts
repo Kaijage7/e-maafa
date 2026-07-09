@@ -12,8 +12,8 @@ interface Group { module: string; permissions: Permission[]; }
 /**
  * System Settings → Roles & Permissions. The access model that ties the system together: users
  * hold roles, roles hold permissions across every functional area. Pick a role on the left, set
- * its permissions in the matrix on the right. (Honest: Spring authorizes by role today; the matrix
- * governs the documented policy and can drive finer enforcement later.)
+ * its permissions in the matrix on the right. Backend module/action gates consume those permission
+ * grants as authorities, so the matrix is the operational access-control surface.
  */
 @Component({
   selector: 'page-roles-permissions',

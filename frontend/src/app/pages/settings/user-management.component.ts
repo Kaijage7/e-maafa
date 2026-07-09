@@ -25,8 +25,9 @@ const PARTNER_ROLES = ['Partners'];
 
 /**
  * System Settings → User Management. Administers accounts and their SRS roles — the access-control
- * front door (roles drive the module hub and every @PreAuthorize check). Passwords are BCrypt-hashed
- * by the backend; the last Super Admin cannot be stripped or deleted (a lockout rail).
+ * front door. Roles carry permission grants that drive the module hub and backend @PreAuthorize
+ * authority checks. Passwords are BCrypt-hashed by the backend; the last Super Admin cannot be
+ * stripped or deleted (a lockout rail).
  */
 @Component({
   selector: 'page-user-management',

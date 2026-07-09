@@ -205,8 +205,8 @@ interface UnfundedTrainingRow {
 export class OpenNeedsComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
-  // Disbursing NDMF cash is a finance/oversight action (mirrors the RESPONSE_OVERSIGHT backend gate).
-  readonly canDisburse = ['Super Admin', 'ICT Admin', 'EOCC', 'Director', 'Asst. Director'].some(r => this.auth.hasRole(r));
+  // Disbursing NDMF cash mirrors the backend resource_allocation.dispatch gate.
+  readonly canDisburse = this.auth.hasPermission('resource_allocation.dispatch');
 
   // fund-a-training dialog
   readonly funding = signal<UnfundedTrainingRow | null>(null);

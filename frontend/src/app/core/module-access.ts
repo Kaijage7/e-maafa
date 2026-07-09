@@ -4,9 +4,9 @@ import { MODULE_PERMISSION } from './access';
 /**
  * Which top-level MODULES appear on the hub/menu — driven by the user's PERMISSIONS so the menu matches
  * the backend ModuleGuardFilter (a card shows only if the user holds that module's view permission). A
- * module slug with no mapped permission (e.g. stakeholder-portal) is always shown. A session with no
- * permissions array fails CLOSED (VAPT hardening); such legacy sessions are discarded at AuthService.restore()
- * so the user re-authenticates and receives the real permission set.
+ * module slug with no mapped permission is always shown. A session with no permissions array fails CLOSED
+ * (VAPT hardening); such legacy sessions are discarded at AuthService.restore() so the user re-authenticates
+ * and receives the real permission set.
  */
 export function visibleModules(
   all: Module[],
