@@ -65,8 +65,8 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
 
       <div class="wf-strip">
         <span class="chip" [class.final]="a.status === 'Final'" [class.progress]="a.status !== 'Final'">{{ a.status }}</span>
-        <span class="prog-bar"><span class="prog-fill" [style.width.%]="(submittedCount() / sections().length) * 100"></span></span>
-        <span>{{ submittedCount() }}/{{ sections().length }} sections submitted</span>
+        <span class="prog-bar"><span class="prog-fill" [style.width.%]="progressTotal() ? (progressSubmitted() / progressTotal()) * 100 : 0"></span></span>
+        <span>{{ progressSubmitted() }}/{{ progressTotal() }} sections submitted</span>
         <span style="flex:1"></span>
         @if (covered().length > 1) {
           <span class="chip" style="background:#eef4fb;color:#0d3b66">{{ a.scope === 'SAME_HAZARD' ? 'Combined — same hazard' : 'Combined — multi-hazard' }} · {{ covered().length }} incidents</span>
@@ -98,63 +98,65 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
         </dmis-panel>
       }
 
-      <dmis-panel title="1. General Information" icon="fa-circle-info">
-        <div class="grid-3">
-          <div><label>Date of visit</label><input type="date" [(ngModel)]="header.date_of_visit" [disabled]="locked()"></div>
-          <div><label>Type of disaster</label>
-            <select [(ngModel)]="header.disaster_type" [disabled]="locked()">
-              <option value="">Select…</option>
-              @for (t of disasterTypes(); track t) { <option [value]="t">{{ t }}</option> }
-            </select></div>
-          <div><label>If Epidemics / Other — specify</label><input maxlength="160" [(ngModel)]="header.disaster_type_other" [disabled]="locked()"></div>
-        </div>
-        <label>Region &amp; District</label>
-        <dmis-region-district [region]="pickRegion()" (regionChange)="pickRegion.set($event)"
-                              [district]="pickDistrict()" (districtChange)="pickDistrict.set($event)"
-                              [showCouncil]="false" />
-        @if (header.district && !pickDistrict()) {
-          <div class="hint"><i class="fas fa-map-marker-alt"></i> Current: <b>{{ header.region }} / {{ header.district }}</b> — pick again only to change.</div>
-        }
-        <div class="grid-3">
-          <div><label>Ward</label><input maxlength="120" [(ngModel)]="header.ward" [disabled]="locked()"></div>
-          <div><label>Village / Mtaa</label><input maxlength="160" [(ngModel)]="header.village" [disabled]="locked()"></div>
-          <div><label>GPS coordinates</label><input maxlength="120" [(ngModel)]="header.gps_coordinates" [disabled]="locked()"></div>
-        </div>
-        <label>Name(s) of affected villages / mitaa</label>
-        <textarea rows="2" [(ngModel)]="header.affected_villages" [disabled]="locked()"></textarea>
+      @if (!isSectorRestricted()) {
+        <dmis-panel title="1. General Information" icon="fa-circle-info">
+          <div class="grid-3">
+            <div><label>Date of visit</label><input type="date" [(ngModel)]="header.date_of_visit" [disabled]="locked()"></div>
+            <div><label>Type of disaster</label>
+              <select [(ngModel)]="header.disaster_type" [disabled]="locked()">
+                <option value="">Select…</option>
+                @for (t of disasterTypes(); track t) { <option [value]="t">{{ t }}</option> }
+              </select></div>
+            <div><label>If Epidemics / Other — specify</label><input maxlength="160" [(ngModel)]="header.disaster_type_other" [disabled]="locked()"></div>
+          </div>
+          <label>Region &amp; District</label>
+          <dmis-region-district [region]="pickRegion()" (regionChange)="pickRegion.set($event)"
+                                [district]="pickDistrict()" (districtChange)="pickDistrict.set($event)"
+                                [showCouncil]="false" />
+          @if (header.district && !pickDistrict()) {
+            <div class="hint"><i class="fas fa-map-marker-alt"></i> Current: <b>{{ header.region }} / {{ header.district }}</b> — pick again only to change.</div>
+          }
+          <div class="grid-3">
+            <div><label>Ward</label><input maxlength="120" [(ngModel)]="header.ward" [disabled]="locked()"></div>
+            <div><label>Village / Mtaa</label><input maxlength="160" [(ngModel)]="header.village" [disabled]="locked()"></div>
+            <div><label>GPS coordinates</label><input maxlength="120" [(ngModel)]="header.gps_coordinates" [disabled]="locked()"></div>
+          </div>
+          <label>Name(s) of affected villages / mitaa</label>
+          <textarea rows="2" [(ngModel)]="header.affected_villages" [disabled]="locked()"></textarea>
 
-        <div class="grid-2">
-          <div>
-            <label>Assessment team members</label>
-            @for (m of header.team_members; track $index; let idx = $index) {
-              <div class="rowline">
-                <input placeholder="Name" [(ngModel)]="m.name" [ngModelOptions]="{standalone: true}" [disabled]="locked()">
-                <input placeholder="Organization" [(ngModel)]="m.organization" [ngModelOptions]="{standalone: true}" [disabled]="locked()">
-                @if (!locked()) { <button type="button" class="btn-sm b-outline" (click)="header.team_members.splice(idx, 1)">✕</button> }
-              </div>
-            }
-            @if (!locked()) { <button type="button" class="btn-sm b-outline" (click)="header.team_members.push({name:'', organization:''})"><i class="fas fa-plus"></i> Add member</button> }
+          <div class="grid-2">
+            <div>
+              <label>Assessment team members</label>
+              @for (m of header.team_members; track $index; let idx = $index) {
+                <div class="rowline">
+                  <input placeholder="Name" [(ngModel)]="m.name" [ngModelOptions]="{standalone: true}" [disabled]="locked()">
+                  <input placeholder="Organization" [(ngModel)]="m.organization" [ngModelOptions]="{standalone: true}" [disabled]="locked()">
+                  @if (!locked()) { <button type="button" class="btn-sm b-outline" (click)="header.team_members.splice(idx, 1)">✕</button> }
+                </div>
+              }
+              @if (!locked()) { <button type="button" class="btn-sm b-outline" (click)="header.team_members.push({name:'', organization:''})"><i class="fas fa-plus"></i> Add member</button> }
+            </div>
+            <div>
+              <label>Person(s) interviewed</label>
+              @for (p of header.interviewees; track $index; let idx = $index) {
+                <div class="rowline">
+                  <input placeholder="Name" [(ngModel)]="p.name" [ngModelOptions]="{standalone: true}" [disabled]="locked()">
+                  <input placeholder="Position" [(ngModel)]="p.position" [ngModelOptions]="{standalone: true}" [disabled]="locked()">
+                  @if (!locked()) { <button type="button" class="btn-sm b-outline" (click)="header.interviewees.splice(idx, 1)">✕</button> }
+                </div>
+              }
+              @if (!locked()) { <button type="button" class="btn-sm b-outline" (click)="header.interviewees.push({name:'', position:''})"><i class="fas fa-plus"></i> Add interviewee</button> }
+            </div>
           </div>
-          <div>
-            <label>Person(s) interviewed</label>
-            @for (p of header.interviewees; track $index; let idx = $index) {
-              <div class="rowline">
-                <input placeholder="Name" [(ngModel)]="p.name" [ngModelOptions]="{standalone: true}" [disabled]="locked()">
-                <input placeholder="Position" [(ngModel)]="p.position" [ngModelOptions]="{standalone: true}" [disabled]="locked()">
-                @if (!locked()) { <button type="button" class="btn-sm b-outline" (click)="header.interviewees.splice(idx, 1)">✕</button> }
-              </div>
-            }
-            @if (!locked()) { <button type="button" class="btn-sm b-outline" (click)="header.interviewees.push({name:'', position:''})"><i class="fas fa-plus"></i> Add interviewee</button> }
-          </div>
-        </div>
-        @if (!locked() && canCreate()) {
-          <div class="sec-actions">
-            <button type="button" class="btn-sm b-blue" (click)="saveHeader()"><i class="fas fa-save"></i> Save General Information</button>
-          </div>
-        }
-      </dmis-panel>
+          @if (!locked() && canCreate()) {
+            <div class="sec-actions">
+              <button type="button" class="btn-sm b-blue" (click)="saveHeader()"><i class="fas fa-save"></i> Save General Information</button>
+            </div>
+          }
+        </dmis-panel>
+      }
 
-      @for (sec of sections(); track sec.section_key) {
+      @for (sec of visibleSections(); track sec.section_key) {
         @if (schemaFor(sec.section_key); as schema) {
           <div class="sec">
             <div class="sec-head" (click)="toggle(sec.section_key)">
@@ -250,10 +252,10 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
                     — the record will attribute it to you by name.</div>
                 }
                 <div class="sec-actions">
-                  @if (sec.status === 'Submitted' && !locked() && canCreate()) {
+                  @if (sec.status === 'Submitted' && !locked() && canKeySection()) {
                     <button type="button" class="btn-sm b-outline" (click)="reopenSection(sec)"><i class="fas fa-rotate-left"></i> Reopen section</button>
                   }
-                  @if (!secLocked(sec) && canCreate()) {
+                  @if (!secLocked(sec) && canKeySection()) {
                     <button type="button" class="btn-sm b-blue" (click)="saveSection(sec, false)"><i class="fas fa-save"></i> Save</button>
                     <button type="button" class="btn-sm b-green" (click)="saveSection(sec, true)"><i class="fas fa-check"></i> Save &amp; Submit Section</button>
                   }
@@ -279,6 +281,10 @@ export class DlnaFormComponent implements OnInit {
   readonly myAgency = signal<string | null>(null);
   readonly open = signal<string>('');
   readonly submittedCount = computed(() => this.sections().filter(s => s.status === 'Submitted').length);
+  readonly visibleSections = computed(() => this.sections().filter(s => this.canSeeSection(s.section_key)));
+  readonly visibleSubmittedCount = computed(() => this.visibleSections().filter(s => s.status === 'Submitted').length);
+  readonly progressSubmitted = computed(() => this.isSectorRestricted() ? this.visibleSubmittedCount() : this.submittedCount());
+  readonly progressTotal = computed(() => this.isSectorRestricted() ? this.visibleSections().length : this.sections().length);
   readonly pickRegion = signal('');
   readonly pickDistrict = signal('');
 
@@ -301,6 +307,9 @@ export class DlnaFormComponent implements OnInit {
   }
 
   canCreate(): boolean { return this.auth.hasPermission('damage_assessment.create'); }
+  canKeySection(): boolean {
+    return this.auth.hasPermission('damage_assessment.key_section') || this.canCreate();
+  }
 
   /** Mirrors the server rule: agency logins key only their sections; PMO-DMD and the
    *  EOCC override tier (verify / command_post.activate) key all — for late sectors. */
@@ -312,6 +321,15 @@ export class DlnaFormComponent implements OnInit {
 
   hasOverride(): boolean {
     return this.auth.hasPermission('damage_assessment.verify') || this.auth.hasPermission('command_post.activate');
+  }
+
+  isSectorRestricted(): boolean {
+    const agency = this.myAgency();
+    return !!agency && agency !== 'pmo-dmd' && !this.hasOverride();
+  }
+
+  canSeeSection(key: string): boolean {
+    return !this.isSectorRestricted() || this.sectorMayKey(key);
   }
 
   /** True when keying a section that belongs to another sector under the EOCC/PMO override. */
@@ -330,7 +348,7 @@ export class DlnaFormComponent implements OnInit {
   canVerify(): boolean { return this.auth.hasPermission('damage_assessment.verify'); }
   locked(): boolean { return this.assessment()?.status === 'Final'; }
   secLocked(sec: any): boolean {
-    return this.locked() || sec.status === 'Submitted' || !this.canCreate() || !this.sectorMayKey(sec.section_key);
+    return this.locked() || sec.status === 'Submitted' || !this.canKeySection() || !this.sectorMayKey(sec.section_key);
   }
 
   schemaFor(key: string) {
@@ -346,8 +364,15 @@ export class DlnaFormComponent implements OnInit {
       this.myAgency.set(d.my_agency ?? null);
       this.sections.set(d.sections.map((s: any) => ({ ...s, data: parseJson(s.data) })));
       const wanted = this.route.snapshot.queryParamMap.get('section');
-      if (wanted && !this.open() && this.sections().some(s => s.section_key === wanted)) {
+      if (wanted && !this.open() && this.visibleSections().some(s => s.section_key === wanted)) {
         this.toggle(wanted);
+      } else if (!this.open() && this.isSectorRestricted() && this.visibleSections().length === 1) {
+        this.toggle(this.visibleSections()[0].section_key);
+      }
+      if (this.open() && !this.canSeeSection(this.open())) {
+        this.open.set('');
+        this.edit = {};
+        this.editSnapshot = '{}';
       }
       const a = d.assessment;
       this.header = {
@@ -371,6 +396,9 @@ export class DlnaFormComponent implements OnInit {
   }
 
   toggle(key: string): void {
+    if (!this.canSeeSection(key)) {
+      return;
+    }
     const doToggle = () => {
       if (this.open() === key) {
         this.open.set('');

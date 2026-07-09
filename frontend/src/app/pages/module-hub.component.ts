@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { MODULES, Module, ModuleItem } from '../core/modules';
 import { visibleModules } from '../core/module-access';
-import { routePermission } from '../core/access';
+import { hasRequiredPermission, routePermission } from '../core/access';
 import { qrcodegen } from '../shared/qrcodegen';
 
 /** Exact reproduction of home-v2.blade.php — the module hub landing. */
@@ -175,7 +175,7 @@ export class ModuleHubComponent implements OnInit {
   visibleItems(module: Module): ModuleItem[] {
     return module.items.filter(item => {
       const perm = routePermission(['/m', module.slug, ...item.path.split('/')].join('/'));
-      return !perm || this.auth.hasPermission(perm);
+      return hasRequiredPermission(p => this.auth.hasPermission(p), perm);
     });
   }
 }

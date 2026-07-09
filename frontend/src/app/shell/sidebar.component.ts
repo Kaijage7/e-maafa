@@ -2,7 +2,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { moduleBySlug } from '../core/modules';
-import { routePermission } from '../core/access';
+import { hasRequiredPermission, routePermission } from '../core/access';
 import { qrcodegen } from '../shared/qrcodegen';
 
 /** Exact reproduction of components/dmis/sidebar.blade.php (module mode: back-to-hub + current module). */
@@ -83,7 +83,7 @@ export class SidebarComponent {
     }
     return m.items.filter(item => {
       const perm = routePermission(this.linkFor(m.slug, item.path).join('/'));
-      return !perm || this.auth.hasPermission(perm);
+      return hasRequiredPermission(p => this.auth.hasPermission(p), perm);
     });
   });
 

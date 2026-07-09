@@ -5,10 +5,12 @@
  * {@code module.action} from public.permissions, carried on the login user + JWT.
  */
 
+export type PermissionRequirement = string | string[];
+
 /** Module (hub/menu card) slug -> the permission(s) that grant it. A string = that permission; an array =
  *  ANY of them (the card shows if the user holds at least one of its sub-area permissions). Slugs with no
  *  mapping are always shown. */
-export const MODULE_PERMISSION: Record<string, string | string[]> = {
+export const MODULE_PERMISSION: Record<string, PermissionRequirement> = {
   'prevention-mitigation': 'prevention_and_mitigation.view',
   // Preparedness card appears if the user can see any operational preparedness sub-area. The EW workbench
   // is authoring-tier; area officers receive issued warnings through Response, not this module.
@@ -27,7 +29,7 @@ export const MODULE_PERMISSION: Record<string, string | string[]> = {
 };
 
 /** Route prefix -> required permission (longest match wins). Mirrors the backend ModuleGuardFilter. */
-const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
+const ROUTE_PERMISSION: ReadonlyArray<readonly [string, PermissionRequirement]> = [
   ['/m/budget-finance', 'budget_and_finance.view'],
   ['/m/response/issued-alerts', 'incidents.view'],
   ['/m/response/incidents', 'incidents.view'],
@@ -73,6 +75,7 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
   ['/m/preparedness/inventory', 'warehouse_and_stock.view'],
   ['/m/preparedness', 'preparedness.view'],
   ['/m/one-health/directives', 'one_health.directive'],
+  ['/m/one-health/dissemination', ['one_health.disseminate', 'one_health.approve', 'one_health.manage']],
   ['/m/one-health', 'one_health.view'],
   // The two Recovery desks over the assessment registry require the same permission as the API they call.
   ['/m/recovery/needs-assessment', 'damage_assessment.view'],
@@ -87,10 +90,10 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /** The permission required to open a route URL, or null if the route is unguarded. */
-export function routePermission(url: string): string | null {
+export function routePermission(url: string): PermissionRequirement | null {
   const path = (url || '').split('?')[0];
   let best = '';
-  let perm: string | null = null;
+  let perm: PermissionRequirement | null = null;
   for (const [prefix, p] of ROUTE_PERMISSION) {
     if ((path === prefix || path.startsWith(prefix + '/')) && prefix.length > best.length) {
       best = prefix;
@@ -98,4 +101,14 @@ export function routePermission(url: string): string | null {
     }
   }
   return perm;
+}
+
+export function hasRequiredPermission(
+  hasPermission: (permission: string) => boolean,
+  required: PermissionRequirement | null,
+): boolean {
+  if (!required) {
+    return true;
+  }
+  return Array.isArray(required) ? required.some(p => hasPermission(p)) : hasPermission(required);
 }

@@ -21,6 +21,7 @@ interface DissDetail {
   log_count: number;
   log_stats: { total: number; sent: number; delivered: number; failed: number; pending: number };
   can_approve: boolean;
+  can_resend: boolean;
 }
 
 /**
@@ -192,7 +193,7 @@ interface DissDetail {
                     <i class="fas fa-times"></i> Reject
                   </button>
                 }
-                @if (d.status === 'sent' && d.can_approve) {
+                @if (d.status === 'sent' && d.can_resend) {
                   <button type="button" class="btn-add w-100" style="background:#f59e0b;font-size:0.78rem;justify-content:center;" (click)="resend()">
                     <i class="fas fa-redo"></i> Resend
                   </button>

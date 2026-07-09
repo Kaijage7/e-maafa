@@ -345,7 +345,7 @@ public class DlnaController {
     }
 
     @PostMapping("/{id:\\d+}/sections/{key}")
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
+    @PreAuthorize("hasAnyAuthority('damage_assessment.create','damage_assessment.key_section')")
     public Map<String, Object> saveSection(@PathVariable long id, @PathVariable String key,
                                            @RequestBody SectionRequest req) throws Exception {
         assertEditable(findOr404(id));
@@ -387,7 +387,7 @@ public class DlnaController {
     }
 
     @PostMapping("/{id:\\d+}/sections/{key}/reopen")
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
+    @PreAuthorize("hasAnyAuthority('damage_assessment.create','damage_assessment.key_section')")
     public Map<String, Object> reopenSection(@PathVariable long id, @PathVariable String key) {
         assertEditable(findOr404(id));
         assertSectorMayKey(key);
@@ -542,6 +542,7 @@ public class DlnaController {
      * DLNA — each row links straight into the section keying screen.
      */
     @GetMapping("/my-sections")
+    @PreAuthorize("hasAnyAuthority('damage_assessment.create','damage_assessment.key_section')")
     public Map<String, Object> mySections() {
         String agency = jurisdiction.currentAgencyCode();
         List<String> keys = new ArrayList<>();

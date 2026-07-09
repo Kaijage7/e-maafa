@@ -28,9 +28,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import org.springframework.security.access.prepost.PreAuthorize;
-import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.common.security.SecurityUtils;
 import tz.go.pmo.dmis.notification.ExternalDeliveryService;
 import tz.go.pmo.dmis.notification.MailService;
 
@@ -49,6 +49,8 @@ public class OneHealthDisseminationController {
 
     private static final Logger log = LoggerFactory.getLogger(OneHealthDisseminationController.class);
     private static final int MAX_PUBLIC_RECIPIENTS = 100; // config('services.mgov.max_public_recipients', 100)
+    private static final String DISSEMINATION_DESK =
+            "hasAnyAuthority('one_health.disseminate','one_health.approve','one_health.manage')";
 
     private final JdbcTemplate jdbc;
     private final OneHealthEventService service;
@@ -74,6 +76,7 @@ public class OneHealthDisseminationController {
     // ─── Index ───
 
     @GetMapping("/disseminations")
+    @PreAuthorize(DISSEMINATION_DESK)
     public Map<String, Object> index(@RequestParam(name = "dissemination_type", required = false) String type,
                                      @RequestParam(name = "approval_status", required = false) String approvalStatus,
                                      @RequestParam(required = false) String status,
@@ -160,6 +163,7 @@ public class OneHealthDisseminationController {
     // ─── Show ───
 
     @GetMapping("/disseminations/{id}")
+    @PreAuthorize(DISSEMINATION_DESK)
     public Map<String, Object> show(@PathVariable long id) {
         // Scope via the parent event's area (disseminations carry no area column); out-of-area 404s.
         areaGuard.assertParentOwnOrShared("public.oh_disseminations", "event_id", "public.oh_events", id);
@@ -217,7 +221,8 @@ public class OneHealthDisseminationController {
         out.put("log_stats", logStats);
         out.put("approved_by_name", approvedByName);
         out.put("sent_by_name", sentByName);
-        out.put("can_approve", true); // local sessions act as Super Admin
+        out.put("can_approve", SecurityUtils.hasAuthority("one_health.approve"));
+        out.put("can_resend", SecurityUtils.hasAuthority("one_health.manage"));
         return out;
     }
 
@@ -429,6 +434,7 @@ public class OneHealthDisseminationController {
     // ─── Recipients lookup for the creation modal ───
 
     @GetMapping("/disseminations/recipients")
+    @PreAuthorize("hasAuthority('one_health.disseminate')")
     public Map<String, Object> recipients(@RequestParam(name = "event_id") long eventId,
                                           @RequestParam String type) {
         Map<String, Object> ev = service.findEventOr404(eventId);

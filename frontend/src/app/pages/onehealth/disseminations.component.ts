@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -121,10 +122,10 @@ interface IndexResponse {
                         <button class="ctx-trigger" type="button" (click)="toggleMenu(d.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
                         <div class="ctx-menu" [class.open]="openMenuId() === d.id">
                           <a [routerLink]="['/m/one-health/dissemination', d.id]" class="ctx-item"><i class="fas fa-eye"></i> View</a>
-                          @if (d.approval_status === 'pending') {
+                          @if (d.approval_status === 'pending' && canApprove) {
                             <button type="button" class="ctx-item success" (click)="approve(d)"><i class="fas fa-check-circle"></i> Approve</button>
                           }
-                          @if (d.status === 'sent' || d.status === 'failed') {
+                          @if ((d.status === 'sent' || d.status === 'failed') && canResend) {
                             <button type="button" class="ctx-item warning" (click)="resend(d)"><i class="fas fa-paper-plane"></i> Resend</button>
                           }
                           <div class="ctx-divider"></div>
@@ -159,6 +160,9 @@ interface IndexResponse {
 })
 export class OhDisseminationsComponent implements OnInit {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  readonly canApprove = this.auth.hasPermission('one_health.approve');
+  readonly canResend = this.auth.hasPermission('one_health.manage');
 
   rows = signal<DissRow[]>([]);
   total = signal(0);
