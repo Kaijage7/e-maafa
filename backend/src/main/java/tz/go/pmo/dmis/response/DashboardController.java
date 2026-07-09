@@ -201,7 +201,7 @@ public class DashboardController {
     private List<Map<String, Object>> incidentQueue(String extra, List<Object> params, String order, int limit) {
         String where = incidentScope("i", extra, params);
         params.add(limit);
-        List<Map<String, Object>> rows = jdbc.queryForList("""
+        String sql = """
                 select i.id, i.title, i.workflow_status, i.severity_level, i.status, i.reported_at,
                        i.submitted_at, i.location_description, i.district_name, i.region_name,
                        coalesce(it.name, 'Unknown') as hazard_name,
@@ -209,10 +209,11 @@ public class DashboardController {
                 from public.incidents i
                 left join public.incident_types it on it.id = i.incident_type_id
                 left join public.users su on su.id = i.submitted_by_user_id
-                where """ + where + """
-                order by """ + order + """
+                where %s
+                order by %s
                 limit ?
-                """, params.toArray());
+                """.formatted(where, order);
+        List<Map<String, Object>> rows = jdbc.queryForList(sql, params.toArray());
         for (Map<String, Object> row : rows) {
             String wf = row.get("workflow_status") == null ? null : String.valueOf(row.get("workflow_status"));
             row.put("workflow_status_label", IncidentOptions.workflowStatusLabel(wf));
