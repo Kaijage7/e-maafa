@@ -52,7 +52,12 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
         MODULE_PERMISSION.put("/v1/onehealth", "one_health.view");
         MODULE_PERMISSION.put("/v1/recovery", "recovery.view");
         MODULE_PERMISSION.put("/v1/reports/early-warnings", "early_warning.view");
+        MODULE_PERMISSION.put("/v1/reports/incidents", "incidents.view");
+        MODULE_PERMISSION.put("/v1/reports/resource-allocations", "resource_allocation.view");
+        MODULE_PERMISSION.put("/v1/reports/generated", "damage_assessment.view");
         MODULE_PERMISSION.put("/v1/reports", "reports_and_analytics.view");
+        MODULE_PERMISSION.put("/v1/repository/events", "disaster_repository.enter");
+        MODULE_PERMISSION.put("/v1/repository/analytics", "reports_and_analytics.view");
         MODULE_PERMISSION.put("/v1/repository", "reports_and_analytics.view");
         MODULE_PERMISSION.put("/v1/hazards", "prevention_and_mitigation.view");
         MODULE_PERMISSION.put("/v1/mitigation-measures", "prevention_and_mitigation.view");

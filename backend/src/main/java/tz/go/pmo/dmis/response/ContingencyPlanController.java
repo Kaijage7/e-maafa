@@ -42,6 +42,7 @@ public class ContingencyPlanController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('contingency_plans.view')")
     public Map<String, Object> index(@RequestParam(required = false) String status,
                                      @RequestParam(required = false) String hazard) {
         StringBuilder where = new StringBuilder("1=1");
@@ -78,6 +79,7 @@ public class ContingencyPlanController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('contingency_plans.view')")
     public Map<String, Object> show(@PathVariable long id) {
         Map<String, Object> plan = findOr404(id);
         parseJsonField(plan, "coverage_regions");

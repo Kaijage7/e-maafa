@@ -39,7 +39,7 @@ public class DisasterEventController {
 
     @GetMapping
     @Operation(summary = "Event registry with filters + repository stats")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(CAN_WRITE)
     public Map<String, Object> index(@RequestParam(required = false) String hazard,
                                      @RequestParam(required = false) String region,
                                      @RequestParam(required = false) Integer year,
@@ -49,7 +49,7 @@ public class DisasterEventController {
 
     @GetMapping("/export")
     @Operation(summary = "Export the (filtered) disaster repository as a CSV download")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(CAN_WRITE)
     public org.springframework.http.ResponseEntity<byte[]> export(@RequestParam(required = false) String hazard,
                                                                   @RequestParam(required = false) String region,
                                                                   @RequestParam(required = false) Integer year,
@@ -80,7 +80,7 @@ public class DisasterEventController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Full event card: effects, linked records, totals, response investment")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(CAN_WRITE)
     public Map<String, Object> show(@PathVariable long id) {
         return service.show(id);
     }
@@ -144,7 +144,7 @@ public class DisasterEventController {
 
     @GetMapping("/{id}/link-suggestions")
     @Operation(summary = "Unlinked incidents/warnings/assessments inside the event window")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(CAN_WRITE)
     public Map<String, Object> suggestions(@PathVariable long id) {
         return service.linkSuggestions(id);
     }

@@ -24,7 +24,7 @@ public class SendaiAnalyticsController {
 
     @GetMapping
     @Operation(summary = "Sendai dashboard: targets A–G, yearly series, hazard/region profiles, insights")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('reports_and_analytics.view')")
     public Map<String, Object> dashboard(@RequestParam(required = false) Integer year) {
         return service.dashboard(year);
     }

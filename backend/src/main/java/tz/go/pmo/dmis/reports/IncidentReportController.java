@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,6 +36,7 @@ public class IncidentReportController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('incidents.view')")
     public Map<String, Object> index(@RequestParam(required = false) String start_date,
                                      @RequestParam(required = false) String end_date,
                                      @RequestParam(required = false) String status,

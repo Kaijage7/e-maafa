@@ -75,13 +75,15 @@ import { qrcodegen } from '../shared/qrcodegen';
       }
     </div>
 
-    <a [routerLink]="['/register-partner']" class="hub-qr" title="Scan with a phone to register as a partner — or click to open the registration page">
-      <svg [attr.viewBox]="qr.vb" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
-        <rect [attr.x]="-3" [attr.y]="-3" [attr.width]="qr.n + 6" [attr.height]="qr.n + 6" fill="#ffffff"/>
-        @for (m of qr.dark; track $index) { <rect [attr.x]="m[0]" [attr.y]="m[1]" width="1" height="1" fill="#0d3b66"/> }
-      </svg>
-      <span class="hub-qr-cap">SCAN TO REGISTER</span>
-    </a>
+    @if (auth.hasPermission('content_management.view')) {
+      <a [routerLink]="['/register-partner']" class="hub-qr" title="Scan with a phone to register as a partner — or click to open the registration page">
+        <svg [attr.viewBox]="qr.vb" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+          <rect [attr.x]="-3" [attr.y]="-3" [attr.width]="qr.n + 6" [attr.height]="qr.n + 6" fill="#ffffff"/>
+          @for (m of qr.dark; track $index) { <rect [attr.x]="m[0]" [attr.y]="m[1]" width="1" height="1" fill="#0d3b66"/> }
+        </svg>
+        <span class="hub-qr-cap">SCAN TO REGISTER</span>
+      </a>
+    }
   `,
   styles: [`
     .module-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }

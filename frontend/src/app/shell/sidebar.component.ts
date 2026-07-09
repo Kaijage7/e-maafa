@@ -35,15 +35,17 @@ import { qrcodegen } from '../shared/qrcodegen';
         }
       </div>
       <div class="sidebar-footer">
-        <a [routerLink]="['/m/content-management/qr-outreach']" class="sb-qr" title="Scan to register a partner — or click to open QR Outreach"
-           style="display:block;text-align:center;padding:.55rem .5rem .6rem;text-decoration:none;">
-          <svg [attr.viewBox]="qr.vb" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"
-               style="width:94px;height:94px;background:#fff;border-radius:7px;padding:5px;box-sizing:border-box;">
-            <rect [attr.x]="-3" [attr.y]="-3" [attr.width]="qr.n + 6" [attr.height]="qr.n + 6" fill="#ffffff"/>
-            @for (m of qr.dark; track $index) { <rect [attr.x]="m[0]" [attr.y]="m[1]" width="1" height="1" fill="#0d3b66"/> }
-          </svg>
-          <div class="sb-qr-cap" style="font-size:.75rem;color:var(--text-mid);margin-top:.3rem;font-weight:700;letter-spacing:.04em;">SCAN TO REGISTER</div>
-        </a>
+        @if (auth.hasPermission('content_management.view')) {
+          <a [routerLink]="['/m/content-management/qr-outreach']" class="sb-qr" title="Scan to register a partner — or click to open QR Outreach"
+             style="display:block;text-align:center;padding:.55rem .5rem .6rem;text-decoration:none;">
+            <svg [attr.viewBox]="qr.vb" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"
+                 style="width:94px;height:94px;background:#fff;border-radius:7px;padding:5px;box-sizing:border-box;">
+              <rect [attr.x]="-3" [attr.y]="-3" [attr.width]="qr.n + 6" [attr.height]="qr.n + 6" fill="#ffffff"/>
+              @for (m of qr.dark; track $index) { <rect [attr.x]="m[0]" [attr.y]="m[1]" width="1" height="1" fill="#0d3b66"/> }
+            </svg>
+            <div class="sb-qr-cap" style="font-size:.75rem;color:var(--text-mid);margin-top:.3rem;font-weight:700;letter-spacing:.04em;">SCAN TO REGISTER</div>
+          </a>
+        }
         <div class="sb-user">
           <div class="sb-user-avatar">{{ auth.initials() }}</div>
           <div class="sb-user-info"><div class="sb-user-name">{{ auth.user()?.name }}</div><div class="sb-user-role">{{ auth.primaryRole() }}</div></div>

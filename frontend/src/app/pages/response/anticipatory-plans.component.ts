@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, HostListener, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../core/auth.service';
 import { addTanzaniaGisBase, addMapNav } from '../../core/tz-map';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
@@ -45,7 +46,9 @@ const STATUS_BADGE: Record<string, string> = {
   template: `
     <dmis-page-header title="Anticipatory Action Plans" icon="fa-clipboard-list"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Anticipatory Action Plans'}]">
-      <button class="btn-add" type="button" (click)="openForm(null)"><i class="fas fa-plus"></i> New Plan</button>
+      @if (canCreate()) {
+        <button class="btn-add" type="button" (click)="openForm(null)"><i class="fas fa-plus"></i> New Plan</button>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -139,19 +142,20 @@ const STATUS_BADGE: Record<string, string> = {
                       <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + p.hazard_type + ' — ' + p.district_council"
                               (click)="toggleMenu(p.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
                       <div class="ctx-menu" [class.open]="openMenu() === p.id">
-                        @if (p.status === 'draft') {
+                        <a class="ctx-item" (click)="view(p)"><i class="fas fa-eye"></i> View details</a>
+                        @if (p.status === 'draft' && canCreate()) {
                           <a class="ctx-item" (click)="openForm(p)"><i class="fas fa-pen"></i> Edit</a>
                           <a class="ctx-item success" (click)="action(p,'submit')"><i class="fas fa-paper-plane"></i> Submit for approval</a>
                         }
-                        @if (p.status === 'pending') {
+                        @if (p.status === 'pending' && canApprove()) {
                           <a class="ctx-item success" (click)="action(p,'approve')"><i class="fas fa-check"></i> Approve</a>
                           <a class="ctx-item danger" (click)="action(p,'reject')"><i class="fas fa-rotate-left"></i> Reject to draft</a>
                         }
                         @if (p.status === 'active') {
-                          <a class="ctx-item" (click)="view(p)"><i class="fas fa-eye"></i> View details</a>
-                          <a class="ctx-item" (click)="action(p,'archive')"><i class="fas fa-box-archive"></i> Archive</a>
+                          @if (canApprove()) {
+                            <a class="ctx-item" (click)="action(p,'archive')"><i class="fas fa-box-archive"></i> Archive</a>
+                          }
                         }
-                        @if (p.status === 'archived') { <a class="ctx-item" (click)="view(p)"><i class="fas fa-eye"></i> View details</a> }
                       </div>
                     </div>
                   </td>
@@ -160,7 +164,8 @@ const STATUS_BADGE: Record<string, string> = {
                 <tr><td colspan="9">
                   <div class="empty-state"><i class="fas fa-inbox"></i>
                     @if (fStatus || fHazard || fSearch) { No plans match these filters. }
-                    @else { No anticipatory action plans yet — create the first one. }
+                    @else if (canCreate()) { No anticipatory action plans yet — create the first one. }
+                    @else { No anticipatory action plans yet. }
                   </div>
                 </td></tr>
               }
@@ -296,6 +301,7 @@ const STATUS_BADGE: Record<string, string> = {
 })
 export class AnticipatoryPlansComponent implements OnDestroy {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   private base = '/api/v1/response/anticipatory-plans';
 
   plans = signal<PlanRow[]>([]);
@@ -317,6 +323,8 @@ export class AnticipatoryPlansComponent implements OnDestroy {
 
   peopleCoveredK = computed(() => Math.round((this.stats()['people_covered'] ?? 0) / 1000));
   budgetBn = computed(() => Math.round((this.stats()['budget_active'] ?? 0) / 1e9));
+  canCreate = computed(() => this.auth.hasPermission('anticipatory_action_plans.create'));
+  canApprove = computed(() => this.auth.hasPermission('anticipatory_action_plans.approve'));
 
   // National coverage state. The badge counts regions from the static TZ_REGIONS list against the
   // active-plan areas, so it settles as soon as the plans load — independent of the map's geojson render.
@@ -466,6 +474,7 @@ export class AnticipatoryPlansComponent implements OnDestroy {
   }
 
   openForm(p: PlanRow | null): void {
+    if (!this.canCreate()) { return; }
     this.editId = p?.id ?? null;
     if (!p) {
       this.m = {}; this.mActivities = ''; this.mActors = ''; this.mChannels.set([]);
@@ -493,6 +502,7 @@ export class AnticipatoryPlansComponent implements OnDestroy {
   }
 
   save(): void {
+    if (!this.canCreate()) { return; }
     this.saving.set(true);
     const body = {
       ...this.m,
@@ -508,6 +518,9 @@ export class AnticipatoryPlansComponent implements OnDestroy {
   }
 
   action(p: PlanRow, act: 'submit' | 'approve' | 'reject' | 'archive'): void {
+    if ((act === 'submit' && !this.canCreate()) || (act !== 'submit' && !this.canApprove())) {
+      return;
+    }
     const labels: Record<string, string> = {
       submit: 'Submit this draft for approval?', approve: 'Approve this plan — it becomes active and forecast-ready?',
       reject: 'Return this plan to draft?', archive: 'Archive this plan?',

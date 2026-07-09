@@ -89,6 +89,7 @@ public class AnticipatoryPlanController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('anticipatory_action_plans.view')")
     public Map<String, Object> index(@RequestParam(required = false) String status,
                                      @RequestParam(required = false) String hazard,
                                      @RequestParam(required = false) String search) {
@@ -138,6 +139,7 @@ public class AnticipatoryPlanController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('anticipatory_action_plans.view')")
     public Map<String, Object> show(@PathVariable long id) {
         return Map.of("plan", findOr404(id));
     }

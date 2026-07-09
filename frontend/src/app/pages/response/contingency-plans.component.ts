@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -32,7 +33,9 @@ const STATUS_BADGE: Record<string, string> = {
   template: `
     <dmis-page-header title="Contingency Plans" icon="fa-folder-tree"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Contingency Plans'}]">
-      <button class="btn-add" type="button" (click)="openForm(null)"><i class="fas fa-plus"></i> New Plan</button>
+      @if (canManage()) {
+        <button class="btn-add" type="button" (click)="openForm(null)"><i class="fas fa-plus"></i> New Plan</button>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -80,21 +83,26 @@ const STATUS_BADGE: Record<string, string> = {
                       <button class="ctx-trigger" type="button" (click)="toggleMenu(p.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
                       <div class="ctx-menu" [class.open]="openMenu() === p.id">
                         <a class="ctx-item" (click)="view(p)"><i class="fas fa-eye"></i> View details</a>
-                        @if (p.status === 'draft') {
+                        @if (p.status === 'draft' && canManage()) {
                           <a class="ctx-item" (click)="openForm(p)"><i class="fas fa-pen"></i> Edit</a>
                           <a class="ctx-item success" (click)="action(p,'submit')"><i class="fas fa-paper-plane"></i> Submit for approval</a>
                         }
-                        @if (p.status === 'pending') {
+                        @if (p.status === 'pending' && canApprove()) {
                           <a class="ctx-item success" (click)="action(p,'approve')"><i class="fas fa-check"></i> Approve</a>
                           <a class="ctx-item danger" (click)="action(p,'reject')"><i class="fas fa-rotate-left"></i> Reject to draft</a>
                         }
-                        @if (p.status === 'active') { <a class="ctx-item" (click)="action(p,'archive')"><i class="fas fa-box-archive"></i> Archive</a> }
+                        @if (p.status === 'active' && canApprove()) {
+                          <a class="ctx-item" (click)="action(p,'archive')"><i class="fas fa-box-archive"></i> Archive</a>
+                        }
                       </div>
                     </div>
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem;">No contingency plans match — create the first one.</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem;">
+                  @if (canManage()) { No contingency plans match — create the first one. }
+                  @else { No contingency plans match. }
+                </td></tr>
               }
             </tbody>
           </table>
@@ -173,6 +181,7 @@ const STATUS_BADGE: Record<string, string> = {
 })
 export class ContingencyPlansComponent {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   private base = '/api/v1/response/contingency-plans';
 
   plans = signal<CPlanRow[]>([]);
@@ -192,6 +201,8 @@ export class ContingencyPlansComponent {
   mSectors = '';
 
   budgetBn = computed(() => Math.round((this.stats()['budget_active'] ?? 0) / 1e9));
+  canManage = computed(() => this.auth.hasPermission('contingency_plans.manage'));
+  canApprove = computed(() => this.auth.hasPermission('contingency_plans.approve'));
 
   constructor() { this.reload(); }
 
@@ -218,6 +229,7 @@ export class ContingencyPlansComponent {
   }
 
   openForm(p: CPlanRow | null): void {
+    if (!this.canManage()) { return; }
     this.editId = p?.id ?? null;
     if (!p) {
       this.m = {}; this.mRegions = ''; this.mSectors = '';
@@ -238,6 +250,7 @@ export class ContingencyPlansComponent {
   }
 
   save(): void {
+    if (!this.canManage()) { return; }
     this.saving.set(true);
     const body = {
       ...this.m,
@@ -252,6 +265,9 @@ export class ContingencyPlansComponent {
   }
 
   action(p: CPlanRow, act: 'submit' | 'approve' | 'reject' | 'archive'): void {
+    if ((act === 'submit' && !this.canManage()) || (act !== 'submit' && !this.canApprove())) {
+      return;
+    }
     const labels: Record<string, string> = {
       submit: 'Submit this draft for approval?', approve: 'Approve this plan — it becomes active and in force?',
       reject: 'Return this plan to draft?', archive: 'Archive this plan?',

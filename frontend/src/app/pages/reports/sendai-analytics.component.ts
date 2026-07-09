@@ -1,7 +1,8 @@
 import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { AfterViewInit, Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 
@@ -53,9 +54,11 @@ const TARGET_COLORS: Record<string, string> = {
           }
           <strong>{{ quality()['links'] ?? 0 }}</strong> operational links
         </div>
-        <a routerLink="/m/reports-analytics/repository" style="margin-left:auto;color:#fff;font-size:0.8rem;font-weight:700;text-decoration:none;border:1px solid rgba(255,255,255,0.4);border-radius:8px;padding:0.35rem 0.9rem;">
-          <i class="fas fa-database me-1"></i> Open the repository
-        </a>
+        @if (canOpenRepository()) {
+          <a routerLink="/m/reports-analytics/repository" style="margin-left:auto;color:#fff;font-size:0.8rem;font-weight:700;text-decoration:none;border:1px solid rgba(255,255,255,0.4);border-radius:8px;padding:0.35rem 0.9rem;">
+            <i class="fas fa-database me-1"></i> Open the repository
+          </a>
+        }
       </div>
     </div>
 
@@ -154,6 +157,7 @@ const TARGET_COLORS: Record<string, string> = {
 })
 export class SendaiAnalyticsComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   trendCanvas = viewChild<ElementRef<HTMLCanvasElement>>('trendChart');
   hazardCanvas = viewChild<ElementRef<HTMLCanvasElement>>('hazardChart');
 
@@ -170,6 +174,7 @@ export class SendaiAnalyticsComponent implements AfterViewInit, OnDestroy {
   private charts: any[] = [];
   private viewReady = false;
   private indicatorIndex = new Map<string, string>();
+  readonly canOpenRepository = computed(() => this.auth.hasPermission('disaster_repository.enter'));
 
   constructor() {
     this.load(null);

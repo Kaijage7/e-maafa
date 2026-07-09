@@ -113,8 +113,8 @@ public class PermissionLocalSeeder implements CommandLineRunner {
         p.put("Comms Officer", List.of("*|view", "Communication & Alerts|send", "Content Management|manage",
                 "Early Warning|disseminate", "Translations|manage", "One Health|disseminate"));
         p.put("MDA Focal", List.of("*|view", "Damage Assessment|key_section", "One Health|acknowledge"));
-        p.put("Partners", List.of("Reports & Analytics|view", "Tasks|view", "Anticipatory Action Plans|view",
-                "Disaster Repository|view", "Content Management|view"));
+        p.put("Partners", List.of("Anticipatory Action Plans|view", "Contingency Plans|view",
+                "Reports & Analytics|view"));
         return p;
     }
 
@@ -153,7 +153,7 @@ public class PermissionLocalSeeder implements CommandLineRunner {
         d.put("DAS", "District Administrative Secretary — district approval authority.");
         d.put("Comms Officer", "Communications — alert dissemination and public content.");
         d.put("MDA Focal", "Sector / MDA focal point — One Health and sectoral coordination.");
-        d.put("Partners", "Stakeholders & partners — scoped read access and assigned tasks.");
+        d.put("Partners", "Stakeholders & partners — scoped read access to planning and public analytics.");
         d.forEach((role, desc) -> jdbc.update(
                 "update public.roles set description = ? where name = ? and description is null", desc, role));
     }

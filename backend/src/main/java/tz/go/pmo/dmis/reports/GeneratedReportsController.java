@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -30,6 +31,7 @@ public class GeneratedReportsController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('damage_assessment.view')")
     public Map<String, Object> index(@RequestParam(required = false) String type,
                                      @RequestParam(required = false) Long incident_id) {
         StringBuilder sql = new StringBuilder("""
