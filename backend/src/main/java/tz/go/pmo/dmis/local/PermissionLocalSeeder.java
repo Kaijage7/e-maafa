@@ -42,7 +42,7 @@ public class PermissionLocalSeeder implements CommandLineRunner {
         c.put("Risk Index", List.of("create", "approve"));
         c.put("Early Warning", List.of("view", "create", "disseminate", "approve"));
         c.put("Preparedness", List.of("view", "manage"));
-        c.put("Incidents", List.of("view", "create", "update", "approve", "close", "publish"));
+        c.put("Incidents", List.of("view", "create", "update", "comment", "approve", "close", "publish"));
         c.put("Budget & Finance", List.of("view", "manage", "approve", "disburse"));
         c.put("Resource Allocation", List.of("view", "request", "approve", "dispatch"));
         c.put("Stakeholders", List.of("view", "manage"));

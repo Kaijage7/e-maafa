@@ -168,13 +168,15 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
           <div class="panel-row full">
             <dmis-panel title="Situation Updates" icon="fa-comment-dots" [badge]="d.updates.length + ' entries'">
               <div class="panel-body">
-                <div class="d-flex gap-2 mb-3">
-                  <select class="form-select form-select-sm" style="max-width:200px;" [(ngModel)]="updateType">
-                    @for (t of updateTypes(); track t) { <option [value]="t">{{ t }}</option> }
-                  </select>
-                  <input type="text" class="form-control form-control-sm" placeholder="Log a situation update..." [(ngModel)]="updateText">
-                  <button type="button" class="btn btn-sm btn-add" (click)="addUpdate()"><i class="fas fa-plus"></i></button>
-                </div>
+                @if (canLogUpdate()) {
+                  <div class="d-flex gap-2 mb-3">
+                    <select class="form-select form-select-sm" style="max-width:200px;" [(ngModel)]="updateType">
+                      @for (t of updateTypes(); track t) { <option [value]="t">{{ t }}</option> }
+                    </select>
+                    <input type="text" class="form-control form-control-sm" placeholder="Log a situation update..." [(ngModel)]="updateText">
+                    <button type="button" class="btn btn-sm btn-add" (click)="addUpdate()"><i class="fas fa-plus"></i></button>
+                  </div>
+                }
                 @for (u of d.updates; track u.id) {
                   <div style="padding:0.5rem 0;border-bottom:1px solid #f1f5f9;">
                     <div style="font-size:0.82rem;color:var(--text-dark);">{{ u.update_details }}</div>
@@ -229,6 +231,9 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
                 @if (canCloseRumor()) {
                   <button class="btn btn-sm btn-outline-secondary" (click)="act('close-rumor', 'Close as a rumour / normal case? District leadership (DED, DAS) will be informed.')"><i class="fas fa-ban me-1"></i> Close (Rumour)</button>
                 }
+                @if (canAddComment()) {
+                  <button class="btn btn-sm btn-outline-primary" (click)="act('comments', 'Add an advisory comment to this incident?', true)"><i class="fas fa-comment-dots me-1"></i> Comment</button>
+                }
               </div>
               <div class="detail-label mt-3">Operational Status</div>
               <div class="wf-actions mt-1">
@@ -258,34 +263,38 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
             </div>
           </dmis-panel>
 
-          <dmis-panel title="Public Portal" icon="fa-bullhorn">
-            <div class="panel-body">
-              <div class="detail-label">Live map</div>
-              <div class="wf-actions mt-1">
-                @if (!d.incident.show_on_portal_map) {
-                  <button class="btn btn-sm btn-add" (click)="pushMap(true)"><i class="fas fa-map-marker-alt me-1"></i> Push to map</button>
-                } @else {
-                  <button class="btn btn-sm btn-outline-danger" (click)="pushMap(false)"><i class="fas fa-map-marker-alt me-1"></i> Remove from map</button>
-                  <a class="btn btn-sm btn-outline-primary" [href]="'/incident/' + d.incident.id" target="_blank" rel="noopener"><i class="fas fa-external-link-alt me-1"></i> View public page</a>
-                }
+          @if (canPublishPortal()) {
+            <dmis-panel title="Public Portal" icon="fa-bullhorn">
+              <div class="panel-body">
+                <div class="detail-label">Live map</div>
+                <div class="wf-actions mt-1">
+                  @if (!d.incident.show_on_portal_map) {
+                    <button class="btn btn-sm btn-add" (click)="pushMap(true)"><i class="fas fa-map-marker-alt me-1"></i> Push to map</button>
+                  } @else {
+                    <button class="btn btn-sm btn-outline-danger" (click)="pushMap(false)"><i class="fas fa-map-marker-alt me-1"></i> Remove from map</button>
+                    <a class="btn btn-sm btn-outline-primary" [href]="'/incident/' + d.incident.id" target="_blank" rel="noopener"><i class="fas fa-external-link-alt me-1"></i> View public page</a>
+                  }
+                </div>
+                <div class="detail-label mt-3">News &amp; Events</div>
+                <div class="wf-actions mt-1">
+                  @if (!d.incident.portal_news_id) {
+                    <button class="btn btn-sm btn-add" (click)="pushNews()"><i class="fas fa-newspaper me-1"></i> Push to news</button>
+                  } @else {
+                    <button class="btn btn-sm btn-outline-danger" (click)="removeNews()"><i class="fas fa-newspaper me-1"></i> Remove from news</button>
+                  }
+                </div>
+                <div style="font-size:0.75rem;color:var(--text-light);margin-top:0.6rem;">
+                  Publishing shows a live snapshot (situation, response &amp; resources) on the public portal map and News &amp; Events; it updates as you update the incident.
+                </div>
               </div>
-              <div class="detail-label mt-3">News &amp; Events</div>
-              <div class="wf-actions mt-1">
-                @if (!d.incident.portal_news_id) {
-                  <button class="btn btn-sm btn-add" (click)="pushNews()"><i class="fas fa-newspaper me-1"></i> Push to news</button>
-                } @else {
-                  <button class="btn btn-sm btn-outline-danger" (click)="removeNews()"><i class="fas fa-newspaper me-1"></i> Remove from news</button>
-                }
-              </div>
-              <div style="font-size:0.75rem;color:var(--text-light);margin-top:0.6rem;">
-                Publishing shows a live snapshot (situation, response &amp; resources) on the public portal map and News &amp; Events; it updates as you update the incident.
-              </div>
-            </div>
-          </dmis-panel>
+            </dmis-panel>
+          }
 
           <dmis-panel title="Situation Reports" icon="fa-file-medical" [badge]="d.history_reports.length + ''">
             <div class="panel-body">
-              <button class="btn btn-sm btn-outline-secondary w-100 mb-2" (click)="addHistoryReport()"><i class="fas fa-plus me-1"></i> Record Situation Report</button>
+              @if (canLogUpdate()) {
+                <button class="btn btn-sm btn-outline-secondary w-100 mb-2" (click)="addHistoryReport()"><i class="fas fa-plus me-1"></i> Record Situation Report</button>
+              }
               @for (r of d.history_reports; track r.id) {
                 <div style="font-size:0.78rem;padding:0.4rem 0;border-bottom:1px solid #f1f5f9;">
                   †{{ r.deaths_total }} · inj {{ r.injured_total }} · displ {{ r.displaced }}
@@ -365,33 +374,46 @@ export class IncidentShowComponent implements OnInit {
   }
 
   canSubmit(): boolean {
-    return ['draft', 'rolled_back_to_district', 'rolled_back_to_regional'].includes(this.wf());
+    return this.auth.hasPermission('incidents.create')
+      && ['draft', 'rolled_back_to_district', 'rolled_back_to_regional'].includes(this.wf());
   }
 
   canResubmit(): boolean {
-    return this.wf() === 'rolled_back_to_das';
+    return this.auth.hasPermission('incidents.approve') && this.wf() === 'rolled_back_to_das';
   }
 
   /** Escalation ladder stages (INCIDENT-WORKFLOW-PLAN.md). The backend still gates WHO may act at each. */
   canApprove(): boolean {
-    return ['waiting_ddmc', 'waiting_ded', 'waiting_rdmc', 'waiting_ras',
-      'waiting_eocc', 'waiting_director', 'waiting_ps'].includes(this.wf());
+    return this.auth.hasPermission('incidents.approve') && this.ownsCurrentWorkflowStage();
   }
 
   /** Roll-back is available at every stage except the DDMC entry. */
   canRollback(): boolean {
-    return ['waiting_ded', 'waiting_rdmc', 'waiting_ras',
-      'waiting_eocc', 'waiting_director', 'waiting_ps'].includes(this.wf());
+    return this.auth.hasPermission('incidents.approve') && this.ownsCurrentWorkflowStage()
+      && ['waiting_ded', 'waiting_rdmc', 'waiting_ras', 'waiting_eocc', 'waiting_director', 'waiting_ps'].includes(this.wf());
   }
 
   /** DDMC gatekeeper: close an entry-stage report as a rumour / normal case. */
   canCloseRumor(): boolean {
-    return this.wf() === 'waiting_ddmc';
+    return this.auth.hasPermission('incidents.approve') && this.wf() === 'waiting_ddmc' && this.ownsCurrentWorkflowStage();
   }
 
   /** DED (district) / RAS (region): resolve locally when resources sufficed, instead of escalating. */
   canResolve(): boolean {
-    return ['waiting_ded', 'waiting_ras'].includes(this.wf());
+    return this.auth.hasPermission('incidents.approve') && this.ownsCurrentWorkflowStage()
+      && ['waiting_ded', 'waiting_ras'].includes(this.wf());
+  }
+
+  canAddComment(): boolean {
+    return this.auth.hasPermission('incidents.comment');
+  }
+
+  canLogUpdate(): boolean {
+    return this.auth.hasPermission('incidents.update');
+  }
+
+  canPublishPortal(): boolean {
+    return this.auth.hasPermission('incidents.publish');
   }
 
   /** Operational status (separate axis from the approval workflow_status). */
@@ -400,15 +422,31 @@ export class IncidentShowComponent implements OnInit {
   }
 
   canVerify(): boolean {
-    return !['Verified', 'Closed'].includes(this.opStatus());
+    return this.auth.hasPermission('incidents.update') && !['Verified', 'Closed'].includes(this.opStatus());
   }
 
   canEscalate(): boolean {
-    return !['Escalated', 'Closed'].includes(this.opStatus());
+    return this.auth.hasPermission('incidents.update') && !['Escalated', 'Closed'].includes(this.opStatus());
   }
 
   canClose(): boolean {
-    return this.opStatus() !== 'Closed';
+    return this.auth.hasPermission('incidents.close') && this.opStatus() !== 'Closed';
+  }
+
+  private ownsCurrentWorkflowStage(): boolean {
+    if (this.auth.hasRole('Super Admin')) {
+      return true;
+    }
+    const stageRoles: Record<string, string[]> = {
+      waiting_ddmc: ['Dist DC'],
+      waiting_ded: ['DED'],
+      waiting_rdmc: ['Reg DC'],
+      waiting_ras: ['RAS'],
+      waiting_eocc: ['EOCC'],
+      waiting_director: ['Director'],
+      waiting_ps: ['Secretary'],
+    };
+    return (stageRoles[this.wf()] ?? []).some(role => this.auth.hasRole(role));
   }
 
   /** Confirm + optional comments prompt, then POST the workflow action. */

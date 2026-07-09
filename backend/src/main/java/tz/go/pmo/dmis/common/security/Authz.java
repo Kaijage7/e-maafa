@@ -194,6 +194,8 @@ public final class Authz {
     public static final String PERM_INCIDENT_UPDATE = "hasAuthority('incidents.update')";
     /** Act on the approval chain (approve / roll back / forward / resubmit / escalate / verify). */
     public static final String PERM_INCIDENT_APPROVE = "hasAuthority('incidents.approve')";
+    /** Add an advisory/audit comment without editing or approving the incident. */
+    public static final String PERM_INCIDENT_COMMENT = "hasAuthority('incidents.comment')";
     /** Close out an incident. */
     public static final String PERM_INCIDENT_CLOSE = "hasAuthority('incidents.close')";
     /** Read incident data / generate incident reports. */

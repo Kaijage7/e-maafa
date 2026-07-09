@@ -591,6 +591,22 @@ public class IncidentController {
         return Map.of("success", true, "message", "Incident resubmitted.", "workflow_status", to);
     }
 
+    /** Advisory/comment-only path for DC/RC/planning viewers and approvers; does not mutate incident fields. */
+    @PreAuthorize(Authz.PERM_INCIDENT_COMMENT)
+    @PostMapping("/{id}/comments")
+    @Transactional
+    public Map<String, Object> addComment(@PathVariable long id, @RequestBody Map<String, Object> body) {
+        Map<String, Object> incident = workflow.findOr404(id);
+        areaGuard.assertOwn("public.incidents", id);   // comment visibility follows the same district/region boundary
+        String text = comment(body);
+        if (text == null || text.isBlank()) {
+            throw new BusinessRuleException("Comments are required.");
+        }
+        String status = str(incident.get("workflow_status"));
+        workflow.logHistory(id, "commented", status, status, text.trim());
+        return Map.of("success", true, "message", "Comment recorded.");
+    }
+
     // Operational actions bound by routes/response.php to methods missing in the source
 
     @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
@@ -765,7 +781,7 @@ public class IncidentController {
 
     // ─── History reports (periodic situation figures) ───
 
-    @PreAuthorize(Authz.PERM_INCIDENT_VIEW)
+    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
     @PostMapping("/{id}/history-reports")
     @Transactional
     public ResponseEntity<Map<String, Object>> storeHistoryReport(@PathVariable long id, @RequestBody Map<String, Object> body) {

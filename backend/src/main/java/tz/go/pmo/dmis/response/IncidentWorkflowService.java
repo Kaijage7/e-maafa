@@ -135,14 +135,12 @@ public class IncidentWorkflowService {
         if (scope == Scope.DISTRICT) {
             Long myDistrict = asLong(me.get("district_id"));
             if (myDistrict == null || !myDistrict.equals(asLong(incident.get("district_id")))) {
-                throw new BusinessRuleException(
-                        "This incident is in another district; only the DED for its own district can action it.");
+                throw new ResourceNotFoundException("Record not found.");
             }
         } else { // REGION
             Long myRegion = asLong(me.get("region_id"));
             if (myRegion == null || !myRegion.equals(asLong(incident.get("region_id")))) {
-                throw new BusinessRuleException(
-                        "This incident is in another region; only the RAS for its own region can action it.");
+                throw new ResourceNotFoundException("Record not found.");
             }
         }
     }
