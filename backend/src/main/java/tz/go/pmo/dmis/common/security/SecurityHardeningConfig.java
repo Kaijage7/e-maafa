@@ -46,7 +46,12 @@ public class SecurityHardeningConfig {
         CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOrigins(origins);
         cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        cors.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Local-Roles", "Accept"));
+        // X-Local-Roles is a local E2E persona header only — never advertise it on production CORS.
+        if (local) {
+            cors.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Local-Roles", "Accept"));
+        } else {
+            cors.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        }
         cors.setExposedHeaders(List.of("Content-Disposition"));
         cors.setAllowCredentials(false);
         cors.setMaxAge(3600L);

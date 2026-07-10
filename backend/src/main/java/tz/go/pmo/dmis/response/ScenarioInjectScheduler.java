@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 
 /**
  * F79: fire due scenario injects even when nobody has the Command Post board open.
@@ -21,6 +22,7 @@ public class ScenarioInjectScheduler {
 
     private final JdbcTemplate jdbc;
     private final ActivationService activations;
+    private final CurrentUserResolver users;
 
     @Scheduled(fixedDelayString = "${dmis.scenario-injects.poll-ms:60000}")
     @Transactional
@@ -39,8 +41,8 @@ public class ScenarioInjectScheduler {
         if (due.isEmpty()) {
             return;
         }
-        // task_activity_log.user_id is NOT NULL — use a real system/admin id for scheduled fires.
-        Long systemUserId = resolveSystemUserId();
+        // task_activity_log.user_id is NOT NULL — real Super Admin / configured system actor only.
+        Long systemUserId = users.systemActorUserId();
         int fired = 0;
         for (Map<String, Object> row : due) {
             long injectId = ((Number) row.get("id")).longValue();
@@ -69,19 +71,4 @@ public class ScenarioInjectScheduler {
         }
     }
 
-    private Long resolveSystemUserId() {
-        try {
-            Long id = jdbc.query(
-                    "select id from public.users where email = 'admin@example.com' limit 1",
-                    rs -> rs.next() ? rs.getLong(1) : null);
-            if (id != null) {
-                return id;
-            }
-            return jdbc.query("select min(id) from public.users",
-                    rs -> rs.next() && rs.getObject(1) != null ? rs.getLong(1) : null);
-        } catch (RuntimeException ex) {
-            log.debug("system user resolve failed: {}", ex.getMessage());
-            return null;
-        }
-    }
 }

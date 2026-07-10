@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 
 /**
  * Port of the source's OneHealthService event behaviours plus the OhEvent /
@@ -114,8 +115,10 @@ public class OneHealthEventService {
     }
 
     private final JdbcTemplate jdbc;
+    private final CurrentUserResolver users;
 
-    public OneHealthEventService(JdbcTemplate jdbc) {
+    public OneHealthEventService(JdbcTemplate jdbc, CurrentUserResolver users) {
+        this.users = users;
         this.jdbc = jdbc;
     }
 
@@ -491,22 +494,11 @@ public class OneHealthEventService {
     }
 
     /**
-     * users.id of the acting user. The local profile's synthetic subject is not a
-     * numeric users.id, so audit columns that are NOT NULL resolve to the seeded
-     * admin account; production tokens carry the numeric id directly.
+     * users.id of the acting user — JWT subject, configured system actor, or Super Admin role.
+     * Does not invent demo emails. May be null if no real user can be resolved.
      */
     Long actingUserId() {
-        Long id = currentUserDbId();
-        if (id != null) {
-            return id;
-        }
-        Long admin = jdbc.query("select id from public.users where email = 'admin@example.com'",
-                rs -> rs.next() ? rs.getLong(1) : null);
-        if (admin != null) {
-            return admin;
-        }
-        return jdbc.query("select min(id) from public.users",
-                rs -> rs.next() && rs.getObject(1) != null ? rs.getLong(1) : null);
+        return users.actingUserId();
     }
 
     static String trimToNull(String s) {

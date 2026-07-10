@@ -1,7 +1,8 @@
 # e-MAAFA / DMIS — Production Go-Live Runbook
 
 > **Source of truth for go-live ops:** `space02.md` §3, §7.2 (GL-01…GL-10), §8.  
-> **Honesty:** This runbook configures and proves a careful production cutover. It does **not** claim NIDA/LATRA/NAPA/IFMIS live integration, AI productisation, or empty-DB-from-V1 installs.
+> **Honesty:** This runbook configures and proves a careful production cutover. It does **not** claim NIDA/LATRA/NAPA/IFMIS live integration, AI productisation, or empty-DB-from-V1 installs.  
+> **No fakes:** Do not mark integration endpoints `live` without dual-proof; do not invent casualty/EC gazette data; do not enable `local` profile or residual-accept flags without written sign-off.
 
 **Assessment baseline:** 2026-07-10 space02 pre-deploy (local dual-proof: smoke **12/12**; persona JWT fail=0; Flyway through **V195**; integrity residuals 0 including poly links; geo↔INFORM 156/156; `space02IssueRegister` on readiness board; **openCode=0**).
 

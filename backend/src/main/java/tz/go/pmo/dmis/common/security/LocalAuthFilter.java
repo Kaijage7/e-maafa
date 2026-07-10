@@ -102,14 +102,17 @@ public class LocalAuthFilter extends OncePerRequestFilter {
             if (byRole != null) {
                 return byRole;
             }
-            Long admin = jdbc.query("select id from public.users where email = 'admin@example.com'",
-                    rs -> rs.next() ? rs.getLong(1) : null);
-            if (admin != null) {
-                return admin;
+            // Local E2E only: any Super Admin seat, else lowest real user id — never invent id=1.
+            Long superAdmin = jdbc.query(
+                    "select min(mhr.model_id) from public.model_has_roles mhr "
+                            + "join public.roles r on r.id = mhr.role_id where r.name = 'Super Admin'",
+                    rs -> rs.next() && rs.getObject(1) != null ? rs.getLong(1) : null);
+            if (superAdmin != null) {
+                return superAdmin;
             }
             Long min = jdbc.query("select min(id) from public.users",
                     rs -> rs.next() && rs.getObject(1) != null ? rs.getLong(1) : null);
-            return min == null ? 1L : min;
+            return min;
         });
     }
 }

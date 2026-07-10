@@ -6,14 +6,12 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
 import tz.go.pmo.dmis.notification.NotificationService;
 
@@ -49,8 +47,11 @@ public class IncidentWorkflowService {
 
     private final JdbcTemplate jdbc;
     private final NotificationService notifications;
+    private final CurrentUserResolver users;
 
-    public IncidentWorkflowService(JdbcTemplate jdbc, NotificationService notifications) {
+    public IncidentWorkflowService(JdbcTemplate jdbc, NotificationService notifications,
+                                   CurrentUserResolver users) {
+        this.users = users;
         this.jdbc = jdbc;
         this.notifications = notifications;
     }
@@ -615,18 +616,9 @@ public class IncidentWorkflowService {
         return rows.get(0);
     }
 
-    /** users.id of the acting user; local-profile sessions resolve to the seeded admin. */
+    /** users.id of the acting user — honest JWT / Super Admin / configured system actor only. */
     Long actingUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
-            try {
-                return Long.parseLong(jwt.getSubject());
-            } catch (NumberFormatException localSubjectIsNotNumeric) {
-                // fall through to the admin lookup below
-            }
-        }
-        return jdbc.query("select id from public.users where email = 'admin@example.com'",
-                rs -> rs.next() ? rs.getLong(1) : null);
+        return users.actingUserId();
     }
 
     // ─── Stage notifications: ping the officers who now own the incident. ───

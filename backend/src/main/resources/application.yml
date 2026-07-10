@@ -112,6 +112,9 @@ dmis:
       ttl-minutes: ${DMIS_AUTH_JWT_TTL_MINUTES:30}
       # Limited-purpose tokens (password_change / mfa_enroll) expire faster.
       limited-ttl-minutes: ${DMIS_AUTH_JWT_LIMITED_TTL_MINUTES:15}
+    # Optional ops-configured system actor for scheduled jobs (email of a real Super Admin).
+    # Empty = resolve Super Admin by role only. Never hardcode demo emails in non-local code paths.
+    system-actor-email: ${DMIS_AUTH_SYSTEM_ACTOR_EMAIL:}
   # F59 delivery retry (failed/pending SMS + email). Cap retries; DLR still comes from webhook.
   delivery:
     retry-enabled: ${DMIS_DELIVERY_RETRY_ENABLED:true}
