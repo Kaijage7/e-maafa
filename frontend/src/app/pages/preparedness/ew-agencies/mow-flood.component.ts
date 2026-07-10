@@ -11,6 +11,7 @@ import { EntityTaskingsComponent } from './entity-taskings.component';
 import { CATCHMENT_BASINS, BASIN_BY_KEY } from './catchment-basins';
 import { ALERT_LEVELS, ALERT_RANK, alertColor, AGENCIES, HAZ_ICON, LIKELIHOOD, IMPACT } from './ew-agency.model';
 import { loadCrossAgencyRef, renderCrossAgencyRef, RefMarker } from './cross-agency-ref';
+import { escapeHtml } from '../../../core/html';
 import { addDmisBaseLayer } from '../../../core/tz-map';
 
 declare const L: any;
@@ -299,11 +300,14 @@ export class MowFloodComponent implements OnInit, OnDestroy {
 
     this.http.get<any>('/geojson/tz_districts_gadm.geojson').subscribe(gj => {
       this.districtLayer = L.geoJSON(gj, {
-        style: (f: any) => this.styleDistrict(f.properties.display_name),
-        onEachFeature: (f: any, lyr: any) => {
-          const nm = f.properties.display_name;
-          lyr.bindTooltip(() => `<b>${nm}</b><br>Alert: ${(this.districtAlerts()[nm] ?? 'None').replace('_', ' ')}`, { sticky: true });
-        },
+	        style: (f: any) => this.styleDistrict(f.properties.display_name),
+	        onEachFeature: (f: any, lyr: any) => {
+	          const nm = f.properties.display_name;
+	          lyr.bindTooltip(
+	            () => `<b>${escapeHtml(nm)}</b><br>Alert: ${escapeHtml((this.districtAlerts()[nm] ?? 'None').replace('_', ' '))}`,
+	            { sticky: true },
+	          );
+	        },
       }).addTo(this.map);
       try { this.map.fitBounds(this.districtLayer.getBounds(), { padding: [8, 8] }); } catch {}
       this.applyRef();

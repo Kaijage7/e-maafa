@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
-import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
+import { AuthService } from '../../core/auth.service';
 
 declare const Chart: any; // Chart.js 4.4.0, loaded per-page from the CDN exactly as index-v2 does
 
@@ -35,7 +36,9 @@ interface IndexResponse {
   template: `
     <dmis-page-header title="Risk Frameworks" icon="fa-file-contract"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Risk Frameworks'}]">
-      <a class="btn-add" routerLink="/m/content-management/frameworks/create"><i class="fas fa-plus"></i> Add New Framework</a>
+      @if (canManage()) {
+        <a class="btn-add" routerLink="/m/content-management/frameworks/create"><i class="fas fa-plus"></i> Add New Framework</a>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -108,12 +111,16 @@ interface IndexResponse {
                           <button class="ctx-trigger" type="button" (click)="toggleMenu(fw.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
                           <div class="ctx-menu" [class.open]="openMenu() === fw.id">
                             <button class="ctx-item" (click)="viewFramework(fw.id)"><i class="fas fa-eye"></i> View</button>
-                            <a class="ctx-item success" [routerLink]="['/m/content-management/frameworks', fw.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
+                            @if (canManage()) {
+                              <a class="ctx-item success" [routerLink]="['/m/content-management/frameworks', fw.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
+                            }
                             @if (fw.attachmentPath) {
                               <a class="ctx-item" [href]="'/api/storage/' + fw.attachmentPath" target="_blank"><i class="fas fa-download"></i> Download</a>
                             }
-                            <div class="ctx-divider"></div>
-                            <button class="ctx-item danger" (click)="askDelete(fw)"><i class="fas fa-trash"></i> Delete</button>
+                            @if (canManage()) {
+                              <div class="ctx-divider"></div>
+                              <button class="ctx-item danger" (click)="askDelete(fw)"><i class="fas fa-trash"></i> Delete</button>
+                            }
                           </div>
                         </div>
                       </td>
@@ -126,9 +133,11 @@ interface IndexResponse {
             <div class="empty-state">
               <i class="fas fa-file-contract"></i>
               No frameworks registered yet.<br>
-              <a class="btn-add" routerLink="/m/content-management/frameworks/create" style="margin-top:0.6rem;display:inline-flex;">
-                <i class="fas fa-plus"></i> Add First Framework
-              </a>
+              @if (canManage()) {
+                <a class="btn-add" routerLink="/m/content-management/frameworks/create" style="margin-top:0.6rem;display:inline-flex;">
+                  <i class="fas fa-plus"></i> Add First Framework
+                </a>
+              }
             </div>
           }
         </div>
@@ -210,6 +219,8 @@ interface IndexResponse {
 })
 export class FrameworksComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  readonly canManage = computed(() => this.auth.hasPermission('content_management.manage'));
   docTypeCanvas = viewChild<ElementRef<HTMLCanvasElement>>('docTypeChart');
   scopeCanvas = viewChild<ElementRef<HTMLCanvasElement>>('scopeChart');
 
@@ -296,6 +307,9 @@ export class FrameworksComponent implements AfterViewInit, OnDestroy {
   }
 
   askDelete(fw: FrameworkRow): void {
+    if (!this.canManage()) {
+      return;
+    }
     this.deleteTarget.set(fw);
     this.deleteOpen.set(true);
   }
@@ -303,6 +317,10 @@ export class FrameworksComponent implements AfterViewInit, OnDestroy {
   confirmDelete(): void {
     const target = this.deleteTarget();
     if (!target) {
+      return;
+    }
+    if (!this.canManage()) {
+      this.deleteOpen.set(false);
       return;
     }
     this.http.delete(`/api/v1/frameworks/${target.id}`).subscribe({

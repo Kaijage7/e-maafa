@@ -93,13 +93,33 @@ const DIM_DESC: Record<string, string> = {
     .indi { margin-top:.4rem; border-top:1px dashed #e2e8f0; padding-top:.7rem; }
     .indi-top { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin-bottom:.5rem; }
     .indi select { font:inherit; font-size:1rem; padding:.4rem .55rem; border:1px solid #cbd5e1; border-radius:6px; max-width:380px; }
-    .grp { margin:.45rem 0; }
-    .grp-cat { font-size:.8rem; font-weight:800; color:#0d3b66; text-transform:uppercase; letter-spacing:.04em; }
-    .grp-name { font-size:.8rem; font-weight:700; color:#475569; margin:.25rem 0 .15rem; }
-    .ind-chips { display:flex; gap:.3rem; flex-wrap:wrap; }
-    .ind-chip { font:inherit; font-size:.8rem; font-weight:600; padding:.25rem .6rem; border-radius:5px; border:1px solid #d7dee6; background:#f8fafc; color:#475569; cursor:pointer; }
-    .ind-chip.on { background:#1f6feb; color:#fff; border-color:#1f6feb; }
-    .ind-chip .own { opacity:.7; font-weight:500; }
+    .crumb { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; font-size:.82rem; margin:.2rem 0 .55rem; }
+    .crumb button { font:inherit; font-size:.82rem; font-weight:700; border:none; background:transparent; color:#0369a1; cursor:pointer; padding:0; }
+    .crumb button:hover { text-decoration:underline; }
+    .crumb .sep { color:#94a3b8; }
+    .crumb .here { font-weight:800; color:#0f172a; }
+    .drill-tools { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-bottom:.55rem; }
+    .drill-tools input[type=search] { flex:1; min-width:180px; font:inherit; font-size:.9rem; padding:.4rem .65rem; border:1px solid #cbd5e1; border-radius:8px; }
+    .cat-block { border:1px solid #e2e8f0; border-radius:10px; margin-bottom:.5rem; overflow:hidden; background:#fff; }
+    .cat-head { width:100%; display:flex; justify-content:space-between; align-items:center; gap:.6rem; text-align:left;
+      font:inherit; font-size:.84rem; font-weight:800; padding:.55rem .75rem; border:none; background:#f8fafc; color:#0d3b66; cursor:pointer; }
+    .cat-head:hover { background:#f1f5f9; }
+    .cat-head.on-cat { background:#e0f2fe; }
+    .cat-body { padding:.35rem .65rem .65rem; border-top:1px solid #e2e8f0; max-height:280px; overflow:auto; }
+    .comp-block { margin:.35rem 0; }
+    .comp-head { width:100%; display:flex; justify-content:space-between; align-items:center; gap:.4rem; text-align:left;
+      font:inherit; font-size:.8rem; font-weight:700; padding:.35rem .45rem; border:1px solid transparent; border-radius:7px; background:transparent; color:#334155; cursor:pointer; }
+    .comp-head:hover { background:#f8fafc; }
+    .comp-head.on-comp { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+    .ind-list { display:flex; flex-direction:column; gap:2px; margin:.2rem 0 .35rem .55rem; padding-left:.45rem; border-left:2px solid #e2e8f0; }
+    .ind-row { display:flex; justify-content:space-between; align-items:center; gap:.5rem; width:100%; text-align:left;
+      font:inherit; font-size:.8rem; font-weight:600; padding:.32rem .45rem; border:1px solid transparent; border-radius:6px; background:transparent; color:#475569; cursor:pointer; }
+    .ind-row:hover { background:#f8fafc; border-color:#e2e8f0; }
+    .ind-row.on { background:#1f6feb; color:#fff; border-color:#1f6feb; }
+    .ind-row .own { opacity:.75; font-weight:500; font-size:.72rem; }
+    .ind-row .id { font-size:.68rem; opacity:.7; font-family:ui-monospace,monospace; }
+    .map-status { position:absolute; top:10px; left:10px; z-index:500; background:rgba(15,23,42,.88); color:#fff; font-size:.75rem; font-weight:700;
+      padding:.28rem .55rem; border-radius:6px; pointer-events:none; }
 
     .catbar { display:flex; flex-direction:row; gap:.4rem .5rem; align-items:center; flex-wrap:wrap; margin-bottom:.9rem; padding:.5rem .8rem; }
     .cat { font:inherit; font-size:.85rem; font-weight:700; padding:.32rem .7rem; border-radius:50px; border:1.5px solid #cbd5e1; background:#fff; color:#475569; cursor:pointer; display:inline-flex; align-items:center; gap:.3rem; flex:none; white-space:nowrap; }
@@ -108,9 +128,23 @@ const DIM_DESC: Record<string, string> = {
     .cat-n { font-weight:800; opacity:.8; }
 
     .maprow { display:grid; grid-template-columns:1.35fr 1fr; gap:1rem; margin-bottom:1rem; }
-    @media (max-width:980px){ .maprow { grid-template-columns:1fr; } }
+    .maprow.split { grid-template-columns:1.2fr 0.8fr; }
+    @media (max-width:980px){ .maprow, .maprow.split { grid-template-columns:1fr; } }
     .map-wrap { position:relative; overflow:hidden; }
-    #informExpMap { height:62vh; min-height:460px; border-radius:12px; z-index:1; }
+    #informExpMap, #informFocusMap { height:62vh; min-height:460px; border-radius:12px; z-index:1; }
+    .maprow.split #informExpMap, .maprow.split #informFocusMap { height:56vh; min-height:400px; }
+    .focus-empty { display:flex; align-items:center; justify-content:center; height:56vh; min-height:400px; color:#64748b; font-size:.95rem; padding:1.2rem; text-align:center; }
+    .split-panel { display:flex; flex-direction:column; gap:.55rem; max-height:62vh; overflow:auto; }
+    .level-select { font:inherit; font-size:.9rem; font-weight:700; padding:.4rem .7rem; border:1.5px solid #cbd5e1; border-radius:8px; background:#fff; color:#0d3b66; cursor:pointer; }
+    .level-count { font-size:.85rem; color:#64748b; font-weight:600; }
+    .split-area { border:1px solid #e2e8f0; border-radius:10px; padding:.65rem .75rem; background:#f8fafc; cursor:pointer; }
+    .split-area:hover { border-color:#93c5fd; background:#eff6ff; }
+    .split-area.on { border-color:#1d4ed8; background:#dbeafe; }
+    .split-area .nm { font-weight:800; color:#0f172a; }
+    .split-area .rg { font-size:.8rem; color:#64748b; }
+    .split-area .sc { font-size:1.15rem; font-weight:900; font-variant-numeric:tabular-nums; }
+    .layout-bar { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-bottom:.75rem; }
+    .layout-bar .hint { font-size:.82rem; color:#64748b; flex:1; min-width:180px; }
     .leaflet-container { background:#e8edf2; } .leaflet-control-attribution { display:none !important; }
     .legend { background:#fff; padding:.5rem .65rem; border:1px solid #e2e8f0; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.08); font-size:.8rem; line-height:1.55; }
     .legend strong { font-size:.85rem; }
@@ -176,61 +210,137 @@ const DIM_DESC: Record<string, string> = {
     </div>
 
     <div class="wrap">
+      <!-- VIEW LEVEL (inform.co.tz pattern): each unit keeps its own score — map redistributes by level -->
+      <div class="card pad controls" style="margin-bottom:.75rem;">
+        <div class="ctl-row">
+          <span class="eyebrow">{{ t('view_level') }}</span>
+          <select class="level-select" [value]="mapLevel()" (change)="setMapLevel(($any($event.target).value))">
+            <option value="council">{{ t('level_council') }}</option>
+            <option value="region">{{ t('level_region') }}</option>
+          </select>
+          <span class="level-count">{{ ranked().length }} {{ mapLevel() === 'region' ? t('note_regions') : t('note_councils') }}</span>
+          <span class="muted" style="font-size:.85rem;">{{ t('view_level_hint') }}</span>
+        </div>
+      </div>
+
+      <!-- PRODUCT MODE: strategic risk vs operational EO hazard signals (F54) ------------------ -->
+      <div class="card pad controls" style="margin-bottom:.75rem;">
+        <div class="ctl-row">
+          <span class="eyebrow">{{ t('map_product') }}</span>
+          <div class="chips">
+            <button class="chip" [class.on]="mapMode() === 'strategic'" (click)="setMapMode('strategic')">{{ t('mode_strategic') }}</button>
+            <button class="chip" [class.on]="mapMode() === 'signals'" (click)="setMapMode('signals')">{{ t('mode_signals') }}</button>
+          </div>
+          @if (mapMode() === 'signals' && signalHazards().length) {
+            <select class="chip" style="border-radius:8px;cursor:pointer;" (change)="onSignalHazard($event)">
+              @for (h of signalHazards(); track h) {
+                <option [value]="h" [selected]="h === signalHazard()">{{ h }}</option>
+              }
+            </select>
+          }
+        </div>
+        <p class="muted" style="font-size:.85rem;margin:.35rem 0 0;">
+          {{ mapMode() === 'signals' ? t('mode_signals_hint') : t('mode_strategic_hint') }}
+        </p>
+      </div>
+
       <!-- LENS SELECTOR ------------------------------------------------------------------------ -->
+      @if (mapMode() === 'strategic') {
       <div class="card pad controls">
         <div class="ctl-row">
           <span class="eyebrow">{{ t('colour_councils_by') }}</span>
           <div class="chips">
             @for (l of dimLenses(); track l.key) {
-              <button class="chip" [class.on]="activeScope() === l.scope" (click)="setLens(l)">{{ lensLabel(l) }}</button>
+              <button class="chip" [class.on]="isDimChipOn(l)" (click)="setLens(l)">{{ lensLabel(l) }}</button>
             }
           </div>
         </div>
 
-        @if (activeDim(); as dim) {
+        @if (drillDim(); as dim) {
           <p class="muted" style="font-size:.9rem; margin:.1rem 0 .5rem;">{{ dimDesc() }}</p>
           <div class="indi">
-            <div class="indi-top">
-              <span class="eyebrow">{{ dimLabel(dim) }} — {{ t('drill_into') }}</span>
-              <select (change)="onDrillSelect($event)">
-                <option [value]="'dim:' + dim.key" [selected]="metricKey() === 'dim:' + dim.key">{{ t('whole') }} {{ dimLabel(dim) }} {{ t('paren_dimension') }}</option>
-                @for (c of dim.categories; track c.category) {
-                  <optgroup [label]="t('optgroup_category') + ' ' + nm(c.category)">
-                    <option [value]="'cat:' + c.category" [selected]="metricKey() === 'cat:' + c.category">{{ nm(c.category) }} {{ t('paren_category') }}</option>
-                    @for (comp of c.components; track comp.component) {
-                      <option [value]="'comp:' + comp.component" [selected]="metricKey() === 'comp:' + comp.component">  {{ comp.component }} {{ t('paren_component') }}</option>
-                      @for (ind of comp.indicators; track ind.id) {
-                        <option [value]="'ind:' + ind.id" [selected]="metricKey() === 'ind:' + ind.id">    {{ ind.name }}</option>
-                      }
-                    }
-                  </optgroup>
-                }
-              </select>
+            <!-- Breadcrumb: dimension → category → component → indicator (stays visible while map recolours) -->
+            <div class="crumb">
+              <button type="button" (click)="setLens({ key: 'dim:' + dim.key, label: dim.dimension, level: 'dim', scope: dim.key })">{{ dimLabel(dim) }}</button>
+              @if (crumbCat()) {
+                <span class="sep">›</span>
+                <button type="button" (click)="setMetric('cat:' + crumbCat()!, 'cat', crumbCat()!)">{{ nm(crumbCat()!) }}</button>
+              }
+              @if (crumbComp()) {
+                <span class="sep">›</span>
+                <button type="button" (click)="setMetric('comp:' + crumbComp()!, 'comp', crumbComp()!)">{{ crumbComp() }}</button>
+              }
+              @if (activeLens().level === 'ind') {
+                <span class="sep">›</span>
+                <span class="here">{{ lensLabel(activeLens()) }}</span>
+              } @else if (activeLens().level === 'dim') {
+                <span class="sep">›</span>
+                <span class="here">{{ t('whole') }} {{ dimLabel(dim) }}</span>
+              }
             </div>
-            @for (c of dim.categories; track c.category) {
-              <div class="grp">
-                <button class="ind-chip" [class.on]="metricKey() === 'cat:' + c.category"
-                        (click)="setMetric('cat:' + c.category, 'cat', c.category)" style="font-weight:800;">
-                  <span class="grp-cat">{{ nm(c.category) }}</span>
+
+            <div class="drill-tools">
+              <input type="search" [value]="indQuery()" (input)="indQuery.set(($any($event.target).value || ''))"
+                     [placeholder]="t('search_indicators')" aria-label="Search indicators">
+              <button type="button" class="chip" (click)="setLens({ key: 'dim:' + dim.key, label: dim.dimension, level: 'dim', scope: dim.key })">
+                {{ t('whole') }} {{ dimLabel(dim) }}
+              </button>
+            </div>
+
+            @for (c of filteredCategories(dim); track c.category) {
+              <div class="cat-block">
+                <button type="button" class="cat-head"
+                        [class.on-cat]="metricKey() === 'cat:' + c.category || openCat() === c.category"
+                        (click)="toggleCat(c.category)">
+                  <span>{{ nm(c.category) }} · {{ countIndicators(c) }} {{ t('indicators_word') }}</span>
+                  <span>{{ openCat() === c.category || indQuery().trim() ? '▾' : '▸' }}</span>
                 </button>
-                @for (comp of c.components; track comp.component) {
-                  <div class="grp-name">{{ comp.component }}</div>
-                  <div class="ind-chips">
-                    <button class="ind-chip" [class.on]="metricKey() === 'comp:' + comp.component"
-                            (click)="setMetric('comp:' + comp.component, 'comp', comp.component)" style="font-style:italic;">{{ t('whole_component') }}</button>
-                    @for (ind of comp.indicators; track ind.id) {
-                      <button class="ind-chip" [class.on]="metricKey() === 'ind:' + ind.id"
-                              (click)="setMetric('ind:' + ind.id, 'ind', ind.name)" [title]="ind.id">
-                        {{ ind.name }}@if (ind.owner) { <span class="own"> · {{ ind.owner }}</span> }
-                      </button>
+                @if (openCat() === c.category || indQuery().trim()) {
+                  <div class="cat-body">
+                    <button type="button" class="comp-head" [class.on-comp]="metricKey() === 'cat:' + c.category"
+                            (click)="setMetric('cat:' + c.category, 'cat', c.category)">
+                      <span>{{ t('whole') }} {{ nm(c.category) }}</span>
+                      <span class="muted">{{ t('paren_category') }}</span>
+                    </button>
+                    @for (comp of filteredComponents(c); track comp.component) {
+                      <div class="comp-block">
+                        <button type="button" class="comp-head"
+                                [class.on-comp]="metricKey() === 'comp:' + comp.component || openComp() === comp.component"
+                                (click)="toggleComp(comp.component, c.category)">
+                          <span>{{ comp.component }} · {{ filteredIndicators(comp).length }}</span>
+                          <span>{{ openComp() === comp.component || indQuery().trim() ? '▾' : '▸' }}</span>
+                        </button>
+                        @if (openComp() === comp.component || indQuery().trim()) {
+                          <div class="ind-list">
+                            <button type="button" class="ind-row" [class.on]="metricKey() === 'comp:' + comp.component"
+                                    (click)="setMetric('comp:' + comp.component, 'comp', comp.component)">
+                              <span>{{ t('whole_component') }}</span>
+                            </button>
+                            @for (ind of filteredIndicators(comp); track ind.id) {
+                              <button type="button" class="ind-row" [class.on]="metricKey() === 'ind:' + ind.id"
+                                      (click)="selectIndicator(ind, dim.key, c.category, comp.component)" [title]="ind.id">
+                                <span>
+                                  {{ ind.name }}
+                                  @if (ind.owner) { <span class="own"> · {{ ind.owner }}</span> }
+                                </span>
+                                <span class="id">{{ ind.id }}</span>
+                              </button>
+                            }
+                          </div>
+                        }
+                      </div>
                     }
                   </div>
                 }
               </div>
             }
+            @if (!filteredCategories(dim).length) {
+              <p class="muted" style="font-size:.85rem;">{{ t('no_indicator_match') }}</p>
+            }
           </div>
         }
       </div>
+      }
 
       <!-- CLASS / SELECTED FILTER --------------------------------------------------------------- -->
       <div class="card pad catbar">
@@ -253,22 +363,80 @@ const DIM_DESC: Record<string, string> = {
         }
       </div>
 
-      <!-- MAP + REGIONAL PROFILE --------------------------------------------------------------- -->
-      <div class="maprow">
+      <!-- Layout: optional map split for selected areas --------------------------------------- -->
+      <div class="layout-bar">
+        <button type="button" class="chip" [class.on]="mapSplit()" (click)="requestMapSplit()">
+          {{ mapSplit() ? t('split_on') : t('split_offer') }}
+        </button>
+        @if (mapSplit()) {
+          <button type="button" class="chip" (click)="clearSplitPins()">{{ t('split_clear') }}</button>
+        }
+        <span class="hint">{{ mapSplit() ? t('split_hint_on') : t('split_hint_off') }}</span>
+      </div>
+
+      <!-- MAP + (focus map when split | regional profile) — main map always distributes scores per unit -->
+      <div class="maprow" [class.split]="mapSplit()">
         <div class="card map-wrap">
+          @if (mapBusy()) {
+            <div class="map-status">{{ t('map_updating') }}</div>
+          }
           <div #mapEl id="informExpMap"></div>
         </div>
-        <div class="card pad">
+        @if (mapSplit()) {
+          <div class="card map-wrap">
+            @if (selected()) {
+              <div #focusMapEl id="informFocusMap"></div>
+            } @else {
+              <div class="focus-empty">{{ t('focus_empty') }}</div>
+            }
+            @if (splitPins().length) {
+              <div class="pad" style="border-top:1px solid #e2e8f0;max-height:28vh;overflow:auto;">
+                @for (r of splitPins(); track r.area) {
+                  <div class="split-area" [class.on]="selected()?.area === r.area" (click)="selectRow(r)" style="margin-bottom:.4rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+                      <div>
+                        <div class="nm">{{ r.name }}</div>
+                        <div class="rg">{{ r.region || '—' }}</div>
+                      </div>
+                      <div class="sc" [style.color]="cls(r.value).color">{{ fmt(r.value) }}</div>
+                    </div>
+                    <div style="display:flex;gap:.45rem;margin-top:.35rem;flex-wrap:wrap;font-size:.78rem;color:#475569;">
+                      <span>H {{ fmt(r.hazard) }}</span>
+                      <span>V {{ fmt(r.vulnerability) }}</span>
+                      <span>C {{ fmt(r.coping) }}</span>
+                      <span class="badge" [style.background]="cls(r.value).color">{{ levelLabel(cls(r.value).level) }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else if (!selected()) {
+              <p class="muted" style="font-size:.9rem;margin:.6rem 0;padding:0 1rem;">{{ t('split_empty') }}</p>
+            }
+          </div>
+        } @else {
+          <div class="card pad">
+            <div class="eyebrow">{{ t('regional_profile') }}</div>
+            <div class="sub muted" style="font-size:.85rem; margin:.1rem 0 .3rem;">{{ t('regional_sub') }}{{ emphasize() ? ' ' + t('highlighting') + ' ' + emphasizeLabel() : '' }}</div>
+            <div [innerHTML]="regionalSvg()"></div>
+          </div>
+        }
+      </div>
+
+      <!-- When map is split, regional INFORM profile charts sit full-width below the map ------- -->
+      @if (mapSplit()) {
+        <div class="card pad" style="margin-bottom:1rem;">
           <div class="eyebrow">{{ t('regional_profile') }}</div>
-          <div class="sub muted" style="font-size:.85rem; margin:.1rem 0 .3rem;">{{ t('regional_sub') }}{{ emphasize() ? ' ' + t('highlighting') + ' ' + emphasizeLabel() : '' }}</div>
+          <div class="sub muted" style="font-size:.85rem; margin:.1rem 0 .3rem;">
+            {{ t('regional_sub') }}{{ emphasize() ? ' ' + t('highlighting') + ' ' + emphasizeLabel() : '' }}
+          </div>
           <div [innerHTML]="regionalSvg()"></div>
         </div>
-      </div>
+      }
 
       <!-- RANKED TABLE ------------------------------------------------------------------------- -->
       <div class="card table-wrap">
         <div class="table-head">
-          <span class="muted" style="font-weight:700;">{{ filtered().length }} {{ t('councils') }}</span>
+          <span class="muted" style="font-weight:700;">{{ filtered().length }} {{ mapLevel() === 'region' ? t('note_regions') : t('councils') }}</span>
           <div class="table-actions">
             @if (tableOpen()) {
               <button class="chip" (click)="toggleSort()">{{ sortDesc() ? t('high_to_low') : t('low_to_high') }}</button>
@@ -328,12 +496,37 @@ const DIM_DESC: Record<string, string> = {
                 <div class="eyebrow">{{ d.region || '' }}{{ d.region ? ' ' + t('region_word') + ' · ' : '' }}{{ d.area }}</div>
                 <h3 class="h2">{{ d.name }}</h3>
               </div>
-              <div class="detail-score" [style.color]="cls(d.risk).color">
-                {{ fmt(d.risk) }}
-                <span class="badge" [style.background]="cls(d.risk).color">{{ levelLabel(cls(d.risk).level) }}</span>
-              </div>
+              @if (!d.signalMode) {
+                <div class="detail-score" [style.color]="cls(d.risk).color">
+                  {{ fmt(d.risk) }}
+                  <span class="badge" [style.background]="cls(d.risk).color">{{ levelLabel(cls(d.risk).level) }}</span>
+                </div>
+              }
             </div>
 
+            @if (d.signalMode) {
+              <div class="eyebrow" style="margin-bottom:.6rem;">{{ t('mode_signals') }}</div>
+              @for (s of d.signals || []; track s.component) {
+                <div style="border:1px solid #e2e8f0;border-radius:8px;padding:.55rem .7rem;margin-bottom:.45rem;background:#f8fafc;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+                    <strong>{{ s.component }}</strong>
+                    <span class="badge" [style.background]="signalColor(s.signal)">{{ fmt(s.signal) }} · {{ s.status || '—' }}</span>
+                  </div>
+                  <div class="muted" style="font-size:.8rem;margin-top:.2rem;">
+                    {{ t('reliability_word') }}: {{ s.reliability || '—' }}
+                    · {{ t('coverage_word') }}: {{ s.coveragePct != null ? s.coveragePct + '%' : '—' }}
+                    · {{ s.membersPresent ?? 0 }}/{{ s.membersDesigned ?? 0 }}
+                  </div>
+                  @for (m of s.members || []; track m.id) {
+                    <div style="display:flex;justify-content:space-between;font-size:.78rem;color:#475569;padding:.1rem 0 .1rem .4rem;">
+                      <span>{{ m.name }}@if (m.owner) { <span class="muted"> · {{ m.owner }}</span> }</span>
+                      <span style="font-variant-numeric:tabular-nums;">{{ fmt(m.score) }}</span>
+                    </div>
+                  }
+                </div>
+              }
+              @if (!(d.signals || []).length) { <div class="muted">{{ t('no_indicator_data') }}</div> }
+            } @else {
             <div class="dim-grid">
               <div class="dim">
                 <div class="dim-head"><span>{{ t('dim_hazard') }}</span><b [style.color]="cls(d.hazard).color">{{ fmt(d.hazard) }}</b></div>
@@ -391,6 +584,7 @@ const DIM_DESC: Record<string, string> = {
                 <div [innerHTML]="detailCompareSvg()"></div>
               </div>
             </div>
+            }
           </div>
         } @else {
           <div class="detail-empty">{{ t('detail_empty') }}</div>
@@ -408,6 +602,7 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
   L = inject(PortalLabels);
   mapEl = viewChild<ElementRef>('mapEl');
+  focusMapEl = viewChild<ElementRef>('focusMapEl');
 
   classes = RISK_CLASSES;
   classLabels = CLASS_LABELS;
@@ -422,15 +617,21 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
     // Hero
     'eyebrow':            { en: 'INFORM Risk Index · Tanzania', sw: 'Fahirisi ya Hatari ya INFORM · Tanzania' },
     'risk_explorer':      { en: 'Risk Explorer', sw: 'Chunguza Hatari' },
-    'hero_desc':          { en: 'Choose a lens — overall INFORM risk, a dimension, or any single indicator — to recolour the council choropleth and the ranked table. Click a council for its full INFORM profile.', sw: 'Chagua kioo — hatari ya jumla ya INFORM, kipimo, au kiashiria chochote kimoja — kutia rangi upya ramani ya halmashauri na jedwali lililopangwa. Bofya halmashauri kuona wasifu wake kamili wa INFORM.' },
+    'hero_desc':          { en: 'Choose a level and a lens — overall INFORM risk, a dimension, or any single indicator — to recolour each unit with its own score. Click a unit for its full INFORM profile (selection highlights only; it does not repaint the whole map).', sw: 'Chagua ngazi na kioo — hatari ya jumla ya INFORM, kipimo, au kiashiria — kutia rangi kila eneo kwa alama yake. Bofya eneo kuona wasifu kamili (uteuzi unaangazia tu; haubadilishi rangi ya ramani yote).' },
     'risk_suffix':        { en: 'Risk', sw: 'Hatari' },
     // Stats
     'stat_councils':      { en: 'Councils', sw: 'Halmashauri' },
     'stat_regions':       { en: 'Regions', sw: 'Mikoa' },
     'stat_dimensions':    { en: 'Dimensions', sw: 'Vipimo' },
     'stat_indicators':    { en: 'Indicators', sw: 'Viashiria' },
+    // Level (inform.co.tz pattern)
+    'view_level':         { en: 'View at level', sw: 'Ona katika ngazi' },
+    'level_council':      { en: 'Council / LGA (195)', sw: 'Halmashauri / LGA (195)' },
+    'level_region':       { en: 'Region (31)', sw: 'Mkoa (31)' },
+    'view_level_hint':    { en: 'Each polygon keeps its own INFORM score — the map redistributes colours by level, not by the selected unit.', sw: 'Kila poligoni huhifadhi alama yake ya INFORM — ramani hugawa rangi kwa ngazi, si kwa eneo lililochaguliwa.' },
+    'focus_empty':        { en: 'Select an area on the main map or table to focus this panel on it (zoomed map of that unit).', sw: 'Chagua eneo kwenye ramani kuu au jedwali ili kulenga paneli hii (ramani iliyokuzwa ya eneo hilo).' },
     // Lens selector
-    'colour_councils_by': { en: 'Colour councils by', sw: 'Tia rangi halmashauri kwa' },
+    'colour_councils_by': { en: 'Colour units by', sw: 'Tia rangi maeneo kwa' },
     'overall_inform_risk':{ en: 'Overall INFORM Risk', sw: 'Hatari ya Jumla ya INFORM' },
     'drill_into':         { en: 'drill into a category, component or indicator', sw: 'ingia ndani ya kundi, kijenzi au kiashiria' },
     'whole':              { en: 'Whole', sw: 'Kizima' },
@@ -503,12 +704,44 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
     'national_word':      { en: 'National', sw: 'Kitaifa' },
     'x_region_ordered':   { en: 'Region (ordered by INFORM Risk →)', sw: 'Mkoa (umepangwa kwa Hatari ya INFORM →)' },
     'x_inform_dimension': { en: 'INFORM dimension', sw: 'Kipimo cha INFORM' },
+    'map_product':        { en: 'Map product', sw: 'Aina ya ramani' },
+    'mode_strategic':     { en: 'Strategic INFORM risk', sw: 'Hatari ya kimkakati ya INFORM' },
+    'mode_signals':       { en: 'EO hazard signals', sw: 'Ishara za hatari (EO)' },
+    'mode_strategic_hint':{ en: 'Slow structural composite — Hazard × Vulnerability × Coping (validated INFORM).', sw: 'Muundo wa kimkakati — Janga × Uathirikaji × Uwezo wa kukabili (INFORM).' },
+    'mode_signals_hint':  { en: 'Fast operational Earth-observation signals by hazard component. Faded fill = thinner basket reliability. Informs anticipatory action; not the headline risk score.', sw: 'Ishara za uendeshaji za EO kwa kila hatari. Rangi dhaifu = uaminifu mdogo wa data. Kwa hatua za mapema; si alama kuu ya hatari.' },
+    'signal_word':        { en: 'Signal', sw: 'Ishara' },
+    'reliability_word':   { en: 'Reliability', sw: 'Uaminifu' },
+    'coverage_word':      { en: 'Basket coverage', sw: 'Ufunikaji wa kikapu' },
+    'search_indicators':  { en: 'Search indicators by name or code…', sw: 'Tafuta viashiria kwa jina au msimbo…' },
+    'indicators_word':    { en: 'indicators', sw: 'viashiria' },
+    'no_indicator_match': { en: 'No indicators match this search.', sw: 'Hakuna kiashiria kinacholingana na utafutaji huu.' },
+    'map_updating':       { en: 'Updating map colours…', sw: 'Inasasisha rangi za ramani…' },
+    // Optional map-split layout
+    'split_offer':        { en: 'Split map · selected areas panel', sw: 'Gawa ramani · paneli ya maeneo yaliyochaguliwa' },
+    'split_on':           { en: 'Split map ON', sw: 'Mgawanyo wa ramani UMEWASHWA' },
+    'split_clear':        { en: 'Clear selected areas', sw: 'Futa maeneo yaliyochaguliwa' },
+    'split_hint_off':     { en: 'Optional: open a side panel for pinned councils; regional INFORM charts then move below the map.', sw: 'Hiari: fungua paneli ya pembeni kwa halmashauri zilizochaguliwa; chati za INFORM za kimkoa zinahamia chini ya ramani.' },
+    'split_hint_on':      { en: 'Click councils on the map or table to pin them here. Regional profile charts are below the map.', sw: 'Bofya halmashauri kwenye ramani au jedwali kuzibandika hapa. Wasifu wa kimkoa uko chini ya ramani.' },
+    'split_panel_title':  { en: 'Selected areas', sw: 'Maeneo yaliyochaguliwa' },
+    'split_panel_sub':    { en: 'Pinned councils for comparison (same lens as the map)', sw: 'Halmashauri zilizobandikwa kwa ulinganisho (kioo sawa na ramani)' },
+    'split_empty':        { en: 'No areas pinned yet — click a council on the map or table.', sw: 'Hakuna eneo lililobandikwa bado — bofya halmashauri kwenye ramani au jedwali.' },
+    'split_confirm':      { en: 'Split the map and show a focused map of the selected area beside it? Regional INFORM profile charts will move below the maps. The main map still shows every unit with its own score.', sw: 'Ungependa kugawa ramani na kuonyesha ramani iliyolengwa ya eneo lililochaguliwa kando yake? Chati za wasifu wa INFORM wa kimkoa zitahamia chini. Ramani kuu bado inaonyesha kila eneo kwa alama yake.' },
   };
 
-  /** Translate a component-local key to the portal's current language; falls back to English, then the key. */
-  t(k: string): string { return this.TR[k]?.[this.L.lang()] ?? this.TR[k]?.en ?? k; }
-  /** Render a risk-class / relative-band level in the current language (the English `.level` stays the key). */
-  levelLabel(level: string): string { return this.TR[level]?.[this.L.lang()] ?? this.TR[level]?.en ?? level; }
+  /** Active language only — never mixes EN into SW (or the reverse). */
+  t(k: string): string {
+    const e = this.TR[k];
+    if (!e) return k;
+    const v = (e[this.L.lang()] ?? '').trim();
+    return v || k;
+  }
+  /** Risk-class / relative-band label in the active language only. */
+  levelLabel(level: string): string {
+    const e = this.TR[level];
+    if (!e) return level;
+    const v = (e[this.L.lang()] ?? '').trim();
+    return v || level;
+  }
   /**
    * Display label for a lens. The overall-risk lens carries a hardcoded English label that we
    * translate; every drill-down lens (dimension / category / component / indicator) carries an
@@ -545,25 +778,54 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   classFilter = signal<string | null>(null);
   selectedOnly = signal(false);
   tableOpen = signal(true);
+  /** F54 — public explorer consumes /portal/inform/signals for operational EO layer. */
+  mapMode = signal<'strategic' | 'signals'>('strategic');
+  signalHazards = signal<string[]>([]);
+  signalHazard = signal<string>('Drought');
+  private signalRows = new Map<string, { area: string; name: string; signals: any[] }>();
+  private signalReliability = new Map<string, string>();
+  /** Keeps the dimension drill panel open while an indicator/category/component lens is active. */
+  drillDimKey = signal<string | null>(null);
+  openCat = signal<string | null>(null);
+  openComp = signal<string | null>(null);
+  indQuery = signal('');
+  mapBusy = signal(false);
+  /** Optional layout: main map + focus map of selected unit (inform.co.tz split panel). */
+  mapSplit = signal(false);
+  /** Geographic level of the choropleth — each unit still has its own score. */
+  mapLevel = signal<'council' | 'region'>('council');
+  /** Pinned councils when map-split is on (max 12). */
+  splitPins = signal<RiskRow[]>([]);
+  private crumbPath = signal<{ cat?: string; comp?: string }>({});
 
   private map: any; private layer: any; private legend: any; private viewReady = false;
+  private focusMap: any; private focusLayer: any;
   private rowByCode = new Map<string, RiskRow>();
   private regionByCode = new Map<string, string>();
+  private fittedOnce = false;
+  private pendingGeo: any = null;
+  private currentGeo: any = null;
   private readonly TZ_BOUNDS = [[-12.0, 28.5], [-0.8, 41.2]];
+  private readonly SIGNAL_BANDS = [
+    { label: 'Low', max: 2, color: '#2ECC71' },
+    { label: 'Moderate', max: 4, color: '#F4D03F' },
+    { label: 'Elevated', max: 6, color: '#E67E22' },
+    { label: 'High', max: 8, color: '#E74C3C' },
+    { label: 'Severe', max: 10.1, color: '#922B21' },
+  ];
 
   metricKey = computed(() => this.activeLens().key);
   activeScope = computed(() => this.activeLens().scope);
-  // The dimension being drilled, if the active lens lives inside one (so we show its drill panel).
-  activeDim = computed<Dim | null>(() => {
-    const l = this.activeLens();
-    if (l.level === 'risk') return null;
-    const struct = this.structure();
-    if (l.level === 'dim') return struct.find(d => d.key === l.scope) || null;
-    if (l.level === 'cat') return struct.find(d => d.categories.some(c => c.category === l.scope)) || null;
-    if (l.level === 'comp') return struct.find(d => d.categories.some(c => c.components.some(cm => cm.component === l.scope))) || null;
-    if (l.level === 'ind') return struct.find(d => d.categories.some(c => c.components.some(cm => cm.indicators.some(i => i.id === l.scope)))) || null;
-    return null;
+  /** Dimension panel: sticky via drillDimKey so indicator clicks never wipe the tree. */
+  drillDim = computed<Dim | null>(() => {
+    const key = this.drillDimKey();
+    if (!key) { return null; }
+    return this.structure().find(d => d.key === key) || null;
   });
+  /** Alias used by dimDesc() and older template paths. */
+  activeDim = computed<Dim | null>(() => this.drillDim());
+  crumbCat = computed(() => this.crumbPath().cat || null);
+  crumbComp = computed(() => this.crumbPath().comp || null);
   // The top-level lens chips: overall risk + each dimension.
   dimLenses = computed<Lens[]>(() => {
     const base: Lens[] = [{ key: 'risk', label: 'Overall INFORM Risk', level: 'risk', scope: 'risk' }];
@@ -595,25 +857,82 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   constructor() {
     this.http.get<Dim[]>('/api/v1/portal/inform/structure').subscribe({ next: s => this.structure.set(s || []), error: () => {} });
     this.http.get<any>('/api/v1/portal/inform/stats').subscribe({ next: s => { if (s) this.stats.set(s); }, error: () => {} });
-    // load the council geojson region names first (so the table/detail can show the region)
-    this.http.get<any>('/geojson/tz_councils.geojson').subscribe({
-      next: gj => { for (const f of gj?.features || []) { const p = f.properties || {}; if (p.code) this.regionByCode.set(p.code, p.reg); } this.buildMapLayer(gj); this.loadLens(); },
-      error: () => this.loadLens(),
-    });
+    // Council geojson first — supplies region names for table + seeds main map.
+    this.loadGeoForLevel('council');
 
-    // recolour + resize whenever the active lens changes; re-fit when the map becomes visible.
+    // Recolour only — do NOT re-fitBounds on every lens change (that felt like a full map refresh and lost place).
+    // Selection only thickens border / dims on "Selected only" filter — never paints every unit with the selected score.
     effect(() => {
-      this.rows();           // recolour when fresh lens data arrives
+      this.rows();
       this.selected();
       this.classFilter();
       this.selectedOnly();
-      this.L.lang();         // re-render the imperative legend + tooltips on a language switch
+      this.L.lang();
+      this.mapMode();
+      this.signalHazard();
       this.colourAll();
-      setTimeout(() => { if (this.map) { this.map.invalidateSize(); try { if (this.layer) this.map.fitBounds(this.layer.getBounds(), { padding: [10, 10] }); } catch {} } }, 120);
+      this.syncFocusMap();
     });
   }
-  ngAfterViewInit(): void { this.viewReady = true; this.initMap(); }
-  ngOnDestroy(): void { this.map?.remove(); }
+  ngAfterViewInit(): void { this.viewReady = true; this.initMap(); this.syncFocusMap(); }
+  ngOnDestroy(): void { this.map?.remove(); this.focusMap?.remove(); }
+
+  /** Switch choropleth geography (council ↔ region). Scores stay per-unit; selection is cleared. */
+  setMapLevel(level: 'council' | 'region'): void {
+    if (level !== 'council' && level !== 'region') {
+      return;
+    }
+    if (this.mapLevel() === level) {
+      return;
+    }
+    this.mapLevel.set(level);
+    this.selected.set(null);
+    this.detail.set(null);
+    this.selectedOnly.set(false);
+    this.classFilter.set(null);
+    this.splitPins.set([]);
+    this.fittedOnce = false;
+    this.loadGeoForLevel(level);
+  }
+
+  private loadGeoForLevel(level: 'council' | 'region'): void {
+    const url = level === 'region'
+      ? '/geojson/adm1_region/adm1.geojson'
+      : '/geojson/tz_councils.geojson';
+    this.http.get<any>(url).subscribe({
+      next: gj => {
+        const features = (gj?.features || []).map((f: any) => {
+          const p = { ...(f.properties || {}) };
+          if (level === 'region') {
+            // INFORM area codes are TZ##; adm1 uses reg_code like "07".
+            const rc = p.reg_code != null ? String(p.reg_code).padStart(2, '0') : '';
+            p.code = rc ? `TZ${rc}` : p.code;
+            p.name = p.reg_name || p.name || p.code;
+            p.reg = p.reg_name || p.name;
+          }
+          if (p.code && p.reg) {
+            this.regionByCode.set(p.code, p.reg);
+          }
+          return { ...f, properties: p };
+        });
+        const normalized = { type: 'FeatureCollection', features };
+        this.currentGeo = normalized;
+        this.buildMapLayer(normalized);
+        if (this.mapMode() === 'signals') {
+          this.loadSignals();
+        } else {
+          this.loadLens();
+        }
+      },
+      error: () => {
+        if (this.mapMode() === 'signals') {
+          this.loadSignals();
+        } else {
+          this.loadLens();
+        }
+      },
+    });
+  }
 
   // --- helpers exposed to the template ---
   cls(v: number | null | undefined) { return classifyRisk(v); }
@@ -627,21 +946,197 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   }
   classCount(level: string): number { return this.ranked().filter(r => classifyRisk(r.value).level === level).length; }
 
+  // --- product mode (strategic vs EO signals) ---
+  setMapMode(mode: 'strategic' | 'signals'): void {
+    this.mapMode.set(mode);
+    this.classFilter.set(null);
+    this.selectedOnly.set(false);
+    if (mode === 'signals') {
+      this.loadSignals();
+    } else {
+      this.loadLens();
+    }
+  }
+  onSignalHazard(e: Event): void {
+    const h = (e.target as HTMLSelectElement).value;
+    this.signalHazard.set(h);
+    this.applySignalLens();
+  }
+  private loadSignals(): void {
+    const level = this.mapLevel();
+    this.http.get<any[]>(`/api/v1/portal/inform/signals?level=${encodeURIComponent(level)}`).subscribe({
+      next: rows => {
+        this.signalRows.clear();
+        const seen = new Set<string>();
+        for (const row of rows || []) {
+          this.signalRows.set(row.area, row);
+          for (const s of row.signals || []) {
+            if (s?.component) { seen.add(s.component); }
+          }
+        }
+        const hazards = [...seen].sort();
+        this.signalHazards.set(hazards);
+        if (hazards.length && !hazards.includes(this.signalHazard())) {
+          this.signalHazard.set(hazards[0]);
+        }
+        this.applySignalLens();
+      },
+      error: () => { this.rows.set([]); this.colourAll(); },
+    });
+  }
+  private applySignalLens(): void {
+    const hazard = this.signalHazard();
+    const list: RiskRow[] = [];
+    this.signalReliability.clear();
+    this.rowByCode.clear();
+    for (const [area, row] of this.signalRows) {
+      const sig = (row.signals || []).find((s: any) => s.component === hazard);
+      const value = sig?.signal != null && isFinite(+sig.signal) ? +sig.signal : null;
+      const r: RiskRow = {
+        area,
+        name: row.name || area,
+        risk: value,
+        hazard: value,
+        vulnerability: null,
+        coping: null,
+        value,
+        region: this.regionByCode.get(area),
+      };
+      list.push(r);
+      this.rowByCode.set(area, r);
+      if (sig?.reliability) { this.signalReliability.set(area, String(sig.reliability)); }
+    }
+    this.rows.set(list);
+    this.colourAll();
+  }
+  /** Exposed for template signal badges. */
+  signalColor(v: number | null | undefined): string {
+    if (v == null || !isFinite(v)) { return NO_DATA; }
+    for (const b of this.SIGNAL_BANDS) { if (v <= b.max) { return b.color; } }
+    return this.SIGNAL_BANDS[this.SIGNAL_BANDS.length - 1].color;
+  }
+  private reliabilityOpacity(rel: string | undefined): number {
+    return rel === 'High' ? 0.85 : rel === 'Moderate' ? 0.58 : rel ? 0.35 : 0.72;
+  }
+
   // --- lens control ---
-  setLens(l: Lens): void { this.activeLens.set(l); this.classFilter.set(null); this.selectedOnly.set(false); this.loadLens(); }
+  isDimChipOn(l: Lens): boolean {
+    if (l.level === 'risk') { return this.activeLens().level === 'risk' && this.mapMode() === 'strategic'; }
+    return this.drillDimKey() === l.scope || (this.activeLens().level === 'dim' && this.activeLens().scope === l.scope);
+  }
+
+  setLens(l: Lens): void {
+    this.activeLens.set(l);
+    this.classFilter.set(null);
+    this.selectedOnly.set(false);
+    if (l.level === 'risk') {
+      this.drillDimKey.set(null);
+      this.openCat.set(null);
+      this.openComp.set(null);
+      this.crumbPath.set({});
+      this.indQuery.set('');
+    } else if (l.level === 'dim') {
+      this.drillDimKey.set(l.scope);
+      this.openCat.set(null);
+      this.openComp.set(null);
+      this.crumbPath.set({});
+    }
+    this.loadLens();
+  }
+
   setMetric(key: string, level: 'cat' | 'comp' | 'ind', scope: string): void {
+    // scope for indicators MUST be the indicator id (not display name) so the drill panel stays resolved.
     const label = this.labelFor(key, level, scope);
+    const dimKey = this.drillDimKey() || this.inferDimKey(level, scope);
+    if (dimKey) { this.drillDimKey.set(dimKey); }
+    if (level === 'cat') {
+      this.openCat.set(scope);
+      this.openComp.set(null);
+      this.crumbPath.set({ cat: scope });
+    } else if (level === 'comp') {
+      const cat = this.findCatForComp(scope);
+      if (cat) { this.openCat.set(cat); }
+      this.openComp.set(scope);
+      this.crumbPath.set({ cat: cat || this.crumbPath().cat, comp: scope });
+    }
     this.activeLens.set({ key, label, level, scope });
+    this.classFilter.set(null);
     this.loadLens();
   }
-  onDrillSelect(e: Event): void {
-    const key = (e.target as HTMLSelectElement).value;
-    if (key.startsWith('dim:')) { const dk = key.slice(4); const dim = this.structure().find(d => d.key === dk); if (dim) this.activeLens.set({ key, label: dim.dimension, level: 'dim', scope: dk }); }
-    else if (key.startsWith('cat:')) this.activeLens.set({ key, label: this.labelFor(key, 'cat', key.slice(4)), level: 'cat', scope: key.slice(4) });
-    else if (key.startsWith('comp:')) this.activeLens.set({ key, label: this.labelFor(key, 'comp', key.slice(5)), level: 'comp', scope: key.slice(5) });
-    else if (key.startsWith('ind:')) { const id = key.slice(4); this.activeLens.set({ key, label: this.indName(id), level: 'ind', scope: id }); }
+
+  selectIndicator(ind: Indicator, dimKey: string, cat: string, comp: string): void {
+    this.drillDimKey.set(dimKey);
+    this.openCat.set(cat);
+    this.openComp.set(comp);
+    this.crumbPath.set({ cat, comp });
+    // Pass indicator **id** as scope (bugfix: previously passed display name → activeDim became null and the tree vanished).
+    this.activeLens.set({ key: 'ind:' + ind.id, label: ind.name, level: 'ind', scope: ind.id });
+    this.classFilter.set(null);
     this.loadLens();
   }
+
+  toggleCat(cat: string): void {
+    this.openCat.update(c => c === cat ? null : cat);
+    // Always clear component when switching/collapsing categories (avoids stale openComp from another cat).
+    this.openComp.set(null);
+  }
+  toggleComp(comp: string, cat: string): void {
+    this.openCat.set(cat);
+    this.openComp.update(c => c === comp ? null : comp);
+  }
+
+  filteredCategories(dim: Dim): Cat[] {
+    const q = this.indQuery().trim().toLowerCase();
+    if (!q) { return dim.categories; }
+    return dim.categories
+      .map(c => ({
+        ...c,
+        components: this.filteredComponents(c),
+      }))
+      .filter(c => c.components.length > 0 || c.category.toLowerCase().includes(q));
+  }
+  filteredComponents(c: Cat): Cmp[] {
+    const q = this.indQuery().trim().toLowerCase();
+    if (!q) { return c.components; }
+    return c.components
+      .map(comp => ({ ...comp, indicators: this.filteredIndicators(comp) }))
+      .filter(comp =>
+        comp.indicators.length > 0
+        || comp.component.toLowerCase().includes(q));
+  }
+  filteredIndicators(comp: Cmp): Indicator[] {
+    const q = this.indQuery().trim().toLowerCase();
+    if (!q) { return comp.indicators; }
+    return comp.indicators.filter(i =>
+      i.name.toLowerCase().includes(q)
+      || i.id.toLowerCase().includes(q)
+      || (i.owner || '').toLowerCase().includes(q));
+  }
+  countIndicators(c: Cat): number {
+    return c.components.reduce((n, comp) => n + comp.indicators.length, 0);
+  }
+
+  private inferDimKey(level: 'cat' | 'comp' | 'ind', scope: string): string | null {
+    for (const d of this.structure()) {
+      for (const c of d.categories) {
+        if (level === 'cat' && c.category === scope) { return d.key; }
+        for (const cm of c.components) {
+          if (level === 'comp' && cm.component === scope) { return d.key; }
+          if (level === 'ind' && cm.indicators.some(i => i.id === scope)) { return d.key; }
+        }
+      }
+    }
+    return null;
+  }
+  private findCatForComp(comp: string): string | null {
+    for (const d of this.structure()) {
+      for (const c of d.categories) {
+        if (c.components.some(cm => cm.component === comp)) { return c.category; }
+      }
+    }
+    return null;
+  }
+
   private labelFor(_key: string, level: 'cat' | 'comp' | 'ind', scope: string): string {
     return level === 'ind' ? this.indName(scope) : scope;
   }
@@ -651,19 +1146,27 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   }
   private loadLens(): void {
     const key = this.metricKey();
-    this.http.get<RiskRow[]>(`/api/v1/portal/inform/risk?level=council&metric=${encodeURIComponent(key)}`).subscribe({
+    const level = this.mapLevel();
+    this.mapBusy.set(true);
+    this.http.get<RiskRow[]>(`/api/v1/portal/inform/risk?level=${encodeURIComponent(level)}&metric=${encodeURIComponent(key)}`).subscribe({
       next: rows => {
-        const list = (rows || []).map(r => ({ ...r, region: this.regionByCode.get(r.area) }));
+        const list = (rows || []).map(r => ({
+          ...r,
+          // Keep each unit's own risk/hazard/vuln/coping for the regional profile; never copy selected unit.
+          region: this.regionByCode.get(r.area) || (level === 'region' ? r.name : undefined),
+        }));
         this.rows.set(list);
         this.rowByCode.clear(); for (const r of list) this.rowByCode.set(r.area, r);
-        // National headline = mean across councils (subnational model is authoritative; honest summary).
+        // National headline = mean across units at current level (honest summary).
         if (key === 'risk') {
           const mean = (k: keyof RiskRow) => { const v = list.map(r => r[k] as number).filter(x => x != null && isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
           this.national.set({ area: 'TZ', name: 'Tanzania', risk: mean('risk'), hazard: mean('hazard'), vulnerability: mean('vulnerability'), coping: mean('coping'), value: mean('risk') });
         }
+        this.mapBusy.set(false);
         this.colourAll();
+        this.syncFocusMap();
       },
-      error: () => {},
+      error: () => { this.mapBusy.set(false); },
     });
   }
 
@@ -674,14 +1177,89 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   toggleSelectedOnly(): void { if (!this.selected()) return; this.selectedOnly.update(v => !v); this.classFilter.set(null); }
   selectRow(r: RiskRow): void { this.selectByCode(r.area); }
 
+  /** Prompt before enabling split layout so the change is intentional. */
+  requestMapSplit(): void {
+    if (this.mapSplit()) {
+      this.mapSplit.set(false);
+      if (this.focusMap) {
+        try { this.focusMap.remove(); } catch { /* ignore */ }
+        this.focusMap = null;
+        this.focusLayer = null;
+      }
+      setTimeout(() => this.map?.invalidateSize(), 80);
+      return;
+    }
+    if (!window.confirm(this.t('split_confirm'))) {
+      return;
+    }
+    this.mapSplit.set(true);
+    // Seed pins with current selection if any.
+    const sel = this.selected();
+    if (sel) {
+      this.pinSplit(sel);
+    }
+    setTimeout(() => {
+      this.map?.invalidateSize();
+      this.syncFocusMap();
+    }, 80);
+  }
+
+  clearSplitPins(): void {
+    this.splitPins.set([]);
+  }
+
+  private pinSplit(r: RiskRow): void {
+    const cur = this.splitPins();
+    if (cur.some(x => x.area === r.area)) {
+      return;
+    }
+    this.splitPins.set([r, ...cur].slice(0, 12));
+  }
+
   private selectByCode(code: string): void {
     const r = this.rowByCode.get(code) || null;
     this.selected.set(r);
     this.detail.set(null);
     if (!r) return;
+    // Selection highlights + zooms to the unit — does NOT recolor other units to this unit's score.
+    this.focusFeature(code);
+    if (this.mapSplit()) {
+      this.pinSplit(r);
+      // Allow Angular to create #focusMapEl before init.
+      setTimeout(() => this.syncFocusMap(), 50);
+    }
+    if (this.mapMode() === 'signals') {
+      const row = this.signalRows.get(code);
+      this.detail.set({
+        area: code,
+        name: r.name,
+        region: r.region,
+        signals: row?.signals || [],
+        signalMode: true,
+      });
+      return;
+    }
     this.http.get<any>(`/api/v1/portal/inform/risk/${encodeURIComponent(code)}`).subscribe({
       next: d => this.detail.set({ ...d, name: r.name, region: r.region }),
       error: () => {},
+    });
+  }
+
+  /** Fly the main map to the selected polygon bounds (inform.co.tz focusUnit behaviour). */
+  private focusFeature(code: string): void {
+    if (!this.layer || !this.map || !code) {
+      return;
+    }
+    this.layer.eachLayer((lyr: any) => {
+      const p = lyr.feature?.properties || {};
+      if (p.code === code) {
+        try {
+          this.map.fitBounds(lyr.getBounds(), {
+            padding: [36, 36],
+            maxZoom: this.mapLevel() === 'region' ? 7.5 : 9,
+          });
+        } catch { /* ignore */ }
+      }
     });
   }
 
@@ -694,11 +1272,22 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
     addMapNav(this.map, { home: [-6.2, 35.0, 6] });
     this.renderLegend();
     if (this.pendingGeo) { this.attachLayer(this.pendingGeo); this.pendingGeo = null; }
+    else if (this.currentGeo) { this.attachLayer(this.currentGeo); }
     setTimeout(() => this.map?.invalidateSize(), 200);
   }
-  private pendingGeo: any = null;
-  private buildMapLayer(gj: any): void { if (this.map) this.attachLayer(gj); else this.pendingGeo = gj; }
+  private buildMapLayer(gj: any): void {
+    this.currentGeo = gj;
+    if (this.map) {
+      this.attachLayer(gj);
+    } else {
+      this.pendingGeo = gj;
+    }
+  }
   private attachLayer(gj: any): void {
+    if (this.layer) {
+      try { this.map.removeLayer(this.layer); } catch { /* ignore */ }
+      this.layer = null;
+    }
     this.layer = L.geoJSON(gj, {
       style: () => ({ color: '#fff', weight: 1, fillColor: NO_DATA, fillOpacity: 0.82 }),
       onEachFeature: (f: any, lyr: any) => {
@@ -707,8 +1296,88 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
         lyr.on('click', () => { if (p.code) this.selectByCode(p.code); });
       },
     }).addTo(this.map);
-    try { this.map.fitBounds(this.layer.getBounds(), { padding: [10, 10] }); } catch {}
+    if (!this.fittedOnce) {
+      try { this.map.fitBounds(this.layer.getBounds(), { padding: [10, 10] }); this.fittedOnce = true; } catch {}
+    } else {
+      try { this.map.fitBounds(this.layer.getBounds(), { padding: [10, 10] }); } catch {}
+    }
     this.colourAll();
+    this.syncFocusMap();
+  }
+
+  /**
+   * Split-panel focus map: same metric colours, zoomed to the selected unit and isolating it
+   * (other units dimmed) — mirrors inform.co.tz DistrictMap isolateKey + focusUnit.
+   */
+  private syncFocusMap(): void {
+    if (!this.mapSplit() || !this.selected() || !this.currentGeo || typeof L === 'undefined') {
+      if (this.focusMap && !this.mapSplit()) {
+        try { this.focusMap.remove(); } catch { /* ignore */ }
+        this.focusMap = null;
+        this.focusLayer = null;
+      }
+      return;
+    }
+    const el = this.focusMapEl()?.nativeElement;
+    if (!el) {
+      return;
+    }
+    const code = this.selected()!.area;
+    if (!this.focusMap) {
+      this.focusMap = L.map(el, {
+        center: [-6.2, 35.0],
+        zoom: 7,
+        minZoom: 5,
+        maxBounds: this.TZ_BOUNDS,
+        maxBoundsViscosity: 0.8,
+        zoomControl: true,
+      });
+      try {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap',
+          maxZoom: 18,
+        }).addTo(this.focusMap);
+      } catch { /* ignore */ }
+    }
+    if (this.focusLayer) {
+      try { this.focusMap.removeLayer(this.focusLayer); } catch { /* ignore */ }
+      this.focusLayer = null;
+    }
+    const signals = this.mapMode() === 'signals';
+    const rel = signals ? null : this.relColor();
+    this.focusLayer = L.geoJSON(this.currentGeo, {
+      style: (f: any) => {
+        const c = f?.properties?.code;
+        const r = c ? this.rowByCode.get(c) : null;
+        const v = r?.value;
+        const isSel = c === code;
+        const fill = signals ? this.signalColor(v) : (rel ? rel(v) : classifyRisk(v).color);
+        return {
+          fillColor: fill,
+          fillOpacity: v == null ? 0.12 : (isSel ? 0.88 : 0.12),
+          color: isSel ? '#0f172a' : '#e2e8f0',
+          weight: isSel ? 2.6 : 0.6,
+        };
+      },
+      onEachFeature: (f: any, lyr: any) => {
+        const p = f.properties || {};
+        const r = p.code ? this.rowByCode.get(p.code) : null;
+        lyr.bindTooltip(
+          `<strong>${escapeHtml(p.name || p.code || '')}</strong><br>${escapeHtml(this.lensLabel(this.activeLens()))}: <b>${fmt(r?.value)}</b>`,
+          { sticky: true, className: 'map-tip' },
+        );
+        lyr.on('click', () => { if (p.code) this.selectByCode(p.code); });
+      },
+    }).addTo(this.focusMap);
+    // Zoom to the selected feature only.
+    this.focusLayer.eachLayer((lyr: any) => {
+      if (lyr.feature?.properties?.code === code) {
+        try {
+          this.focusMap.fitBounds(lyr.getBounds(), { padding: [24, 24], maxZoom: 10 });
+        } catch { /* ignore */ }
+      }
+    });
+    setTimeout(() => this.focusMap?.invalidateSize(), 80);
   }
 
   // Indicator lenses get a relative-quintile colour scale (own distribution); risk/dimension/category/
@@ -725,8 +1394,9 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   private colourAll(): void {
     if (!this.layer) return;
     this.renderLegend();
-    const rel = this.relColor();
-    const isInd = this.activeLens().level === 'ind';
+    const signals = this.mapMode() === 'signals';
+    const rel = signals ? null : this.relColor();
+    const isInd = !signals && this.activeLens().level === 'ind';
     this.layer.eachLayer((lyr: any) => {
       const p = lyr.feature?.properties || {}; const code = p.code; const name = p.name || code || this.t('council_word');
       if (!code) return;
@@ -735,31 +1405,55 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
       const isSel = this.selected()?.area === code;
       const cf = this.selectedOnly() ? null : this.classFilter();
       const dimmed = (cf && classifyRisk(v).level !== cf) || (this.selectedOnly() && this.selected() && this.selected()!.area !== code);
+      const fill = signals ? this.signalColor(v) : (rel ? rel(v) : classifyRisk(v).color);
+      const baseOp = signals
+        ? (v == null ? 0.18 : this.reliabilityOpacity(this.signalReliability.get(code)))
+        : (v == null ? 0.18 : 0.84);
       lyr.setStyle({
-        fillColor: rel ? rel(v) : classifyRisk(v).color,
-        fillOpacity: v == null ? 0.18 : dimmed ? 0.12 : 0.84,
+        fillColor: fill,
+        fillOpacity: dimmed ? 0.12 : baseOp,
         color: isSel ? '#0f172a' : dimmed ? '#e2e8f0' : '#ffffff',
         weight: isSel ? 2.4 : 1,
       });
-      const lbl = this.lensLabel(this.activeLens());
-      const cls = classifyRisk(v);
-      lyr.setTooltipContent(
-        `<strong>${escapeHtml(name)}</strong><br>${escapeHtml(lbl)}: <b>${v != null && isFinite(v) ? fmt(v) : '-'}</b>${v == null || isInd ? '' : ' · ' + this.levelLabel(cls.level)}`
-      );
+      if (signals) {
+        const relTxt = this.signalReliability.get(code);
+        lyr.setTooltipContent(
+          `<strong>${escapeHtml(name)}</strong><br>${escapeHtml(this.signalHazard())} ${escapeHtml(this.t('signal_word'))}: <b>${v != null && isFinite(v) ? fmt(v) : '-'}</b>`
+          + (relTxt ? `<br>${escapeHtml(this.t('reliability_word'))}: ${escapeHtml(relTxt)}` : '')
+        );
+      } else {
+        const lbl = this.lensLabel(this.activeLens());
+        const cls = classifyRisk(v);
+        lyr.setTooltipContent(
+          `<strong>${escapeHtml(name)}</strong><br>${escapeHtml(lbl)}: <b>${v != null && isFinite(v) ? fmt(v) : '-'}</b>${v == null || isInd ? '' : ' · ' + this.levelLabel(cls.level)}`
+        );
+      }
     });
   }
 
-  private legendTitle(): string { return this.lensLabel(this.activeLens()) + (this.activeLens().level === 'ind' ? ' ' + this.t('relative_suffix') : ''); }
+  private legendTitle(): string {
+    if (this.mapMode() === 'signals') {
+      return `${this.signalHazard()} ${this.t('signal_word')}`;
+    }
+    return this.lensLabel(this.activeLens()) + (this.activeLens().level === 'ind' ? ' ' + this.t('relative_suffix') : '');
+  }
   private renderLegend(): void {
     if (!this.map) return;
     if (this.legend) this.map.removeControl(this.legend);
-    const isInd = this.activeLens().level === 'ind';
+    const signals = this.mapMode() === 'signals';
+    const isInd = !signals && this.activeLens().level === 'ind';
     this.legend = L.control({ position: 'bottomright' });
     this.legend.onAdd = () => {
       const div = L.DomUtil.create('div', 'legend');
       let html = `<strong>${escapeHtml(this.legendTitle())}</strong><br>`;
-      if (isInd) { REL_LEGEND.forEach((lv, i) => { html += `<i style="background:${REL_PAL[i]}"></i>${escapeHtml(this.levelLabel(lv))}<br>`; }); }
-      else { for (const c of RISK_CLASSES) html += `<i style="background:${c.color}"></i>${escapeHtml(this.levelLabel(c.level))}<br>`; }
+      if (signals) {
+        for (const b of this.SIGNAL_BANDS) html += `<i style="background:${b.color}"></i>${escapeHtml(b.label)}<br>`;
+        html += `<div style="margin-top:.25rem;color:#64748b;font-size:.72rem">${escapeHtml(this.t('reliability_word'))} → opacity</div>`;
+      } else if (isInd) {
+        REL_LEGEND.forEach((lv, i) => { html += `<i style="background:${REL_PAL[i]}"></i>${escapeHtml(this.levelLabel(lv))}<br>`; });
+      } else {
+        for (const c of RISK_CLASSES) html += `<i style="background:${c.color}"></i>${escapeHtml(this.levelLabel(c.level))}<br>`;
+      }
       html += `<i style="background:${NO_DATA}"></i>${escapeHtml(this.t('No data'))}<br>`;
       div.innerHTML = html; return div;
     };
@@ -889,20 +1583,34 @@ export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
     return this.safe(this.barHorizSvg(top, 10));
   });
   regionalSvg = computed<SafeHtml>(() => {
-    // Mean per region across the council rows.
-    const byReg: Record<string, { risk: number[]; hazard: number[]; vuln: number[]; cope: number[] }> = {};
-    for (const r of this.rows()) {
-      const reg = r.region || 'Unknown';
-      const b = (byReg[reg] = byReg[reg] || { risk: [], hazard: [], vuln: [], cope: [] });
-      if (r.risk != null && isFinite(r.risk)) b.risk.push(r.risk);
-      if (r.hazard != null && isFinite(r.hazard)) b.hazard.push(r.hazard);
-      if (r.vulnerability != null && isFinite(r.vulnerability)) b.vuln.push(r.vulnerability);
-      if (r.coping != null && isFinite(r.coping)) b.cope.push(r.coping);
+    // Each unit keeps its own scores — never copy the selected unit onto all series.
+    // Region level: rows ARE regions. Council level: average councils up to their parent region.
+    let regional: { name: string; risk: number | null; hazard: number | null; vuln: number | null; cope: number | null }[];
+    if (this.mapLevel() === 'region') {
+      regional = this.rows()
+        .map(r => ({
+          name: r.name,
+          risk: r.risk,
+          hazard: r.hazard,
+          vuln: r.vulnerability,
+          cope: r.coping,
+        }))
+        .sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0));
+    } else {
+      const byReg: Record<string, { risk: number[]; hazard: number[]; vuln: number[]; cope: number[] }> = {};
+      for (const r of this.rows()) {
+        const reg = r.region || 'Unknown';
+        const b = (byReg[reg] = byReg[reg] || { risk: [], hazard: [], vuln: [], cope: [] });
+        if (r.risk != null && isFinite(r.risk)) b.risk.push(r.risk);
+        if (r.hazard != null && isFinite(r.hazard)) b.hazard.push(r.hazard);
+        if (r.vulnerability != null && isFinite(r.vulnerability)) b.vuln.push(r.vulnerability);
+        if (r.coping != null && isFinite(r.coping)) b.cope.push(r.coping);
+      }
+      const mean = (a: number[]) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
+      regional = Object.entries(byReg)
+        .map(([name, b]) => ({ name, risk: mean(b.risk), hazard: mean(b.hazard), vuln: mean(b.vuln), cope: mean(b.cope) }))
+        .sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0));
     }
-    const mean = (a: number[]) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
-    const regional = Object.entries(byReg)
-      .map(([name, b]) => ({ name, risk: mean(b.risk), hazard: mean(b.hazard), vuln: mean(b.vuln), cope: mean(b.cope) }))
-      .sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0));
     const series = [
       { name: this.t('inform_risk'), key: 'INFORM Risk', color: '#0f172a', values: regional.map(r => round1(r.risk)) },
       { name: this.t('dim_hazard'), key: 'Hazard and Exposure', color: '#FF9800', values: regional.map(r => round1(r.hazard)) },

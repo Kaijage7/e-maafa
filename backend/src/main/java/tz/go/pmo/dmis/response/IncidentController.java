@@ -82,7 +82,7 @@ public class IncidentController {
      * {@link JurisdictionScope} so every area-scoped registry behaves identically.
      */
     private void appendAreaScope(StringBuilder where, List<Object> params) {
-        jurisdiction.appendAreaScope("i", where, params);   // incidents carry region_id/district_id FK columns
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
     }
 
     // ─── Registry ───
@@ -213,11 +213,14 @@ public class IncidentController {
 
         Long regionId = parseOptionalId(errors, form, "region_id", "region");
         Long districtId = parseOptionalId(errors, form, "district_id", "district");
-        // Region is authoritative from the chosen district (a district belongs to exactly one region). Derive
-        // region_id from it, overriding a missing/mismatched region, so the incident always routes to the correct
-        // RAS at the region stage and stays visible to that region. Region-only incidents keep their region_id.
-        regionId = regionOfDistrict(districtId, regionId);
-        validateTargetArea(errors, regionId, districtId);
+        Long councilId = parseOptionalId(errors, form, "council_id", "council/LGA");
+        // Council/LGA is the most precise selected area; derive its parent district and region so the incident
+        // routes to the correct DDMC/DED and regional stages. District-only legacy records keep district scope.
+        TargetArea target = normalizeTargetArea(errors, regionId, districtId, councilId);
+        regionId = target.regionId();
+        districtId = target.districtId();
+        councilId = target.councilId();
+        validateTargetArea(errors, regionId, districtId, councilId);
         Long assignedToUserId = parseOptionalId(errors, form, "assigned_to_user_id", "assignee");
         validateAssignableUser(errors, assignedToUserId);
         if (!errors.isEmpty()) {
@@ -265,7 +268,7 @@ public class IncidentController {
         jdbc.update("update public.incidents set people_affected = ?, occurred_at = nullif(?,'')::timestamptz, "
                 + "ended_at = nullif(?,'')::timestamptz, council_id = ?, ward_id = ? where id = ?",
                 parseLong(form.get("people_affected")), form.get("occurred_at"), form.get("ended_at"),
-                parseLong(form.get("council_id")), parseLong(form.get("ward_id")), id);
+                councilId, parseLong(form.get("ward_id")), id);
         workflow.logHistory(id, "created", null, "draft", "Incident reported");
         return ResponseEntity.ok(Map.of("success", true, "message", "Incident logged successfully.", "id", id));
     }
@@ -288,8 +291,12 @@ public class IncidentController {
                     .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
         }
         Long updDistrictId = parseOptionalId(errors, form, "district_id", "district");
-        Long updRegionId = regionOfDistrict(updDistrictId, parseOptionalId(errors, form, "region_id", "region"));
-        validateTargetArea(errors, updRegionId, updDistrictId);
+        Long updCouncilId = parseOptionalId(errors, form, "council_id", "council/LGA");
+        TargetArea target = normalizeTargetArea(errors, parseOptionalId(errors, form, "region_id", "region"), updDistrictId, updCouncilId);
+        Long updRegionId = target.regionId();
+        updDistrictId = target.districtId();
+        updCouncilId = target.councilId();
+        validateTargetArea(errors, updRegionId, updDistrictId, updCouncilId);
         Long assignedToUserId = parseOptionalId(errors, form, "assigned_to_user_id", "assignee");
         validateAssignableUser(errors, assignedToUserId);
         if (!errors.isEmpty()) {
@@ -347,7 +354,7 @@ public class IncidentController {
         jdbc.update("update public.incidents set people_affected = ?, occurred_at = nullif(?,'')::timestamptz, "
                 + "ended_at = nullif(?,'')::timestamptz, council_id = ?, ward_id = ? where id = ?",
                 parseLong(form.get("people_affected")), form.get("occurred_at"), form.get("ended_at"),
-                parseLong(form.get("council_id")), parseLong(form.get("ward_id")), id);
+                updCouncilId, parseLong(form.get("ward_id")), id);
         workflow.logHistory(id, "edited", (String) incident.get("workflow_status"),
                 (String) incident.get("workflow_status"), "Incident details updated");
         return ResponseEntity.ok(Map.of("success", true, "message", "Incident updated successfully."));
@@ -578,17 +585,17 @@ public class IncidentController {
     }
 
     @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
+    @PostMapping("/{id}/resubmit")
+    public Map<String, Object> resubmit(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        String to = workflow.resubmit(id, comment(body));
+        return Map.of("success", true, "message", "Incident resubmitted after corrections.", "workflow_status", to);
+    }
+
+    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
     @PostMapping("/{id}/forward")
     public Map<String, Object> forward(@PathVariable long id, @RequestBody Map<String, Object> body) {
         String to = workflow.forward(id, strOf(body.get("to_role")), strOf(body.get("recommendation")));
         return Map.of("success", true, "message", "Incident forwarded.", "workflow_status", to);
-    }
-
-    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
-    @PostMapping("/{id}/resubmit")
-    public Map<String, Object> resubmit(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
-        String to = workflow.resubmit(id, comment(body));
-        return Map.of("success", true, "message", "Incident resubmitted.", "workflow_status", to);
     }
 
     /** Advisory/comment-only path for DC/RC/planning viewers and approvers; does not mutate incident fields. */
@@ -916,7 +923,7 @@ public class IncidentController {
         return jdbc.queryForList(sql.toString(), params.toArray());
     }
 
-    private void validateTargetArea(Map<String, List<String>> errors, Long regionId, Long districtId) {
+    private void validateTargetArea(Map<String, List<String>> errors, Long regionId, Long districtId, Long councilId) {
         if (regionId != null && count("regions", regionId) == 0) {
             add(errors, "region_id", "The selected region is invalid.");
         }
@@ -933,6 +940,15 @@ public class IncidentController {
         JurisdictionScope.Tier tier = jurisdiction.currentTier();
         Map<String, Object> area = jurisdiction.currentArea();
         if (tier == JurisdictionScope.Tier.DISTRICT) {
+            Long myCouncil = asLong(area.get("council_id"));
+            if (myCouncil != null) {
+                if (councilId == null) {
+                    add(errors, "council_id", "Your account is attached to a council/LGA; select your council/LGA.");
+                } else if (!myCouncil.equals(councilId)) {
+                    add(errors, "council_id", "You can only log incidents for your own council/LGA.");
+                }
+                return;
+            }
             Long myDistrict = asLong(area.get("district_id"));
             if (myDistrict == null) {
                 add(errors, "district_id", "Your account is not attached to a district.");
@@ -994,6 +1010,12 @@ public class IncidentController {
                 }
             }
             case DISTRICT -> {
+                Long councilId = asLong(area.get("council_id"));
+                if (councilId != null) {
+                    sql.append(" and u.council_id = ?");
+                    params.add(councilId);
+                    return;
+                }
                 Long districtId = asLong(area.get("district_id"));
                 if (districtId == null) {
                     sql.append(" and 1=0");
@@ -1206,6 +1228,30 @@ public class IncidentController {
         }
         List<Long> ids = jdbc.queryForList("select region_id from public.districts where id = ?", Long.class, districtId);
         return (ids.isEmpty() || ids.get(0) == null) ? postedRegionId : ids.get(0);
+    }
+
+    private record TargetArea(Long regionId, Long districtId, Long councilId) {}
+
+    private TargetArea normalizeTargetArea(Map<String, List<String>> errors, Long postedRegionId,
+                                           Long postedDistrictId, Long councilId) {
+        if (councilId == null) {
+            return new TargetArea(regionOfDistrict(postedDistrictId, postedRegionId), postedDistrictId, null);
+        }
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "select region_id, district_id from public.councils where id = ?", councilId);
+        if (rows.isEmpty()) {
+            add(errors, "council_id", "The selected council/LGA is invalid.");
+            return new TargetArea(regionOfDistrict(postedDistrictId, postedRegionId), postedDistrictId, null);
+        }
+        Long councilRegion = asLong(rows.get(0).get("region_id"));
+        Long councilDistrict = asLong(rows.get(0).get("district_id"));
+        if (postedRegionId != null && councilRegion != null && !postedRegionId.equals(councilRegion)) {
+            add(errors, "region_id", "The selected council/LGA does not belong to the selected region.");
+        }
+        if (postedDistrictId != null && councilDistrict != null && !postedDistrictId.equals(councilDistrict)) {
+            add(errors, "district_id", "The selected council/LGA does not belong to the selected district.");
+        }
+        return new TargetArea(councilRegion, councilDistrict, councilId);
     }
 
     private static int intOr0(String s) {

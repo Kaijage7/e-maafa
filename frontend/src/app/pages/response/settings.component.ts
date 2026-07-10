@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
+import { AuthService } from '../../core/auth.service';
 
 declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the Blade pages
 
@@ -52,9 +53,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     </dmis-page-header>
 
     <div class="queue-tabs">
-      <button [class.active]="tab() === 'chains'" (click)="tab.set('chains')">Approval Chains</button>
-      <button [class.active]="tab() === 'resources'" (click)="tab.set('resources')">Resource Catalogue</button>
-      <button [class.active]="tab() === 'types'" (click)="tab.set('types')">Incident Types</button>
+      @if (canViewWorkflow()) { <button [class.active]="tab() === 'chains'" (click)="tab.set('chains')">Approval Chains</button> }
+      @if (canViewCatalogue()) { <button [class.active]="tab() === 'resources'" (click)="tab.set('resources')">Resource Catalogue</button> }
+      @if (canViewCatalogue()) { <button [class.active]="tab() === 'types'" (click)="tab.set('types')">Incident Types</button> }
     </div>
 
     <!-- ── Approval chains (live V24 engine config) ── -->
@@ -72,8 +73,10 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
                   <td>{{ m.step_count }}</td>
                   <td><span class="chip" [class.on]="m.is_active" [class.off]="!m.is_active">{{ m.is_active ? 'Active' : 'Inactive' }}</span></td>
                   <td style="white-space:nowrap">
-                    <button class="btn-sm b-red" (click)="editChain(m.id)">Edit Chain</button>
-                    <button class="btn-sm b-outline" style="margin-left:4px" (click)="toggleModule(m.id)">Toggle</button>
+                    @if (canManageWorkflow()) {
+                      <button class="btn-sm b-red" (click)="editChain(m.id)">Edit Chain</button>
+                      <button class="btn-sm b-outline" style="margin-left:4px" (click)="toggleModule(m.id)">Toggle</button>
+                    }
                   </td>
                 </tr>
               } @empty { <tr><td colspan="5" class="empty">No approval modules configured.</td></tr> }
@@ -88,18 +91,20 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
           @for (s of editSteps; track $index; let i = $index) {
             <div class="step-row">
               <span class="ord">{{ i + 1 }}</span>
-              <input [(ngModel)]="s.name" placeholder="Step name (e.g. RAS Approval)">
-              <select [(ngModel)]="s.role_required">
+              <input [readonly]="!canManageWorkflow()" [(ngModel)]="s.name" placeholder="Step name (e.g. RAS Approval)">
+              <select [disabled]="!canManageWorkflow()" [(ngModel)]="s.role_required">
                 @for (r of editingModule().roles ?? []; track r.name) { <option [value]="r.name ?? r">{{ r.name ?? r }}</option> }
               </select>
-              <label style="font-size:0.75rem; white-space:nowrap"><input type="checkbox" [(ngModel)]="s.can_skip"> Can skip</label>
-              <button class="btn-sm b-outline" (click)="editSteps.splice(i, 1)">✕</button>
+              <label style="font-size:0.75rem; white-space:nowrap"><input type="checkbox" [disabled]="!canManageWorkflow()" [(ngModel)]="s.can_skip"> Can skip</label>
+              @if (canManageWorkflow()) { <button class="btn-sm b-outline" (click)="editSteps.splice(i, 1)">✕</button> }
             </div>
           }
-          <div style="margin-top:10px; display:flex; gap:8px">
-            <button class="btn-sm b-outline" (click)="addStep()"><i class="fas fa-plus"></i> Add step</button>
-            <button class="btn-sm b-red" (click)="saveChain()"><i class="fas fa-save"></i> Save Chain</button>
-          </div>
+          @if (canManageWorkflow()) {
+            <div style="margin-top:10px; display:flex; gap:8px">
+              <button class="btn-sm b-outline" (click)="addStep()"><i class="fas fa-plus"></i> Add step</button>
+              <button class="btn-sm b-red" (click)="saveChain()"><i class="fas fa-save"></i> Save Chain</button>
+            </div>
+          }
         }
       </dmis-panel>
     }
@@ -107,7 +112,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     <!-- ── Resource catalogue ── -->
     @if (tab() === 'resources') {
       <dmis-panel title="Resource Catalogue" icon="fa-box-archive">
-        <button class="btn-sm b-red" style="margin-bottom:10px" (click)="openResourceForm(null)"><i class="fas fa-plus"></i> Add Resource</button>
+        @if (canManageCatalogue()) {
+          <button class="btn-sm b-red" style="margin-bottom:10px" (click)="openResourceForm(null)"><i class="fas fa-plus"></i> Add Resource</button>
+        }
         <table>
           <thead><tr><th>Name</th><th>Category</th><th>Unit</th><th>In Stock</th><th>Low Threshold</th><th>Unit Cost</th><th></th></tr></thead>
           <tbody>
@@ -119,15 +126,17 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
                 <td>{{ r.in_stock | number }}</td>
                 <td>{{ r.low_stock_threshold ?? '—' }}</td>
                 <td>{{ r.unit_cost ? (r.unit_cost | number) : '—' }}</td>
-                <td style="white-space:nowrap;text-align:right;">
-                  <div class="ctx-wrap">
-                    <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + r.name" (click)="toggleMenu('res:' + r.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
-                    <div class="ctx-menu" [class.open]="openMenu() === 'res:' + r.id">
-                      <a class="ctx-item" (click)="openResourceForm(r)"><i class="fas fa-pen"></i> Edit</a>
-                      <a class="ctx-item danger" (click)="deleteResource(r.id)"><i class="fas fa-trash"></i> Delete</a>
+                @if (canManageCatalogue()) {
+                  <td style="white-space:nowrap;text-align:right;">
+                    <div class="ctx-wrap">
+                      <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + r.name" (click)="toggleMenu('res:' + r.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
+                      <div class="ctx-menu" [class.open]="openMenu() === 'res:' + r.id">
+                        <a class="ctx-item" (click)="openResourceForm(r)"><i class="fas fa-pen"></i> Edit</a>
+                        <a class="ctx-item danger" (click)="deleteResource(r.id)"><i class="fas fa-trash"></i> Delete</a>
+                      </div>
                     </div>
-                  </div>
-                </td>
+                  </td>
+                }
               </tr>
             } @empty { <tr><td colspan="7" class="empty">Catalogue is empty.</td></tr> }
           </tbody>
@@ -138,7 +147,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     <!-- ── Incident types ── -->
     @if (tab() === 'types') {
       <dmis-panel title="Incident Types" icon="fa-tags">
-        <button class="btn-sm b-red" style="margin-bottom:10px" (click)="openTypeForm(null)"><i class="fas fa-plus"></i> Add Incident Type</button>
+        @if (canManageCatalogue()) {
+          <button class="btn-sm b-red" style="margin-bottom:10px" (click)="openTypeForm(null)"><i class="fas fa-plus"></i> Add Incident Type</button>
+        }
         <table>
           <thead><tr><th>Name</th><th>Default Severity</th><th>Icon</th><th>Used By</th><th></th></tr></thead>
           <tbody>
@@ -148,15 +159,17 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
                 <td>{{ t.default_severity ?? '—' }}</td>
                 <td><i class="fas {{ t.icon_class }}"></i> {{ t.icon_class ?? '—' }}</td>
                 <td>{{ t.incident_count }} incidents</td>
-                <td style="white-space:nowrap;text-align:right;">
-                  <div class="ctx-wrap">
-                    <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + t.name" (click)="toggleMenu('type:' + t.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
-                    <div class="ctx-menu" [class.open]="openMenu() === 'type:' + t.id">
-                      <a class="ctx-item" (click)="openTypeForm(t)"><i class="fas fa-pen"></i> Edit</a>
-                      <a class="ctx-item danger" (click)="deleteType(t.id)"><i class="fas fa-trash"></i> Delete</a>
+                @if (canManageCatalogue()) {
+                  <td style="white-space:nowrap;text-align:right;">
+                    <div class="ctx-wrap">
+                      <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + t.name" (click)="toggleMenu('type:' + t.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
+                      <div class="ctx-menu" [class.open]="openMenu() === 'type:' + t.id">
+                        <a class="ctx-item" (click)="openTypeForm(t)"><i class="fas fa-pen"></i> Edit</a>
+                        <a class="ctx-item danger" (click)="deleteType(t.id)"><i class="fas fa-trash"></i> Delete</a>
+                      </div>
                     </div>
-                  </div>
-                </td>
+                  </td>
+                }
               </tr>
             } @empty { <tr><td colspan="5" class="empty">No incident types.</td></tr> }
           </tbody>
@@ -231,6 +244,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
 export class ResponseSettingsComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthService);
 
   readonly tab = signal<'chains' | 'resources' | 'types'>('chains');
   readonly chains = signal<any>({});
@@ -256,22 +270,31 @@ export class ResponseSettingsComponent implements OnInit {
     [...new Set((this.resources().resources ?? []).map((r: any) => r.category).filter(Boolean) as string[])].sort());
   readonly unitOptions = computed<string[]>(() =>
     [...new Set((this.resources().resources ?? []).map((r: any) => r.unit_of_measure).filter(Boolean) as string[])].sort());
+  readonly canViewWorkflow = computed(() => this.auth.hasPermission('approval_workflows.view'));
+  readonly canManageWorkflow = computed(() => this.auth.hasPermission('approval_workflows.manage'));
+  readonly canViewCatalogue = computed(() => this.auth.hasPermission('resource_catalogue.view'));
+  readonly canManageCatalogue = computed(() => this.auth.hasPermission('resource_catalogue.manage'));
 
   ngOnInit(): void {
     ensureSweetAlert();
     const t = this.route.snapshot.data['tab'];
     if (t === 'chains' || t === 'resources' || t === 'types') { this.tab.set(t); }
-    this.loadChains();
-    this.loadResources();
-    this.loadTypes();
+    if (this.tab() === 'chains' && !this.canViewWorkflow()) {
+      this.tab.set(this.canViewCatalogue() ? 'types' : 'chains');
+    } else if ((this.tab() === 'resources' || this.tab() === 'types') && !this.canViewCatalogue()) {
+      this.tab.set(this.canViewWorkflow() ? 'chains' : 'resources');
+    }
+    if (this.canViewWorkflow()) { this.loadChains(); }
+    if (this.canViewCatalogue()) { this.loadResources(); this.loadTypes(); }
   }
 
-  loadChains(): void { this.http.get<any>('/api/v1/response/settings/approval-chains').subscribe(d => this.chains.set(d)); }
-  loadResources(): void { this.http.get<any>('/api/v1/response/settings/resources').subscribe(d => this.resources.set(d)); }
-  loadTypes(): void { this.http.get<any>('/api/v1/response/settings/incident-types').subscribe(d => this.types.set(d)); }
+  loadChains(): void { if (this.canViewWorkflow()) { this.http.get<any>('/api/v1/response/settings/approval-chains').subscribe(d => this.chains.set(d)); } }
+  loadResources(): void { if (this.canViewCatalogue()) { this.http.get<any>('/api/v1/response/settings/resources').subscribe(d => this.resources.set(d)); } }
+  loadTypes(): void { if (this.canViewCatalogue()) { this.http.get<any>('/api/v1/response/settings/incident-types').subscribe(d => this.types.set(d)); } }
 
   // ── approval chain editor ──
   editChain(moduleId: number): void {
+    if (!this.canViewWorkflow()) { return; }
     this.http.get<any>(`/api/v1/response/settings/approval-chains/${moduleId}`).subscribe(d => {
       this.editSteps = (d.steps ?? []).map((s: any) => ({ name: s.name, role_required: s.role_required, can_skip: s.can_skip }));
       this.editingModule.set(d);
@@ -279,11 +302,13 @@ export class ResponseSettingsComponent implements OnInit {
   }
 
   addStep(): void {
+    if (!this.canManageWorkflow()) { return; }
     const roles = this.editingModule()?.roles ?? [];
     this.editSteps.push({ name: '', role_required: roles[0]?.name ?? roles[0] ?? '', can_skip: false });
   }
 
   saveChain(): void {
+    if (!this.canManageWorkflow()) { return; }
     if (this.editSteps.some(s => !s.name?.trim() || !s.role_required)) {
       ensureSweetAlert().then(() => Swal.fire('Incomplete', 'Every step needs a name and a role.', 'warning'));
       return;
@@ -293,11 +318,13 @@ export class ResponseSettingsComponent implements OnInit {
   }
 
   toggleModule(id: number): void {
+    if (!this.canManageWorkflow()) { return; }
     this.post(`/api/v1/response/settings/approval-chains/${id}/toggle`, {}, () => this.loadChains());
   }
 
   // ── resource catalogue ──
   openResourceForm(r: any | null): void {
+    if (!this.canManageCatalogue()) { return; }
     this.openMenu.set(null);
     this.formKind.set('resource');
     this.editId = r?.id ?? null;
@@ -309,11 +336,13 @@ export class ResponseSettingsComponent implements OnInit {
   }
 
   deleteResource(id: number): void {
+    if (!this.canManageCatalogue()) { return; }
     this.confirmDelete(`/api/v1/response/settings/resources/${id}`, 'Delete this resource?', () => this.loadResources());
   }
 
   // ── incident types ──
   openTypeForm(t: any | null): void {
+    if (!this.canManageCatalogue()) { return; }
     this.openMenu.set(null);
     this.formKind.set('type');
     this.editId = t?.id ?? null;
@@ -325,6 +354,7 @@ export class ResponseSettingsComponent implements OnInit {
 
   /** One save path for both catalogues — POST create / POST update (same contract as before; UI only changed). */
   saveForm(): void {
+    if (!this.canManageCatalogue()) { return; }
     if (!this.m.name?.trim()) { return; }
     this.saving.set(true);
     const kind = this.formKind();
@@ -352,11 +382,12 @@ export class ResponseSettingsComponent implements OnInit {
   }
 
   deleteType(id: number): void {
+    if (!this.canManageCatalogue()) { return; }
     this.confirmDelete(`/api/v1/response/settings/incident-types/${id}`, 'Delete this incident type?', () => this.loadTypes());
   }
 
   private confirmDelete(url: string, title: string, after: () => void): void {
-    ensureSweetAlert().then(() => Swal.fire({ title, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545' })
+    ensureSweetAlert().then(() => Swal.fire({ titleText: title, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545' })
       .then((r: any) => {
         if (r.isConfirmed) {
           this.http.delete<any>(url).subscribe({

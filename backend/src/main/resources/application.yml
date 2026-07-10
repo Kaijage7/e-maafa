@@ -13,8 +13,9 @@ spring:
       max-request-size: 12MB
 
   # SMTP for real email (stakeholder/dissemination notifications). Secrets from the environment.
+  # Default host is empty so readiness and MailHealthIndicator stay honest when credentials are deferred.
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
+    host: ${MAIL_HOST:}
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
@@ -83,6 +84,13 @@ management:
     health:
       probes:
         enabled: true
+      # Show component breakdown only when authenticated (ops diagnosis without public leakage).
+      show-details: when_authorized
+  health:
+    # Mail probe needs live SMTP credentials. Leave off until MAIL_HOST + password are set for cutover
+    # (readiness board already tracks host presence; controlled test-send proves delivery).
+    mail:
+      enabled: ${MANAGEMENT_HEALTH_MAIL_ENABLED:false}
 
 springdoc:
   swagger-ui:
@@ -99,15 +107,21 @@ dmis:
       # provided via env DMIS_AUTH_JWT_SECRET (>= 32 bytes) or startup fails fast; under the local
       # profile a bundled dev default is used. (Relaxed binding maps DMIS_AUTH_JWT_SECRET -> this key.)
       issuer: ${DMIS_AUTH_JWT_ISSUER:dmis}
-      # VAPT iii (excessive session lifetime): default lowered from 720 (12h) to 120 (2h) — a 6x reduction of
-      # the exposure window; deployments tune via DMIS_AUTH_JWT_TTL_MINUTES. NOTE: this is an interim hardening
-      # only. The structural fix the finding calls for — inactivity/idle timeout, short-lived access token +
-      # refresh, and server-side revocation on logout/deactivation — is a separate, dedicated auth change and
-      # is NOT delivered by this value alone (a stateless JWT cannot be revoked before it expires).
-      ttl-minutes: ${DMIS_AUTH_JWT_TTL_MINUTES:120}
+      # VAPT iii: access-token lifetime (was 720 → 120 → 60 → 30). Client idle logout + POST /v1/auth/logout
+      # denylist (jti) close the practical session window; full OAuth refresh-token design is optional later.
+      ttl-minutes: ${DMIS_AUTH_JWT_TTL_MINUTES:30}
+      # Limited-purpose tokens (password_change / mfa_enroll) expire faster.
+      limited-ttl-minutes: ${DMIS_AUTH_JWT_LIMITED_TTL_MINUTES:15}
+  # F59 delivery retry (failed/pending SMS + email). Cap retries; DLR still comes from webhook.
+  delivery:
+    retry-enabled: ${DMIS_DELIVERY_RETRY_ENABLED:true}
+    max-retries: ${DMIS_DELIVERY_MAX_RETRIES:3}
+    retry-delay-ms: ${DMIS_DELIVERY_RETRY_DELAY_MS:120000}
   # M-Gov SMS gateway (the proven national delivery path). Secrets come from the environment.
   mgov:
     url: ${MGOV_SMS_URL:https://mgov.gov.go.tz/gateway/sms/v2/send-sms}
+    # Optional shared secret for POST /v1/webhooks/mgov/dlr (empty = accept any in local).
+    dlr-secret: ${DMIS_MGOV_DLR_SECRET:}
     api-key: ${MGOV_API_KEY:}
     system-id: ${MGOV_SYSTEM_ID:}
     mobile-service-id: ${MGOV_MOBILE_SERVICE_ID:}

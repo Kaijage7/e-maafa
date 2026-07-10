@@ -1,0 +1,87 @@
+package tz.go.pmo.dmis.response;
+
+import java.util.List;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * F79: fire due scenario injects even when nobody has the Command Post board open.
+ * Board GET still fires due injects for the open activation (immediate UX); this covers
+ * the gap when the exercise director walks away.
+ */
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class ScenarioInjectScheduler {
+
+    private final JdbcTemplate jdbc;
+    private final ActivationService activations;
+
+    @Scheduled(fixedDelayString = "${dmis.scenario-injects.poll-ms:60000}")
+    @Transactional
+    public void fireDueInjects() {
+        List<Map<String, Object>> due = jdbc.queryForList("""
+                select ai.id, ai.activation_id, ai.title
+                from public.activation_injects ai
+                join public.response_activations a on a.id = ai.activation_id
+                where ai.status = 'pending'
+                  and ai.due_at is not null
+                  and ai.due_at <= now()
+                  and lower(coalesce(a.status,'')) = 'active'
+                order by ai.due_at, ai.id
+                limit 50
+                """);
+        if (due.isEmpty()) {
+            return;
+        }
+        // task_activity_log.user_id is NOT NULL — use a real system/admin id for scheduled fires.
+        Long systemUserId = resolveSystemUserId();
+        int fired = 0;
+        for (Map<String, Object> row : due) {
+            long injectId = ((Number) row.get("id")).longValue();
+            long activationId = ((Number) row.get("activation_id")).longValue();
+            int n = jdbc.update("""
+                    update public.activation_injects
+                       set status = 'fired', fired_at = now(), updated_at = now()
+                     where id = ? and status = 'pending'
+                    """, injectId);
+            if (n == 0) {
+                continue;
+            }
+            fired++;
+            if (systemUserId != null) {
+                try {
+                    activations.log(activationId, systemUserId, "inject_fired",
+                            "INJECT (scheduled): " + row.get("title"), null);
+                } catch (RuntimeException ex) {
+                    // Journal is best-effort — fire status already committed on this row if outer TX allows.
+                    log.warn("inject journal skip for activation {}: {}", activationId, ex.getMessage());
+                }
+            }
+        }
+        if (fired > 0) {
+            log.info("Scenario inject scheduler fired {} due inject(s)", fired);
+        }
+    }
+
+    private Long resolveSystemUserId() {
+        try {
+            Long id = jdbc.query(
+                    "select id from public.users where email = 'admin@example.com' limit 1",
+                    rs -> rs.next() ? rs.getLong(1) : null);
+            if (id != null) {
+                return id;
+            }
+            return jdbc.query("select min(id) from public.users",
+                    rs -> rs.next() && rs.getObject(1) != null ? rs.getLong(1) : null);
+        } catch (RuntimeException ex) {
+            log.debug("system user resolve failed: {}", ex.getMessage());
+            return null;
+        }
+    }
+}

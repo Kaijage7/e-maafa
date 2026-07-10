@@ -1,12 +1,13 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { NgClass } from '@angular/common';
+import { DecimalPipe, NgClass } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { EwAgencyService, Consolidated } from './ew-agency.service';
 import { EwCrossAgencyPanelComponent } from './ew-cross-agency-panel.component';
 import { EwPreviewModalComponent } from './ew-preview-modal.component';
 import { ALERT_LEVELS, alertColor, AGENCIES, AGENCY_HAZARDS, HAZ_ICON } from './ew-agency.model';
+import { escapeHtml } from '../../../core/html';
 import { addDmisBaseLayer } from '../../../core/tz-map';
 
 /** type-key -> icon file, flattened across all agencies' hazards (for the overlay markers). */
@@ -24,38 +25,78 @@ declare const L: any;
 @Component({
   selector: 'page-dmd-consolidated',
   standalone: true,
-  imports: [NgClass, RouterLink, EwCrossAgencyPanelComponent, EwPreviewModalComponent],
+  imports: [NgClass, DecimalPipe, RouterLink, EwCrossAgencyPanelComponent, EwPreviewModalComponent],
   styles: [`
-    .wrap { padding: 14px 18px 40px; }
-    .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-    .hd .ic { width: 44px; height: 44px; border-radius: 11px; background: #ede7f6; color: #4527a0; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; }
-    .hd h1 { font-size: 1.3rem; margin: 0; color: #14303a; } .hd .sub { font-size: 0.8rem; color: #6c757d; }
-    .src { margin-left: auto; font-size: 0.8rem; color: #475569; text-align: right; }
-    .src .chip { display: inline-block; font-size: 0.8rem; font-weight: 700; border-radius: 6px; padding: 1px 7px; margin: 2px 0 0 4px; color: #fff; }
-    .grid { display: grid; grid-template-columns: 1fr 380px; gap: 14px; align-items: start; }
-    @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
-    .panel { background: #fff; border: 1px solid #e3e6ed; border-radius: 12px; padding: 12px 14px; }
-    .day-tabs { display: flex; gap: 5px; margin-bottom: 10px; }
-    .day-tabs button { flex: 1; font-size: 0.8rem; font-weight: 600; color: #607089; border: 1px solid #e3e6ed; background: #f8fafc; padding: 8px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+    .wrap { padding: 12px 16px 36px; max-width: 1600px; margin: 0 auto; }
+    .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+    .hd .ic { width: 42px; height: 42px; border-radius: 11px; background: #ede7f6; color: #4527a0; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; }
+    .hd h1 { font-size: 1.2rem; margin: 0; color: #14303a; } .hd .sub { font-size: 0.78rem; color: #6c757d; max-width: 520px; }
+    .src { margin-left: auto; font-size: 0.78rem; color: #475569; text-align: right; }
+    .src .chip { display: inline-block; font-size: 0.75rem; font-weight: 700; border-radius: 6px; padding: 1px 7px; margin: 2px 0 0 4px; color: #fff; }
+    /* Map-first layout: wide map + slim tools rail */
+    .main-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 340px); gap: 12px; align-items: start; }
+    @media (max-width: 1100px) { .main-grid { grid-template-columns: 1fr; } }
+    .panel { background: #fff; border: 1px solid #e3e6ed; border-radius: 12px; padding: 10px 12px; }
+    .panel.map-panel { padding: 10px; }
+    .side-rail { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 120px); overflow: auto; position: sticky; top: 8px; }
+    .day-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+    .day-tabs button { flex: 1; font-size: 0.78rem; font-weight: 600; color: #607089; border: 1px solid #e3e6ed; background: #f8fafc; padding: 7px; border-radius: 8px; cursor: pointer; font-family: inherit; }
     .day-tabs button.on { background: #4527a0; color: #fff; border-color: #4527a0; }
-    #dmdmap { height: 560px; border-radius: 12px; border: 1px solid #e3e6ed; }
-    .legend { display: flex; gap: 14px; margin-top: 8px; font-size: 0.8rem; color: #475569; flex-wrap: wrap; }
-    .legend .sw { display: inline-block; width: 13px; height: 13px; border-radius: 3px; margin-right: 4px; vertical-align: -2px; }
-    .tier-counts { display: flex; gap: 8px; margin-bottom: 10px; }
-    .tc { flex: 1; text-align: center; border-radius: 9px; padding: 8px; color: #1a1a1a; }
-    .tc b { display: block; font-size: 1.5rem; } .tc span { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    #dmdmap { height: min(68vh, 640px); min-height: 420px; border-radius: 10px; border: 1px solid #e3e6ed; }
+    .legend { display: flex; gap: 10px; margin-top: 6px; font-size: 0.75rem; color: #475569; flex-wrap: wrap; }
+    .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 3px; vertical-align: -2px; }
+    .tier-counts { display: flex; gap: 6px; margin-bottom: 8px; }
+    .tc { flex: 1; text-align: center; border-radius: 8px; padding: 6px 4px; color: #1a1a1a; }
+    .tc b { display: block; font-size: 1.25rem; } .tc span { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; }
+    .tool-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 0.74rem; color: #475569; flex-wrap: wrap; }
+    .chip-btn { border-radius: 6px; padding: 3px 8px; font-size: 0.72rem; font-weight: 700; cursor: pointer; font-family: inherit; border: 1px solid #cbd5e1; background: #fff; color: #334155; }
+    .chip-btn.on { color: #fff; }
+    /* Collapsible sections */
+    details.acc { border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa; font-size: 0.74rem; color: #334155; }
+    details.acc > summary { cursor: pointer; font-weight: 800; padding: 8px 10px; list-style: none; display: flex; align-items: center; gap: 6px; color: #1e293b; }
+    details.acc > summary::-webkit-details-marker { display: none; }
+    details.acc > summary::before { content: '▸'; color: #94a3b8; font-size: 0.7rem; }
+    details.acc[open] > summary::before { content: '▾'; }
+    details.acc .acc-body { padding: 0 10px 10px; line-height: 1.4; border-top: 1px solid #f1f5f9; }
+    details.acc.warm { background: #fffbeb; border-color: #fcd34d; }
+    details.acc.warm > summary { color: #92400e; }
+    details.acc.violet { background: #faf5ff; border-color: #c4b5fd; }
+    details.acc.violet > summary { color: #4527a0; }
+    /* Below map: full-width composition */
+    .compose-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    @media (max-width: 900px) { .compose-grid { grid-template-columns: 1fr; } }
+    .compose-grid .panel h3 { font-size: 0.86rem; margin: 0 0 6px; color: #1f2d3d; }
+    .compose-grid textarea { width: 100%; box-sizing: border-box; border: 1px solid #e3e6ed; border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 0.8rem; color: #1f2d3d; resize: vertical; min-height: 110px; }
+    .compose-grid .hint { font-size: 0.72rem; color: #94a3b8; margin: 0 0 6px; }
     .cmt { border-left: 3px solid #ccc; padding: 6px 10px; margin-bottom: 8px; background: #fbfcfe; border-radius: 0 8px 8px 0; }
     .cmt .ch { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: #1f2d3d; }
     .cmt .ch .pill { font-size: 0.75rem; font-weight: 800; border-radius: 6px; padding: 1px 6px; margin-left: auto; }
     .cmt .cd { font-size: 0.85rem; color: #475569; margin-top: 3px; }
     .cmt .ca { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
-    h3 { font-size: 0.9rem; color: #1f2d3d; margin: 4px 0 8px; }
-    .pushbtn { font-size: 0.8rem; font-weight: 700; border-radius: 8px; padding: 9px 16px; border: none; cursor: pointer; font-family: inherit; color: #fff; background: #4527a0; }
+    h3 { font-size: 0.88rem; color: #1f2d3d; margin: 4px 0 8px; }
+    .pushbtn { font-size: 0.8rem; font-weight: 700; border-radius: 8px; padding: 8px 14px; border: none; cursor: pointer; font-family: inherit; color: #fff; background: #4527a0; }
     .pushbtn:hover:not(:disabled) { filter: brightness(0.94); }
     .pushbtn:disabled { opacity: 0.55; cursor: default; }
-    .pushflash { padding: 9px 13px; border-radius: 9px; font-size: 0.82rem; margin-bottom: 12px; }
+    .pushflash { padding: 9px 13px; border-radius: 9px; font-size: 0.82rem; margin-bottom: 10px; }
     .pushflash.ok { background: #ede7f6; color: #4527a0; border: 1px solid #b39ddb; }
     .pushflash.err { background: #fee2e2; color: #b91c1c; }
+    .sup-table { width: 100%; border-collapse: collapse; font-size: 0.68rem; }
+    .sup-table th { background: #f8fafc; padding: 4px; position: sticky; top: 0; }
+    .sup-table td { padding: 4px; border-top: 1px solid #f1f5f9; }
+    .sup-wrap { max-height: 180px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 6px; }
+    .fld { display: grid; gap: 2px; font-weight: 800; color: #92400e; font-size: 0.68rem; }
+    .fld select { border: 1px solid #fcd34d; border-radius: 6px; padding: 4px 6px; font: inherit; font-size: 0.75rem; font-weight: 600; color: #1c1917; }
+    .mini-btn { font-size: 0.68rem; font-weight: 700; border-radius: 5px; padding: 3px 8px; cursor: pointer; font-family: inherit; }
+    .prop-card { background: #fff; border: 1px solid #e7e5e4; border-radius: 8px; padding: 8px; margin-top: 6px; }
+    .prop-card textarea { width: 100%; box-sizing: border-box; margin-top: 4px; border: 1px solid #e7e5e4; border-radius: 6px; padding: 6px; font: inherit; font-size: 0.72rem; resize: vertical; min-height: 56px; }
+    .clear-btn { font-size: 0.7rem; font-weight: 700; border: 1px solid #fecaca; background: #fff; color: #b91c1c; border-radius: 6px; padding: 3px 8px; cursor: pointer; font-family: inherit; }
+    .evac-panel { border: 1px solid #a7f3d0; background: #ecfdf5; border-radius: 8px; padding: 8px 10px; margin-top: 6px; }
+    .evac-panel h4 { margin: 0 0 4px; font-size: 0.8rem; color: #065f46; display: flex; align-items: center; gap: 6px; }
+    .evac-row { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-top: 1px solid #d1fae5; font-size: 0.72rem; color: #134e4a; }
+    .evac-row:first-of-type { border-top: none; }
+    .evac-row b { color: #064e3b; font-size: 0.76rem; }
+    .evac-row a { color: #047857; font-weight: 700; text-decoration: none; }
+    .evac-row a:hover { text-decoration: underline; }
   `],
   template: `
     <div class="wrap">
@@ -63,7 +104,7 @@ declare const L: any;
       <div class="hd">
         <div class="ic"><i class="fas fa-layer-group"></i></div>
         <div><h1>PMO-DMD — Consolidated Impact Overlay</h1>
-          <div class="sub">Hydromet tiers (TMA + MoW, highest-alert-wins per district) with every other entity's hazards overlaid as markers</div></div>
+          <div class="sub">Entity consolidation unchanged (highest-alert-wins). Decision-support layers help PMO paint red / orange / yellow more realistically using INFORM + ops context.</div></div>
         <div class="src">
           <div>Contributing entities</div>
           @for (s of sources(); track s) { <span class="chip" [style.background]="agColor(s)">{{ agName(s) }}</span> }
@@ -96,11 +137,12 @@ declare const L: any;
         </div>
       }
 
-      <div class="grid">
-        <div class="panel">
+      <div class="main-grid">
+        <!-- MAP (primary) -->
+        <div class="panel map-panel">
           <div class="day-tabs">
             @for (d of data()?.days ?? []; track d.day) {
-              <button [class.on]="activeDay() === d.day" (click)="activeDay.set(d.day); restyle()">Day {{ d.day }}</button>
+              <button [class.on]="activeDay() === d.day" (click)="setActiveDay(d.day)">Day {{ d.day }}</button>
             }
           </div>
           @if (curDay()) {
@@ -110,37 +152,256 @@ declare const L: any;
               <div class="tc" style="background:#FFFF00"><b>{{ curEffTiers().advisory.length }}</b><span>Advisory</span></div>
             </div>
           }
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.8rem;color:#475569">
-            <i class="fas fa-fill-drip" style="color:#4527a0"></i> <b>Impact level</b> — click a district to set/reduce its impact, or draw zones with the toolbar (top-left):
+          <div class="tool-row">
+            <i class="fas fa-fill-drip" style="color:#4527a0"></i> <b>Paint</b>
             @for (lv of levels; track lv.key) {
-              <button (click)="drawLevel.set(lv.key)" [style.background]="drawLevel()===lv.key ? lv.color : '#fff'"
-                [style.border]="'1px solid '+lv.color" style="border-radius:6px;padding:2px 9px;font-size:0.8rem;font-weight:700;cursor:pointer;color:#1a1a1a">{{ lv.label }}</button>
+              <button type="button" class="chip-btn" [class.on]="drawLevel()===lv.key" (click)="drawLevel.set(lv.key)"
+                [style.background]="drawLevel()===lv.key ? lv.color : '#fff'"
+                [style.borderColor]="lv.color" [style.color]="drawLevel()===lv.key ? '#1a1a1a' : '#334155'">{{ lv.label }}</button>
             }
             @if (pmoShapes().length) { <span style="color:#4527a0;font-weight:700">· {{ pmoShapes().length }} drawn</span> }
           </div>
+          <div class="tool-row">
+            <i class="fas fa-layer-group" style="color:#0d6efd"></i> <b>View</b>
+            <button type="button" class="chip-btn" [class.on]="mapMode()==='entity'" (click)="mapMode.set('entity'); restyle()"
+              [style.background]="mapMode()==='entity' ? '#4527a0' : '#fff'" [style.color]="mapMode()==='entity' ? '#fff' : '#334155'" [style.borderColor]="'#c4b5fd'">Entity</button>
+            <button type="button" class="chip-btn" [class.on]="mapMode()==='support'" (click)="mapMode.set('support'); restyle()"
+              [style.background]="mapMode()==='support' ? '#0d6efd' : '#fff'" [style.color]="mapMode()==='support' ? '#fff' : '#334155'" [style.borderColor]="'#93c5fd'">Support</button>
+            <button type="button" class="chip-btn" [class.on]="mapMode()==='inform-h'" (click)="mapMode.set('inform-h'); restyle()"
+              [style.background]="mapMode()==='inform-h' ? '#b45309' : '#fff'" [style.color]="mapMode()==='inform-h' ? '#fff' : '#334155'" [style.borderColor]="'#fcd34d'">H</button>
+            <button type="button" class="chip-btn" [class.on]="mapMode()==='inform-v'" (click)="mapMode.set('inform-v'); restyle()"
+              [style.background]="mapMode()==='inform-v' ? '#0f766e' : '#fff'" [style.color]="mapMode()==='inform-v' ? '#fff' : '#334155'" [style.borderColor]="'#5eead4'">V</button>
+            <button type="button" class="chip-btn" [class.on]="mapMode()==='inform-c'" (click)="mapMode.set('inform-c'); restyle()"
+              [style.background]="mapMode()==='inform-c' ? '#7c3aed' : '#fff'" [style.color]="mapMode()==='inform-c' ? '#fff' : '#334155'" [style.borderColor]="'#c4b5fd'">C</button>
+            <button type="button" class="chip-btn" [class.on]="mapMode()==='inform-risk'" (click)="mapMode.set('inform-risk'); restyle()"
+              [style.background]="mapMode()==='inform-risk' ? '#be123c' : '#fff'" [style.color]="mapMode()==='inform-risk' ? '#fff' : '#334155'" [style.borderColor]="'#fda4af'">Risk</button>
+            <button type="button" class="chip-btn" [class.on]="mapMode()==='focus-hazard'" (click)="mapMode.set('focus-hazard'); restyle()"
+              [style.background]="mapMode()==='focus-hazard' ? '#0369a1' : '#fff'" [style.color]="mapMode()==='focus-hazard' ? '#fff' : '#334155'" [style.borderColor]="'#7dd3fc'">Focus</button>
+            <button type="button" class="pushbtn" style="padding:4px 10px;font-size:0.72rem;background:#0d6efd"
+              [disabled]="!supportRows().length" (click)="applyAllSuggestions()">Apply all suggestions</button>
+          </div>
+          <div class="tool-row">
+            <i class="fas fa-crosshairs" style="color:#0369a1"></i> <b>Hazard focus</b>
+            @for (opt of hazardFocusOptions(); track opt.key) {
+              <button type="button" class="chip-btn" [class.on]="hazardFocus()===opt.key" (click)="setHazardFocus(opt.key)"
+                [title]="opt.hint || opt.label"
+                [style.background]="hazardFocus()===opt.key ? '#0369a1' : '#fff'" [style.color]="hazardFocus()===opt.key ? '#fff' : '#334155'" [style.borderColor]="'#7dd3fc'">{{ opt.label }}</button>
+            }
+            @if (hazardFocusResolved()) { <span style="font-weight:700;color:#0369a1">· {{ hazardFocusResolved() }}</span> }
+          </div>
           <div id="dmdmap"></div>
           <div class="legend">
-            <span style="font-weight:700;color:#1f2d3d">Hydromet tiers (TMA+MoW):</span>
+            <span style="font-weight:700;color:#1f2d3d">Impact:</span>
             @for (lv of levels; track lv.key) { <span><span class="sw" [style.background]="lv.color"></span>{{ lv.label }}</span> }
-            <span><span class="sw" style="background:#F5F5F5"></span>No alert</span>
-            <span style="font-weight:700;color:#1f2d3d;margin-left:6px">· Other hazards:</span>
-            <span><i class="fas fa-map-pin" style="color:#4527a0"></i> icon markers (earthquake, disease, drought, air quality)</span>
+            <span><span class="sw" style="background:#F5F5F5"></span>None</span>
+            <span style="font-weight:700;margin-left:4px">· Purple border = PMO paint · Icons = other hazards</span>
           </div>
         </div>
 
-        <div class="panel">
-          <h3><i class="fas fa-clipboard-list"></i> PMO directives and instructions · Day {{ activeDay() }}
-            <span style="font-weight:500;color:#94a3b8;font-size:0.8rem">— shown beside the map</span></h3>
-          <textarea rows="4" [value]="pmoDirectives()[activeDay()] || ''" (input)="setDirectives($any($event.target).value)"
-            placeholder="PMO directives and instructions for this day — one per line (e.g. evacuate low-lying wards, pre-position relief stocks, activate district EOCs). Shown beside the map in the impact bulletin."
-            style="width:100%;box-sizing:border-box;border:1px solid #e3e6ed;border-radius:8px;padding:8px 10px;font-family:inherit;font-size:0.8rem;color:#1f2d3d;resize:vertical;margin-bottom:4px"></textarea>
+        <!-- SLIM RIGHT RAIL — tools in dropdowns -->
+        <div class="side-rail">
+          <div class="panel" style="padding:8px 10px">
+            <div style="font-weight:800;font-size:0.82rem;color:#4527a0;margin-bottom:6px">
+              <i class="fas fa-compass-drafting"></i> Impact tools · Day {{ activeDay() }}
+            </div>
+            @if (supportRows().length) {
+              <div class="sup-wrap">
+                <table class="sup-table">
+                  <thead><tr>
+                    <th style="text-align:left">District</th>
+                    <th>Ent</th><th>Sug</th><th>Sc</th><th>H</th><th>V</th><th>C</th><th></th>
+                  </tr></thead>
+                  <tbody>
+                    @for (r of supportRows(); track r.district) {
+                      <tr style="cursor:pointer" [style.background]="selectedDistrict()===r.district ? '#eff6ff' : ''"
+                          (click)="selectedDistrict.set(r.district)" [title]="(r.reasons || []).join(' · ')">
+                        <td style="font-weight:600">{{ r.district }}</td>
+                        <td style="text-align:center"><span class="sw" [style.background]="alertColor(r.entityLevel)"></span></td>
+                        <td style="text-align:center"><span class="sw" [style.background]="alertColor(r.suggestedLevel)"></span></td>
+                        <td style="text-align:center;font-weight:700">{{ r.supportScore ?? '—' }}</td>
+                        <td style="text-align:center">{{ r.informHazard ?? '—' }}</td>
+                        <td style="text-align:center">{{ r.informVulnerability ?? '—' }}</td>
+                        <td style="text-align:center">{{ r.informCoping ?? '—' }}</td>
+                        <td><button type="button" class="mini-btn" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8"
+                          (click)="applyOneSuggestion(r); $event.stopPropagation()">Paint</button></td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <div style="font-size:0.74rem;color:#94a3b8;margin-bottom:6px">Support loads when entities push hydromet tiers.</div>
+            }
 
-          <h3 style="margin-top:10px"><i class="fas fa-feather-pointed"></i> PMO impact narrative · Day {{ activeDay() }}
-            <span style="font-weight:500;color:#94a3b8;font-size:0.8rem">— shown as the comment below</span></h3>
-          <textarea rows="4" [value]="pmoNarratives()[activeDay()] || ''" (input)="setNarrative($any($event.target).value)"
-            placeholder="PMO-DMD's consolidated impact assessment for this day — one impact / guidance point per line. Appears as the DMD comment in the impact bulletin."
-            style="width:100%;box-sizing:border-box;border:1px solid #e3e6ed;border-radius:8px;padding:8px 10px;font-family:inherit;font-size:0.8rem;color:#1f2d3d;resize:vertical;margin-bottom:4px"></textarea>
-          <h3 style="margin-top:10px"><i class="fas fa-comments"></i> Agency narratives (this day)</h3>
+            <details class="acc violet" style="margin-bottom:6px">
+              <summary>Justification @if (selectedRow(); as s) { · {{ s.district }} }</summary>
+              <div class="acc-body">
+                @if (selectedRow(); as sel) {
+                  <div style="font-variant-numeric:tabular-nums;margin-bottom:4px">
+                    H {{ sel.informHazard ?? '—' }} · V {{ sel.informVulnerability ?? '—' }} · C {{ sel.informCoping ?? '—' }}
+                    · Risk {{ sel.informRisk ?? '—' }} · Score {{ sel.supportScore }}
+                  </div>
+                  <ul style="margin:0;padding-left:16px">
+                    @for (reason of (sel.reasons || []).slice(0, 6); track $index) { <li>{{ reason }}</li> }
+                  </ul>
+                  @if (sel.suggestedDirectives?.length) {
+                    <button type="button" class="mini-btn" style="margin-top:6px;border:1px solid #c4b5fd;background:#ede7f6;color:#4527a0"
+                      (click)="applyDirectives(sel)">Insert model directives</button>
+                  }
+                } @else {
+                  <span style="color:#94a3b8">Select a district in the table.</span>
+                }
+              </div>
+            </details>
+
+            <details class="acc" style="margin-bottom:6px">
+              <summary>Design &amp; exposure notes</summary>
+              <div class="acc-body">
+                @if (designCapture(); as dc) {
+                  <p style="margin:6px 0">{{ dc.purpose }}</p>
+                  <p style="margin:0 0 6px;font-family:ui-monospace,Menlo,monospace;font-size:0.65rem;color:#64748b">{{ dc.formula }}</p>
+                }
+                @if (institutionNote(); as inst) {
+                  <div style="font-weight:800;margin:6px 0 2px;color:#0f766e">Institutions</div>
+                  <ul style="margin:0;padding-left:16px">
+                    @for (k of instKeys(inst); track k) { <li><b>{{ k }}:</b> {{ inst[k] }}</li> }
+                  </ul>
+                }
+                @if (supportNote()) { <p style="margin:6px 0 0;color:#64748b">{{ supportNote() }}</p> }
+              </div>
+            </details>
+
+            <div class="evac-panel">
+              <h4><i class="fas fa-house-user"></i> Evacuation centres · routes</h4>
+              <p style="margin:0 0 6px;font-size:0.68rem;color:#047857;line-height:1.35">
+                From the warned-area centroid (or selected district) to registered centres.
+                Straight-line km — use road directions for navigation.
+              </p>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:4px">
+                <button type="button" class="mini-btn" style="border:1px solid #6ee7b7;background:#059669;color:#fff"
+                  [disabled]="evacLoading()" (click)="loadEvacRoutes()">
+                  <i class="fas" [class.fa-route]="!evacLoading()" [class.fa-circle-notch]="evacLoading()" [class.fa-spin]="evacLoading()"></i>
+                  {{ evacLoading() ? '…' : 'Estimate routes' }}
+                </button>
+                <label style="font-size:0.68rem;font-weight:700;color:#065f46;display:flex;align-items:center;gap:4px;cursor:pointer">
+                  <input type="checkbox" [checked]="showEvacOnMap()" (change)="toggleEvacOnMap($any($event.target).checked)"> Map
+                </label>
+                <a routerLink="/m/preparedness/evacuation-centers" style="font-size:0.68rem;font-weight:700;color:#047857;margin-left:auto">Registry →</a>
+              </div>
+              @if (evacOrigin(); as o) {
+                <div style="font-size:0.65rem;color:#64748b;margin-bottom:4px">
+                  Origin: {{ o.label }} ({{ o.lat | number:'1.2-2' }}, {{ o.lng | number:'1.2-2' }})
+                </div>
+              }
+              @if (evacError()) { <div style="color:#b91c1c;font-size:0.7rem">{{ evacError() }}</div> }
+              @for (c of evacCenters(); track c.id; let i = $index) {
+                <div class="evac-row">
+                  <div><b>{{ i + 1 }}. {{ c.centreName }}</b>
+                    <span style="color:#64748b"> · {{ c.distanceKm }} km · ~{{ c.driveMinutesEstimate }} min</span>
+                  </div>
+                  <div style="color:#64748b">{{ c.district || '—' }} / {{ c.region || '—' }}
+                    @if (c.capacityPeople) { · cap {{ c.capacityPeople }} }</div>
+                  <div style="display:flex;gap:8px;margin-top:2px">
+                    <a [href]="c.gmapsDirectionsUrl" target="_blank" rel="noopener"><i class="fas fa-directions"></i> Road</a>
+                    <a [routerLink]="['/m/preparedness/evacuation-centers/create']" [queryParams]="{edit: c.id}"><i class="fas fa-house-user"></i> Centre</a>
+                  </div>
+                </div>
+              }
+              @if (!evacLoading() && !evacCenters().length && !evacError() && evacOrigin()) {
+                <div style="font-size:0.7rem;color:#94a3b8">No active centres with coordinates. Register under Evacuation Centers.</div>
+              }
+              @if (!evacOrigin() && !evacLoading()) {
+                <div style="font-size:0.7rem;color:#94a3b8">Paint or wait for entity tiers so a warned-area origin can be computed, then Estimate routes.</div>
+              }
+            </div>
+
+            <details class="acc warm" [open]="stmtProposals().length > 0" style="margin-top:6px">
+              <summary>Action Guide statements</summary>
+              <div class="acc-body">
+                <p style="margin:6px 0;color:#78716c">Proposes ~3 statements from the official guide by colour + hazard. Apply fills boxes below only — edit guide content in
+                  <a routerLink="/m/content-management/action-guide" style="color:#b45309;font-weight:700">Content Management → Action Guide</a>.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+                  <label class="fld">Colour
+                    <select [value]="stmtLevel()" (change)="stmtLevel.set($any($event.target).value)">
+                      <option value="ADVISORY">Yellow — Advisory</option>
+                      <option value="WARNING">Orange — Warning</option>
+                      <option value="MAJOR_WARNING">Red — Major</option>
+                    </select>
+                  </label>
+                  <label class="fld">Language
+                    <select [value]="stmtLang()" (change)="stmtLang.set($any($event.target).value)">
+                      <option value="en">English</option>
+                      <option value="sw">Kiswahili</option>
+                      <option value="both">Both</option>
+                    </select>
+                  </label>
+                  <label class="fld" style="grid-column:1 / -1">Hazard
+                    <select [value]="stmtHazard()" (change)="stmtHazard.set($any($event.target).value)">
+                      @for (h of stmtHazards(); track h.id) { <option [value]="h.id">{{ h.name }}</option> }
+                    </select>
+                  </label>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
+                  <button type="button" class="pushbtn" style="padding:6px 12px;font-size:0.74rem;background:#b45309"
+                    [disabled]="stmtLoading()" (click)="proposeStatements()">
+                    <i class="fas" [class.fa-wand-magic-sparkles]="!stmtLoading()" [class.fa-circle-notch]="stmtLoading()" [class.fa-spin]="stmtLoading()"></i>
+                    {{ stmtLoading() ? '…' : 'Propose' }}
+                  </button>
+                  <span style="font-size:0.68rem;color:#78716c">Areas: <b>{{ stmtAreasPreview() }}</b></span>
+                </div>
+                @if (stmtError()) { <div style="color:#b91c1c;font-size:0.72rem">{{ stmtError() }}</div> }
+                @for (p of stmtProposals(); track p.id) {
+                  <div class="prop-card">
+                    <div style="display:flex;justify-content:space-between;gap:4px;flex-wrap:wrap">
+                      <div style="font-weight:800;font-size:0.74rem">{{ p.title }}</div>
+                      <div style="display:flex;gap:3px">
+                        @if (p.id === 'operational_directives' || p.id === 'public_sms') {
+                          <button type="button" class="mini-btn" style="border:1px solid #fcd34d;background:#fef3c7;color:#92400e"
+                            (click)="applyProposal(p, 'directives')">Directives</button>
+                        }
+                        @if (p.id === 'bulletin_narrative' || p.id === 'public_sms' || p.id === 'bilingual_pack') {
+                          <button type="button" class="mini-btn" style="border:1px solid #c4b5fd;background:#ede7f6;color:#4527a0"
+                            (click)="applyProposal(p, 'narrative')">Narrative</button>
+                        }
+                      </div>
+                    </div>
+                    <textarea rows="3" [value]="p.text" (input)="editProposal(p.id, $any($event.target).value)"></textarea>
+                  </div>
+                }
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <!-- FULL WIDTH BELOW MAP: composition boxes -->
+      <div class="compose-grid">
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+            <h3 style="margin:0"><i class="fas fa-clipboard-list"></i> PMO directives · Day {{ activeDay() }}</h3>
+            <button type="button" class="clear-btn" (click)="clearDirectives()">Clear</button>
+          </div>
+          <p class="hint">Shown beside the map in the impact bulletin · SMS/ops ready after edit</p>
+          <textarea rows="6" [value]="pmoDirectives()[activeDay()] || ''" (input)="setDirectives($any($event.target).value)"
+            placeholder="Operational directives for this day (one per line)…"></textarea>
+        </div>
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+            <h3 style="margin:0"><i class="fas fa-feather-pointed"></i> PMO impact narrative · Day {{ activeDay() }}</h3>
+            <button type="button" class="clear-btn" (click)="clearNarrative()">Clear</button>
+          </div>
+          <p class="hint">Appears as the DMD comment in the multirisk impact bulletin PDF</p>
+          <textarea rows="6" [value]="pmoNarratives()[activeDay()] || ''" (input)="setNarrative($any($event.target).value)"
+            placeholder="Impact assessment narrative for this day…"></textarea>
+        </div>
+      </div>
+
+      <details class="acc" style="margin-top:12px" [open]="dayComments().length > 0">
+        <summary style="background:#fff;border:1px solid #e3e6ed;border-radius:10px;padding:10px 12px">
+          <i class="fas fa-comments" style="color:#64748b"></i> Agency narratives (this day)
+          <span style="font-weight:600;color:#94a3b8;margin-left:6px">{{ dayComments().length || 0 }}</span>
+        </summary>
+        <div class="panel" style="margin-top:8px">
           @if (dayComments().length) {
             @for (c of dayComments(); track $index) {
               <div class="cmt" [style.border-left-color]="agColor(c.agency)">
@@ -153,7 +414,7 @@ declare const L: any;
             }
           } @else { <div style="font-size:0.8rem;color:#94a3b8">No narratives for this day.</div> }
         </div>
-      </div>
+      </details>
     </div>
   `,
 })
@@ -176,6 +437,48 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
   pmoNarratives = signal<Record<number, string>>({}); // PMO impact narrative per day → the DMD comment (impact bullets) in the bulletin
   pmoDirectives = signal<Record<number, string>>({}); // PMO directives & instructions per day → rendered BESIDE the big map (engine recommendations slot)
   layerReady = signal(false);                     // the GADM district layer has loaded (per-district coords need it)
+  /**
+   * entity = hydromet fill; support = suggested paint;
+   * inform-h/v/c/risk = INFORM dimensions; focus-hazard = selected natural hazard lens.
+   */
+  mapMode = signal<'entity' | 'support' | 'inform' | 'inform-h' | 'inform-v' | 'inform-c' | 'inform-risk' | 'focus-hazard'>('entity');
+  supportRows = signal<any[]>([]);
+  supportNote = signal('');
+  designCapture = signal<any | null>(null);
+  institutionNote = signal<Record<string, string> | null>(null);
+  hazardFocus = signal('auto');
+  hazardFocusResolved = signal('');
+  hazardFocusOptions = signal<{ key: string; label: string; hint?: string }[]>([
+    { key: 'auto', label: 'Auto', hint: 'From entity product type (heavy rain → Flood)' },
+    { key: 'flood', label: 'Flood', hint: 'Heavy rainfall / riverine / flash flood' },
+    { key: 'drought', label: 'Drought' },
+    { key: 'landslide', label: 'Landslide' },
+    { key: 'storm', label: 'Storm' },
+    { key: 'earthquake', label: 'Quake' },
+    { key: 'coastal', label: 'Coastal' },
+    { key: 'overall', label: 'Overall', hint: 'Full INFORM only — no single-hazard boost' },
+  ]);
+  selectedDistrict = signal<string | null>(null);
+  private supportByName = signal<Record<string, any>>({});
+
+  // Action Guide Book statement assist
+  stmtLevel = signal<'ADVISORY' | 'WARNING' | 'MAJOR_WARNING'>('ADVISORY');
+  stmtHazard = signal('heavy_rainfall');
+  stmtLang = signal('en');
+  stmtLoading = signal(false);
+  stmtError = signal('');
+  stmtProposals = signal<any[]>([]);
+  stmtHazards = signal<{ id: string; name: string }[]>([
+    { id: 'heavy_rainfall', name: 'Heavy rainfall' },
+    { id: 'floods', name: 'FLOODS' },
+    { id: 'landslide', name: 'LANDSLIDE' },
+    { id: 'strong_winds', name: 'STRONG WINDS' },
+    { id: 'large_waves', name: 'LARGE WAVES' },
+    { id: 'wildfire', name: 'WILDFIRE' },
+    { id: 'drought', name: 'DROUGHT' },
+    { id: 'earthquake_and_tsunami', name: 'EARTHQUAKE AND TSUNAMI' },
+    { id: 'public_health', name: 'PUBLIC HEALTH' },
+  ]);
   private sanitizer = inject(DomSanitizer);
   previewUrl = signal<SafeResourceUrl | null>(null);
   previewRaw = signal<string>('');
@@ -187,20 +490,353 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
   private overlayLayer: any;
   private drawnGroup: any;
   private shapeSeq = 0;
+  /** Registered evacuation centres nearest to warned-area centroid (EW ↔ EC link). */
+  evacCenters = signal<any[]>([]);
+  evacLoading = signal(false);
+  evacError = signal('');
+  evacOrigin = signal<{ lat: number; lng: number; label: string } | null>(null);
+  showEvacOnMap = signal(true);
+  private evacLayerGroup: any = null;
 
   ngOnInit(): void {
     this.reload();
+    this.loadActionGuideMeta();
     setTimeout(() => this.initMap(), 0);
+  }
+
+  /** Resolve origin: selected district centre, else average of Day's painted/entity warned districts. */
+  private resolveEvacOrigin(): { lat: number; lng: number; label: string } | null {
+    const sel = this.selectedDistrict();
+    if (sel) {
+      const c = this.districtCentre(sel);
+      if (c) { return { ...c, label: sel }; }
+    }
+    const et = this.curEffTiers();
+    const names = [...(et.major_warning || []), ...(et.warning || []), ...(et.advisory || [])];
+    const pts: Array<{ lat: number; lng: number }> = [];
+    for (const n of names) {
+      const c = this.districtCentre(n);
+      if (c) { pts.push(c); }
+    }
+    const avg = this.centroidOf(pts);
+    if (avg) {
+      return { ...avg, label: names.length ? `Day ${this.activeDay()} warned centroid (${names.length} areas)` : 'Map centroid' };
+    }
+    // Fallback: map centre if layers not ready
+    if (this.map) {
+      const c = this.map.getCenter();
+      return { lat: c.lat, lng: c.lng, label: 'Map view centre' };
+    }
+    return null;
+  }
+
+  loadEvacRoutes(): void {
+    const origin = this.resolveEvacOrigin();
+    this.evacError.set('');
+    if (!origin) {
+      this.evacCenters.set([]);
+      this.evacOrigin.set(null);
+      this.evacError.set('No origin yet — load the map and wait for district tiers or select a district.');
+      this.clearEvacLayers();
+      return;
+    }
+    this.evacOrigin.set(origin);
+    this.evacLoading.set(true);
+    this.http.get<any>('/api/v1/evacuation-centers/nearest', {
+      params: { lat: String(origin.lat), lng: String(origin.lng), limit: '8' },
+    }).subscribe({
+      next: r => {
+        this.evacCenters.set(r.centers ?? []);
+        this.evacLoading.set(false);
+        if (this.showEvacOnMap()) { this.drawEvacOnMap(); }
+      },
+      error: () => {
+        this.evacCenters.set([]);
+        this.evacLoading.set(false);
+        this.evacError.set('Could not load nearest centres.');
+        this.clearEvacLayers();
+      },
+    });
+  }
+
+  toggleEvacOnMap(on: boolean): void {
+    this.showEvacOnMap.set(on);
+    if (on) {
+      if (this.evacCenters().length) { this.drawEvacOnMap(); }
+      else { this.loadEvacRoutes(); }
+    } else {
+      this.clearEvacLayers();
+    }
+  }
+
+  private clearEvacLayers(): void {
+    if (this.evacLayerGroup && this.map) {
+      try { this.map.removeLayer(this.evacLayerGroup); } catch { /* ignore */ }
+    }
+    this.evacLayerGroup = null;
+  }
+
+  private drawEvacOnMap(): void {
+    if (!this.map || typeof L === 'undefined') { return; }
+    this.clearEvacLayers();
+    const origin = this.evacOrigin();
+    const centers = this.evacCenters();
+    if (!origin || !centers.length) { return; }
+    const g = L.layerGroup();
+    const originMk = L.circleMarker([origin.lat, origin.lng], {
+      radius: 9, fillColor: '#4527a0', color: '#fff', weight: 2, fillOpacity: 1,
+    }).bindPopup(`<b>EW origin</b><br>${escapeHtml(origin.label)}`);
+    g.addLayer(originMk);
+    const colors = ['#059669', '#10b981', '#34d399', '#6ee7b7', '#a7f3d0'];
+    centers.forEach((c: any, i: number) => {
+      if (c.latitude == null || c.longitude == null) { return; }
+      const line = L.polyline(
+        [[origin.lat, origin.lng], [c.latitude, c.longitude]],
+        { color: colors[i % colors.length], weight: i === 0 ? 4 : 2.5, opacity: 0.85, dashArray: i === 0 ? undefined : '7 5' },
+      ).bindPopup(
+        `<b>${escapeHtml(c.centreName)}</b><br>${c.distanceKm} km · ~${c.driveMinutesEstimate} min`
+        + `<br><a href="${c.gmapsDirectionsUrl}" target="_blank" rel="noopener">Road directions</a>`,
+      );
+      const dest = L.circleMarker([c.latitude, c.longitude], {
+        radius: i === 0 ? 9 : 7, fillColor: '#059669', color: '#fff', weight: 2, fillOpacity: 0.95,
+      }).bindPopup(`<b>${escapeHtml(c.centreName)}</b><br>${escapeHtml(c.district || '')} / ${escapeHtml(c.region || '')}`);
+      g.addLayer(line);
+      g.addLayer(dest);
+    });
+    g.addTo(this.map);
+    this.evacLayerGroup = g;
+  }
+
+  loadActionGuideMeta(): void {
+    this.svc.actionGuideMeta().subscribe({
+      next: m => {
+        if (Array.isArray(m?.hazards) && m.hazards.length) {
+          this.stmtHazards.set(m.hazards.map((h: any) => ({ id: h.id, name: h.name })));
+        }
+      },
+      error: () => { /* guide optional — defaults remain */ },
+    });
   }
 
   reload(): void {
     this.loading.set(true); this.loadError.set(false);
     this.svc.consolidated(5).subscribe({
-      next: r => { this.data.set(r); this.sources.set(r.sources ?? []); this.loading.set(false); this.loadError.set(false); this.restyle(); },
+      next: r => {
+        this.data.set(r);
+        this.sources.set(r.sources ?? []);
+        this.loading.set(false);
+        this.loadError.set(false);
+        this.loadSupport();
+        this.restyle();
+      },
       error: () => { this.loading.set(false); this.loadError.set(true); },
     });
   }
-  ngOnDestroy(): void { if (this.map) { this.map.remove(); this.map = null; } }
+
+  /** Additive INFORM + hazard focus + exposures — never mutates consolidated payload or bulletin path. */
+  loadSupport(): void {
+    this.svc.impactSupport(this.activeDay(), 5, this.hazardFocus()).subscribe({
+      next: r => {
+        this.supportNote.set(r?.note || '');
+        this.designCapture.set(r?.designCapture ?? null);
+        this.institutionNote.set(r?.institutionExposureNote ?? null);
+        this.hazardFocusResolved.set(r?.hazardFocusResolved || r?.hazardFocus || '');
+        if (Array.isArray(r?.hazardFocusOptions) && r.hazardFocusOptions.length) {
+          this.hazardFocusOptions.set(r.hazardFocusOptions.map((o: any) => ({
+            key: o.key, label: o.label, hint: o.hint,
+          })));
+        }
+        const rows = r?.districts ?? [];
+        this.supportRows.set(rows);
+        const by: Record<string, any> = {};
+        for (const row of rows) { by[row.district] = row; }
+        this.supportByName.set(by);
+        if (rows.length && !this.selectedDistrict()) {
+          this.selectedDistrict.set(rows[0].district);
+        }
+        this.restyle();
+      },
+      error: () => {
+        this.supportRows.set([]);
+        this.supportByName.set({});
+        this.designCapture.set(null);
+        this.institutionNote.set(null);
+      },
+    });
+  }
+
+  setHazardFocus(key: string): void {
+    this.hazardFocus.set(key);
+    this.loadSupport();
+  }
+
+  /** Day tabs — reload support + restyle + EC routes for that day's warned centroid. */
+  setActiveDay(day: number): void {
+    this.activeDay.set(day);
+    this.loadSupport();
+    this.restyle();
+    if (this.showEvacOnMap() || this.evacCenters().length) {
+      this.loadEvacRoutes();
+    }
+  }
+
+  selectedRow(): any | null {
+    const name = this.selectedDistrict();
+    if (!name) return null;
+    return this.supportByName()[name] || this.supportRows().find((r: any) => r.district === name) || null;
+  }
+
+  instKeys(obj: any): string[] {
+    return obj && typeof obj === 'object' ? Object.keys(obj) : [];
+  }
+
+  /** Copy model-suggested directives into the day's PMO directives box (replaces previous). */
+  applyDirectives(row: any): void {
+    const lines = (row?.suggestedDirectives || []) as string[];
+    if (!lines.length) return;
+    this.setDirectives(lines.join('\n'));
+    this.pushMsg.set({ msg: 'Model directives set for Day ' + this.activeDay() + ' — edit before publishing.', err: false });
+  }
+
+  /** Areas currently painted at the selected statement colour (or all painted / entity tiers). */
+  stmtAreasPreview(): string {
+    const areas = this.areasForLevel(this.stmtLevel());
+    if (!areas.length) return 'none painted at this colour yet (will use all warned districts)';
+    if (areas.length <= 4) return areas.join(', ');
+    return areas.slice(0, 3).join(', ') + ` +${areas.length - 3} more`;
+  }
+
+  private areasForLevel(level: string): string[] {
+    const want = level;
+    const out: string[] = [];
+    const ov = this.pmoOverrides();
+    // PMO paint first
+    for (const [name, lvl] of Object.entries(ov)) {
+      if (lvl === want) out.push(name);
+    }
+    // Entity effective tiers for the day when no paint yet for that colour
+    if (!out.length) {
+      const t = this.curEffTiers();
+      if (want === 'MAJOR_WARNING') out.push(...(t.major_warning || []));
+      else if (want === 'WARNING') out.push(...(t.warning || []));
+      else out.push(...(t.advisory || []));
+    }
+    return [...new Set(out)];
+  }
+
+  /** Sync hazard select from current impact focus when possible. */
+  private hazardFromFocus(): string {
+    const f = (this.hazardFocusResolved() || this.hazardFocus() || '').toLowerCase();
+    if (f.includes('flood')) return 'floods';
+    if (f.includes('drought')) return 'drought';
+    if (f.includes('landslide')) return 'landslide';
+    if (f.includes('storm') || f.includes('wind')) return 'strong_winds';
+    if (f.includes('coastal') || f.includes('wave')) return 'large_waves';
+    if (f.includes('earth') || f.includes('quake')) return 'earthquake_and_tsunami';
+    if (f.includes('fire')) return 'wildfire';
+    if (f.includes('health')) return 'public_health';
+    return this.stmtHazard() || 'heavy_rainfall';
+  }
+
+  proposeStatements(): void {
+    this.stmtLoading.set(true);
+    this.stmtError.set('');
+    // Prefer hazard focus from impact analysis when user left default
+    const hazard = this.stmtHazard() || this.hazardFromFocus();
+    this.stmtHazard.set(hazard);
+    const areas = this.areasForLevel(this.stmtLevel());
+    // Fallback: all districts currently on the support/entity map for the day
+    const allAreas = areas.length ? areas : [
+      ...this.curEffTiers().major_warning,
+      ...this.curEffTiers().warning,
+      ...this.curEffTiers().advisory,
+    ];
+    this.svc.actionStatements({
+      impactLevel: this.stmtLevel(),
+      hazard,
+      hazardFocus: this.hazardFocusResolved() || this.hazardFocus(),
+      areas: allAreas,
+      language: this.stmtLang(),
+      limit: 3,
+    }).subscribe({
+      next: r => {
+        this.stmtLoading.set(false);
+        if (!r?.success) {
+          this.stmtError.set(r?.message || 'Could not load Action Guide proposals.');
+          this.stmtProposals.set([]);
+          return;
+        }
+        this.stmtProposals.set((r.proposals || []).map((p: any) => ({ ...p })));
+        this.pushMsg.set({
+          msg: `Action Guide proposed ${(r.proposals || []).length} statements for ${r.impactLevel} / ${r.hazard?.name || hazard}. Edit, then apply — nothing is sent until you publish via EOCC.`,
+          err: false,
+        });
+      },
+      error: err => {
+        this.stmtLoading.set(false);
+        this.stmtError.set(err?.error?.message || 'Action Guide assist unavailable.');
+        this.stmtProposals.set([]);
+      },
+    });
+  }
+
+  editProposal(id: string, text: string): void {
+    this.stmtProposals.set(this.stmtProposals().map(p => p.id === id ? { ...p, text } : p));
+  }
+
+  /**
+   * Apply a (possibly edited) proposal into directive and/or narrative boxes only.
+   * Replaces prior content for that target (no duplicate stacking). Does not generate PDF or send.
+   */
+  applyProposal(p: any, target: 'directives' | 'narrative' | 'both'): void {
+    const text = (p?.text || '').trim();
+    if (!text) return;
+    if (target === 'directives' || target === 'both') {
+      this.setDirectives(text);
+    }
+    if (target === 'narrative' || target === 'both') {
+      // Prefer true narrative proposal for narrative box; public_sms is ok as short headline
+      this.setNarrative(text);
+    }
+    this.pushMsg.set({
+      msg: `Set ${target === 'both' ? 'directives and narrative' : target} from “${p.title}” (replaced previous). Edit freely, then Generate Impact Bulletin.`,
+      err: false,
+    });
+  }
+
+  clearDirectives(): void {
+    this.setDirectives('');
+    this.pushMsg.set({ msg: 'Directives cleared for Day ' + this.activeDay() + '.', err: false });
+  }
+
+  clearNarrative(): void {
+    this.setNarrative('');
+    this.pushMsg.set({ msg: 'Narrative cleared for Day ' + this.activeDay() + '.', err: false });
+  }
+
+  /** One-click: copy support suggestions into PMO paint (still editable by click). */
+  applyAllSuggestions(): void {
+    const next = { ...this.pmoOverrides() };
+    for (const r of this.supportRows()) {
+      if (r.suggestedLevel && r.suggestedLevel !== 'NONE') {
+        next[r.district] = r.suggestedLevel;
+      }
+    }
+    this.pmoOverrides.set(next);
+    this.mapMode.set('entity');
+    this.restyle();
+    this.pushMsg.set({ msg: 'Suggested colours applied as PMO paint — review and adjust by clicking districts. Generate/push flow unchanged.', err: false });
+  }
+
+  applyOneSuggestion(r: any): void {
+    if (!r?.district || !r.suggestedLevel || r.suggestedLevel === 'NONE') return;
+    this.pmoOverrides.set({ ...this.pmoOverrides(), [r.district]: r.suggestedLevel });
+    this.restyle();
+  }
+  ngOnDestroy(): void {
+    this.clearEvacLayers();
+    if (this.map) { this.map.remove(); this.map = null; }
+  }
 
   /** PMO STEP 1 — generate the consolidated Multirisk IMPACT bulletin (every entity arrives as a layer) and
    * PREVIEW it. The PMO PDF is the one that goes onward to the other circles. */
@@ -437,11 +1073,20 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
   /** PMO impact analysis: click a district to set its impact at the active level; click again at the same level
    *  to revert to the consolidated tier. The white "No alert" level reduces a district out of the impact. */
   private paintDistrict(name: string): void {
+    this.selectedDistrict.set(name);
     const lvl = this.drawLevel();
     const cur = { ...this.pmoOverrides() };
     if (cur[name] === lvl) { delete cur[name]; } else { cur[name] = lvl; }
     this.pmoOverrides.set(cur);
+    // Keep Action Guide colour selector in sync with the paint brush (no-harm level)
+    if (lvl === 'MAJOR_WARNING' || lvl === 'WARNING' || lvl === 'ADVISORY') {
+      this.stmtLevel.set(lvl);
+    }
     this.restyle();
+    // Refresh EC routes when operator focuses a district on the impact map
+    if (this.showEvacOnMap() || this.evacCenters().length) {
+      this.loadEvacRoutes();
+    }
   }
 
   /** PMO delineation toolbar — draw impact zones coloured by the active level; carried into the impact PDF. */
@@ -498,26 +1143,114 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
         onEachFeature: (f: any, lyr: any) => {
           const nm = f.properties.display_name;
           lyr.on('click', () => this.paintDistrict(nm));   // PMO impact analysis: click a district to set/reduce its level
-          lyr.bindTooltip(() => {
-            const eff = this.effectiveLevelNow(nm);
-            const ov = this.pmoOverrides()[nm] !== undefined;
-            const src = this.curDay()?.tier_sources?.[nm];
-            return `<b>${nm}</b><br>${eff && eff !== 'NONE' ? this.label(eff) : 'No alert'}`
-              + (ov ? ' <small>(PMO impact)</small>' : (src ? `<br><small>${this.srcLabel(src)}</small>` : ''));
-          }, { sticky: true });
+	          lyr.bindTooltip(() => {
+	            const eff = this.effectiveLevelNow(nm);
+	            const ov = this.pmoOverrides()[nm] !== undefined;
+	            const src = this.curDay()?.tier_sources?.[nm];
+	            const sup = this.supportByName()[nm];
+	            let html = `<b>${escapeHtml(nm)}</b><br>${escapeHtml(eff && eff !== 'NONE' ? this.label(eff) : 'No alert')}`
+	              + (ov ? ' <small>(PMO paint)</small>' : (src ? `<br><small>${escapeHtml(this.srcLabel(src))}</small>` : ''));
+	            if (sup) {
+	              html += `<br><small>Support suggest: ${escapeHtml(this.label(sup.suggestedLevel))} · score ${escapeHtml(String(sup.supportScore ?? '—'))}</small>`;
+	              html += `<br><small>INFORM H ${escapeHtml(String(sup.informHazard ?? '—'))} · V ${escapeHtml(String(sup.informVulnerability ?? '—'))} · C ${escapeHtml(String(sup.informCoping ?? '—'))} · risk ${escapeHtml(String(sup.informRisk ?? '—'))}</small>`;
+	              if (sup.hazardFocus) {
+	                html += `<br><small>Focus ${escapeHtml(String(sup.hazardFocus))}: struct ${escapeHtml(String(sup.focusedStructuralHazard ?? '—'))} · EO ${escapeHtml(String(sup.focusedEoSignal ?? '—'))}</small>`;
+	              }
+	              const why = (sup.reasons || []).slice(0, 2).map((x: string) => escapeHtml(x)).join('; ');
+	              if (why) { html += `<br><small>${why}</small>`; }
+	            }
+	            return html;
+	          }, { sticky: true });
         },
       }).addTo(this.map);
       try { this.map.fitBounds(this.districtLayer.getBounds(), { padding: [8, 8] }); } catch {}
       this.renderOverlays();
       this.layerReady.set(true);   // per-district coordinate resolution (area_points/centroid) is now possible
+      // Once district geometry is ready, estimate routes to registered evacuation centres
+      if (this.showEvacOnMap()) {
+        setTimeout(() => this.loadEvacRoutes(), 50);
+      }
+      // Layout is map-first / tall — force Leaflet to remeasure after DOM settles
+      setTimeout(() => { try { this.map?.invalidateSize(); } catch {} }, 200);
     });
   }
   private styleDistrict(name: string): any {
+    const overridden = this.pmoOverrides()[name] !== undefined;
+    const mode = this.mapMode();
+    const sup = this.supportByName()[name];
+
+    // INFORM dimension / focus-hazard choropleths (support only — do not change painted levels)
+    if (mode === 'inform' || mode === 'inform-v') {
+      return this.choroplethStyle(sup?.informVulnerability, overridden, 'v');
+    }
+    if (mode === 'inform-h') {
+      return this.choroplethStyle(sup?.informHazard, overridden, 'h');
+    }
+    if (mode === 'inform-c') {
+      return this.choroplethStyle(sup?.informCoping, overridden, 'c');
+    }
+    if (mode === 'inform-risk') {
+      return this.choroplethStyle(sup?.informRisk, overridden, 'risk');
+    }
+    if (mode === 'focus-hazard') {
+      // Prefer EO signal, fall back to structural focused hazard component
+      const v = sup?.focusedEoSignal ?? sup?.focusedStructuralHazard;
+      return this.choroplethStyle(v, overridden, 'focus');
+    }
+
+    // Support-suggested red/orange/yellow (preview); PMO paint still wins if set
+    if (mode === 'support') {
+      const sug = overridden ? this.pmoOverrides()[name] : (sup?.suggestedLevel || this.effectiveLevelNow(name));
+      const active = !!sug && sug !== 'NONE';
+      return {
+        fillColor: alertColor(sug), fillOpacity: active ? 0.8 : 0.18,
+        color: overridden ? '#4527a0' : (sup && sup.suggestedLevel !== sup.entityLevel ? '#0d6efd' : '#5a6b7b'),
+        weight: overridden ? 1.4 : (sup && sup.suggestedLevel !== sup.entityLevel ? 1.2 : 0.45),
+        opacity: 1, dashArray: (!overridden && sup && sup.suggestedLevel !== sup.entityLevel) ? '4 3' : undefined,
+      };
+    }
+
+    // Default: entity consolidation + PMO effective paint (unchanged behaviour)
     const lvl = this.effectiveLevelNow(name);
     const active = !!lvl && lvl !== 'NONE';
-    const overridden = this.pmoOverrides()[name] !== undefined;
-    return { fillColor: alertColor(lvl), fillOpacity: active ? 0.8 : 0.22,
-      color: overridden ? '#4527a0' : '#5a6b7b', weight: overridden ? 1.4 : 0.45, opacity: 1 };
+    return {
+      fillColor: alertColor(lvl), fillOpacity: active ? 0.8 : 0.22,
+      color: overridden ? '#4527a0' : '#5a6b7b', weight: overridden ? 1.4 : 0.45, opacity: 1,
+    };
+  }
+
+  private choroplethStyle(v: number | null | undefined, overridden: boolean, kind: string): any {
+    const fill = this.informColor(v, kind);
+    return {
+      fillColor: fill, fillOpacity: v != null ? 0.75 : 0.12,
+      color: overridden ? '#4527a0' : '#5a6b7b', weight: overridden ? 1.4 : 0.45, opacity: 1,
+    };
+  }
+
+  /** 0–10 choropleth; tint by dimension kind so H/V/C/focus are visually distinct. */
+  private informColor(v: number | null | undefined, kind: string = 'v'): string {
+    if (v == null || Number.isNaN(Number(v))) return '#e2e8f0';
+    const x = Math.max(0, Math.min(10, Number(v))) / 10;
+    if (kind === 'h') {
+      // amber → deep orange
+      return `rgb(${Math.round(255 - x * 40)},${Math.round(220 - x * 140)},${Math.round(100 - x * 60)})`;
+    }
+    if (kind === 'c') {
+      // purple scale
+      return `rgb(${Math.round(240 - x * 80)},${Math.round(230 - x * 150)},${Math.round(255 - x * 40)})`;
+    }
+    if (kind === 'risk' || kind === 'focus') {
+      // rose / blue depending
+      if (kind === 'focus') {
+        return `rgb(${Math.round(220 - x * 100)},${Math.round(240 - x * 80)},${Math.round(255 - x * 30)})`;
+      }
+      return `rgb(${Math.round(255 - x * 30)},${Math.round(200 - x * 150)},${Math.round(200 - x * 120)})`;
+    }
+    // vulnerability: teal
+    const r = Math.round(240 - x * 180);
+    const g = Math.round(253 - x * 80);
+    const b = Math.round(250 - x * 40);
+    return `rgb(${r},${g},${b})`;
   }
   restyle(): void {
     if (this.districtLayer) this.districtLayer.eachLayer((l: any) => l.setStyle(this.styleDistrict(l.feature.properties.display_name)));
@@ -543,10 +1276,14 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
         html: `<div style="width:30px;height:30px;border-radius:50%;border:3px solid ${alertColor(ov.alert_level)};background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)">
                  <img src="${HAZ_ICON(ICON_BY_TYPE[ov.type] || 'heavy_rain.png')}" style="width:20px;height:20px"></div>`,
         iconSize: [30, 30], iconAnchor: [15, 15],
-      });
-      L.marker([c.lat, c.lng], { icon, pane: 'overlayicons' })
-        .bindTooltip(`<b>${this.agName(ov.agency)} · ${ov.type}</b><br>${this.label(ov.alert_level)}<br><small>${this.join(ov.areas)}</small>`, { sticky: true })
-        .addTo(this.overlayLayer);
+	      });
+	      L.marker([c.lat, c.lng], { icon, pane: 'overlayicons' })
+	        .bindTooltip(
+	          `<b>${escapeHtml(this.agName(ov.agency))} · ${escapeHtml(ov.type)}</b><br>`
+	            + `${escapeHtml(this.label(ov.alert_level))}<br><small>${escapeHtml(this.join(ov.areas))}</small>`,
+	          { sticky: true },
+	        )
+	        .addTo(this.overlayLayer);
     }
     // Hydromet (TMA rainfall / MoW floods) live in the tier choropleth, not the overlays — give them a hazard
     // icon too (one per distinct hydromet hazard type) so PMO sees the rain/flood symbol like every other agency.
@@ -572,10 +1309,14 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
         html: `<div style="width:30px;height:30px;border-radius:50%;border:3px solid ${alertColor(lvl)};background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)">
                  <img src="${HAZ_ICON(ICON_BY_TYPE[type] || 'heavy_rain.png')}" style="width:20px;height:20px"></div>`,
         iconSize: [30, 30], iconAnchor: [15, 15],
-      });
-      L.marker([c.lat, c.lng], { icon, pane: 'overlayicons' })
-        .bindTooltip(`<b>${this.agName(ag.toLowerCase())} · ${type}</b><br>${this.label(lvl)}<br><small>${this.join(districts)}</small>`, { sticky: true })
-        .addTo(this.overlayLayer);
+	      });
+	      L.marker([c.lat, c.lng], { icon, pane: 'overlayicons' })
+	        .bindTooltip(
+	          `<b>${escapeHtml(this.agName(ag.toLowerCase()))} · ${escapeHtml(type)}</b><br>`
+	            + `${escapeHtml(this.label(lvl))}<br><small>${escapeHtml(this.join(districts))}</small>`,
+	          { sticky: true },
+	        )
+	        .addTo(this.overlayLayer);
     }
   }
   srcLabel(src: string): string {

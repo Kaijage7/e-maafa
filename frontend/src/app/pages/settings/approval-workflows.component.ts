@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
+import { AuthService } from '../../core/auth.service';
 
 interface Level {
   id: number; level: number; name: string; roleRequired: string; order: number;
@@ -14,7 +15,10 @@ interface Module {
 }
 interface AutoTier {
   stage: string; label: string; role: string; scope: string; mode: string; officers: number;
+  coveredAreas: number; totalAreas: number; coverageLabel: string;
 }
+interface RoleDetail { name: string; category: string; scopeLevel: string; sortOrder: number; }
+interface RoleGroup { category: string; count: number; roles: RoleDetail[]; }
 
 /**
  * System Settings → Approval Workflows. The admin surface for the V24 generalized approval engine:
@@ -56,9 +60,12 @@ interface AutoTier {
                   <div style="font-weight:700;font-size:0.9rem;">{{ t.label }}</div>
                   <div style="font-size:0.78rem;color:var(--text-light);">{{ t.scope }} · role {{ t.role }} ·
                     <span [style.color]="t.officers ? '#059669' : '#dc2626'">{{ t.officers }} officer{{ t.officers === 1 ? '' : 's' }} seeded</span>
+                    @if (t.totalAreas) {
+                      · <span [style.color]="t.coveredAreas === t.totalAreas ? '#059669' : '#dc2626'">{{ t.coveredAreas }}/{{ t.totalAreas }} {{ t.coverageLabel }}</span>
+                    }
                   </div>
                 </div>
-                <select class="form-select" [ngModel]="t.mode" (ngModelChange)="setMode(t, $event)">
+                <select class="form-select" [disabled]="!canManage()" [ngModel]="t.mode" (ngModelChange)="setMode(t, $event)">
                   <option value="manual">Manual approval</option>
                   <option value="auto">Auto-advance</option>
                   <option value="skip_if_unstaffed">Skip if unstaffed</option>
@@ -83,7 +90,7 @@ interface AutoTier {
                 @if (m.description) { · {{ m.description }} }
               </div>
               <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;">
-                <input type="checkbox" [checked]="m.isActive" (change)="toggleModule(m)">
+                <input type="checkbox" [disabled]="!canManage()" [checked]="m.isActive" (change)="toggleModule(m)">
                 <span [style.color]="m.isActive ? '#059669' : '#94a3b8'">{{ m.isActive ? 'Active' : 'Inactive' }}</span>
               </label>
             </div>
@@ -93,40 +100,52 @@ interface AutoTier {
               @for (l of m.levels; track l.id; let i = $index) {
                 <div class="lvl" [class.off]="!l.isActive">
                   <div class="ord">{{ i + 1 }}</div>
-                  <input class="form-control nm" [ngModel]="l.name" (change)="saveLevel(l, { name: $any($event.target).value })">
-                  <select class="form-select rl" [ngModel]="l.roleRequired" (ngModelChange)="saveLevel(l, { roleRequired: $event })">
-                    @for (r of roles(); track r) { <option [value]="r">{{ r }}</option> }
+                  <input class="form-control nm" [readonly]="!canManage()" [ngModel]="l.name" (change)="saveLevel(l, { name: $any($event.target).value })">
+                  <select class="form-select rl" [disabled]="!canManage()" [ngModel]="l.roleRequired" (ngModelChange)="saveLevel(l, { roleRequired: $event })">
+                    @for (g of roleGroups(); track g.category) {
+                      <optgroup [label]="g.category">
+                        @for (r of g.roles; track r.name) { <option [value]="r.name">{{ r.name }}</option> }
+                      </optgroup>
+                    }
                   </select>
                   <label class="chk" title="Can be skipped under conditions">
-                    <input type="checkbox" [checked]="l.canSkip" (change)="saveLevel(l, { canSkip: $any($event.target).checked })"> skippable
+                    <input type="checkbox" [disabled]="!canManage()" [checked]="l.canSkip" (change)="saveLevel(l, { canSkip: $any($event.target).checked })"> skippable
                   </label>
                   <label class="chk" title="Level is active in the chain">
-                    <input type="checkbox" [checked]="l.isActive" (change)="saveLevel(l, { isActive: $any($event.target).checked })"> active
+                    <input type="checkbox" [disabled]="!canManage()" [checked]="l.isActive" (change)="saveLevel(l, { isActive: $any($event.target).checked })"> active
                   </label>
-                  <div class="ctl ctx-wrap">
-                    <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + l.name" (click)="toggleMenu(l.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
-                    <div class="ctx-menu" [class.open]="openMenu() === l.id">
-                      @if (i > 0) { <a class="ctx-item" (click)="move(l, 'up')"><i class="fas fa-arrow-up"></i> Move up</a> }
-                      @if (i < m.levels.length - 1) { <a class="ctx-item" (click)="move(l, 'down')"><i class="fas fa-arrow-down"></i> Move down</a> }
-                      <a class="ctx-item danger" (click)="removeLevel(m, l)"><i class="fas fa-trash"></i> Remove level</a>
+                  @if (canManage()) {
+                    <div class="ctl ctx-wrap">
+                      <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + l.name" (click)="toggleMenu(l.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
+                      <div class="ctx-menu" [class.open]="openMenu() === l.id">
+                        @if (i > 0) { <a class="ctx-item" (click)="move(l, 'up')"><i class="fas fa-arrow-up"></i> Move up</a> }
+                        @if (i < m.levels.length - 1) { <a class="ctx-item" (click)="move(l, 'down')"><i class="fas fa-arrow-down"></i> Move down</a> }
+                        <a class="ctx-item danger" (click)="removeLevel(m, l)"><i class="fas fa-trash"></i> Remove level</a>
+                      </div>
                     </div>
-                  </div>
+                  }
                 </div>
               } @empty { <div style="color:var(--text-light);font-size:0.85rem;padding:0.5rem 0;">No levels yet — add the first approval step below.</div> }
             </div>
 
             <!-- add level -->
-            <div class="addrow">
-              <input class="form-control" style="flex:2;" placeholder="New level name (e.g. PMO Review)"
-                     [(ngModel)]="newName[m.id]">
-              <select class="form-select" style="flex:1;" [(ngModel)]="newRole[m.id]">
-                <option value="">Select role…</option>
-                @for (r of roles(); track r) { <option [value]="r">{{ r }}</option> }
-              </select>
-              <button class="btn-add" [disabled]="!newName[m.id]?.trim() || !newRole[m.id]" (click)="addLevel(m)">
-                <i class="fas fa-plus"></i> Add level
-              </button>
-            </div>
+            @if (canManage()) {
+              <div class="addrow">
+                <input class="form-control" style="flex:2;" placeholder="New level name (e.g. PMO Review)"
+                       [(ngModel)]="newName[m.id]">
+                <select class="form-select" style="flex:1;" [(ngModel)]="newRole[m.id]">
+                  <option value="">Select role…</option>
+                  @for (g of roleGroups(); track g.category) {
+                    <optgroup [label]="g.category">
+                      @for (r of g.roles; track r.name) { <option [value]="r.name">{{ r.name }}</option> }
+                    </optgroup>
+                  }
+                </select>
+                <button class="btn-add" [disabled]="!newName[m.id]?.trim() || !newRole[m.id]" (click)="addLevel(m)">
+                  <i class="fas fa-plus"></i> Add level
+                </button>
+              </div>
+            }
           </div>
         </dmis-panel>
       </div>
@@ -154,10 +173,12 @@ interface AutoTier {
 })
 export class ApprovalWorkflowsComponent {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   private base = '/api/v1/settings/approval-workflows';
 
   modules = signal<Module[]>([]);
   roles = signal<string[]>([]);
+  roleGroups = signal<RoleGroup[]>([]);
   tiers = signal<AutoTier[]>([]);
   autoSaved = signal(false);
   private autoBase = '/api/v1/response/settings/approval-automation';
@@ -171,10 +192,13 @@ export class ApprovalWorkflowsComponent {
 
   constructor() { this.reload(); this.loadAutomation(); }
 
+  canManage = computed(() => this.auth.hasPermission('approval_workflows.manage'));
+
   reload(): void {
-    this.http.get<{ modules: Module[]; roles: string[] }>(this.base).subscribe(r => {
+    this.http.get<{ modules: Module[]; roles: string[]; roleGroups?: RoleGroup[]; roleDetails?: RoleDetail[] }>(this.base).subscribe(r => {
       this.modules.set(r.modules);
       this.roles.set(r.roles);
+      this.roleGroups.set(r.roleGroups ?? this.groupRoles(r.roleDetails ?? []));
     });
   }
 
@@ -185,6 +209,7 @@ export class ApprovalWorkflowsComponent {
 
   /** Change one tier's mode and persist immediately. */
   setMode(t: AutoTier, mode: string): void {
+    if (!this.canManage()) { return; }
     t.mode = mode;
     this.http.post(this.autoBase, { [t.stage]: mode }).subscribe({
       next: () => { this.autoSaved.set(true); setTimeout(() => this.autoSaved.set(false), 1800); },
@@ -193,10 +218,12 @@ export class ApprovalWorkflowsComponent {
   }
 
   toggleModule(m: Module): void {
+    if (!this.canManage()) { return; }
     this.http.post(`${this.base}/${m.id}/toggle`, {}).subscribe(() => this.reload());
   }
 
   saveLevel(l: Level, change: Partial<Record<string, any>>): void {
+    if (!this.canManage()) { return; }
     this.http.put(`${this.base}/levels/${l.id}`, change).subscribe({
       next: () => this.reload(),
       error: err => { alert(err?.error?.message ?? 'Could not save the level.'); this.reload(); },
@@ -204,10 +231,12 @@ export class ApprovalWorkflowsComponent {
   }
 
   move(l: Level, direction: 'up' | 'down'): void {
+    if (!this.canManage()) { return; }
     this.http.post(`${this.base}/levels/${l.id}/move`, { direction }).subscribe(() => this.reload());
   }
 
   addLevel(m: Module): void {
+    if (!this.canManage()) { return; }
     const name = this.newName[m.id]?.trim();
     const roleRequired = this.newRole[m.id];
     if (!name || !roleRequired) { return; }
@@ -222,7 +251,14 @@ export class ApprovalWorkflowsComponent {
   }
 
   removeLevel(m: Module, l: Level): void {
+    if (!this.canManage()) { return; }
     if (!confirm(`Remove the "${l.name}" approval level from ${m.moduleName}?`)) { return; }
     this.http.delete(`${this.base}/levels/${l.id}`).subscribe(() => this.reload());
+  }
+
+  private groupRoles(roles: RoleDetail[]): RoleGroup[] {
+    const grouped = new Map<string, RoleDetail[]>();
+    roles.forEach(r => grouped.set(r.category, [...(grouped.get(r.category) ?? []), r]));
+    return [...grouped.entries()].map(([category, roles]) => ({ category, count: roles.length, roles }));
   }
 }

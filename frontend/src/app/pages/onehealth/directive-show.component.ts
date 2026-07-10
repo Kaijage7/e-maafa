@@ -226,6 +226,35 @@ interface DirectiveDetail {
               </dmis-panel>
             </div>
           }
+
+          <!-- F52: per-stakeholder implementation history (was dead API) -->
+          <div class="panel-row full" style="animation-delay:.4s;">
+            <dmis-panel title="Implementation history by stakeholder" icon="fa-timeline">
+              <div class="panel-body">
+                @if (historyLoading()) {
+                  <div style="font-size:0.82rem;color:var(--text-light);">Loading history…</div>
+                } @else if (!historyGroups().length) {
+                  <div style="font-size:0.82rem;color:var(--text-light);">No implementation updates yet.</div>
+                } @else {
+                  @for (g of historyGroups(); track g.key) {
+                    <div style="margin-bottom:0.85rem;padding-bottom:0.65rem;border-bottom:1px solid #eef2f7;">
+                      <div style="font-weight:700;font-size:0.84rem;margin-bottom:0.35rem;">{{ g.label }}</div>
+                      @for (u of g.updates; track u.id) {
+                        <div style="font-size:0.78rem;padding:0.35rem 0;color:var(--text-mid);">
+                          <b>{{ u.implementation_status || 'update' }}</b>
+                          @if (u.implementation_percentage != null) { · {{ u.implementation_percentage }}% }
+                          @if (u.user_name) { · {{ u.user_name }} }
+                          @if (u.created_at) { · {{ u.created_at }} }
+                          @if (u.update_notes) { <div style="color:#64748b;">{{ u.update_notes }}</div> }
+                          @if (u.challenges) { <div style="color:#b45309;">Challenges: {{ u.challenges }}</div> }
+                        </div>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            </dmis-panel>
+          </div>
         </div>
 
         <div class="col-lg-4">
@@ -495,10 +524,32 @@ export class OhDirectiveShowComponent implements OnInit {
     });
   }
 
+  readonly historyLoading = signal(false);
+  readonly historyGroups = signal<{ key: string; label: string; updates: any[] }[]>([]);
+
   load(after?: () => void): void {
     this.http.get<DirectiveDetail>(`/api/v1/onehealth/directives/${this.id}`).subscribe(d => {
       this.directive.set(d);
+      this.loadImplementationHistory();
       after?.();
+    });
+  }
+
+  private loadImplementationHistory(): void {
+    this.historyLoading.set(true);
+    this.http.get<any>(`/api/v1/onehealth/directives/${this.id}/implementation-history`).subscribe({
+      next: res => {
+        const raw = res?.updates ?? {};
+        const groups: { key: string; label: string; updates: any[] }[] = [];
+        Object.keys(raw).forEach(key => {
+          const updates = raw[key] as any[];
+          const label = updates?.[0]?.stakeholder_organization || (key === 'null' ? 'Unassigned' : `Stakeholder #${key}`);
+          groups.push({ key, label, updates: updates ?? [] });
+        });
+        this.historyGroups.set(groups);
+        this.historyLoading.set(false);
+      },
+      error: () => { this.historyGroups.set([]); this.historyLoading.set(false); },
     });
   }
 

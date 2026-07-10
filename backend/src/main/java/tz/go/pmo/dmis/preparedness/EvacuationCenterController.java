@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.security.AreaLookup;
@@ -37,7 +38,7 @@ public class EvacuationCenterController {
 
     @GetMapping
     @Operation(summary = "Evacuation center registry + statistics + map markers")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('preparedness.view','early_warning.view','incidents.view')")
     public EvacuationCenterResponse index() {
         // The service reads the whole registry; evacuation_centers stamps area as free TEXT
         // (region/district columns, no region_id/district_id FK). Scope here by resolving each row's
@@ -88,9 +89,34 @@ public class EvacuationCenterController {
         return evacuationCenterService.create(request);
     }
 
+    /**
+     * Possible routes from an incident / early-warning point to registered evacuation centres.
+     * Sorted nearest-first; distances are straight-line (honest — not OSM routing).
+     */
+    @GetMapping("/nearest")
+    @Operation(summary = "Nearest evacuation centres to a lat/lng (incident or warning centroid)")
+    @PreAuthorize("hasAnyAuthority('preparedness.view','early_warning.view','incidents.view')")
+    public Map<String, Object> nearest(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "5") int limit) {
+        if (lat < -12.5 || lat > 0.5 || lng < 28.5 || lng > 41.5) {
+            // Soft guard: still compute, but flag out-of-TZ bounds for operators
+            List<Map<String, Object>> rows = evacuationCenterService.nearest(lat, lng, limit);
+            return Map.of(
+                    "origin", Map.of("latitude", lat, "longitude", lng),
+                    "centers", rows,
+                    "note", "Coordinates outside typical Tanzania bounds — distances may not be operationally useful.");
+        }
+        return Map.of(
+                "origin", Map.of("latitude", lat, "longitude", lng),
+                "centers", evacuationCenterService.nearest(lat, lng, limit),
+                "note", "Straight-line km + ~40 km/h drive estimate. Use road directions for navigation.");
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Evacuation center detail (for the edit form)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('preparedness.view','early_warning.view','incidents.view')")
     public Map<String, Object> detail(@PathVariable long id) {
         return evacuationCenterService.detail(id);
     }

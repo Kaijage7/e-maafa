@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import tz.go.pmo.dmis.notification.NotificationService;
 
 /**
  * Opens a disaster response activation — the single entry point shared by the
@@ -26,10 +27,12 @@ public class ActivationService {
 
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService users;
+    private final NotificationService notifications;
 
-    public ActivationService(JdbcTemplate jdbc, IncidentWorkflowService users) {
+    public ActivationService(JdbcTemplate jdbc, IncidentWorkflowService users, NotificationService notifications) {
         this.jdbc = jdbc;
         this.users = users;
+        this.notifications = notifications;
     }
 
     @Transactional
@@ -118,11 +121,25 @@ public class ActivationService {
                 join public.disaster_response_functions f on f.id = t.drf_id
                 """, incidentId, activationId, userId);
 
-        log(activationId, userId, "activated",
-                (simulation
-                        ? "SIMULATION " + (allowRealOps ? "FULL-SCALE exercise" : "table-top drill") + " activated"
-                        : "Disaster response activated")
-                        + " — 15 DRFs and " + tasks + " tasks created.", null);
+        String summary = (simulation
+                ? "SIMULATION " + (allowRealOps ? "FULL-SCALE exercise" : "table-top drill") + " activated"
+                : "Disaster response activated")
+                + " — 15 DRFs and " + tasks + " tasks created.";
+        log(activationId, userId, "activated", summary, null);
+        // F27 — CP activation was silent; notify national response desks (in-app).
+        try {
+            String title = simulation ? "Simulation command post activated" : "Command post activated";
+            String msg = summary + " (incident #" + incidentId + ", activation #" + activationId + ").";
+            notifications.notifyRoles(
+                    List.of("EOCC", "Director", "Asst. Director", "Super Admin"),
+                    NotificationService.Notice.inApp(
+                            simulation ? "cp_activation_sim" : "cp_activation",
+                            title, msg,
+                            "/m/response/coordination?activation=" + activationId,
+                            "response_activation", activationId, simulation ? "info" : "warning"));
+        } catch (Exception ignored) {
+            // Non-fatal: activation already committed.
+        }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("activation_id", activationId);
         out.put("incident_id", incidentId);

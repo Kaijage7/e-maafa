@@ -213,9 +213,9 @@ export class ReliefDistributionsComponent {
   }
 
   confirm(r: Row): void {
-    this.http.post(`${this.base}/${r.id}/confirm`, {}).subscribe({
+    this.http.post<any>(`${this.base}/${r.id}/confirm`, {}).subscribe({
       next: () => this.reload(),
-      error: e => alert(e?.error?.detail ?? 'Could not confirm distribution.'),
+      error: e => alert(e?.error?.detail ?? e?.error?.message ?? 'Could not confirm distribution.'),
     });
   }
 

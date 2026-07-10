@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 
@@ -53,6 +54,25 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
       <div class="stat"><b style="color:#d97706">{{ stats().in_chain ?? 0 }}</b><span>In Approval Chain</span></div>
       <div class="stat"><b>{{ stats().ended ?? 0 }}</b><span>Ended</span></div>
     </div>
+
+    <dmis-panel title="Statutory committees (reference)" icon="fa-sitemap">
+      @if (committees().length) {
+        <table>
+          <thead><tr><th>Committee</th><th>Level</th><th>Role</th></tr></thead>
+          <tbody>
+            @for (c of committees(); track c.id) {
+              <tr>
+                <td><b>{{ c.name || c.committee_name || c.title || ('#' + c.id) }}</b></td>
+                <td>{{ c.level || c.tier || c.scope || '—' }}</td>
+                <td style="font-size:0.8rem;color:#475569">{{ c.mandate || c.role || c.description || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <div class="empty">Loading statutory committee hierarchy…</div>
+      }
+    </dmis-panel>
 
     <dmis-panel title="Declarations (DM Act 2022 ss.32–33)" icon="fa-gavel">
       <table>
@@ -114,6 +134,7 @@ export class DeclarationsComponent implements OnInit {
   readonly declarations = signal<any[]>([]);
   readonly stats = signal<any>({});
   readonly detail = signal<any | null>(null);
+  readonly committees = signal<any[]>([]);
 
   readonly chainSteps = [
     { key: 'proposed', label: 'Proposed', i: 0 },
@@ -131,6 +152,11 @@ export class DeclarationsComponent implements OnInit {
     this.http.get<any>('/api/v1/response/declarations').subscribe(d => {
       this.declarations.set(d.declarations);
       this.stats.set(d.stats);
+    });
+    // F51: consume statutory committee hierarchy (was dead endpoint)
+    this.http.get<any>('/api/v1/response/declarations/committees').subscribe({
+      next: d => this.committees.set(d.committees ?? d ?? []),
+      error: () => this.committees.set([]),
     });
   }
 
@@ -166,9 +192,9 @@ export class DeclarationsComponent implements OnInit {
     }).then((r: any) => { if (r.isConfirmed) { this.post('/api/v1/response/declarations', r.value); } }));
   }
 
-  act(id: number, action: string, title: string): void {
-    ensureSweetAlert().then(() => Swal.fire({
-      title, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
+	  act(id: number, action: string, title: string): void {
+	    ensureSweetAlert().then(() => Swal.fire({
+	      titleText: title, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
       input: 'textarea', inputLabel: 'Note (optional)',
     }).then((r: any) => { if (r.isConfirmed) { this.post(`/api/v1/response/declarations/${id}/${action}`, { note: r.value || null }); } }));
   }
@@ -188,11 +214,11 @@ export class DeclarationsComponent implements OnInit {
     }).then((r: any) => { if (r.isConfirmed) { this.post(`/api/v1/response/declarations/${x.id}/declare`, r.value); } }));
   }
 
-  extend(x: any): void {
-    ensureSweetAlert().then(() => Swal.fire({
-      title: 'Extend this declaration (s.32)?',
-      html: `<input id="eu" type="date" class="swal2-input" title="Effective until" value="${x.effective_until ?? ''}">
-             <p style="font-size:0.78rem;color:#6c757d">A Disaster Area may be extended for a further period (s.32).</p>`,
+	  extend(x: any): void {
+	    ensureSweetAlert().then(() => Swal.fire({
+	      title: 'Extend this declaration (s.32)?',
+	      html: `<input id="eu" type="date" class="swal2-input" title="Effective until" value="${escapeHtml(x.effective_until ?? '')}">
+	             <p style="font-size:0.78rem;color:#6c757d">A Disaster Area may be extended for a further period (s.32).</p>`,
       showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Extend',
       preConfirm: () => {
         const until = (document.getElementById('eu') as HTMLInputElement).value;

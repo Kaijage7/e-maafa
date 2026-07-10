@@ -21,11 +21,9 @@ interface UnfundedTrainingRow {
 }
 
 /**
- * Open Needs — the partner-facing discovery list of what the platform currently needs help with:
- * resource donation calls (allocations published for stakeholder bidding, still awaiting fulfilment)
- * and trainings whose funding support has been requested but is unfunded. Read-only: it surfaces the
- * need, how much is still required and how soon; the offer/accept lifecycle lives on the response
- * dispatch console, and an item drops off this list automatically once it is fulfilled or closed.
+ * Open Needs — the PMO/internal worklist of what the platform currently needs help with: resource
+ * donation calls still awaiting fulfilment and trainings whose funding support has been requested but is
+ * unfunded. Partner-facing pledge flows stay on Resource Donations and Fund a Measure or Training.
  */
 @Component({
   selector: 'page-open-needs',
@@ -71,7 +69,7 @@ interface UnfundedTrainingRow {
   `],
   template: `
     <dmis-page-header title="Open Needs" icon="fa-hand-holding-heart"
-      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Stakeholder Portal'}, {label:'Open Needs'}]">
+      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Stakeholder Portal'}, {label:'PMO Open Needs'}]">
     </dmis-page-header>
 
     <div class="stat-strip">

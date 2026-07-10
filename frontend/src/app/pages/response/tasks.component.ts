@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 
@@ -304,7 +305,7 @@ export class TasksComponent implements OnInit {
 
   setStatus(id: number, status: string): void {
     ensureSweetAlert().then(() => Swal.fire({
-      title: `Move task to "${status}"?`, icon: 'question', showCancelButton: true,
+      titleText: `Move task to "${status}"?`, icon: 'question', showCancelButton: true,
       confirmButtonColor: '#dc3545', input: 'textarea', inputLabel: 'Notes (optional)',
     }).then((r: any) => {
       if (r.isConfirmed) {
@@ -313,9 +314,9 @@ export class TasksComponent implements OnInit {
     }));
   }
 
-  reassign(id: number): void {
-    this.http.get<any>('/api/v1/response/tasks/form-data').subscribe(fd => {
-      const options = fd.users.map((u: any) => `<option value="${u.id}">${u.name}</option>`).join('');
+	  reassign(id: number): void {
+	    this.http.get<any>('/api/v1/response/tasks/form-data').subscribe(fd => {
+	      const options = fd.users.map((u: any) => `<option value="${Number(u.id)}">${escapeHtml(u.name)}</option>`).join('');
       ensureSweetAlert().then(() => Swal.fire({
         title: 'Reassign task',
         html: `<select id="as-user" class="swal2-select" style="width:85%">${options}</select>

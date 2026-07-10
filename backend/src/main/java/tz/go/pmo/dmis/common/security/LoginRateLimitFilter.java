@@ -47,6 +47,7 @@ public class LoginRateLimitFilter extends AbstractRateLimitFilter {
         // an email-spam vector and reset-password a token-guessing surface.
         return "POST".equalsIgnoreCase(request.getMethod()) && uri != null
                 && (uri.endsWith(LOGIN_PATH)
+                    || uri.endsWith("/v1/auth/2fa/verify")
                     || uri.endsWith("/v1/auth/forgot-password")
                     || uri.endsWith("/v1/auth/reset-password"));
     }

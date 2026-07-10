@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { escapeHtml } from '../../core/html';
 import { addTanzaniaDarkBase, addMapNav } from '../../core/tz-map';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 
@@ -146,6 +147,21 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
     .ics-lane:hover { color: #7dd3fc; }
     .ics-lane .pc { margin-left: auto; color: #64748b; font-variant-numeric: tabular-nums; }
     .ics-dot { width: 8px; height: 8px; border-radius: 2px; flex: 0 0 auto; }
+    .refresh-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4ade80; margin-right: 5px; box-shadow: 0 0 0 4px rgba(74,222,128,0.12); }
+    .mini-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 7px; margin-bottom: 9px; }
+    .mini-stat { background: #17263d; border: 1px solid #33485f; border-radius: 6px; padding: 7px 9px; }
+    .mini-stat b { display: block; font-size: 1.05rem; color: #f1f5f9; line-height: 1.1; }
+    .mini-stat span { color: #8aa0bd; font-size: 0.7rem; text-transform: uppercase; font-weight: 800; }
+    .logi-row, .sitrep-row { border: 1px solid #334155; border-radius: 6px; padding: 8px 10px; margin-bottom: 7px; background: #17263d; font-size: 0.77rem; }
+    .logi-head { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+    .logi-title { flex: 1; font-weight: 800; color: #f1f5f9; }
+    .logi-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 7px; }
+    .qbar { background: #0f172a; border-radius: 5px; height: 7px; overflow: hidden; border: 1px solid #334155; }
+    .qbar span { display: block; height: 100%; background: #38bdf8; }
+    .qbar.delivered span { background: #4ade80; }
+    .sitrep-row b { color: #f1f5f9; }
+    .sitrep-meta { display: flex; gap: 8px; flex-wrap: wrap; margin: 5px 0; color: #cbd5e1; }
+    .sitrep-remark { color: #94a3b8; margin-top: 4px; }
   `],
   template: `
     <dmis-page-header title="Command Post — Disaster Response Coordination" icon="fa-tower-broadcast"
@@ -455,7 +471,8 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
           <div style="color:#94a3b8; font-size:0.75rem; margin-top:2px">
             {{ b.activation.region_name ?? '' }} · activated {{ b.activation.activated_at?.substring(0, 16)?.replace('T', ' ') }}
             by {{ b.activation.activated_by_name }} · {{ b.summary.assigned_stakeholders }} agencies engaged
-            @if (b.activation.scenario_title) { · {{ b.activation.scenario_title }} · {{ b.activation.run_code }} }</div>
+            @if (b.activation.scenario_title) { · {{ b.activation.scenario_title }} · {{ b.activation.run_code }} }
+            @if (lastRefreshed()) { · <span class="refresh-dot"></span>updated {{ lastRefreshed() }} }</div>
         </div>
         <div style="text-align:center">
           <div class="clock" [class.danger]="clockDanger()">{{ clock72() }}</div>
@@ -471,6 +488,138 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
             <button class="btn b-outline" (click)="deactivate()"><i class="fas fa-flag-checkered"></i> Close Response</button>
           }
           <button class="btn b-outline" style="margin-left:6px" (click)="closeBoard()">← All Activations</button>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="card">
+          <h4><i class="fas fa-truck-fast"></i> Logistics & Dispatch Picture
+            @if (b.activation.incident_id) {
+              <a class="btn-xs" style="margin-left:auto" [routerLink]="['/m/response/dispatch']" [queryParams]="{ incident_id: b.activation.incident_id }">
+                <i class="fas fa-arrow-up-right-from-square"></i> Dispatch Console
+              </a>
+            }
+          </h4>
+          @if (b.logistics?.available) {
+            <div class="mini-stats">
+              <div class="mini-stat"><b>{{ b.logistics.summary.allocation_count || 0 }}</b><span>allocation lines</span></div>
+              <div class="mini-stat"><b>{{ b.logistics.summary.resource_count || 0 }}</b><span>resources</span></div>
+              <div class="mini-stat"><b>{{ b.logistics.summary.pending_dispatch || 0 }}</b><span>awaiting source</span></div>
+              <div class="mini-stat"><b>{{ b.logistics.summary.pending_source_approvals || 0 }}</b><span>source approvals</span></div>
+            </div>
+            @for (r of b.logistics.resources; track r.id) {
+              <div class="logi-row">
+                <div class="logi-head">
+                  <span class="pill">{{ r.status }}</span>
+                  <span class="logi-title">{{ r.resource_name }}</span>
+                  <span style="color:#94a3b8">{{ r.latest_source || 'source pending' }}</span>
+                </div>
+                <div style="margin-top:5px;color:#cbd5e1">
+                  requested {{ num(r.quantity_requested) | number:'1.0-2' }} {{ r.unit_of_measure }}
+                  @if (num(r.quantity_allocated) > 0) { · allocated {{ num(r.quantity_allocated) | number:'1.0-2' }} }
+                  · dispatched {{ num(r.dispatched_quantity) | number:'1.0-2' }}
+                  @if (num(r.pending_quantity) > 0) { · pending {{ num(r.pending_quantity) | number:'1.0-2' }} }
+                </div>
+                <div class="logi-bars">
+                  <div>
+                    <small style="color:#64748b">dispatch coverage</small>
+                    <div class="qbar"><span [style.width.%]="coverage(r, 'dispatched_quantity')"></span></div>
+                  </div>
+                  <div>
+                    <small style="color:#64748b">delivery coverage</small>
+                    <div class="qbar delivered"><span [style.width.%]="coverage(r, 'delivered_quantity')"></span></div>
+                  </div>
+                </div>
+              </div>
+            } @empty {
+              <div class="empty">No resource allocations are linked to this incident yet.</div>
+            }
+          } @else {
+            <div class="empty">Forecast-only activations show logistics after impact creates an incident.</div>
+          }
+        </div>
+        <div class="card">
+          <h4><i class="fas fa-file-medical"></i> Situation Reports & Operational Cadence
+            @if (b.activation.incident_id) {
+              <a class="btn-xs" style="margin-left:auto" [routerLink]="['/m/response/incidents', b.activation.incident_id]">
+                <i class="fas fa-arrow-up-right-from-square"></i> Incident
+              </a>
+            }
+          </h4>
+          @if (b.situation_reports?.available) {
+            <div class="mini-stats">
+              <div class="mini-stat"><b>{{ b.situation_reports.summary.reports_count || 0 }}</b><span>situation reports</span></div>
+              <div class="mini-stat"><b>{{ b.situation_reports.cadence?.label || 'Period' }}</b><span>{{ b.situation_reports.cadence?.window || 'clock pending' }}</span></div>
+            </div>
+            @if (b.situation_reports.cadence?.objectives) {
+              <div class="sitrep-remark" style="margin-bottom:0.5rem;"><b>IAP objectives:</b> {{ b.situation_reports.cadence.objectives }}</div>
+            }
+            @for (r of b.situation_reports.reports; track r.id) {
+              <div class="sitrep-row">
+                <b>{{ r.created_at?.substring(0, 16)?.replace('T', ' ') }}</b>
+                <span style="color:#94a3b8"> · {{ r.reported_by_name || 'Officer' }}</span>
+                <div class="sitrep-meta">
+                  <span>Deaths {{ r.deaths_total || 0 }}</span>
+                  <span>Injured {{ r.injured_total || 0 }}</span>
+                  <span>Missing {{ r.missing_total || 0 }}</span>
+                  <span>Displaced {{ r.displaced || 0 }}</span>
+                </div>
+                @if (services(r).length) {
+                  <div style="color:#7dd3fc">Services: {{ services(r).join(', ') }}</div>
+                }
+                @if (r.remarks) { <div class="sitrep-remark">{{ r.remarks }}</div> }
+              </div>
+            } @empty {
+              <div class="empty">No situation report has been filed for this incident yet.</div>
+            }
+          } @else {
+            <div class="empty">Forecast-only activations start situation reporting after confirmed impact.</div>
+          }
+
+          <!-- F31: formal operational periods (open / close with handover) -->
+          <div style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid rgba(148,163,184,0.25);">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:0.5rem;">
+              <b style="font-size:0.85rem;"><i class="fas fa-clock-rotate-left me-1"></i> Operational periods</b>
+              @if (b.activation.status === 'active' && b.operational_periods?.available !== false) {
+                <button type="button" class="btn-xs go" style="margin-left:auto" (click)="openPeriod()" [disabled]="periodBusy()">
+                  {{ periodBusy() ? '…' : 'Open next period' }}
+                </button>
+              }
+            </div>
+            @if (periodMsg()) { <div class="empty" style="color:#7dd3fc;padding:0.3rem 0;">{{ periodMsg() }}</div> }
+            @for (p of b.operational_periods?.periods || []; track p.id) {
+              <div class="sitrep-row">
+                <b>P{{ p.period_number }} · {{ p.label }}</b>
+                <span class="pill" [style.background]="p.status==='open' ? '#14532d' : '#334155'"
+                      [style.color]="p.status==='open' ? '#4ade80' : '#cbd5e1'" style="margin-left:6px;">{{ p.status }}</span>
+                <div class="sitrep-meta">
+                  <span>{{ p.hours_duration ?? '—' }}h</span>
+                  @if (p.created_by_name) { <span>{{ p.created_by_name }}</span> }
+                </div>
+                @if (p.objectives) { <div class="sitrep-remark">{{ p.objectives }}</div> }
+                @if (p.handover_notes) { <div class="sitrep-remark" style="color:#fde68a;">Handover: {{ p.handover_notes }}</div> }
+                @if (p.task_rollup; as tr) {
+                  <div class="sitrep-meta" style="margin-top:4px;flex-wrap:wrap;gap:6px;">
+                    <span class="pill" style="background:#1e3a5f;color:#93c5fd;"
+                          title="Tasks completed (status) in this period window">Done {{ tr.completed_in_window ?? 0 }}</span>
+                    <span class="pill" style="background:#1e3a5f;color:#fde68a;"
+                          title="In-progress tasks last updated in this window">In prog {{ tr.in_progress_in_window ?? 0 }}</span>
+                    <span class="pill" style="background:#1e3a5f;color:#86efac;"
+                          title="72-hr critical tasks completed in this window">Critical {{ tr.critical_completed_in_window ?? 0 }}</span>
+                    <span class="pill" style="background:#1e3a5f;color:#cbd5e1;"
+                          title="Distinct tasks with activity log entries in this window">Touched {{ tr.tasks_touched ?? 0 }}</span>
+                  </div>
+                }
+                @if (p.status === 'open' && b.activation.status === 'active') {
+                  <button type="button" class="btn-xs" style="margin-top:4px" (click)="closePeriod(p)" [disabled]="periodBusy()">Close period…</button>
+                }
+              </div>
+            } @empty {
+              <div class="empty" style="padding:0.4rem 0;">
+                {{ b.operational_periods?.message || 'No formal periods yet — open Period 1 to start IAP cadence.' }}
+              </div>
+            }
+          </div>
         </div>
       </div>
 
@@ -700,7 +849,10 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   readonly lane = signal<any | null>(null);
   readonly readiness = signal<any | null>(null);
   readonly now = signal(Date.now());
+  readonly lastRefreshed = signal('');
   private timer: any;
+  private boardRefresh: any;
+  private boardRefreshing = false;
 
   // Anticipatory-activation form state
   readonly showForecast = signal(false);
@@ -790,6 +942,7 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     clearInterval(this.timer);
+    this.stopBoardRefresh();
     this.stopStorm();
     this.stopIncidentMap();
     this.destroyFormMap();
@@ -833,8 +986,10 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   }
 
   openBoard(id: number): void {
+    this.stopBoardRefresh();
     this.http.get<any>(`/api/v1/response/coordination/${id}`).subscribe(d => {
       this.board.set(d);
+      this.markRefreshed();
       this.readiness.set(null);
       // Readiness (evac centres / stockpiles / warnings) is relevant to BOTH the forecast areas and an
       // incident's region, so load it for every activation.
@@ -844,10 +999,12 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
       } else if (d.activation?.latitude && d.activation?.longitude) {
         setTimeout(() => this.initIncidentMap(d.activation), 60);
       }
+      this.startBoardRefresh();
     });
   }
 
   closeBoard(): void {
+    this.stopBoardRefresh();
     this.stopStorm();
     this.stopIncidentMap();
     this.board.set(null);
@@ -875,10 +1032,15 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
     map.getPane('inc').style.zIndex = '650';
     const colour = this.sevColour(String(activation.severity_level ?? ''));
     L.circle([lat, lng], { pane: 'inc', radius: 8000, color: colour, weight: 1, fillColor: colour, fillOpacity: 0.12, interactive: false }).addTo(map);
-    L.circleMarker([lat, lng], { pane: 'inc', radius: 10, color: '#fff', weight: 2, fillColor: colour, fillOpacity: 0.95 })
-      .addTo(map)
-      .bindTooltip(`<b>${activation.incident_title ?? 'Incident'}</b><br>${activation.severity_level ?? ''} · ${activation.region_name ?? ''}<br>${activation.location_description ?? ''}`, { sticky: true })
-      .openTooltip();
+	    L.circleMarker([lat, lng], { pane: 'inc', radius: 10, color: '#fff', weight: 2, fillColor: colour, fillOpacity: 0.95 })
+	      .addTo(map)
+	      .bindTooltip(
+	        `<b>${escapeHtml(activation.incident_title ?? 'Incident')}</b><br>`
+	          + `${escapeHtml(activation.severity_level)} · ${escapeHtml(activation.region_name)}<br>`
+	          + escapeHtml(activation.location_description),
+	        { sticky: true },
+	      )
+	      .openTooltip();
     setTimeout(() => map.invalidateSize(), 80);
   }
 
@@ -894,13 +1056,102 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   private refresh(): void {
     const id = this.board()?.activation?.id;
     if (id) {
-      this.http.get<any>(`/api/v1/response/coordination/${id}`).subscribe(d => {
-        this.board.set(d);   // refresh data WITHOUT re-initialising the storm map (avoid flicker)
-        const drf = this.lane()?.drf;
-        if (drf) { this.openLane(drf); }
+      if (this.boardRefreshing) { return; }
+      this.boardRefreshing = true;
+      this.http.get<any>(`/api/v1/response/coordination/${id}`).subscribe({
+        next: d => {
+          this.board.set(d);   // refresh data WITHOUT re-initialising maps (avoid flicker)
+          this.markRefreshed();
+          const drf = this.lane()?.drf;
+          if (drf) { this.openLane(drf); }
+        },
+        error: () => {},
+        complete: () => { this.boardRefreshing = false; },
       });
     } else {
       this.load();
+    }
+  }
+
+  private startBoardRefresh(): void {
+    this.stopBoardRefresh();
+    this.boardRefresh = setInterval(() => this.refresh(), 30_000);
+  }
+
+  private stopBoardRefresh(): void {
+    if (this.boardRefresh) {
+      clearInterval(this.boardRefresh);
+      this.boardRefresh = null;
+    }
+  }
+
+  private markRefreshed(): void {
+    this.lastRefreshed.set(new Date().toTimeString().slice(0, 8));
+  }
+
+  /** F31 — open next IAP operational period. */
+  periodBusy = signal(false);
+  periodMsg = signal('');
+
+  openPeriod(): void {
+    const id = this.board()?.activation?.id;
+    if (!id) return;
+    const objectives = window.prompt('IAP objectives for the new operational period (optional):', '') ?? undefined;
+    if (objectives === undefined) return; // cancelled
+    this.periodBusy.set(true);
+    this.periodMsg.set('');
+    this.http.post(`/api/v1/response/coordination/${id}/periods`, { objectives: objectives || null }).subscribe({
+      next: () => {
+        this.periodBusy.set(false);
+        this.periodMsg.set('Period opened.');
+        this.refresh();
+      },
+      error: e => {
+        this.periodBusy.set(false);
+        this.periodMsg.set(e?.error?.message || e?.error?.detail || 'Could not open period.');
+      },
+    });
+  }
+
+  closePeriod(p: { id: number; label?: string }): void {
+    const id = this.board()?.activation?.id;
+    if (!id || !p?.id) return;
+    const notes = window.prompt(`Handover notes for closing ${p.label || 'period'} (optional):`, '') ?? undefined;
+    if (notes === undefined) return;
+    this.periodBusy.set(true);
+    this.periodMsg.set('');
+    this.http.post(`/api/v1/response/coordination/${id}/periods/${p.id}/close`, { handover_notes: notes || null }).subscribe({
+      next: () => {
+        this.periodBusy.set(false);
+        this.periodMsg.set('Period closed.');
+        this.refresh();
+      },
+      error: e => {
+        this.periodBusy.set(false);
+        this.periodMsg.set(e?.error?.message || e?.error?.detail || 'Could not close period.');
+      },
+    });
+  }
+
+  num(value: any): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  coverage(row: any, key: string): number {
+    const need = this.num(row.quantity_allocated) || this.num(row.quantity_requested);
+    return need > 0 ? Math.max(0, Math.min(100, Math.round((this.num(row[key]) / need) * 100))) : 0;
+  }
+
+  services(report: any): string[] {
+    const raw = report?.services_unavailable;
+    if (!raw) { return []; }
+    if (Array.isArray(raw)) { return raw.map(String).filter(Boolean); }
+    try {
+      const parsed = JSON.parse(String(raw));
+      return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
+    } catch {
+      return String(raw).split(',').map(x => x.trim()).filter(Boolean);
     }
   }
 
@@ -1012,11 +1263,11 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
     });
   }
 
-  launchScenario(s: any): void {
-    ensureSweetAlert().then(() => this.swal({
-      title: `Launch exercise: ${s.title}`,
+	  launchScenario(s: any): void {
+	    ensureSweetAlert().then(() => this.swal({
+	      titleText: `Launch exercise: ${s.title ?? 'scenario'}`,
       html: `<label style="display:block;text-align:left;font-size:0.78rem;color:#94a3b8;margin:4px 0 3px">Time compression</label>
-             <input id="scFactor" type="number" min="0.1" step="0.1" class="swal2-input" value="${s.default_time_compression || 1}">
+             <input id="scFactor" type="number" min="0.1" step="0.1" class="swal2-input" value="${Number(s.default_time_compression) || 1}">
              <label style="display:block;text-align:left;font-size:0.82rem;margin:8px 0">
                <input id="scRealOps" type="checkbox"> Full-scale exercise — allow real operations
              </label>
@@ -1180,7 +1431,7 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   // ── existing R11 activation + lane operations ──
   activate(incident: any, simulation: boolean): void {
     ensureSweetAlert().then(() => this.swal({
-      title: simulation ? `Run a SIMULATION exercise for "${incident.title}"?` : `Activate LIVE response for "${incident.title}"?`,
+      titleText: simulation ? `Run a SIMULATION exercise for "${incident.title}"?` : `Activate LIVE response for "${incident.title}"?`,
       ...(simulation ? {
         html: 'A flagged drill copy of the incident is created — the board is identical.<br><br>'
           + '<b>Table-top</b>: real logistics, money and communications are blocked.<br>'
@@ -1227,13 +1478,13 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
     return nums.map(n => (b?.drfs ?? []).find((d: any) => Number(d.number) === Number(n))).filter(Boolean);
   }
 
-  appointRole(entry: any): void {
-    const id = this.board()!.activation.id;
-    const open = (users: any[]) => {
-      const options = users.map((u: any) => `<option value="${u.id}">${u.name}</option>`).join('');
-      ensureSweetAlert().then(() => this.swal({
-        title: `Appoint ${entry.role_title}`,
-        html: `<select id="icsUser" class="swal2-select" style="width:85%"><option value="">Select officer…</option>${options}</select>
+	  appointRole(entry: any): void {
+	    const id = this.board()!.activation.id;
+	    const open = (users: any[]) => {
+	      const options = users.map((u: any) => `<option value="${Number(u.id)}">${escapeHtml(u.name)}</option>`).join('');
+	      ensureSweetAlert().then(() => this.swal({
+	        titleText: `Appoint ${entry.role_title ?? 'role'}`,
+	        html: `<select id="icsUser" class="swal2-select" style="width:85%"><option value="">Select officer…</option>${options}</select>
                <input id="icsNote" class="swal2-input" placeholder="Appointment / handover note (optional)">`,
         showCancelButton: true, confirmButtonColor: '#dc3545',
         preConfirm: () => {
@@ -1258,7 +1509,7 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
 
   relieveRole(entry: any): void {
     ensureSweetAlert().then(() => this.swal({
-      title: `Relieve ${entry.user_name} as ${entry.role_title}?`,
+      titleText: `Relieve ${entry.user_name} as ${entry.role_title}?`,
       text: 'The role goes vacant until a replacement is appointed. The relief is journalled for the After-Action Review.',
       icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545',
       input: 'text', inputLabel: 'Relief note (optional)',
@@ -1290,7 +1541,7 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   resolveInject(j: any): void {
     const id = this.board()!.activation.id;
     ensureSweetAlert().then(() => this.swal({
-      title: `Resolve inject: ${j.title}`, input: 'text', inputLabel: 'Decision / response taken',
+      titleText: `Resolve inject: ${j.title}`, input: 'text', inputLabel: 'Decision / response taken',
       showCancelButton: true, confirmButtonColor: '#16a34a',
     }).then((r: any) => {
       if (r.isConfirmed) {
@@ -1392,11 +1643,11 @@ ${rows(b.challenges, (c: any) => `<tr><td>DRF ${c.drf_number}</td><td>${esc(c.ch
     }));
   }
 
-  assignLane(drf: any): void {
-    const options = (this.board()?.stakeholders ?? [])
-      .map((s: any) => `<option value="${s.id}">${s.organization ?? s.name}</option>`).join('');
-    ensureSweetAlert().then(() => this.swal({
-      title: `Assign DRF ${drf.number} to an agency`,
+	  assignLane(drf: any): void {
+	    const options = (this.board()?.stakeholders ?? [])
+	      .map((s: any) => `<option value="${Number(s.id)}">${escapeHtml(s.organization ?? s.name)}</option>`).join('');
+	    ensureSweetAlert().then(() => this.swal({
+	      titleText: `Assign DRF ${drf.number} to an agency`,
       html: `<select id="ag" class="swal2-select" style="width:85%">${options}</select>`,
       showCancelButton: true, confirmButtonColor: '#dc3545',
       preConfirm: () => ({ stakeholder_id: Number((document.getElementById('ag') as HTMLSelectElement).value) }),
@@ -1409,7 +1660,7 @@ ${rows(b.challenges, (c: any) => `<tr><td>DRF ${c.drf_number}</td><td>${esc(c.ch
 
   addTask(drf: any): void {
     ensureSweetAlert().then(() => this.swal({
-      title: `Add task to DRF ${drf.number}`,
+      titleText: `Add task to DRF ${drf.number}`,
       html: `<input id="tt" class="swal2-input" placeholder="Task title">
              <select id="tp" class="swal2-select" style="width:85%">
                <option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select>
@@ -1447,9 +1698,9 @@ ${rows(b.challenges, (c: any) => `<tr><td>DRF ${c.drf_number}</td><td>${esc(c.ch
     }));
   }
 
-  removeTask(task: any): void {
-    ensureSweetAlert().then(() => this.swal({
-      title: `Remove "${task.title}"?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545',
+	  removeTask(task: any): void {
+	    ensureSweetAlert().then(() => this.swal({
+	      titleText: `Remove "${task.title ?? 'task'}"?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545',
     }).then((r: any) => {
       if (r.isConfirmed) {
         this.http.delete<any>(`/api/v1/response/coordination/${this.board()!.activation.id}/task/${task.id}`)

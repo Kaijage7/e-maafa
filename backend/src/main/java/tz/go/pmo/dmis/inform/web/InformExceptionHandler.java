@@ -3,6 +3,7 @@ package tz.go.pmo.dmis.inform.web;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -32,6 +33,11 @@ public class InformExceptionHandler {
     @ExceptionHandler({ IllegalArgumentException.class, NumberFormatException.class })
     public ResponseEntity<Map<String, Object>> badRequest(Exception e) {
         return body(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> forbidden(AccessDeniedException e) {
+        return body(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
     private static ResponseEntity<Map<String, Object>> body(HttpStatus status, String message) {

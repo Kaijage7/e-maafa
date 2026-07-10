@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, HostListener, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth.service';
+import { escapeHtml } from '../../core/html';
 import { addTanzaniaGisBase, addMapNav } from '../../core/tz-map';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
@@ -416,11 +417,11 @@ export class AnticipatoryPlansComponent implements OnDestroy {
         style: (f: any) => this.covStyle(f.properties.reg_name),
         onEachFeature: (f: any, layer: any) => {
           const region = f.properties.reg_name;
-          const n = this.regionCount(region);
-          const gap = n === 0 && this.hazardRegions().has(String(region).toLowerCase());
-          layer.bindTooltip(gap
-            ? `${region} — active hazard, no anticipatory plan`
-            : `${region} — ${n} active plan${n === 1 ? '' : 's'}`, { sticky: true });
+	          const n = this.regionCount(region);
+	          const gap = n === 0 && this.hazardRegions().has(String(region).toLowerCase());
+	          layer.bindTooltip(gap
+	            ? `${escapeHtml(region)} - active hazard, no anticipatory plan`
+	            : `${escapeHtml(region)} - ${n} active plan${n === 1 ? '' : 's'}`, { sticky: true });
           layer.on('mouseover', () => layer.setStyle({ weight: 2 }));
           layer.on('mouseout', () => this.covLayer?.resetStyle(layer));
         },

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { EwAgencyService } from './ew-agencies/ew-agency.service';
 import { loadCrossAgencyRef, renderCrossAgencyRef, RefMarker } from './ew-agencies/cross-agency-ref';
@@ -496,9 +497,9 @@ export class EwAlertMapComponent {
       const layer = L.geoJSON(r, {
         style: (f: any) => this.styleFor(this.rn(f)),
         onEachFeature: (f: any, lyr: any) => {
-          const name = this.rn(f);
-          this.regionLayers.set(name, lyr);
-          lyr.bindTooltip(name, { sticky: true, direction: 'top' });
+	          const name = this.rn(f);
+	          this.regionLayers.set(name, lyr);
+	          lyr.bindTooltip(escapeHtml(name), { sticky: true, direction: 'top' });
           lyr.on({ click: () => this.paintArea(name), mouseover: () => lyr.setStyle({ weight: 2 }), mouseout: () => lyr.setStyle({ weight: 0.8 }) });
         },
       }).addTo(this.map);

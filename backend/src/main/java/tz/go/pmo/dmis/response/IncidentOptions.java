@@ -50,10 +50,16 @@ public final class IncidentOptions {
     /** Incident::EMERGENCY_NEEDS_OPTIONS (multi-select key → label). */
     public static final Map<String, String> EMERGENCY_NEEDS = new LinkedHashMap<>();
 
-    /** Incident::getWorkflowStatuses() (workflow_status → label). */
+    /**
+     * Live filter options for the incident registry / form-data (F86).
+     * Only the modern DDMC→PS ladder + terminal states — not legacy approval aliases.
+     */
     public static final Map<String, String> WORKFLOW_STATUSES = new LinkedHashMap<>();
 
-    /** Incident::ASSISTANT_DIRECTOR_ROLES — valid forward targets besides 'Director'. */
+    /** Historical labels for residual DB rows (never offered as live filters). */
+    public static final Map<String, String> WORKFLOW_STATUS_LEGACY_LABELS = new LinkedHashMap<>();
+
+    /** Incident::ASSISTANT_DIRECTOR_ROLES — retained for history display only (F49 forward removed). */
     public static final List<String> ASSISTANT_DIRECTOR_ROLES = List.of(
             "Asst. Director", "EOCC", "Assistant Director EOCC", "Assistant Director Operation",
             "Assistant Director Research", "Assistant Director One Health");
@@ -76,8 +82,8 @@ public final class IncidentOptions {
         EMERGENCY_NEEDS.put("logistic_support", "Logistic Support");
         EMERGENCY_NEEDS.put("other", "Other (specify)");
 
-        WORKFLOW_STATUSES.put("draft", "Draft");
         // Escalation ladder (INCIDENT-WORKFLOW-PLAN.md): DDMC → DED → RDMC → RAS → EOCC → Director → PS.
+        WORKFLOW_STATUSES.put("draft", "Draft");
         WORKFLOW_STATUSES.put("waiting_ddmc", "Waiting for DDMC (District Coordinator)");
         WORKFLOW_STATUSES.put("waiting_ded", "Waiting for DED");
         WORKFLOW_STATUSES.put("waiting_rdmc", "Waiting for RDMC (Regional Coordinator)");
@@ -87,18 +93,20 @@ public final class IncidentOptions {
         WORKFLOW_STATUSES.put("waiting_ps", "Waiting for PS (Permanent Secretary)");
         WORKFLOW_STATUSES.put("closed_rumor", "Closed — Rumour / Normal Case");
         WORKFLOW_STATUSES.put("resolved", "Resolved (handled locally)");
-        WORKFLOW_STATUSES.put("waiting_das_approval", "Waiting for DAS Approval");
-        WORKFLOW_STATUSES.put("waiting_ras_approval", "Waiting for RAS Approval");
-        WORKFLOW_STATUSES.put("waiting_national_approval", "Waiting for Asst. Director Review");
-        WORKFLOW_STATUSES.put("waiting_assistant_director_approval", "Waiting for Asst. Director Approval");
-        WORKFLOW_STATUSES.put("waiting_director_approval", "Waiting for Director");
-        WORKFLOW_STATUSES.put("waiting_ps_approval", "Waiting for PS (Permanent Secretary)");
         WORKFLOW_STATUSES.put("approved", "Approved");
         WORKFLOW_STATUSES.put("rejected", "Rejected");
-        WORKFLOW_STATUSES.put("rolled_back_to_district", "Rolled Back to District Coordinator");
-        WORKFLOW_STATUSES.put("rolled_back_to_das", "Rolled Back to DAS");
-        WORKFLOW_STATUSES.put("rolled_back_to_regional", "Rolled Back to Regional Coordinator");
-        WORKFLOW_STATUSES.put("rolled_back_to_national", "Rolled Back to National Coordinator");
+
+        // Legacy labels only (F86) — residual rows / history, never form filters.
+        WORKFLOW_STATUS_LEGACY_LABELS.put("waiting_das_approval", "Waiting for DAS Approval");
+        WORKFLOW_STATUS_LEGACY_LABELS.put("waiting_ras_approval", "Waiting for RAS Approval");
+        WORKFLOW_STATUS_LEGACY_LABELS.put("waiting_national_approval", "Waiting for Asst. Director Review");
+        WORKFLOW_STATUS_LEGACY_LABELS.put("waiting_assistant_director_approval", "Waiting for Asst. Director Approval");
+        WORKFLOW_STATUS_LEGACY_LABELS.put("waiting_director_approval", "Waiting for Director");
+        WORKFLOW_STATUS_LEGACY_LABELS.put("waiting_ps_approval", "Waiting for PS (Permanent Secretary)");
+        WORKFLOW_STATUS_LEGACY_LABELS.put("rolled_back_to_district", "Rolled Back to District Coordinator");
+        WORKFLOW_STATUS_LEGACY_LABELS.put("rolled_back_to_das", "Rolled Back to DAS");
+        WORKFLOW_STATUS_LEGACY_LABELS.put("rolled_back_to_regional", "Rolled Back to Regional Coordinator");
+        WORKFLOW_STATUS_LEGACY_LABELS.put("rolled_back_to_national", "Rolled Back to National Coordinator");
     }
 
     /** Registry sort: CASE status WHEN ... THEN priority — verbatim ordering rule. */
@@ -111,6 +119,13 @@ public final class IncidentOptions {
     }
 
     public static String workflowStatusLabel(String status) {
-        return WORKFLOW_STATUSES.getOrDefault(status, status == null ? "" : status);
+        if (status == null) {
+            return "";
+        }
+        String live = WORKFLOW_STATUSES.get(status);
+        if (live != null) {
+            return live;
+        }
+        return WORKFLOW_STATUS_LEGACY_LABELS.getOrDefault(status, status);
     }
 }

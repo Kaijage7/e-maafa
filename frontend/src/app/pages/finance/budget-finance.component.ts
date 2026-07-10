@@ -89,6 +89,10 @@ interface Opt { id: number; name: string; }
       <button [class.active]="tab() === 'budgets'" (click)="tab.set('budgets')">Budgets</button>
       <button [class.active]="tab() === 'ndmf'" (click)="tab.set('ndmf')">NDMF Fund</button>
       <button [class.active]="tab() === 'thresholds'" (click)="tab.set('thresholds')">Approval Ceilings</button>
+      <a class="queue-tabs-link" routerLink="/m/budget-finance/economics"
+         style="font-size:0.82rem;font-weight:600;color:#0d6efd;text-decoration:none;padding:10px 16px;margin-left:auto;">
+        <i class="fas fa-chart-line me-1"></i> Economics of Disaster
+      </a>
     </div>
 
     <!-- ── Budgets ── -->

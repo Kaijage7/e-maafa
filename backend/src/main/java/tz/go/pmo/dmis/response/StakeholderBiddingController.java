@@ -22,6 +22,7 @@ import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.common.security.SecurityUtils;
 import tz.go.pmo.dmis.notification.NotificationService;
 
 /**
@@ -159,7 +160,7 @@ public class StakeholderBiddingController {
         out.put("quantity_needed", needed);
         out.put("accepted_quantity", accepted);
         out.put("pending_quantity", pending);
-        out.put("received_quantity", sumWhere(bids, "Received"));
+        out.put("received_quantity", sumReceived(bids));
         out.put("remaining_quantity", Math.max(0, needed - accepted));
         // Return-to-dispatch is only safe once no offer is still in play
         out.put("can_return_to_dispatch",
@@ -183,9 +184,12 @@ public class StakeholderBiddingController {
      * (e.g. offers phoned in during an emergency).
      */
     @PostMapping("/bids")
-    @PreAuthorize("hasAuthority('resource_allocation.request')")
+    @PreAuthorize("hasAnyAuthority('resource_allocation.request','stakeholder_portal.donate')")
     @Transactional
     public Map<String, Object> submitBid(@RequestBody Map<String, Object> body) {
+        if (jurisdiction.currentStakeholderId() == null && !SecurityUtils.hasAuthority("resource_allocation.request")) {
+            throw new BusinessRuleException("Your account is not linked to a partner organisation yet.");
+        }
         long allocationId = lng(body.get("allocated_resource_id"), "allocated_resource_id");
         long stakeholderId = lng(body.get("stakeholder_id"), "stakeholder_id");
         recordBid(allocationId, stakeholderId, body);
@@ -199,7 +203,7 @@ public class StakeholderBiddingController {
      * Link login). This is the donor-facing counterpart to the admin's on-behalf {@code submitBid}.
      */
     @PostMapping("/pledge")
-    @PreAuthorize("hasAuthority('resource_allocation.request')")
+    @PreAuthorize("hasAnyAuthority('resource_allocation.request','stakeholder_portal.donate')")
     @Transactional
     public Map<String, Object> pledge(@RequestBody Map<String, Object> body) {
         Long userId = users.actingUserId();
@@ -342,8 +346,9 @@ public class StakeholderBiddingController {
 
         jdbc.update("""
                 update public.stakeholder_resource_bids set status = 'Received',
+                    received_quantity = ?,
                     notes = coalesce(notes || E'\\n', '') || ?, updated_at = now() where id = ?
-                """, "[Received] Quantity: " + fmt(received) + ". "
+                """, received, "[Received] Quantity: " + fmt(received) + ". "
                         + (str(body.get("notes")) == null ? "Delivered by stakeholder." : str(body.get("notes"))), id);
 
         // Donation batch goes onto the single inventory_items ledger with donor traceability
@@ -357,7 +362,7 @@ public class StakeholderBiddingController {
                 "warehouse".equals(destinationType) ? destinationId : null,
                 "temporary_warehouse".equals(destinationType) ? destinationId : null,
                 "warehouse".equals(destinationType) ? "zonal" : "temporary",
-                resourceName, (int) received, "DON-" + id + "-" + LocalDate.now().toString().replace("-", ""),
+                resourceName, (int) Math.round(received), "DON-" + id + "-" + LocalDate.now().toString().replace("-", ""),
                 stakeholder, "Stakeholder donation. Bid ID: " + id);
         Long userId = users.actingUserId();
         jdbc.update("""
@@ -365,17 +370,18 @@ public class StakeholderBiddingController {
                     to_temporary_warehouse_id, allocation_id, supplier, notes, status, user_id,
                     completed_at, completed_by, created_at, updated_at)
                 values (?,?,'Intake',?,?,?,?,?, 'Completed', ?, now(), ?, now(), now())
-                """, resourceId, (int) received,
+                """, resourceId, (int) Math.round(received),
                 "warehouse".equals(destinationType) ? destinationId : null,
                 "temporary_warehouse".equals(destinationType) ? destinationId : null,
                 allocationId, stakeholder,
                 "Received from [Stakeholder: " + stakeholder + "]. Bid ID: " + id + ". Quantity: " + fmt(received),
                 userId, userId);
 
-        // Roll the allocation status up from everything received so far
+        // Roll the allocation status up from actual intake (received_quantity), not quantity_offered
         Double totalReceived = jdbc.queryForObject("""
-                select coalesce(sum(quantity_offered),0) from public.stakeholder_resource_bids
-                where allocated_resource_id = ? and status = 'Received'
+                select coalesce(sum(coalesce(received_quantity, quantity_offered)),0)
+                  from public.stakeholder_resource_bids
+                 where allocated_resource_id = ? and status = 'Received' and deleted_at is null
                 """, Double.class, allocationId);
         double allocated = dbl(findAllocation(allocationId).get("quantity_allocated"));
         if (totalReceived != null && totalReceived >= allocated) {
@@ -443,7 +449,7 @@ public class StakeholderBiddingController {
 
     /** All bids across allocations (the source's "Stakeholder Donations" screen). */
     @GetMapping("/donations")
-    @PreAuthorize("hasAuthority('resource_allocation.view')")
+    @PreAuthorize("hasAnyAuthority('resource_allocation.view','stakeholder_portal.donate')")
     public Map<String, Object> donations(@RequestParam(required = false) String status,
                                          @RequestParam(required = false) String search) {
         StringBuilder where = new StringBuilder("b.deleted_at is null");
@@ -497,11 +503,9 @@ public class StakeholderBiddingController {
     }
 
     /**
-     * Open needs for partner discovery: resource allocations published for donation that are still
-     * awaiting fulfilment, plus trainings whose funding support has been requested but is unfunded.
-     * Read-only — this lists what partners can help with; the bid/accept lifecycle stays on the admin
-     * console. {@code still_needed} mirrors {@link #pool}'s definition (allocated minus what is already
-     * committed); a bid is Accepted xor Received, so summing both never double-deducts.
+     * PMO Open Needs worklist: resource allocations published for donation that are still awaiting
+     * fulfilment, plus trainings whose funding support has been requested but is unfunded. Partner-facing
+     * donation and support pledges are handled by the donations/support surfaces instead.
      */
     @GetMapping("/open-needs")
     @PreAuthorize("hasAuthority('resource_allocation.view')")
@@ -521,8 +525,8 @@ public class StakeholderBiddingController {
             where.append(" and r.category ilike ?");
             params.add("%" + category + "%");
         }
-        // Area officers see only open needs whose incident is in their own area (or shared); national +
-        // non-area roles (incl. partners browsing for donations) keep the full national list of open needs.
+        // Area officers see only open needs whose incident is in their own area (or shared); national and
+        // non-area PMO roles keep the full national list of open needs.
         jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
         List<Map<String, Object>> allocations = jdbc.queryForList("""
                 select ar.id, ar.status, ar.quantity_allocated, ar.unit_of_measure, ar.bid_deadline,
@@ -556,18 +560,20 @@ public class StakeholderBiddingController {
                                 .isBefore(LocalDate.now().plusDays(4)))
                 .count();
         // Whether the caller is a partner linked to a stakeholder org (so the UI can offer "Donate").
-        Long uid = users.actingUserId();
-        boolean canPledge = uid != null && !jdbc.queryForList(
-                "select 1 from public.stakeholders where user_id = ? and coalesce(is_active, true) = true", uid).isEmpty();
+        Long myStakeholder = jurisdiction.currentStakeholderId();
+        boolean canPledge = myStakeholder != null;
 
         Map<String, Object> stats = new LinkedHashMap<>();
         stats.put("openAllocations", allocations.size());
         stats.put("unfundedTrainings", trainings.size());
         stats.put("urgent", urgent);
         stats.put("canPledge", canPledge);
-        // Partner list for the on-behalf picker (staff recording a pledge for a partner who phoned it in).
-        List<Map<String, Object>> stakeholders = jdbc.queryForList(
-                "select id, name from public.stakeholders where coalesce(is_active, true) = true order by name");
+        // Partner list for the on-behalf picker. Linked partners get only their own org; PMO operators with
+        // resource_allocation.request can record an offer for a partner who phoned it in.
+        List<Map<String, Object>> stakeholders = SecurityUtils.hasAuthority("resource_allocation.request")
+                ? jdbc.queryForList("select id, name from public.stakeholders where coalesce(is_active, true) = true order by name")
+                : myStakeholder == null ? List.of()
+                : jdbc.queryForList("select id, name from public.stakeholders where id = ?", myStakeholder);
         return Map.of("allocations", allocations, "trainings", trainings, "stats", stats, "stakeholders", stakeholders);
     }
 
@@ -930,6 +936,18 @@ public class StakeholderBiddingController {
     private static double sumWhere(List<Map<String, Object>> bids, String status) {
         return bids.stream().filter(b -> status.equals(b.get("status")))
                 .mapToDouble(b -> dbl(b.get("quantity_offered"))).sum();
+    }
+
+    /** Received totals use actual intake when set; falls back for legacy Received rows. */
+    private static double sumReceived(List<Map<String, Object>> bids) {
+        return bids.stream().filter(b -> "Received".equals(b.get("status")))
+                .mapToDouble(b -> {
+                    Object rq = b.get("received_quantity");
+                    if (rq != null) {
+                        return dbl(rq);
+                    }
+                    return dbl(b.get("quantity_offered"));
+                }).sum();
     }
 
     private static double positive(Object v) {

@@ -125,7 +125,7 @@ public class PortalLocalSeeder implements CommandLineRunner {
     /** Capability cards: specific module links where one exists; a how-it-works detail otherwise. */
     private String capabilitiesJson() {
         return "["
-                + "{\"title\":\"Early Warning System\",\"icon\":\"fa-satellite-dish\",\"color\":\"#ef4444\",\"link\":\"/m/preparedness/early-warnings\",\"description\":\"Multi-hazard early warning with automated SMS, email, and WhatsApp alerts to communities at risk.\"},"
+                + "{\"title\":\"Early Warning System\",\"icon\":\"fa-satellite-dish\",\"color\":\"#ef4444\",\"link\":\"/m/preparedness/early-warnings\",\"description\":\"Multi-hazard early warning with SMS and email alerts where gateways are configured.\"},"
                 + "{\"title\":\"GIS Mapping\",\"icon\":\"fa-map-marked-alt\",\"color\":\"#60a5fa\",\"link\":\"/m/prevention-mitigation/risk-mapping\",\"description\":\"Interactive geospatial mapping of hazards, risks, resources, and evacuation routes across all regions.\"},"
                 + "{\"title\":\"Incident Management\",\"icon\":\"fa-tasks\",\"color\":\"#4ade80\",\"description\":\"End-to-end incident tracking from initial report through response coordination to recovery programs.\","
                 + "\"detail\":\"How it works in the system: a citizen or field officer reports an incident (from this portal or the app). It is reviewed up the chain — District Coordinator → DAS → Regional Coordinator → RAS → Assistant Director → Director. Once approved, the EOCC coordinates the response: tasks are assigned, resources dispatched from the nearest warehouses, and progress tracked until recovery programmes close the incident.\"},"
@@ -168,7 +168,7 @@ public class PortalLocalSeeder implements CommandLineRunner {
     /** Capability cards + emergency numbers as JSON settings (welcomeV2's exact model), now with links. */
     private void seedJsonSections() {
         seedJsonSetting("capabilities.items", "["
-                + "{\"title\":\"Early Warning System\",\"icon\":\"fa-satellite-dish\",\"color\":\"#ef4444\",\"link\":\"/portal\",\"description\":\"Multi-hazard early warning with automated SMS, email, and WhatsApp alerts to communities at risk.\"},"
+                + "{\"title\":\"Early Warning System\",\"icon\":\"fa-satellite-dish\",\"color\":\"#ef4444\",\"link\":\"/portal\",\"description\":\"Multi-hazard early warning with SMS and email alerts where gateways are configured.\"},"
                 + "{\"title\":\"GIS Mapping\",\"icon\":\"fa-map-marked-alt\",\"color\":\"#60a5fa\",\"link\":\"/portal\",\"description\":\"Interactive geospatial mapping of hazards, risks, resources, and evacuation routes across all regions.\"},"
                 + "{\"title\":\"Incident Management\",\"icon\":\"fa-tasks\",\"color\":\"#4ade80\",\"link\":\"/\",\"description\":\"End-to-end incident tracking from initial report through response coordination to recovery programs.\"},"
                 + "{\"title\":\"Resource Management\",\"icon\":\"fa-warehouse\",\"color\":\"#60a5fa\",\"link\":\"/about\",\"description\":\"Track warehouses, inventory, and allocated resources for rapid deployment during emergencies.\"},"

@@ -47,14 +47,11 @@ public class AudienceService {
         Set<String> phones = new LinkedHashSet<>();
         Set<String> emails = new LinkedHashSet<>();
         switch (type == null ? "" : type) {
-            case "all_subscribers" -> collect(phones, emails,
-                    "select phone_number as phone, email from public.alert_subscriptions where is_active = true");
+            // F83: honor communication_channels prefs — only add phone when SMS requested, email when Email requested.
+            case "all_subscribers" -> collectSubscribers(phones, emails, null);
             case "subscribers_by_hazard" -> {
                 if (hazard != null && !hazard.isBlank()) {
-                    collect(phones, emails,
-                            "select phone_number as phone, email from public.alert_subscriptions "
-                                    + "where is_active = true and hazards_of_interest::jsonb @> ?::jsonb",
-                            "[\"" + hazard.replace("\"", "") + "\"]");
+                    collectSubscribers(phones, emails, hazard);
                 }
             }
             case "stakeholders" -> collect(phones, emails,
@@ -120,11 +117,23 @@ public class AudienceService {
         Set<String> emails = new LinkedHashSet<>();
         for (String a : normAreas(areaNames)) {
             String lc = a.toLowerCase(Locale.ROOT);
-            collect(phones, emails,
-                    "select phone_number as phone, email from public.alert_subscriptions "
+            // F83: area subscribers also respect communication_channels.
+            for (Map<String, Object> row : jdbc.queryForList(
+                    "select phone_number as phone, email, communication_channels as channels "
+                            + "from public.alert_subscriptions "
                             + "where is_active = true and (location_of_interest::jsonb @> ?::jsonb "
                             + "   or lower(coalesce(subscriber_location,'')) like ?)",
-                    "[\"" + a.replace("\"", "") + "\"]", "%" + lc + "%");
+                    "[\"" + a.replace("\"", "") + "\"]", "%" + lc + "%")) {
+                String channels = row.get("channels") == null ? "" : String.valueOf(row.get("channels")).toLowerCase(Locale.ROOT);
+                boolean wantSms = channels.isBlank() || channels.contains("sms");
+                boolean wantEmail = channels.isBlank() || channels.contains("email");
+                if (wantSms) {
+                    addIf(phones, row.get("phone"));
+                }
+                if (wantEmail) {
+                    addIf(emails, row.get("email"));
+                }
+            }
             // FK ids for this area name (null when the name is a region vs a district, or unknown — a null bind
             // simply never matches, so the text fallback still covers it).
             Long rid = areaLookup.regionId(a);
@@ -260,6 +269,33 @@ public class AudienceService {
         for (Map<String, Object> row : jdbc.queryForList(sql, args)) {
             addIf(phones, row.get("phone"));
             addIf(emails, row.get("email"));
+        }
+    }
+
+    /**
+     * Public subscribers: respect {@code communication_channels} JSON (SMS / Email / WhatsApp).
+     * Missing/empty channels = legacy rows → both phone and email if present (backward compatible).
+     */
+    private void collectSubscribers(Set<String> phones, Set<String> emails, String hazard) {
+        String sql = "select phone_number as phone, email, communication_channels as channels "
+                + "from public.alert_subscriptions where is_active = true";
+        Object[] args;
+        if (hazard != null && !hazard.isBlank()) {
+            sql += " and hazards_of_interest::jsonb @> ?::jsonb";
+            args = new Object[]{"[\"" + hazard.replace("\"", "") + "\"]"};
+        } else {
+            args = new Object[0];
+        }
+        for (Map<String, Object> row : jdbc.queryForList(sql, args)) {
+            String channels = row.get("channels") == null ? "" : String.valueOf(row.get("channels")).toLowerCase();
+            boolean wantSms = channels.isBlank() || channels.contains("sms");
+            boolean wantEmail = channels.isBlank() || channels.contains("email");
+            if (wantSms) {
+                addIf(phones, row.get("phone"));
+            }
+            if (wantEmail) {
+                addIf(emails, row.get("email"));
+            }
         }
     }
 

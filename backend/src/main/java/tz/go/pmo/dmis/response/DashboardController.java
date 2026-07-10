@@ -65,7 +65,7 @@ public class DashboardController {
         StringBuilder w = new StringBuilder(extra == null || extra.isBlank() ? "1=1" : extra);
         String col = alias == null || alias.isBlank() ? "is_simulation" : alias + ".is_simulation";
         w.append(" and coalesce(").append(col).append(", false) = false");
-        jurisdiction.appendAreaScope(alias, w, params);
+        jurisdiction.appendAreaScopeWithCouncil(alias, w, params);
         return w.toString();
     }
 
@@ -73,7 +73,7 @@ public class DashboardController {
     private boolean isNationalTier() {
         StringBuilder probe = new StringBuilder("1=1");
         List<Object> p = new ArrayList<>();
-        jurisdiction.appendAreaScope("i", probe, p);
+        jurisdiction.appendAreaScopeWithCouncil("i", probe, p);
         return p.isEmpty() && probe.toString().equals("1=1");
     }
 
@@ -260,7 +260,14 @@ public class DashboardController {
         JurisdictionScope.AreaFilter f = jurisdiction.sharedOrOwnFilter();
         Map<String, Object> area = new LinkedHashMap<>();
         area.put("scope", f.scope());
-        if (f.districtId() != null) {
+        if (f.councilId() != null) {
+            Map<String, Object> c = jdbc.queryForMap(
+                    "select c.name as council_name, d.name as district_name, r.name as region_name "
+                    + "from public.councils c "
+                    + "join public.districts d on d.id = c.district_id "
+                    + "join public.regions r on r.id = c.region_id where c.id = ?", f.councilId());
+            area.putAll(c);
+        } else if (f.districtId() != null) {
             Map<String, Object> d = jdbc.queryForMap(
                     "select d.name as district_name, r.name as region_name from public.districts d "
                     + "join public.regions r on r.id = d.region_id where d.id = ?", f.districtId());
@@ -292,7 +299,9 @@ public class DashboardController {
                          and """ + notSimIncident("t.incident_id") + """
                          and not exists (select 1 from public.response_activations sa
                                           where sa.id = t.activation_id and sa.is_simulation)) as personnel_deployed,
-                      (select coalesce(sum(quantity),0) from public.inventory_items where status = 'Good Condition') as resources_available,
+                      (select coalesce(sum(quantity),0) from public.inventory_items
+                        where status = 'Good Condition'
+                          and (warehouse_id is not null or temporary_warehouse_id is not null)) as resources_available,
                       (select count(*) from public.response_activations where status = 'active'
                          and is_simulation = true) as simulations_running
                     """));
@@ -315,7 +324,8 @@ public class DashboardController {
                     + "  where sa2.id = t.activation_id and sa2.is_simulation) and "
                     + incidentScope("i", null, pdP), Long.class, pdP.toArray()));
             stats.put("resources_available", jdbc.queryForObject(
-                    "select coalesce(sum(quantity),0) from public.inventory_items where status = 'Good Condition'",
+                    "select coalesce(sum(quantity),0) from public.inventory_items where status = 'Good Condition'"
+                            + " and (warehouse_id is not null or temporary_warehouse_id is not null)",
                     Long.class));
             stats.put("simulations_running", jdbc.queryForObject(
                     "select count(*) from public.response_activations where status = 'active' and is_simulation = true",
@@ -345,7 +355,7 @@ public class DashboardController {
         // Comms counters: area users see alerts for THEIR incidents plus incident-less general broadcasts.
         List<Object> asP = new ArrayList<>();
         StringBuilder asW = new StringBuilder("1=1");
-        jurisdiction.appendAreaScope("i", asW, asP);
+        jurisdiction.appendAreaScopeWithCouncil("i", asW, asP);
         String alertAreaClause = asW.toString().equals("1=1") ? ""
                 : " and (a.incident_id is null or exists (select 1 from public.incidents i "
                   + "where i.id = a.incident_id and " + asW + "))";

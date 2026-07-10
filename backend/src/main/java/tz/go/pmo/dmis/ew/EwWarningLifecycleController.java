@@ -275,19 +275,49 @@ public class EwWarningLifecycleController {
                 code, hazardType, wh.get("hazard_id"), severity, alertMsg, region, district, lat, lng);
             published++;
         }
-        // The ONE notification backbone: announce the published warning to all DMIS users. Run it AFTER
-        // this publish transaction COMMITS (registerSynchronization.afterCommit) so a feed-write can never
-        // mark the publish tx rollback-only (the old inline try/catch gave false safety), and so the
-        // broadcast's N inserts don't lengthen/hold the publish transaction.
+        // The ONE notification backbone: announce the published warning to all DMIS users AND public
+        // alert_subscriptions (F28). Run AFTER this publish transaction COMMITS so a feed/SMS write can
+        // never mark the publish tx rollback-only, and so external delivery does not hold the tx.
         final String hazardSummary = hazards.stream().map(h -> str(h.get("hazard_name")))
                 .filter(x -> x != null).distinct().collect(java.util.stream.Collectors.joining(", "));
+        final String regionSummary = hazards.stream()
+                .map(h -> firstNonBlank(str(h.get("region_name")), str(h.get("district_name"))))
+                .filter(x -> x != null && !x.isBlank()).distinct()
+                .collect(java.util.stream.Collectors.joining(", "));
+        final String pubMessage = "Warning " + code + (hazardSummary.isBlank() ? "" : " (" + hazardSummary + ")")
+                + (regionSummary.isBlank() ? "" : " — " + regionSummary)
+                + " is now published on e-MAAFA.";
+        // Highest warning level among hazard rows — drives F83 alert_level_priority filtering.
+        final String severitySummary = hazards.stream()
+                .map(h -> str(h.get("warning_level")))
+                .filter(x -> x != null && !x.isBlank())
+                .max((a, b) -> Integer.compare(levelRank(a), levelRank(b)))
+                .orElse("Warning");
         Runnable broadcast = () -> {
             try {
+                // Staff in-app feed (unchanged eligibility — internal operators use preferences for SMS/email).
                 notifications.notifyAllUsers(tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
-                        "early_warning_published", "Early warning published",
-                        "Warning " + code + (hazardSummary.isBlank() ? "" : " (" + hazardSummary + ")")
-                                + " is now live on the public portal.",
+                        "early_warning_published", "Early warning published", pubMessage,
                         "/m/preparedness/early-warnings", "early_warning", id, "warning"));
+            } catch (Exception ignored) { }
+            try {
+                // Public subscribers (alert_subscriptions): SMS+email when channel + area + hazard + priority match.
+                notifications.notifyAlertSubscribers(
+                        tz.go.pmo.dmis.notification.NotificationService.Notice.all(
+                                "early_warning_subscriber", "Early warning: " + code, pubMessage,
+                                "/public", "early_warning", id, "warning"),
+                        regionSummary, hazardSummary, severitySummary);
+            } catch (Exception ignored) { }
+            try {
+                // F78: partner stakeholders registry — proactive email on publish (not only portal feed).
+                // SMS is OFF by default on this auto-path to avoid unsolicited bulk SMS to registry
+                // phones; operators still use Communication Center / EW disseminate for SMS policy.
+                notifications.notifyStakeholders(
+                        new tz.go.pmo.dmis.notification.NotificationService.Notice(
+                                "early_warning_stakeholder", "Early warning: " + code, pubMessage,
+                                "/m/stakeholder-portal/issued-alerts", "early_warning", id, "warning",
+                                false, true),
+                        regionSummary);
             } catch (Exception ignored) { }
         };
         if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
@@ -395,6 +425,18 @@ public class EwWarningLifecycleController {
     private static String norm(String s) { return s == null ? "" : s.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " "); }
     private static String str(Object o) { return o == null ? null : String.valueOf(o); }
     private static String firstNonBlank(String... xs) { for (String x : xs) if (x != null && !x.isBlank()) return x; return null; }
+    /** Rank warning levels for picking the highest severity to filter public subscribers (F83). */
+    private static int levelRank(String level) {
+        if (level == null) {
+            return 0;
+        }
+        return switch (level.trim()) {
+            case "Major Warning" -> 3;
+            case "Warning" -> 2;
+            case "Advisory" -> 1;
+            default -> 0;
+        };
+    }
     private static Double num(Object o) {
         if (o instanceof Number n) return n.doubleValue();
         try { return o == null || str(o).isBlank() ? null : Double.parseDouble(str(o).trim()); } catch (Exception e) { return null; }

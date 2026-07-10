@@ -84,8 +84,7 @@ public class EducationalContentAdminController {
         int n = jdbc.update("update public.educational_contents set title=?, content_type=?, summary=?,"
                         + " full_content=coalesce(?, full_content), author=?, publication_date=?::date,"
                         + " target_audience=?, keywords=?, is_published=?,"
-                        + " title_sw=coalesce(?, title_sw), summary_sw=coalesce(?, summary_sw),"
-                        + " full_content_sw=coalesce(?, full_content_sw),"
+                        + " title_sw=?, summary_sw=?, full_content_sw=?,"
                         + " updated_at=now() where id=?",
                 req.title().trim(), nz(req.contentType(), "Article"), req.summary(), req.fullContent(),
                 req.author(), blank(req.publicationDate()), req.targetAudience(), req.keywords(),

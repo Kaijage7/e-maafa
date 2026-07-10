@@ -3,8 +3,10 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
+import { AuthService } from '../../core/auth.service';
 
 declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the Blade pages
 
@@ -67,7 +69,9 @@ interface NdmfRow {
   template: `
     <dmis-page-header title="Stakeholder Donations" icon="fa-hand-holding-heart"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Stakeholder Donations'}]">
-      <a routerLink="/m/response/dispatch" class="btn-add"><i class="fas fa-truck-fast"></i> Dispatch Console</a>
+      @if (canViewInternal()) {
+        <a routerLink="/m/response/dispatch" class="btn-add"><i class="fas fa-truck-fast"></i> Dispatch Console</a>
+      }
     </dmis-page-header>
 
     <div class="stat-strip">
@@ -80,7 +84,9 @@ interface NdmfRow {
 
     <div class="queue-tabs">
       <button [class.active]="tab() === 'resources'" (click)="tab.set('resources')">Resource Donations</button>
-      <button [class.active]="tab() === 'cash'" (click)="tab.set('cash')">NDMF Cash Donations</button>
+      @if (canViewFund()) {
+        <button [class.active]="tab() === 'cash'" (click)="tab.set('cash')">NDMF Cash Donations</button>
+      }
     </div>
 
     <!-- ── Resource donations (stakeholder bids across all allocations) ── -->
@@ -107,11 +113,11 @@ interface NdmfRow {
                 <td><span class="chip c-{{ b.status }}">{{ b.status }}</span>
                   @if (b.notes) { <br><small style="color:#6c757d">{{ b.notes.substring(0, 60) }}</small> }</td>
                 <td style="white-space:nowrap">
-                  @if (b.status === 'Pending') {
+                  @if (b.status === 'Pending' && canApprove()) {
                     <button class="btn-sm b-green" (click)="accept(b)"><i class="fas fa-check"></i> Accept</button>
                     <button class="btn-sm b-outline" (click)="dismiss(b)" style="margin-left:4px">Reject</button>
                   }
-                  @if (b.status === 'Accepted') {
+                  @if (b.status === 'Accepted' && canDispatch()) {
                     <button class="btn-sm b-red" (click)="receive(b)"><i class="fas fa-box-open"></i> Mark Received</button>
                   }
                 </td>
@@ -136,8 +142,10 @@ interface NdmfRow {
 
       <dmis-panel title="NDMF — Cash In (Donations)" icon="fa-sack-dollar">
         <div class="toolbar">
-          <button class="btn-sm b-red" (click)="recordCash()"><i class="fas fa-plus"></i> Record Donation</button>
-          <button class="btn-sm b-outline" (click)="disburseProcurement()"><i class="fas fa-truck-ramp-box"></i> Disburse to Procurement</button>
+          @if (canDispatch()) {
+            <button class="btn-sm b-red" (click)="recordCash()"><i class="fas fa-plus"></i> Record Donation</button>
+            <button class="btn-sm b-outline" (click)="disburseProcurement()"><i class="fas fa-truck-ramp-box"></i> Disburse to Procurement</button>
+          }
         </div>
         <table>
           <thead><tr><th>Reference</th><th>Donor</th><th>Amount</th><th>Date</th><th>Status</th><th></th></tr></thead>
@@ -150,8 +158,8 @@ interface NdmfRow {
                 <td>{{ d.donation_date?.substring(0, 10) }}</td>
                 <td><span class="chip c-{{ d.status }}">{{ d.status }}</span></td>
                 <td style="white-space:nowrap">
-                  @if (d.status === 'pending') { <button class="btn-sm b-green" (click)="markDonation(d, 'received')">Mark received</button> }
-                  @if (d.status === 'received') { <button class="btn-sm b-outline" (click)="markDonation(d, 'acknowledged')">Acknowledge</button> }
+                  @if (canDispatch() && d.status === 'pending') { <button class="btn-sm b-green" (click)="markDonation(d, 'received')">Mark received</button> }
+                  @if (canDispatch() && d.status === 'received') { <button class="btn-sm b-outline" (click)="markDonation(d, 'acknowledged')">Acknowledge</button> }
                 </td>
               </tr>
             } @empty { <tr><td colspan="6" class="empty">No cash donations recorded yet.</td></tr> }
@@ -171,7 +179,7 @@ interface NdmfRow {
                 <td>{{ x.amount | number }} {{ x.currency }}</td>
                 <td>{{ x.disbursement_date?.substring(0,10) }}</td>
                 <td><span class="chip c-{{ x.status }}">{{ x.status }}</span></td>
-                <td>@if (x.status === 'paid') { <button class="btn-sm b-outline" (click)="voidDisbursement(x)">Void</button> }</td>
+                <td>@if (canDispatch() && x.status === 'paid') { <button class="btn-sm b-outline" (click)="voidDisbursement(x)">Void</button> }</td>
               </tr>
             } @empty { <tr><td colspan="7" class="empty">No disbursements yet. Use "Disburse to Procurement", or "Fund from NDMF" on a training in Open Needs.</td></tr> }
           </tbody>
@@ -182,6 +190,7 @@ interface NdmfRow {
 })
 export class StakeholderDonationsComponent implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
 
   readonly tab = signal<'resources' | 'cash'>('resources');
   readonly donations = signal<DonationRow[]>([]);
@@ -196,20 +205,31 @@ export class StakeholderDonationsComponent implements OnInit {
   ngOnInit(): void {
     ensureSweetAlert();
     this.load();
-    this.loadNdmf();
-    this.loadFund();
-    this.http.get<any>('/api/v1/inventory/reference').subscribe(r => {
-      this.refResources = r.resources ?? []; this.refWarehouses = r.warehouses ?? [];
-    });
+    if (this.canViewFund()) {
+      this.loadNdmf();
+      this.loadFund();
+    }
+    if (this.canDispatch()) {
+      this.http.get<any>('/api/v1/inventory/reference').subscribe(r => {
+        this.refResources = r.resources ?? []; this.refWarehouses = r.warehouses ?? [];
+      });
+    }
   }
 
+  canViewInternal(): boolean { return this.auth.hasPermission('resource_allocation.view'); }
+  canViewFund(): boolean { return this.auth.hasPermission('resource_allocation.view'); }
+  canApprove(): boolean { return this.auth.hasPermission('resource_allocation.approve'); }
+  canDispatch(): boolean { return this.auth.hasPermission('resource_allocation.dispatch'); }
+
   loadFund(): void {
+    if (!this.canViewFund()) { return; }
     this.http.get<any>('/api/v1/response/bidding/ndmf-fund').subscribe(d =>
       this.fund.set({ balances: d.balances ?? [], disbursements: d.disbursements ?? [] }));
   }
 
   /** Advance a donation's arrival status so its cash counts toward the fund balance. */
   markDonation(d: NdmfRow, status: 'received' | 'acknowledged'): void {
+    if (!this.canDispatch()) { return; }
     this.http.post<any>(`/api/v1/response/bidding/ndmf-donations/${d.id}/status`, { status }).subscribe({
       next: () => { this.loadNdmf(); this.loadFund(); },
       error: err => ensureSweetAlert().then(() => Swal.fire('Error', err?.error?.detail ?? err?.error?.message ?? 'Could not update.', 'error')),
@@ -217,6 +237,7 @@ export class StakeholderDonationsComponent implements OnInit {
   }
 
   voidDisbursement(x: any): void {
+    if (!this.canDispatch()) { return; }
     ensureSweetAlert().then(() => Swal.fire({
       title: 'Void this disbursement?', text: 'Cash is credited back to the fund. Already-received stock is not reversed.',
       icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Void',
@@ -231,9 +252,10 @@ export class StakeholderDonationsComponent implements OnInit {
   }
 
   /** Disburse NDMF cash to procure resources straight into a warehouse. */
-  disburseProcurement(): void {
-    const resOpts = this.refResources.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-    const whOpts = this.refWarehouses.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+	  disburseProcurement(): void {
+	    if (!this.canDispatch()) { return; }
+	    const resOpts = this.refResources.map(r => `<option value="${Number(r.id)}">${escapeHtml(r.name)}</option>`).join('');
+	    const whOpts = this.refWarehouses.map(w => `<option value="${Number(w.id)}">${escapeHtml(w.name)}</option>`).join('');
     ensureSweetAlert().then(() => Swal.fire({
       title: 'Disburse to procurement',
       html: `<select id="dp-res" class="swal2-select" style="width:85%">${resOpts}</select>
@@ -278,28 +300,32 @@ export class StakeholderDonationsComponent implements OnInit {
   }
 
   loadNdmf(): void {
+    if (!this.canViewFund()) { return; }
     this.http.get<any>('/api/v1/response/bidding/ndmf-donations').subscribe(d => this.ndmf.set(d.donations));
   }
 
   accept(b: DonationRow): void {
+    if (!this.canApprove()) { return; }
     this.confirmThenPost(`Accept ${b.quantity_offered} ${b.resource_name ?? 'units'} from ${b.stakeholder_name}?`,
       `/api/v1/response/bidding/bids/${b.id}/accept`, 'notes', 'Acceptance notes (optional)', false);
   }
 
   dismiss(b: DonationRow): void {
+    if (!this.canApprove()) { return; }
     this.confirmThenPost(`Reject the offer from ${b.stakeholder_name}?`,
       `/api/v1/response/bidding/bids/${b.id}/dismiss`, 'reason', 'Rejection reason (min 10 characters)', true);
   }
 
   /** Receive dialog: destination store + actual quantity → donor-tracked intake. */
-  receive(b: DonationRow): void {
-    this.http.get<any>(`/api/v1/response/bidding/allocations/${b.allocated_resource_id}/pool`).subscribe(pool => {
-      const options = pool.warehouses.map((w: any) => `<option value="warehouse:${w.id}">${w.name} (zonal)</option>`).join('')
-        + pool.temporary_warehouses.map((w: any) => `<option value="temporary_warehouse:${w.id}">${w.name} (${w.level})</option>`).join('');
-      ensureSweetAlert().then(() => Swal.fire({
-        title: `Receive donation from ${b.stakeholder_name}`,
-        html: `<select id="rc-dest" class="swal2-select" style="width:85%">${options}</select>
-               <input id="rc-qty" type="number" min="1" class="swal2-input" placeholder="Quantity received" value="${b.quantity_offered}">
+	  receive(b: DonationRow): void {
+	    if (!this.canDispatch()) { return; }
+	    this.http.get<any>(`/api/v1/response/bidding/allocations/${b.allocated_resource_id}/pool`).subscribe(pool => {
+	      const options = pool.warehouses.map((w: any) => `<option value="warehouse:${Number(w.id)}">${escapeHtml(w.name)} (zonal)</option>`).join('')
+	        + pool.temporary_warehouses.map((w: any) => `<option value="temporary_warehouse:${Number(w.id)}">${escapeHtml(w.name)} (${escapeHtml(w.level)})</option>`).join('');
+	      ensureSweetAlert().then(() => Swal.fire({
+	        titleText: `Receive donation from ${b.stakeholder_name ?? 'stakeholder'}`,
+	        html: `<select id="rc-dest" class="swal2-select" style="width:85%">${options}</select>
+	               <input id="rc-qty" type="number" min="1" class="swal2-input" placeholder="Quantity received" value="${Number(b.quantity_offered) || ''}">
                <input id="rc-notes" class="swal2-input" placeholder="Notes (optional)">`,
         showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Receive into Store',
         preConfirm: () => {
@@ -320,6 +346,7 @@ export class StakeholderDonationsComponent implements OnInit {
 
   /** NDMF cash entry form (donor, amount, currency, date, purpose). */
   recordCash(): void {
+    if (!this.canDispatch()) { return; }
     ensureSweetAlert().then(() => Swal.fire({
       title: 'Record NDMF cash donation',
       html: `<input id="cd-donor" class="swal2-input" placeholder="Donor name">
@@ -343,8 +370,8 @@ export class StakeholderDonationsComponent implements OnInit {
     }).then((r: any) => {
       if (r.isConfirmed) {
         this.http.post<any>('/api/v1/response/bidding/ndmf-donations', r.value).subscribe({
-          next: res => ensureSweetAlert().then(() => Swal.fire({
-            icon: 'success', title: res.reference_number, text: res.message, timer: 2600, showConfirmButton: false,
+	          next: res => ensureSweetAlert().then(() => Swal.fire({
+	            icon: 'success', titleText: res.reference_number, text: res.message, timer: 2600, showConfirmButton: false,
           }).then(() => this.loadNdmf())),
           error: err => ensureSweetAlert().then(() =>
             Swal.fire('Error', err?.error?.detail ?? 'An error occurred.', 'error')),
@@ -353,9 +380,9 @@ export class StakeholderDonationsComponent implements OnInit {
     }));
   }
 
-  private confirmThenPost(title: string, url: string, field: string, inputLabel: string, required: boolean): void {
-    ensureSweetAlert().then(() => Swal.fire({
-      title, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
+	  private confirmThenPost(title: string, url: string, field: string, inputLabel: string, required: boolean): void {
+	    ensureSweetAlert().then(() => Swal.fire({
+	      titleText: title, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
       input: 'textarea', inputLabel,
       preConfirm: (value: string) => {
         if (required && (!value || value.trim().length < 10)) {

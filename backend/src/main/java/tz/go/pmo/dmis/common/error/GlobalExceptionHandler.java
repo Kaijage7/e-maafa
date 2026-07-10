@@ -4,6 +4,9 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
@@ -16,15 +19,27 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * Translates exceptions into RFC 7807 {@code application/problem+json} responses.
- * Internal details are never leaked: each handler sets a safe title/detail and a timestamp;
- * unexpected exceptions fall through to Spring's default 500 with stack traces disabled.
+ * <p>VAPT (PMO Protective Security Assessment, June 2026) — debug / stack / SQL leakage:
+ * every handler returns a safe title/detail only. Unexpected exceptions are logged server-side
+ * and returned as a generic 500 with <em>no</em> stack, SQL, or environment details.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(ResourceNotFoundException.class)
     ProblemDetail handleNotFound(ResourceNotFoundException ex) {
         return problem(HttpStatus.NOT_FOUND, "Not found", ex.getMessage());
+    }
+
+    /**
+     * Unknown API paths (Spring 6 {@code NoResourceFoundException}) must be 404, not a 500
+     * "Internal error" that operators misread as a broken service.
+     */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    ProblemDetail handleNoResource(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return problem(HttpStatus.NOT_FOUND, "Not found", "No endpoint matches this path.");
     }
 
     @ExceptionHandler(BusinessRuleException.class)
@@ -133,6 +148,28 @@ public class GlobalExceptionHandler {
         if (status == null) { status = HttpStatus.INTERNAL_SERVER_ERROR; }
         return problem(status, status.getReasonPhrase(),
                 ex.getReason() == null ? "The request could not be completed." : ex.getReason());
+    }
+
+    /**
+     * Any other {@link DataAccessException} (not already handled as integrity/empty) — never surface
+     * SQLSTATE text, table names, or query fragments to the client (VAPT vii / SQL disclosure).
+     */
+    @ExceptionHandler(DataAccessException.class)
+    ProblemDetail handleDataAccess(DataAccessException ex) {
+        log.error("Data access failure (details withheld from client): {}", ex.getMessage());
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Request failed",
+                "The request could not be completed. Please try again or contact support.");
+    }
+
+    /**
+     * Last-resort catch-all so no unhandled exception can leak stack traces or environment into the
+     * JSON body (production must never show debug pages / Flare / Whoops-style dumps).
+     */
+    @ExceptionHandler(Exception.class)
+    ProblemDetail handleUnexpected(Exception ex) {
+        log.error("Unhandled exception (details withheld from client)", ex);
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Internal error",
+                "An unexpected error occurred. Please try again later.");
     }
 
     private ProblemDetail problem(HttpStatus status, String title, String detail) {

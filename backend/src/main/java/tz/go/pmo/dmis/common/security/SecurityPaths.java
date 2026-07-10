@@ -18,18 +18,26 @@ public final class SecurityPaths {
             // Login itself must be reachable without a token (otherwise the resource server 401s the
             // very call that mints the token — the chicken-and-egg the !local profile would have hit).
             "/v1/auth/login",
+            // Complete TOTP after MFA_REQUIRED — no full session yet (only challengeToken from login).
+            // Rate-limited with login (LoginRateLimitFilter) to blunt code guessing.
+            "/v1/auth/2fa/verify",
             // Self-service password reset (the caller has no session by definition). Both are
             // anti-enumeration (uniform responses) and rate-limited by LoginRateLimitFilter.
             "/v1/auth/forgot-password",
             "/v1/auth/reset-password",
-            // Operational liveness/readiness probes.
+            // Operational liveness/readiness probes only (not /actuator root / env / beans).
+            "/actuator/health",
             "/actuator/health/**",
-            // API docs.
+            // API docs — public only so local/dev can explore; production disables springdoc entirely
+            // (application-prod.yml). Never expose /actuator/env or similar.
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
             // Citizen-facing portal — public by design (mirrors Laravel's public routes).
             "/v1/portal/**",
+            // F59/F60: M-Gov (and compatible) SMS delivery-status callbacks — no JWT; optional shared secret.
+            "/v1/webhooks/mgov/dlr",
+            "/v1/webhooks/sms/dlr",
             // Public static uploads (news/gallery/publications/ew-product images served to the public site).
             // The RESTRICTED_STORAGE_PATHS carve-out below is matched FIRST in both chains, so operational
             // attachments (casualty photos etc.) under this same root are NOT covered by this permitAll.

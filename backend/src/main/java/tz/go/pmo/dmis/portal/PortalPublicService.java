@@ -279,8 +279,9 @@ public class PortalPublicService {
             regionId = jdbc.query("select region_id from public.districts where id = ?",
                     rs -> rs.next() ? rs.getObject("region_id", Long.class) : null, districtId);
         }
-        Long n = jdbc.queryForObject("select count(*) from public.public_hazard_reports", Long.class);
-        String code = String.format("PHR-%d-%05d", Year.now().getValue(), (n == null ? 0 : n) + 1);
+        // F84: sequence-backed code (not count(*)+1) so concurrent reports cannot collide.
+        Long seq = jdbc.queryForObject("select nextval('public.phr_report_code_seq')", Long.class);
+        String code = String.format("PHR-%d-%05d", Year.now().getValue(), seq == null ? 1 : seq);
         Long reportId = jdbc.queryForObject("insert into public.public_hazard_reports(report_code,hazard_type,"
                         + "description,location_description,latitude,longitude,urgency_level,reporter_name,"
                         + "reporter_phone,reporter_type,reporter_org,reporter_email,region_id,district_id,created_at,updated_at)"
@@ -431,8 +432,9 @@ public class PortalPublicService {
         if (!Boolean.parseBoolean(String.valueOf(req.getOrDefault("consent", "false")))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Consent is required to receive alerts");
         }
-        Long n = jdbc.queryForObject("select count(*) from public.alert_subscriptions", Long.class);
-        String id = String.format("SUB-%d-%04d", Year.now().getValue(), (n == null ? 0 : n) + 1);
+        // F83: sequence-backed id (unique index already on subscription_id) — no count(*)+1 race.
+        Long seq = jdbc.queryForObject("select nextval('public.alert_subscription_id_seq')", Long.class);
+        String id = String.format("SUB-%d-%04d", Year.now().getValue(), seq == null ? 1 : seq);
         jdbc.update("insert into public.alert_subscriptions(subscription_id,full_name,subscriber_location,"
                         + "communication_channels,phone_number,email,hazards_of_interest,alert_level_priority,"
                         + "languages,consent,is_active,subscribed_at,created_at,updated_at)"

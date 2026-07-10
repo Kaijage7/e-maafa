@@ -56,15 +56,18 @@ public class WarehouseOpsController {
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
     private final SimulationGuard simulationGuard;
+    private final tz.go.pmo.dmis.notification.NotificationService notifications;
 
     public WarehouseOpsController(JdbcTemplate jdbc, DispatchSupportService stock, IncidentWorkflowService users,
-                                  JurisdictionScope jurisdiction, AreaGuard areaGuard, SimulationGuard simulationGuard) {
+                                  JurisdictionScope jurisdiction, AreaGuard areaGuard, SimulationGuard simulationGuard,
+                                  tz.go.pmo.dmis.notification.NotificationService notifications) {
         this.jdbc = jdbc;
         this.stock = stock;
         this.users = users;
         this.jurisdiction = jurisdiction;
         this.areaGuard = areaGuard;
         this.simulationGuard = simulationGuard;
+        this.notifications = notifications;
     }
 
     // ─── Stock dashboard ───
@@ -650,19 +653,13 @@ public class WarehouseOpsController {
     }
 
     /**
-     * Raise an in-app notification for every user holding {@code roleName}, reusing the existing
-     * resource_notifications channel (shown in the response notifications panel). Warehouse ops have
-     * no allocation, so allocated_resource_id is null.
+     * F71: route warehouse loan notices through the ONE {@link tz.go.pmo.dmis.notification.NotificationService}
+     * dispatcher so notify_in_app preferences are honoured and delivery is logged uniformly.
      */
     private void notifyRole(String roleName, String type, String title, String message) {
-        jdbc.update("""
-                insert into public.resource_notifications(user_id, allocated_resource_id, type, title, message,
-                    channel, created_at, updated_at)
-                select u.id, null, ?, ?, ?, 'database', now(), now()
-                from public.users u
-                join public.model_has_roles mhr on mhr.model_id = u.id
-                join public.roles r on r.id = mhr.role_id and r.name = ?
-                """, type, title, message, roleName);
+        notifications.notifyRoles(List.of(roleName),
+                tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
+                        type, title, message, "/m/response/warehouse-ops", "warehouse_loan", null, "info"));
     }
 
     private long countItems(String where, String scope, List<Object> params) {
@@ -726,11 +723,9 @@ public class WarehouseOpsController {
     }
 
     private static int positiveInt(Object v) {
-        int q = (int) Double.parseDouble(String.valueOf(v));
-        if (q <= 0) {
-            throw new BusinessRuleException("Quantity must be greater than zero.");
-        }
-        return q;
+        // F64 — reject 2.5-style values instead of truncating to 2
+        double d = Double.parseDouble(String.valueOf(v));
+        return (int) DispatchSupportService.requireWholeUnits(d);
     }
 
     private static int positiveOrZeroInt(Object v) {

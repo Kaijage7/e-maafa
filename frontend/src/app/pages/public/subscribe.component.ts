@@ -3,7 +3,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PortalLabels } from './portal-i18n';
 
-const CHANNELS = ['SMS', 'Email', 'WhatsApp'];
+/** Live delivery paths only — WhatsApp is not a gateway-backed channel in e-MAAFA today. */
+const CHANNELS = ['SMS', 'Email'];
 const HAZARDS = ['Floods', 'Heavy Rainfall', 'Strong Winds', 'Drought', 'Large Waves', 'Earthquake', 'Disease Outbreak'];
 
 /**

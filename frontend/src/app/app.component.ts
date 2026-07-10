@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from './core/auth.service';
+import { FontScaleService } from './core/font-scale.service';
 import { SidebarComponent } from './shell/sidebar.component';
 import { TopbarComponent } from './shell/topbar.component';
 import { WatermarkComponent } from './shell/watermark.component';
@@ -32,6 +33,8 @@ import { WatermarkComponent } from './shell/watermark.component';
 })
 export class AppComponent {
   auth = inject(AuthService);
+  /** Eager-init: restores saved font size for whole app (incl. login/public). */
+  private readonly fontScale = inject(FontScaleService);
   private router = inject(Router);
 
   isHub = signal(true);
@@ -43,6 +46,45 @@ export class AppComponent {
   constructor() {
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => this.sync());
     this.sync();
+    // Reposition kebab (ctx) menus so edge rows / overflow tables never clip actions.
+    if (typeof document !== 'undefined') {
+      document.addEventListener('click', () => {
+        // After Angular toggles .open on the same tick
+        queueMicrotask(() => this.positionOpenCtxMenus());
+      }, true);
+      window.addEventListener('resize', () => this.positionOpenCtxMenus());
+      window.addEventListener('scroll', () => this.positionOpenCtxMenus(), true);
+    }
+  }
+
+  /**
+   * Place every open .ctx-menu as position:fixed near its .ctx-trigger, flipping up/left
+   * when near the viewport edges so action items stay fully visible.
+   */
+  private positionOpenCtxMenus(): void {
+    document.querySelectorAll<HTMLElement>('.ctx-menu.open').forEach(menu => {
+      const wrap = menu.closest('.ctx-wrap');
+      const trigger = wrap?.querySelector('.ctx-trigger') as HTMLElement | null;
+      if (!trigger) {
+        return;
+      }
+      const r = trigger.getBoundingClientRect();
+      const mw = Math.max(menu.offsetWidth || 180, 170);
+      const mh = Math.max(menu.offsetHeight || 40, 40);
+      let top = r.bottom + 4;
+      let left = r.right - mw;
+      if (left < 8) {
+        left = 8;
+      }
+      if (left + mw > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - mw - 8);
+      }
+      if (top + mh > window.innerHeight - 8) {
+        top = Math.max(8, r.top - mh - 4);
+      }
+      menu.style.top = `${Math.round(top)}px`;
+      menu.style.left = `${Math.round(left)}px`;
+    });
   }
 
   private sync(): void {

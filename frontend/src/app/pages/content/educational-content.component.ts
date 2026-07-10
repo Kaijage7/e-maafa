@@ -28,6 +28,7 @@ interface EduItem {
       <dmis-stat-card [value]="stats().total" label="Total Items" icon="fa-list" color="#e83e8c" />
       <dmis-stat-card [value]="stats().published" label="Published" icon="fa-check-circle" color="#10b981" />
       <dmis-stat-card [value]="stats().drafts" label="Drafts" icon="fa-pen" color="#f59e0b" />
+      <dmis-stat-card [value]="languageReady()" label="Bilingual Ready" icon="fa-language" color="#2563eb" />
     </div>
 
     <div class="filter-bar">
@@ -37,6 +38,11 @@ interface EduItem {
         <option value="">All Types</option>
         @for (t of types(); track t) { <option [value]="t">{{ t }}</option> }
       </select>
+      <select [value]="langF()" (change)="langF.set($any($event.target).value)">
+        <option value="">All Languages</option>
+        <option value="ready">Bilingual ready</option>
+        <option value="missing">Needs Kiswahili</option>
+      </select>
     </div>
 
     <div class="panel-row" style="animation-delay:.3s;">
@@ -45,14 +51,21 @@ interface EduItem {
           @if (filtered().length) {
             <div style="overflow-x:auto;">
               <table class="r-table">
-                <thead><tr><th>Title</th><th>Type</th><th>Audience</th><th>Published</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Title</th><th>Type</th><th>Audience</th><th>Published</th><th>Language</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                   @for (it of filtered(); track it.id) {
                     <tr class="data-row">
-                      <td><div class="r-title">{{ it.title }}</div><div class="r-subtitle">{{ it.author }}</div></td>
+                      <td>
+                        <div class="r-title">{{ it.title }}</div>
+                        <div class="r-subtitle">
+                          {{ it.author }}
+                          @if (it.titleSw) { <span> · SW: {{ it.titleSw }}</span> }
+                        </div>
+                      </td>
                       <td><span class="r-badge" style="background:rgba(0,51,102,0.08);color:#003366;">{{ it.contentType }}</span></td>
                       <td style="font-size:0.8rem;color:var(--text-mid);">{{ it.targetAudience || '-' }}</td>
                       <td style="font-size:0.8rem;color:var(--text-mid);">{{ it.publicationDate || '-' }}</td>
+                      <td><span class="r-badge" [class.badge-approved]="isLanguageReady(it)" [class.badge-pending]="!isLanguageReady(it)">{{ isLanguageReady(it) ? 'EN + SW' : 'Needs SW' }}</span></td>
                       <td><span class="r-badge {{ it.isPublished ? 'badge-approved' : 'badge-pending' }}">{{ it.isPublished ? 'Published' : 'Draft' }}</span></td>
                       <td>
                         <div class="ctx-wrap">
@@ -123,7 +136,7 @@ export class EducationalContentComponent {
   private http = inject(HttpClient);
   items = signal<EduItem[]>([]);
   stats = signal({ total: 0, published: 0, drafts: 0 });
-  search = signal(''); typeF = signal('');
+  search = signal(''); typeF = signal(''); langF = signal('');
   openMenu = signal<number | null>(null);
   editorOpen = signal(false);
   editId = signal<number | null>(null);
@@ -140,9 +153,20 @@ export class EducationalContentComponent {
   filtered = computed(() => {
     const q = this.search().toLowerCase();
     const t = this.typeF();
-    return this.items().filter(i => (!q || (i.title + ' ' + (i.author ?? '')).toLowerCase().includes(q))
-      && (!t || i.contentType === t));
+    const lang = this.langF();
+    return this.items().filter(i => (!q || [i.title, i.titleSw, i.summary, i.summarySw, i.author]
+      .some(v => (v ?? '').toLowerCase().includes(q)))
+      && (!t || i.contentType === t)
+      && (!lang || (lang === 'ready' ? this.isLanguageReady(i) : !this.isLanguageReady(i))));
   });
+
+  languageReady(): number {
+    return this.items().filter(i => this.isLanguageReady(i)).length;
+  }
+
+  isLanguageReady(it: EduItem): boolean {
+    return !!it.title?.trim() && !!it.summary?.trim() && !!it.titleSw?.trim() && !!it.summarySw?.trim();
+  }
 
   reload(): void {
     this.http.get<{ items: EduItem[]; stats: any }>('/api/v1/content/education')
@@ -186,7 +210,9 @@ export class EducationalContentComponent {
   togglePublish(it: EduItem): void {
     this.http.put(`/api/v1/content/education/${it.id}`,
       { title: it.title, contentType: it.contentType, author: it.author, targetAudience: it.targetAudience,
-        summary: it.summary, isPublished: !it.isPublished }).subscribe(() => this.reload());
+        summary: it.summary, fullContent: it.fullContent, titleSw: it.titleSw ?? null,
+        summarySw: it.summarySw ?? null, fullContentSw: it.fullContentSw ?? null,
+        publicationDate: it.publicationDateIso ?? null, isPublished: !it.isPublished }).subscribe(() => this.reload());
   }
 
   remove(it: EduItem): void {

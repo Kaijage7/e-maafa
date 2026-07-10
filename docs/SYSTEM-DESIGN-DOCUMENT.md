@@ -5,13 +5,14 @@
 | Field | Value |
 |---|---|
 | Document title | e-MAAFA — System Design Document |
-| Version | 1.0 |
-| Date | {{DATE}} |
-| Status | Draft |
+| Version | 1.1 (honest refresh) |
+| Date | 2026-07-10 |
+| Status | Living draft — **not** a production certificate |
 | Owner | PMO-DMD (Prime Minister's Office — Disaster Management Department) |
 | Audience | Backend & frontend engineers; PMO ICT; architecture reviewers; auditors; technical stakeholders |
 | System | e-MAAFA — Tanzania PMO Disaster Management Information System (`dmis-platform`) |
 | Source of truth | The source tree at `/home/kaijage/model/maafa/dmis-platform`. Where code and prose disagree, the code wins. |
+| **Last verified** | **2026-07-10 against Flyway V183 / live local stack** (F99 refresh: migrations, RBAC, outbox honesty) |
 
 ---
 
@@ -140,7 +141,7 @@ Concrete evidence and mechanics from the configuration:
 - **Flyway owns only the new schemas.** `spring.flyway.schemas` = `platform, registry, incident, ew, dissemination, notification`, `default-schema: platform`, with `baseline-on-migrate: true` and `baseline-version: 0`. The comment in `application.yml` is explicit: *"the shared database already exists (strangler migration); baseline so Flyway only manages the new platform schemas, never the legacy Laravel `public` tables."*
 - **Read/write through the same tables, never reshape them.** Many migrations operate on `public.*` tables that the legacy app owns (e.g. `V3__ew_read_model.sql`, `V5__auth_read_model.sql`, `V22__response_read_models.sql`). Every such statement is guarded with `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS` so that on a real production database — where the tables already exist with data — the migration is a no-op, while on a standalone/local database it materialises the schema so the platform is runnable in isolation.
 - **Faithful port, but everything must work.** The standing reproduction policy (see project working rules) is: reproduce the legacy LOOK and contracts 1:1, but make every action functional. Where the Laravel source is broken (missing methods, doomed validations, field-name mismatches), the platform implements the obviously-intended behaviour and logs the deviation. Several controllers (e.g. `EwBulletinIngestController`, `EwBoundaryController`) are documented as **faithful ports** of named Laravel controllers preserving identical request/response contracts and identifiers (e.g. `EW-YYYY-NNNNN` warning codes).
-- **Hibernate validates, Flyway migrates.** `spring.jpa.hibernate.ddl-auto: validate` — Hibernate never issues DDL; it only checks that the JPA mappings agree with the Flyway-built schema. There are **79 migrations** (`V1`…`V95`, with reserved/skipped blocks reflecting parallel-agent version reservations and `out-of-order: true`).
+- **Hibernate validates, Flyway migrates.** `spring.jpa.hibernate.ddl-auto: validate` — Hibernate never issues DDL; it only checks that the JPA mappings agree with the Flyway-built schema. As of **2026-07-10** the migration corpus is **~166 SQL files** ending at **`V183`** (with reserved/skipped blocks and `out-of-order: true`). Earlier SDD text that said "79 migrations / V1…V95" is **obsolete**.
 
 ### 1.6 Security & Identity Context
 
@@ -462,7 +463,7 @@ This section documents the identity flow, the role catalogue and method-security
 ### 3.1 Purpose & Responsibilities
 
 - **Authentication** — establish who the caller is. A `POST /api/v1/auth/login` exchanges email + password for a signed bearer token; the resource server validates that token on every subsequent request.
-- **Authorization (coarse)** — role-based method security. `@PreAuthorize` annotations enforce that the caller holds an appropriate SRS role before a controller method runs. Authorization is **role-based, not permission-based**: all gates use `hasRole`/`hasAnyRole` over role names; there are zero `hasAuthority`/`hasPermission` checks (verified across the backend).
+- **Authorization (coarse)** — method security via `@PreAuthorize`. **Since V102 / the RBAC settings matrix**, enforcement is primarily **permission-based** (`hasAuthority('<module.action>')` over Spatie-style permissions granted in System Settings → Roles & Permissions). Role names still appear in some legacy gates and in JWT claims, but the claim "zero hasAuthority checks / permission matrix is inert" is **obsolete** (hundreds of `hasAuthority` matches across controllers; ModuleGuardFilter also enforces module paths).
 - **Authorization (fine / jurisdiction)** — data scoping. Service- and query-level helpers restrict region/district officers to their own area, partner logins to their own stakeholder record, and EW agency focal logins to their own agency's bulletins.
 - **Transport hardening** — CORS allow-listing, security response headers, and per-IP rate limiting on the unauthenticated and abuse-prone surfaces.
 - **Profile isolation** — the dev persona convenience (`LocalAuthFilter`, `X-Local-Roles`) is wired only under the `local` profile and is provably absent in any other profile, which is true deny-by-default.
@@ -524,9 +525,9 @@ Both chains declare `@EnableMethodSecurity`. The historically critical bug this 
 
 ### 3.4 Role catalogue & method-level authorization
 
-Authorization is enforced by `@PreAuthorize` (~343 annotations across ~72 controllers). Of these, 57 are bare `isAuthenticated()`; the remainder are `hasRole`/`hasAnyRole` over the names defined in `common/security/Authz.java`. There are **no** `hasAuthority`/`hasPermission` checks anywhere.
+Authorization is enforced by `@PreAuthorize` across controllers **and** by `ModuleGuardFilter` path/module gates. The operational control surface is the **permission matrix** (`public.permissions` / `role_has_permissions`), exposed in System Settings → Roles & Permissions. Controllers widely use `hasAuthority('…')` / `hasAnyAuthority(…)` for module actions (e.g. `early_warning.approve`, `incidents.view`, `communication_and_alerts.send`).
 
-`Authz` is the single source of truth for role names and `@PreAuthorize` expressions. It replaced seven divergent, copy-pasted `CAN_WRITE` literals; settings controllers now reference `Authz.SYS_ADMIN` etc. Each expression is a compile-time-constant SpEL string built by concatenating role-name tokens (so it is a legal annotation value).
+`Authz` remains a convenient catalogue of **role-name constants** and some composite SpEL helpers for national-command tiers. It is **not** the sole enforcement mechanism; permission keys granted to roles are the day-to-day RBAC surface.
 
 **The role set** (verbatim names from `Authz`; the 15 operational roles are seeded by the local data seeder, the 4 statutory roles by migration `V71`):
 
@@ -670,8 +671,8 @@ All migrations are idempotent (`IF NOT EXISTS` / guarded constraint creation) so
 
 ### 3.11 Known gaps, constraints & TODOs
 
-1. **Permission matrix is inert.** `public.permissions` / `role_has_permissions` are maintained but never checked by Spring; all enforcement is role-name based. Migrating to permission-based authorization (`hasAuthority`) is a future option the matrix is designed to enable.
-2. **Frontend is not role-gated.** The SPA route guard checks login only; the module hub is static. All authenticated users see all modules in the UI and can reach any URL — the backend `@PreAuthorize` (and jurisdiction checks) are the real wall, returning `403`/`422`. A role/agency-aware menu filter is outstanding.
+1. **Permission matrix is live (2026 correction).** `public.permissions` / `role_has_permissions` drive `hasAuthority` gates and the Roles & Permissions UI. Residual risk is incomplete grant hygiene for new permissions, not a dead matrix.
+2. **Frontend gating is permission-aware for many modules** (route guards + action visibility), but not every screen is fully mirrored; backend `@PreAuthorize` / ModuleGuard remain the authoritative wall.
 3. **Jurisdiction scoping is partial by design.** STRICT scoping is applied to incidents; shared-or-own scoping covers only the high-value registries (warehouses, temporary warehouses, stakeholders). The resource **catalogue** (national list of types) and the contingency/anticipatory/training **plans** are intentionally left national. `agency_resources` carries the area columns (`V94`) but is not yet scoped — it has no standalone registry/CRUD, so scoping was deferred rather than built speculatively.
 4. **In-memory rate-limit state** is per-instance; multi-instance deployments need edge/shared-store rate limiting in addition.
 5. **Statutory authority enforcement is interim.** `RESPONSE_COMMAND` currently keeps everyone below national command out of the declaration steps; the per-step tightening to `DECLARE_REVIEW`/`DECLARE_ENDORSE`/`DECLARE_AUTHORITY` depends on those statutory roles being seeded and assigned (`V71` seeds the role rows; account seeding/assignment is operational).
@@ -681,7 +682,9 @@ All migrations are idempotent (`IF NOT EXISTS` / guarded constraint creation) so
 
 ## 04. Data Architecture & Persistence
 
-> **Purpose (executive summary).** e-MAAFA is a strangler re-platform: a new Spring Boot service runs alongside the legacy Laravel application against the **same PostgreSQL 17 database**. This section documents how that shared database is structured, how schema change is controlled (79 Flyway migrations, V1–V95), and how the new platform reads and writes the legacy `public` tables without ever destabilising production. The governing rule is: **Flyway owns DDL, the legacy `public` schema is treated as a read/write surface we extend additively, and the new bounded-context schemas (`platform`, `incident`, …) are ours alone.**
+> **Purpose (executive summary).** e-MAAFA is a strangler re-platform: a new Spring Boot service runs alongside the legacy Laravel application against the **same PostgreSQL database**. This section documents how that shared database is structured, how schema change is controlled (Flyway migrations through **V183** as of 2026-07-10), and how the new platform reads and writes the legacy `public` tables without ever destabilising production. The governing rule is: **Flyway owns DDL, the legacy `public` schema is treated as a read/write surface we extend additively, and the new bounded-context schemas (`platform`, `incident`, …) are ours alone.**
+>
+> **Outbox honesty (F99):** the transactional-outbox design (`common/event`, `platform.outbox_event`) is described historically as the inter-module seam. On the **live local DB (2026-07-10)** the outbox table is **not present / not the runtime integration bus** for most module collaboration — modules currently collaborate via shared `public` tables, direct service calls within the monolith, and `@Scheduled` jobs. Treat outbox prose as **designed / partial**, not as proven production eventing, until a future migration re-establishes and dual-proves the relay.
 
 ### 4.1 Responsibilities & Scope
 
@@ -714,7 +717,7 @@ Key Flyway settings and **why**:
 
 ### 4.3 Migration / Versioning Strategy
 
-79 migrations, `V1__…` through `V95__…`, in `dmis-platform/backend/src/main/resources/db/migration`. Conventions enforced throughout:
+**~166 migrations, through `V183__…` (as of 2026-07-10)**, in `dmis-platform/backend/src/main/resources/db/migration`. Earlier "79 / V95" counts are historical. Conventions enforced throughout:
 
 1. **Additive and idempotent.** Almost every statement is `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS`, and FK/constraint creation is guarded by `pg_constraint` look-ups inside `DO $$ … $$` blocks. This is mandatory because (a) production may already carry the Laravel table, and (b) the standalone EWS app shares the database and may have created an object via its own DDL first (see V90's explicit note). A migration must be a safe no-op where the object already exists.
 2. **Reserved version blocks** for parallel work (ops `V22–V30`, public-portal `V31+`), enabled by `out-of-order: true`.

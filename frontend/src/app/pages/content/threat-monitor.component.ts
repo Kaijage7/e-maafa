@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -18,7 +19,7 @@ interface ThreatPlan {
 }
 
 /**
- * Content Management → Hazard Monitor (Threat Monitoring) — DMD's control surface for the
+ * Hazard Monitor (Threat Monitoring) — DMD's control surface for the
  * national threats shown on the public front: register threats (source agency, trend,
  * severity), drive each threat's DMD-intervention timeline (UPCOMING/NEW → ONGOING → COMPLETED, or POSTPONED), and
  * review stakeholder plan submissions (Submitted → Under review → Approved). Everything here
@@ -31,7 +32,9 @@ interface ThreatPlan {
   template: `
     <dmis-page-header title="Hazard Monitor — Threat Monitoring" icon="fa-satellite-dish"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Hazard Monitor'}]">
-      <button class="btn-add" type="button" (click)="newThreatOpen.set(true)"><i class="fas fa-plus"></i> Register Threat</button>
+      @if (canManage()) {
+        <button class="btn-add" type="button" (click)="newThreatOpen.set(true)"><i class="fas fa-plus"></i> Register Threat</button>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -55,7 +58,7 @@ interface ThreatPlan {
                   <td style="font-size:0.85rem;">{{ t.updateCount }}</td>
                   <td style="font-size:0.85rem;">{{ t.planCount }}</td>
                   <td><span class="r-badge {{ t.isActive ? 'badge-approved' : 'badge-rejected' }}">{{ t.isActive ? 'Live' : 'Hidden' }}</span></td>
-                  <td><button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.8rem;" (click)="open(t)">Manage</button></td>
+                  <td><button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.8rem;" (click)="open(t)">{{ canManage() ? 'Manage' : 'View' }}</button></td>
                 </tr>
               }
             </tbody>
@@ -74,11 +77,13 @@ interface ThreatPlan {
             } @else {
               <div style="height:90px;width:150px;border:1px dashed var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--text-light);font-size:0.8rem;">No graphic yet</div>
             }
-            <label class="btn-add" style="cursor:pointer;margin:0;">
-              <i class="fas" [class.fa-upload]="!uploading()" [class.fa-spinner]="uploading()" [class.fa-spin]="uploading()"></i>
-              {{ uploading() ? 'Uploading…' : 'Upload graphic' }}
-              <input type="file" accept="image/*" hidden (change)="uploadGraphic($any($event.target).files)">
-            </label>
+            @if (canManage()) {
+              <label class="btn-add" style="cursor:pointer;margin:0;">
+                <i class="fas" [class.fa-upload]="!uploading()" [class.fa-spinner]="uploading()" [class.fa-spin]="uploading()"></i>
+                {{ uploading() ? 'Uploading…' : 'Upload graphic' }}
+                <input type="file" accept="image/*" hidden (change)="uploadGraphic($any($event.target).files)">
+              </label>
+            }
             <span style="font-size:0.8rem;color:var(--text-mid);">Shown on the public threat page (e.g. the TMA El Niño outlook graphic — replace any time).</span>
           </div>
         </dmis-panel>
@@ -90,7 +95,7 @@ interface ThreatPlan {
               @for (u of updates(); track u.id) {
                 <div style="display:grid;grid-template-columns:110px 1.4fr 2fr auto;gap:0.6rem;align-items:center;border:1px solid var(--border);border-radius:10px;padding:0.55rem 0.75rem;">
                   <select style="font-size:0.75rem;border:1px solid var(--border);border-radius:7px;padding:0.25rem;font-weight:700;"
-                          [value]="u.status" (change)="setUpdateStatus(u, $any($event.target).value)">
+                          [value]="u.status" [disabled]="!canManage()" (change)="setUpdateStatus(u, $any($event.target).value)">
                     <option value="UPCOMING">UPCOMING</option><option value="NEW">NEW</option><option value="ONGOING">ONGOING</option><option value="COMPLETED">COMPLETED</option><option value="POSTPONED">POSTPONED</option>
                   </select>
                   <div style="font-size:0.84rem;font-weight:700;color:var(--text-dark);">{{ u.title }}</div>
@@ -99,14 +104,16 @@ interface ThreatPlan {
                 </div>
               }
             </div>
-            <!-- Add timeline entry -->
-            <div style="display:grid;grid-template-columns:1.4fr 2fr 0.8fr 0.8fr auto;gap:0.5rem;align-items:center;">
-              <input class="form-control" placeholder="New intervention title" [value]="uTitle()" (input)="uTitle.set($any($event.target).value)">
-              <input class="form-control" placeholder="Detail" [value]="uDetail()" (input)="uDetail.set($any($event.target).value)">
-              <input type="date" class="form-control" [value]="uStart()" (input)="uStart.set($any($event.target).value)">
-              <input type="date" class="form-control" [value]="uEnd()" (input)="uEnd.set($any($event.target).value)">
-              <button class="btn-add" type="button" [disabled]="!uTitle().trim()" (click)="addUpdate()"><i class="fas fa-plus"></i> Add</button>
-            </div>
+            @if (canManage()) {
+              <!-- Add timeline entry -->
+              <div style="display:grid;grid-template-columns:1.4fr 2fr 0.8fr 0.8fr auto;gap:0.5rem;align-items:center;">
+                <input class="form-control" placeholder="New intervention title" [value]="uTitle()" (input)="uTitle.set($any($event.target).value)">
+                <input class="form-control" placeholder="Detail" [value]="uDetail()" (input)="uDetail.set($any($event.target).value)">
+                <input type="date" class="form-control" [value]="uStart()" (input)="uStart.set($any($event.target).value)">
+                <input type="date" class="form-control" [value]="uEnd()" (input)="uEnd.set($any($event.target).value)">
+                <button class="btn-add" type="button" [disabled]="!uTitle().trim()" (click)="addUpdate()"><i class="fas fa-plus"></i> Add</button>
+              </div>
+            }
           </div>
         </dmis-panel>
       </div>
@@ -126,7 +133,7 @@ interface ThreatPlan {
                       <td style="font-size:0.8rem;color:var(--text-mid);">{{ p.submittedOn }}</td>
                       <td>
                         <select style="font-size:0.76rem;border:1px solid var(--border);border-radius:7px;padding:0.3rem;"
-                                [value]="p.status" (change)="reviewPlan(p, $any($event.target).value)">
+                                [value]="p.status" [disabled]="!canManage()" (change)="reviewPlan(p, $any($event.target).value)">
                           <option>Submitted</option><option>Under review</option><option>Approved</option>
                         </select>
                       </td>
@@ -166,6 +173,8 @@ interface ThreatPlan {
 })
 export class ThreatMonitorComponent {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  readonly canManage = computed(() => this.auth.hasPermission('hazards.manage'));
 
   threats = signal<ThreatRow[]>([]);
   selected = signal<ThreatRow | null>(null);
@@ -193,12 +202,10 @@ export class ThreatMonitorComponent {
     const form = new FormData();
     form.append('file', file);
     form.append('folder', 'threats');
-    this.http.post<{ path: string; url: string }>('/api/v1/content/upload', form).subscribe({
+    this.http.post<{ path: string; url: string }>(`/api/v1/content/threats/${t.id}/graphic`, form).subscribe({
       next: r => {
-        this.http.put(`/api/v1/content/threats/${t.id}`, { graphicPath: r.path }).subscribe(() => {
-          this.uploading.set(false);
-          this.graphicUrl.set(r.url);
-        });
+        this.uploading.set(false);
+        this.graphicUrl.set(r.url);
       },
       error: () => this.uploading.set(false),
     });
@@ -236,6 +243,7 @@ export class ThreatMonitorComponent {
   }
 
   addUpdate(): void {
+    if (!this.canManage()) { return; }
     const t = this.selected();
     if (!t) { return; }
     this.http.post(`/api/v1/content/threats/${t.id}/updates`, {
@@ -248,14 +256,17 @@ export class ThreatMonitorComponent {
   }
 
   setUpdateStatus(u: ThreatUpdate, status: string): void {
+    if (!this.canManage()) { return; }
     this.http.put(`/api/v1/content/threats/updates/${u.id}`, { status }).subscribe(() => this.reload());
   }
 
   reviewPlan(p: ThreatPlan, status: string): void {
+    if (!this.canManage()) { return; }
     this.http.put(`/api/v1/content/threats/plans/${p.id}/status`, { status }).subscribe(() => this.reload());
   }
 
   createThreat(): void {
+    if (!this.canManage()) { return; }
     this.http.post('/api/v1/content/threats', {
       name: this.tName().trim(), sourceAgency: this.tSource() || null, trendLabel: this.tTrend() || null,
       severity: this.tSeverity(), descriptionEn: this.tDescEn() || null, descriptionSw: this.tDescSw() || null,

@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -143,9 +144,9 @@ export class TrainingPlansComponent {
 
   /** Publish an upcoming training as a public News/Event item. */
   publish(t: TrainingRow): void {
-    ensureSweetAlert().then(() => Swal.fire({
-      icon: 'question', title: 'Publish to News & Events?',
-      html: `“${t.title}” will appear as a public event on the portal.`,
+	    ensureSweetAlert().then(() => Swal.fire({
+	      icon: 'question', title: 'Publish to News & Events?',
+	      html: `&ldquo;${escapeHtml(t.title)}&rdquo; will appear as a public event on the portal.`,
       showCancelButton: true, confirmButtonText: 'Publish', confirmButtonColor: '#198754',
     }).then((res: any) => {
       if (!res.isConfirmed) { return; }
@@ -175,9 +176,9 @@ export class TrainingPlansComponent {
 
   /** Request stakeholder funding support for an unfunded training (notifies partners). */
   requestSupport(t: TrainingRow): void {
-    ensureSweetAlert().then(() => Swal.fire({
-      icon: 'warning', title: 'Request funding support?',
-      html: `“${t.title}” has no funding source. Stakeholders/partners will be notified of the funding need.`,
+	    ensureSweetAlert().then(() => Swal.fire({
+	      icon: 'warning', title: 'Request funding support?',
+	      html: `&ldquo;${escapeHtml(t.title)}&rdquo; has no funding source. Stakeholders/partners will be notified of the funding need.`,
       showCancelButton: true, confirmButtonText: 'Request Support', confirmButtonColor: '#d97706',
     }).then((res: any) => {
       if (!res.isConfirmed) { return; }

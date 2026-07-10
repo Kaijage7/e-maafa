@@ -9,14 +9,17 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -43,6 +46,7 @@ public class PastDisasterService {
 
     private final PastDisasterRepository disasters;
     private final MitHazardRepository hazards;
+    private final JdbcTemplate jdbc;
 
     @Value("${dmis.storage.public-root:${user.dir}/storage/public}")
     private String publicRoot;
@@ -53,7 +57,7 @@ public class PastDisasterService {
         List<PastDisasterResponses.Row> rows = result.getContent().stream()
                 .map(d -> new PastDisasterResponses.Row(d.getId(), d.getEventName(), fmt(d.getEventDate()),
                         d.getLocationDescription(), d.getHazard() != null ? d.getHazard().getName() : null,
-                        d.getReportDocumentPath()))
+                        d.getReportDocumentPath(), repositoryPointers(d.getId(), d.getEventName(), d.getEventDate())))
                 .toList();
         PastDisasterResponses.Stats stats = new PastDisasterResponses.Stats(
                 disasters.count(),
@@ -195,5 +199,55 @@ public class PastDisasterService {
 
     private static String fmt(LocalDate date) {
         return date == null ? null : D_MON_Y.format(date);
+    }
+
+    /**
+     * F73 — surface Sendai repository cards already linked, plus date-window name matches.
+     * Narrative past_disasters and disaster_events remain separate; this is a pointer only.
+     */
+    private List<PastDisasterResponses.RepositoryPointer> repositoryPointers(
+            Long pastId, String eventName, LocalDate eventDate) {
+        List<PastDisasterResponses.RepositoryPointer> out = new ArrayList<>();
+        try {
+            for (Map<String, Object> row : jdbc.queryForList("""
+                    select e.id, e.event_code, e.name
+                      from disaster_event_links l
+                      join disaster_events e on e.id = l.event_id
+                     where l.entity_type = 'past_disaster' and l.entity_id = ?
+                     order by e.started_on desc nulls last
+                     limit 5
+                    """, pastId)) {
+                out.add(new PastDisasterResponses.RepositoryPointer(
+                        ((Number) row.get("id")).longValue(),
+                        str(row.get("event_code")), str(row.get("name")), "linked"));
+            }
+            if (out.isEmpty() && eventDate != null) {
+                String token = eventName == null ? "" : eventName.replaceAll("[^A-Za-z ]", " ").trim();
+                String first = token.isEmpty() ? "~" : token.split("\\s+")[0];
+                for (Map<String, Object> row : jdbc.queryForList("""
+                        select e.id, e.event_code, e.name
+                          from disaster_events e
+                         where e.started_on between (?::date - interval '60 days') and (?::date + interval '60 days')
+                           and (? = '~' or lower(e.name) like '%'||lower(?)||'%')
+                         order by abs(e.started_on - ?::date)
+                         limit 3
+                        """, eventDate, eventDate, first, first, eventDate)) {
+                    out.add(new PastDisasterResponses.RepositoryPointer(
+                            ((Number) row.get("id")).longValue(),
+                            str(row.get("event_code")), str(row.get("name")), "suggested"));
+                }
+            }
+        } catch (Exception ignored) {
+            // Pointers are advisory; never fail the past-disasters index.
+        }
+        return out;
+    }
+
+    private static String str(Object v) {
+        if (v == null) {
+            return null;
+        }
+        String s = String.valueOf(v).trim();
+        return s.isEmpty() ? null : s;
     }
 }

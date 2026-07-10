@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 
@@ -367,11 +368,11 @@ export class WarehouseOpsComponent implements OnInit {
 
   /** Borrow stock between two stores with an optional due date + incident link. */
   borrow(): void {
-    const stores = [
-      ...this.warehouses().map(w => ({ v: `zonal:${w.id}`, n: `${w.name} (zonal)` })),
-      ...this.tempWarehouses().map(w => ({ v: `temporary:${w.id}`, n: `${w.name} (${w.level ?? 'temp'})` })),
-    ];
-    const opts = stores.map(s => `<option value="${s.v}">${s.n}</option>`).join('');
+	    const stores = [
+	      ...this.warehouses().map(w => ({ v: `zonal:${w.id}`, n: `${w.name} (zonal)` })),
+	      ...this.tempWarehouses().map(w => ({ v: `temporary:${w.id}`, n: `${w.name} (${w.level ?? 'temp'})` })),
+	    ];
+	    const opts = stores.map(s => `<option value="${escapeHtml(s.v)}">${escapeHtml(s.n)}</option>`).join('');
     ensureSweetAlert().then(() => Swal.fire({
       title: 'Borrow stock between stores',
       html: `<select id="bw-from" class="swal2-select" style="width:90%"><option value="">Lender (from)…</option>${opts}</select>
@@ -402,21 +403,21 @@ export class WarehouseOpsComponent implements OnInit {
   }
 
   /** Record a full or partial return of an outstanding loan. */
-  returnLoan(l: any): void {
-    ensureSweetAlert().then(() => Swal.fire({
-      title: `Return — ${l.resource_name}`,
-      html: `<p style="font-size:0.85rem;color:#475569">Outstanding <b>${l.outstanding_quantity}</b> · ${l.borrower_name} → ${l.lender_name}</p>
-             <input id="rt-qty" type="number" min="1" max="${l.outstanding_quantity}" value="${l.outstanding_quantity}" class="swal2-input" placeholder="Quantity to return">`,
+	  returnLoan(l: any): void {
+	    ensureSweetAlert().then(() => Swal.fire({
+	      titleText: `Return - ${l.resource_name ?? 'resource'}`,
+	      html: `<p style="font-size:0.85rem;color:#475569">Outstanding <b>${Number(l.outstanding_quantity)}</b> · ${escapeHtml(l.borrower_name)} → ${escapeHtml(l.lender_name)}</p>
+	             <input id="rt-qty" type="number" min="1" max="${Number(l.outstanding_quantity)}" value="${Number(l.outstanding_quantity)}" class="swal2-input" placeholder="Quantity to return">`,
       showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Record Return',
       preConfirm: () => ({ quantity: Number((document.getElementById('rt-qty') as HTMLInputElement).value) || l.outstanding_quantity }),
     }).then((r: any) => { if (r.isConfirmed) { this.post(`/api/v1/response/warehouse-ops/loans/${l.id}/return`, r.value); } }));
   }
 
   /** Intake form: resource + quantity + batch/expiry/supplier into the selected store. */
-  intake(): void {
-    const s = this.store()!;
-    ensureSweetAlert().then(() => Swal.fire({
-      title: `Stock intake — ${s.name}`,
+	  intake(): void {
+	    const s = this.store()!;
+	    ensureSweetAlert().then(() => Swal.fire({
+	      titleText: `Stock intake - ${s.name}`,
       html: `<select id="in-res" class="swal2-select" style="width:85%">${this.resourceOptions()}</select>
              <input id="in-qty" type="number" min="1" class="swal2-input" placeholder="Quantity">
              <input id="in-batch" class="swal2-input" placeholder="Batch number (optional)">
@@ -445,12 +446,12 @@ export class WarehouseOpsComponent implements OnInit {
   }
 
   /** Removal form: resource + quantity + the source's verbatim reason list. */
-  remove(): void {
-    const s = this.store()!;
-    const reasonOptions = Object.entries(this.removalReasons)
-      .map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
-    ensureSweetAlert().then(() => Swal.fire({
-      title: `Remove stock — ${s.name}`,
+	  remove(): void {
+	    const s = this.store()!;
+	    const reasonOptions = Object.entries(this.removalReasons)
+	      .map(([k, v]) => `<option value="${escapeHtml(k)}">${escapeHtml(v)}</option>`).join('');
+	    ensureSweetAlert().then(() => Swal.fire({
+	      titleText: `Remove stock - ${s.name}`,
       html: `<select id="rm-res" class="swal2-select" style="width:85%">${this.stockedResourceOptions()}</select>
              <input id="rm-qty" type="number" min="1" class="swal2-input" placeholder="Quantity">
              <select id="rm-reason" class="swal2-select" style="width:85%">${reasonOptions}</select>
@@ -477,12 +478,12 @@ export class WarehouseOpsComponent implements OnInit {
   /** Transfer form: resource + quantity from the open store into any other store. */
   transfer(): void {
     const s = this.store()!;
-    const destinations = this.warehouses().filter(w => !(s.type === 'zonal' && w.id === s.id))
-      .map(w => `<option value="zonal:${w.id}">${w.name} (zonal)</option>`).join('')
-      + this.tempWarehouses().filter(w => !(s.type === 'temporary' && w.id === s.id))
-        .map(w => `<option value="temporary:${w.id}">${w.name} (${w.level})</option>`).join('');
-    ensureSweetAlert().then(() => Swal.fire({
-      title: `Transfer stock — from ${s.name}`,
+	    const destinations = this.warehouses().filter(w => !(s.type === 'zonal' && w.id === s.id))
+	      .map(w => `<option value="zonal:${Number(w.id)}">${escapeHtml(w.name)} (zonal)</option>`).join('')
+	      + this.tempWarehouses().filter(w => !(s.type === 'temporary' && w.id === s.id))
+	        .map(w => `<option value="temporary:${Number(w.id)}">${escapeHtml(w.name)} (${escapeHtml(w.level)})</option>`).join('');
+	    ensureSweetAlert().then(() => Swal.fire({
+	      titleText: `Transfer stock - from ${s.name}`,
       html: `<select id="tr-res" class="swal2-select" style="width:85%">${this.stockedResourceOptions()}</select>
              <input id="tr-qty" type="number" min="1" class="swal2-input" placeholder="Quantity">
              <select id="tr-dest" class="swal2-select" style="width:85%">${destinations}</select>
@@ -540,16 +541,16 @@ export class WarehouseOpsComponent implements OnInit {
 
   // ── helpers ──
 
-  private resourceOptions(): string {
-    return this.resources.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+	  private resourceOptions(): string {
+	    return this.resources.map(r => `<option value="${Number(r.id)}">${escapeHtml(r.name)}</option>`).join('');
   }
 
   /** Optional "link this operation to an incident" selector (normal ops = none). */
   private incidentSelect(id: string): string {
     if (!this.incidents.length) { return ''; }
-    return `<select id="${id}" class="swal2-select" style="width:90%">
-      <option value="">— routine (no incident) —</option>
-      ${this.incidents.map(i => `<option value="${i.id}">${i.title}</option>`).join('')}</select>`;
+	    return `<select id="${id}" class="swal2-select" style="width:90%">
+	      <option value="">— routine (no incident) —</option>
+	      ${this.incidents.map(i => `<option value="${Number(i.id)}">${escapeHtml(i.title)}</option>`).join('')}</select>`;
   }
 
   private incidentVal(id: string): number | null {
@@ -559,8 +560,8 @@ export class WarehouseOpsComponent implements OnInit {
 
   /** For removal/transfer only resources present in the open store make sense. */
   private stockedResourceOptions(): string {
-    const stocked = new Map(this.items().map(i => [i.resource_id, i.resource_name]));
-    return [...stocked.entries()].map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+	    const stocked = new Map(this.items().map(i => [i.resource_id, i.resource_name]));
+	    return [...stocked.entries()].map(([id, name]) => `<option value="${Number(id)}">${escapeHtml(name)}</option>`).join('');
   }
 
   private post(url: string, body: any): void {

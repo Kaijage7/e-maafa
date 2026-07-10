@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { escapeHtml } from '../../core/html';
 import { addMapNav, addTanzaniaDarkBase, addTanzaniaGisBase, applyDmisMapJurisdiction } from '../../core/tz-map';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
@@ -163,10 +164,12 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
       addMapNav(this.map, { home: [-6.369028, 34.888822, 6] });
     }
     this.markers.forEach(m => m.remove());
-    this.markers = incidents.filter(i => i.latitude && i.longitude).map(i =>
-      L.circleMarker([i.latitude, i.longitude], {
-        radius: 9, color: '#fff', weight: 2, fillColor: this.color(i.severity_level), fillOpacity: 0.9,
-      }).addTo(this.map).bindTooltip(`<b>${i.title}</b><br>${i.severity_level} · ${i.status}`));
+	    this.markers = incidents.filter(i => i.latitude && i.longitude).map(i =>
+	      L.circleMarker([i.latitude, i.longitude], {
+	        radius: 9, color: '#fff', weight: 2, fillColor: this.color(i.severity_level), fillOpacity: 0.9,
+	      }).addTo(this.map).bindTooltip(
+	        `<b>${escapeHtml(i.title)}</b><br>${escapeHtml(i.severity_level)} · ${escapeHtml(i.status)}`,
+	      ));
   }
 
   color(severity: string): string {
@@ -326,17 +329,19 @@ export class EoccBoardComponent implements OnInit, OnDestroy {
       addMapNav(this.map, { dark: true, home: [-6.369028, 34.888822, 6] });
     }
     this.markers.forEach(m => m.remove());
-    this.markers = incidents.map(i =>
-      L.circleMarker([i.latitude, i.longitude], {
-        radius: 10, color: '#0f172a', weight: 2,
-        fillColor: SEVERITY_COLORS[i.severity_level] ?? '#6c757d', fillOpacity: 0.95,
-      }).addTo(this.map).bindTooltip(`<b>${i.title}</b><br>${i.severity_level} · ${i.status}`));
+	    this.markers = incidents.map(i =>
+	      L.circleMarker([i.latitude, i.longitude], {
+	        radius: 10, color: '#0f172a', weight: 2,
+	        fillColor: SEVERITY_COLORS[i.severity_level] ?? '#6c757d', fillOpacity: 0.95,
+	      }).addTo(this.map).bindTooltip(
+	        `<b>${escapeHtml(i.title)}</b><br>${escapeHtml(i.severity_level)} · ${escapeHtml(i.status)}`,
+	      ));
   }
 
   /** Quick Action #1 — pick an open incident and open the emergency protocol. */
-  activate(): void {
-    this.http.get<any>('/api/v1/response/tasks/form-data').subscribe(fd => {
-      const options = fd.incidents.map((i: any) => `<option value="${i.id}">${i.title}</option>`).join('');
+	  activate(): void {
+	    this.http.get<any>('/api/v1/response/tasks/form-data').subscribe(fd => {
+	      const options = fd.incidents.map((i: any) => `<option value="${Number(i.id)}">${escapeHtml(i.title)}</option>`).join('');
       ensureSweetAlert().then(() => Swal.fire({
         title: 'Activate Emergency Protocol',
         html: `<select id="ap-incident" class="swal2-select" style="width:85%">${options}</select>

@@ -3,6 +3,7 @@ import { Component, HostListener, OnDestroy, OnInit, inject, signal } from '@ang
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../core/auth.service';
+import { FontScaleService } from '../core/font-scale.service';
 
 /** Exact reproduction of components/dmis/topbar.blade.php + the dmis-v2.js topbar behaviors. */
 @Component({
@@ -21,6 +22,15 @@ import { AuthService } from '../core/auth.service';
         </div>
       </div>
       <div class="top-bar-right">
+        <!-- System-wide font size: A− / % / A+ (persists in this browser) -->
+        <div class="font-scale" role="group" aria-label="Text size">
+          <button type="button" class="fs-btn" (click)="font.decrease()" [disabled]="!font.canDecrease()"
+            title="Decrease text size" aria-label="Decrease text size">A−</button>
+          <button type="button" class="fs-label" (click)="font.reset()"
+            title="Reset text size to default" aria-label="Reset text size to default">{{ font.percentLabel() }}</button>
+          <button type="button" class="fs-btn" (click)="font.increase()" [disabled]="!font.canIncrease()"
+            title="Increase text size" aria-label="Increase text size">A+</button>
+        </div>
         <div class="bell-wrap">
           <button class="bell-btn" type="button" (click)="toggleBell($event)" aria-label="Notifications">
             <i class="fas fa-bell"></i>
@@ -85,6 +95,7 @@ import { AuthService } from '../core/auth.service';
           <div class="user-menu-dropdown" id="userMenuDropdown" [class.show]="menuOpen()">
             <a routerLink="/home"><i class="fas fa-th-large" style="width:14px;text-align:center;opacity:0.5;"></i> Module Hub</a>
             <a (click)="openPw()" style="cursor:pointer;"><i class="fas fa-key" style="width:14px;text-align:center;opacity:0.5;"></i> Change Password</a>
+            <a (click)="open2fa()" style="cursor:pointer;"><i class="fas fa-shield-halved" style="width:14px;text-align:center;opacity:0.5;"></i> Two-factor auth</a>
             <div class="divider"></div>
             <button type="button" class="logout-btn" (click)="logout()"><i class="fas fa-sign-out-alt" style="width:14px;text-align:center;"></i> Logout</button>
           </div>
@@ -114,8 +125,72 @@ import { AuthService } from '../core/auth.service';
         </div>
       </div>
     }
+
+    @if (tfaOpen()) {
+      <div class="pw-overlay" (click)="close2fa()">
+        <div class="pw-modal" (click)="$event.stopPropagation()">
+          <div class="pw-head"><b><i class="fas fa-shield-halved" style="margin-right:6px;opacity:0.6;"></i> Two-factor authentication</b>
+            <button type="button" class="pw-x" (click)="close2fa()" aria-label="Close">&times;</button></div>
+          <div class="pw-body">
+            <div class="pw-hint" style="margin-top:0;">
+              Status:
+              <b [style.color]="tfaEnabled() ? '#16a34a' : '#64748b'">{{ tfaEnabled() ? 'Enabled' : 'Not enabled' }}</b>
+            </div>
+            @if (!tfaEnabled()) {
+              @if (!tfaSecret()) {
+                <p class="pw-hint">Protect your account with an authenticator app (Google Authenticator, FreeOTP, Microsoft Authenticator, etc.).</p>
+                <div class="pw-actions">
+                  <button type="button" class="pw-cancel" (click)="close2fa()">Cancel</button>
+                  <button type="button" class="pw-save" [disabled]="tfaBusy()" (click)="start2faSetup()">{{ tfaBusy() ? '…' : 'Set up 2FA' }}</button>
+                </div>
+              } @else {
+                <p class="pw-hint">Scan this otpauth URI in your app, or enter the secret manually:</p>
+                <code style="display:block;word-break:break-all;font-size:0.78rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin:6px 0;">{{ tfaSecret() }}</code>
+                <label>Enter a 6-digit code to confirm</label>
+                <input type="text" inputmode="numeric" maxlength="8" [(ngModel)]="tfaCode" name="tfaCode" [disabled]="tfaBusy()">
+                <div class="pw-actions">
+                  <button type="button" class="pw-cancel" (click)="close2fa()">Cancel</button>
+                  <button type="button" class="pw-save" [disabled]="tfaBusy()" (click)="confirm2fa()">{{ tfaBusy() ? '…' : 'Enable 2FA' }}</button>
+                </div>
+              }
+            } @else {
+              <p class="pw-hint">To disable 2FA, enter your password and a current authenticator code.</p>
+              <label>Password</label>
+              <input type="password" [(ngModel)]="tfaPwd" name="tfaPwd" autocomplete="current-password" [disabled]="tfaBusy()">
+              <label>Authenticator code</label>
+              <input type="text" inputmode="numeric" maxlength="8" [(ngModel)]="tfaCode" name="tfaCodeOff" [disabled]="tfaBusy()">
+              <div class="pw-actions">
+                <button type="button" class="pw-cancel" (click)="close2fa()">Cancel</button>
+                <button type="button" class="pw-save" style="background:#b91c1c;border-color:#b91c1c;" [disabled]="tfaBusy()" (click)="disable2fa()">{{ tfaBusy() ? '…' : 'Disable 2FA' }}</button>
+              </div>
+            }
+            @if (tfaMsg()) { <div class="pw-note" [class.err]="tfaErr()">{{ tfaMsg() }}</div> }
+          </div>
+        </div>
+      </div>
+    }
   `,
   styles: [`
+    .font-scale {
+      display: inline-flex; align-items: center; gap: 0;
+      border: 1px solid rgba(0,0,0,0.08); border-radius: 999px;
+      background: rgba(255,255,255,0.65); overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .fs-btn, .fs-label {
+      border: none; background: transparent; cursor: pointer; font-family: inherit;
+      color: #334155; font-weight: 800; line-height: 1;
+      padding: 0.4rem 0.55rem;
+    }
+    .fs-btn { font-size: 0.95rem; min-width: 2rem; }
+    .fs-btn:hover:not(:disabled) { background: rgba(0,51,102,0.08); color: #003366; }
+    .fs-btn:disabled { opacity: 0.35; cursor: default; }
+    .fs-label {
+      font-size: 0.78rem; font-weight: 700; color: #003366;
+      border-left: 1px solid rgba(0,0,0,0.06); border-right: 1px solid rgba(0,0,0,0.06);
+      min-width: 2.8rem; text-align: center; padding: 0.4rem 0.45rem;
+    }
+    .fs-label:hover { background: rgba(0,51,102,0.06); }
     .bell-wrap { position: relative; display: flex; align-items: center; }
     .bell-btn { position: relative; background: none; border: none; color: inherit; cursor: pointer; font-size: 1.05rem; padding: 6px 9px; opacity: 0.85; }
     .bell-btn:hover { opacity: 1; }
@@ -172,6 +247,7 @@ import { AuthService } from '../core/auth.service';
 })
 export class TopbarComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
+  font = inject(FontScaleService);
   private router = inject(Router);
   private http = inject(HttpClient);
   menuOpen = signal(false);
@@ -182,6 +258,16 @@ export class TopbarComponent implements OnInit, OnDestroy {
   pwErr = signal(false);
   pwMsg = signal('');
   cur = ''; nw = ''; cf = '';
+
+  // Optional TOTP 2FA (PSA residual).
+  tfaOpen = signal(false);
+  tfaBusy = signal(false);
+  tfaEnabled = signal(false);
+  tfaErr = signal(false);
+  tfaMsg = signal('');
+  tfaSecret = signal('');
+  tfaCode = '';
+  tfaPwd = '';
 
   // Notification bell — reads the per-user feed the one dispatcher writes (public.resource_notifications).
   bellOpen = signal(false);
@@ -320,6 +406,89 @@ export class TopbarComponent implements OnInit, OnDestroy {
     this.pwErr.set(false); this.pwMsg.set('');
     this.pwBusy.set(false);
     this.pwOpen.set(true);
+  }
+
+  open2fa(): void {
+    this.menuOpen.set(false);
+    this.tfaCode = '';
+    this.tfaPwd = '';
+    this.tfaSecret.set('');
+    this.tfaMsg.set('');
+    this.tfaErr.set(false);
+    this.tfaOpen.set(true);
+    this.tfaBusy.set(true);
+    this.auth.twoFaStatus().subscribe({
+      next: s => {
+        this.tfaEnabled.set(!!s.enabled);
+        this.tfaBusy.set(false);
+      },
+      error: () => {
+        this.tfaBusy.set(false);
+        this.tfaErr.set(true);
+        this.tfaMsg.set('Could not load 2FA status.');
+      },
+    });
+  }
+
+  close2fa(): void {
+    this.tfaOpen.set(false);
+  }
+
+  start2faSetup(): void {
+    this.tfaBusy.set(true);
+    this.tfaMsg.set('');
+    this.auth.setupTotp().subscribe({
+      next: r => {
+        this.tfaSecret.set(r.secret);
+        this.tfaBusy.set(false);
+        this.tfaMsg.set('Scan the secret in your authenticator app, then enter a code.');
+      },
+      error: e => {
+        this.tfaBusy.set(false);
+        this.tfaErr.set(true);
+        this.tfaMsg.set(e?.error?.message || e?.error?.detail || 'Could not start 2FA setup.');
+      },
+    });
+  }
+
+  confirm2fa(): void {
+    this.tfaBusy.set(true);
+    this.tfaMsg.set('');
+    this.auth.enableTotp(this.tfaCode.trim()).subscribe({
+      next: () => {
+        this.tfaBusy.set(false);
+        this.tfaEnabled.set(true);
+        this.tfaSecret.set('');
+        this.tfaCode = '';
+        this.tfaErr.set(false);
+        this.tfaMsg.set('Two-factor authentication is now required at sign-in.');
+      },
+      error: e => {
+        this.tfaBusy.set(false);
+        this.tfaErr.set(true);
+        this.tfaMsg.set(e?.error?.message || e?.error?.detail || 'Invalid code — try again.');
+      },
+    });
+  }
+
+  disable2fa(): void {
+    this.tfaBusy.set(true);
+    this.tfaMsg.set('');
+    this.auth.disableTotp(this.tfaPwd, this.tfaCode.trim()).subscribe({
+      next: () => {
+        this.tfaBusy.set(false);
+        this.tfaEnabled.set(false);
+        this.tfaCode = '';
+        this.tfaPwd = '';
+        this.tfaErr.set(false);
+        this.tfaMsg.set('Two-factor authentication has been disabled.');
+      },
+      error: e => {
+        this.tfaBusy.set(false);
+        this.tfaErr.set(true);
+        this.tfaMsg.set(e?.error?.message || e?.error?.detail || 'Could not disable 2FA.');
+      },
+    });
   }
 
   closePw(): void {

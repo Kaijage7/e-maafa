@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 
@@ -464,15 +465,15 @@ export class DispatchConsoleComponent implements OnInit {
       `/api/v1/response/bidding/bids/${b.id}/dismiss`, 'reason', 'Reason (min 10 characters)', true, () => this.reloadPool());
   }
 
-  receiveBid(b: any): void {
-    const p = this.pool()!;
-    const options = p.warehouses.map((w: any) => `<option value="warehouse:${w.id}">${w.name} (zonal)</option>`).join('')
-      + p.temporary_warehouses.map((w: any) => `<option value="temporary_warehouse:${w.id}">${w.name} (${w.level})</option>`).join('');
-    ensureSweetAlert().then(() => Swal.fire({
-      title: `Receive donation from ${b.stakeholder_name}`,
-      html: `<select id="rb-dest" class="swal2-select" style="width:85%">${options}</select>
-             <input id="rb-qty" type="number" min="1" class="swal2-input" placeholder="Quantity received" value="${b.quantity_offered}">
-             <input id="rb-notes" class="swal2-input" placeholder="Notes (optional)">`,
+	  receiveBid(b: any): void {
+	    const p = this.pool()!;
+	    const options = p.warehouses.map((w: any) => `<option value="warehouse:${Number(w.id)}">${escapeHtml(w.name)} (zonal)</option>`).join('')
+	      + p.temporary_warehouses.map((w: any) => `<option value="temporary_warehouse:${Number(w.id)}">${escapeHtml(w.name)} (${escapeHtml(w.level)})</option>`).join('');
+	    ensureSweetAlert().then(() => Swal.fire({
+	      titleText: `Receive donation from ${b.stakeholder_name ?? 'stakeholder'}`,
+	      html: `<select id="rb-dest" class="swal2-select" style="width:85%">${options}</select>
+	             <input id="rb-qty" type="number" min="1" class="swal2-input" placeholder="Quantity received" value="${Number(b.quantity_offered) || ''}">
+	             <input id="rb-notes" class="swal2-input" placeholder="Notes (optional)">`,
       showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Receive into Store',
       preConfirm: () => {
         const qty = Number((document.getElementById('rb-qty') as HTMLInputElement).value);
@@ -522,12 +523,12 @@ export class DispatchConsoleComponent implements OnInit {
   /** Delivery dialog: destination store + received quantity → intake + journal update. */
   openDeliver(p: ProcurementRow): void {
     this.http.get<any>(`/api/v1/response/dispatch/procurement/${p.allocation_id}/track`).subscribe(t => {
-      const warehouseOptions = t.warehouses.map((w: any) => `<option value="warehouse:${w.id}">${w.name} (zonal)</option>`).join('')
-        + t.temporary_warehouses.map((w: any) => `<option value="temporary_warehouse:${w.id}">${w.name} (${w.level})</option>`).join('');
+	      const warehouseOptions = t.warehouses.map((w: any) => `<option value="warehouse:${Number(w.id)}">${escapeHtml(w.name)} (zonal)</option>`).join('')
+	        + t.temporary_warehouses.map((w: any) => `<option value="temporary_warehouse:${Number(w.id)}">${escapeHtml(w.name)} (${escapeHtml(w.level)})</option>`).join('');
       ensureSweetAlert().then(() => Swal.fire({
         title: 'Record procurement delivery',
         html: `<select id="dl-dest" class="swal2-select" style="width:85%">${warehouseOptions}</select>
-               <input id="dl-qty" type="number" min="1" class="swal2-input" placeholder="Quantity received" value="${t.procurement.remaining_quantity ?? p.quantity}">
+	               <input id="dl-qty" type="number" min="1" class="swal2-input" placeholder="Quantity received" value="${Number(t.procurement.remaining_quantity ?? p.quantity) || ''}">
                <input id="dl-cost" type="number" min="0" class="swal2-input" placeholder="Actual cost (optional)">
                <input id="dl-notes" class="swal2-input" placeholder="Delivery notes (optional)">`,
         showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Record Delivery',
@@ -551,8 +552,8 @@ export class DispatchConsoleComponent implements OnInit {
   /** Shared confirm → optional input → POST → toast → reload sequence. */
   private confirmThenPost(title: string, url: string, field: string, inputLabel: string,
                           required: boolean, after?: () => void): void {
-    ensureSweetAlert().then(() => Swal.fire({
-      title, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
+	    ensureSweetAlert().then(() => Swal.fire({
+	      titleText: title, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
       input: 'textarea', inputLabel,
       preConfirm: (value: string) => {
         if (required && (!value || value.trim().length < 10)) {

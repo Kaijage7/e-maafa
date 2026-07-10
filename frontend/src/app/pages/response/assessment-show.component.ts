@@ -295,7 +295,7 @@ export class AssessmentShowComponent implements OnInit {
       return;
     }
     ensureSweetAlert().then(() => Swal.fire({
-      title: confirmTitle, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
+      titleText: confirmTitle, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
     }).then((r: any) => {
       if (r.isConfirmed) { run(); }
     }));

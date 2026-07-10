@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
+import { escapeHtml } from './html';
 
 declare const L: any;
 
@@ -420,7 +421,7 @@ export function addAdminDrilldown(map: any, http: HttpClient, regionFill?: Regio
         wardLayer = L.geoJSON(data, {
           style: () => ({ fillColor: '#1565c0', fillOpacity: 0.03, color: 'rgba(21,101,192,0.35)', weight: 0.6, opacity: 0.5 }),
           onEachFeature: (f: any, layer: any) => {
-            layer.bindTooltip(f.properties.ward_name || 'Ward', { sticky: true });
+	            layer.bindTooltip(escapeHtml(f.properties.ward_name || 'Ward'), { sticky: true });
             layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.15, weight: 1.2, opacity: 0.8 }));
             layer.on('mouseout', () => layer.setStyle({ fillOpacity: 0.03, weight: 0.6, opacity: 0.5 }));
             layer.on('click', (e: any) => {
@@ -442,12 +443,12 @@ export function addAdminDrilldown(map: any, http: HttpClient, regionFill?: Regio
           onEachFeature: (f: any, layer: any) => {
             const district = f.properties.dist_name || 'District';
             const dTip = opts?.districtTip;
-            if (dTip) {
-              // Content is a FUNCTION so each hover re-reads the caller's current data (live refresh).
-              layer.bindTooltip(() => dTip(region, district) ?? district, { className: 'map-tip', sticky: true });
-            } else {
-              layer.bindTooltip(district, { sticky: true });
-            }
+	            if (dTip) {
+	              // Content is a FUNCTION so each hover re-reads the caller's current data (live refresh).
+	              layer.bindTooltip(() => dTip(region, district) ?? escapeHtml(district), { className: 'map-tip', sticky: true });
+	            } else {
+	              layer.bindTooltip(escapeHtml(district), { sticky: true });
+	            }
             layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.12, weight: 2, opacity: 0.8, dashArray: '' }));
             layer.on('mouseout', () => layer.setStyle({ fillOpacity: 0.03, weight: 1, opacity: 0.5, dashArray: '4 3' }));
             layer.on('click', (e: any) => {
@@ -475,12 +476,12 @@ export function addAdminDrilldown(map: any, http: HttpClient, regionFill?: Regio
         const fill = regionFill?.(region) ?? null;
         const baseOpacity = fill ? 0.55 : (regionFill ? 0.04 : 0);
         const rTip = opts?.regionTip;
-        if (rTip) {
-          // Content is a FUNCTION so each hover re-reads the caller's current data (live refresh).
-          layer.bindTooltip(() => rTip(region) ?? region, { className: 'map-tip', sticky: true });
-        } else {
-          layer.bindTooltip(region, { sticky: true });
-        }
+	        if (rTip) {
+	          // Content is a FUNCTION so each hover re-reads the caller's current data (live refresh).
+	          layer.bindTooltip(() => rTip(region) ?? escapeHtml(region), { className: 'map-tip', sticky: true });
+	        } else {
+	          layer.bindTooltip(escapeHtml(region), { sticky: true });
+	        }
         layer.on('mouseover', () => layer.setStyle({ fillOpacity: Math.min(baseOpacity + 0.15, 0.8) }));
         layer.on('mouseout', () => layer.setStyle({ fillOpacity: baseOpacity }));
         layer.on('click', () => {

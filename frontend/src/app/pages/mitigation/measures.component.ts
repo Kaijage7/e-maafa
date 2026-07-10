@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, inject, signal, viewChild } from '@angular/core';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -41,7 +42,9 @@ interface IndexResponse {
     <dmis-page-header title="Mitigation Measures" icon="fa-shield-virus"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Mitigation Measures'}]">
       <!-- Source create page (500s) deliberately FIXED: links to the working SRS create page. -->
-      <a class="btn-add" routerLink="/m/prevention-mitigation/measures/create"><i class="fas fa-plus"></i> Add New Measure</a>
+      @if (canManage()) {
+        <a class="btn-add" routerLink="/m/prevention-mitigation/measures/create"><i class="fas fa-plus"></i> Add New Measure</a>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -117,9 +120,11 @@ interface IndexResponse {
                           <button class="ctx-trigger" type="button" (click)="toggleMenu(m.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
                           <div class="ctx-menu" [class.open]="openMenu() === m.id">
                             <button class="ctx-item" (click)="viewMeasure(m.id)"><i class="fas fa-eye"></i> View</button>
-                            <a class="ctx-item success" [routerLink]="['/m/prevention-mitigation/measures', m.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
-                            <div class="ctx-divider"></div>
-                            <button class="ctx-item danger" (click)="askDelete(m)"><i class="fas fa-trash"></i> Delete</button>
+                            @if (canManage()) {
+                              <a class="ctx-item success" [routerLink]="['/m/prevention-mitigation/measures', m.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
+                              <div class="ctx-divider"></div>
+                              <button class="ctx-item danger" (click)="askDelete(m)"><i class="fas fa-trash"></i> Delete</button>
+                            }
                           </div>
                         </div>
                       </td>
@@ -132,7 +137,9 @@ interface IndexResponse {
             <div class="empty-state">
               <i class="fas fa-shield-virus"></i>
               No mitigation measures registered yet.<br>
-              <a class="btn-add" routerLink="/m/prevention-mitigation/measures/create" style="margin-top:0.6rem;display:inline-flex;"><i class="fas fa-plus"></i> Add First Measure</a>
+              @if (canManage()) {
+                <a class="btn-add" routerLink="/m/prevention-mitigation/measures/create" style="margin-top:0.6rem;display:inline-flex;"><i class="fas fa-plus"></i> Add First Measure</a>
+              }
             </div>
           }
         </div>
@@ -219,6 +226,7 @@ interface IndexResponse {
 })
 export class MeasuresComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   priorityCanvas = viewChild<ElementRef<HTMLCanvasElement>>('priorityChart');
   statusCanvas = viewChild<ElementRef<HTMLCanvasElement>>('statusChart');
 
@@ -273,6 +281,10 @@ export class MeasuresComponent implements AfterViewInit, OnDestroy {
     return this.byPriority().reduce((s, c) => s + c.total, 0);
   }
 
+  canManage(): boolean {
+    return this.auth.hasPermission('mitigation_measures.manage');
+  }
+
   /** The source builds the status chart from the 3 stat values (Design deliberately absent). */
   statusData(): { label: string; value: number }[] {
     return [
@@ -322,11 +334,17 @@ export class MeasuresComponent implements AfterViewInit, OnDestroy {
   }
 
   askDelete(m: MeasureRow): void {
+    if (!this.canManage()) {
+      return;
+    }
     this.deleteTarget.set(m);
     this.deleteOpen.set(true);
   }
 
   confirmDelete(): void {
+    if (!this.canManage()) {
+      return;
+    }
     const target = this.deleteTarget();
     if (!target) {
       return;

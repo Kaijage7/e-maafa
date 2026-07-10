@@ -1,4 +1,5 @@
 import { HttpClient } from '@angular/common/http';
+import { escapeHtml } from '../../../core/html';
 import { AGENCIES, alertColor } from './ew-agency.model';
 
 declare const L: any;
@@ -75,7 +76,10 @@ export function renderCrossAgencyRef(http: HttpClient, markers: RefMarker[], don
         const mk = L.marker([c.lat, c.lng], { icon: L.divIcon({ className: 'rp-ref',
           html: '<div style="width:18px;height:18px;border-radius:50%;border:1.5px solid ' + m.color + ';background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.2)"><i class="fas ' + m.faIcon + '" style="color:' + m.color + ';font-size:12px"></i></div>',
           iconSize: [18, 18], iconAnchor: [9, 9] }) });
-        mk.bindTooltip(m.entity + (m.level ? ' · ' + String(m.level).replace('_', ' ') : ''), { sticky: true });
+	        mk.bindTooltip(
+	          escapeHtml(m.entity + (m.level ? ' · ' + String(m.level).replace('_', ' ') : '')),
+	          { sticky: true },
+	        );
         group.addLayer(mk);
       }
       done(group);

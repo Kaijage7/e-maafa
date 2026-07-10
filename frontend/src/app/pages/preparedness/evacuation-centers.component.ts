@@ -7,6 +7,7 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 import { addTanzaniaGisBase, addMapNav } from '../../core/tz-map';
+import { AuthService } from '../../core/auth.service';
 
 declare const L: any; // Leaflet loaded globally (CDN, same as the existing view)
 
@@ -27,7 +28,13 @@ interface EcResponse {
   template: `
     <dmis-page-header title="Evacuation Centers" icon="fa-house-user"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Evacuation Centers'}]">
-      <a class="btn-add" routerLink="/m/preparedness/evacuation-centers/create"><i class="fas fa-plus"></i> Add Center</a>
+      @if (canManage()) {
+        <a class="btn-add" routerLink="/m/preparedness/evacuation-centers/create"><i class="fas fa-plus"></i> Add Center</a>
+      }
+      <a class="btn-add" routerLink="/m/preparedness/early-warnings/consolidated"
+         style="background:#4527a0" title="Estimate routes from warned-area centroid">
+        <i class="fas fa-route"></i> EW routes
+      </a>
     </dmis-page-header>
 
     <div class="stats-row">
@@ -40,6 +47,11 @@ interface EcResponse {
     <div class="panel-row" style="animation-delay:.2s;">
       <dmis-panel title="Center Locations" icon="fa-map-marked-alt" [badge]="centers().length + ' centers'">
         <div class="panel-body">
+          <p style="font-size:0.85rem;color:var(--text-mid);margin:0 0 0.6rem;padding:0 0.25rem">
+            Registry map of active centres. From <b>Early Warning → PMO Consolidated</b>, use
+            <b>Evacuation centres · routes</b> to estimate straight-line routes from a warned-area centroid
+            to these centres (road directions open in Maps).
+          </p>
           <div #centerMap id="centerMap" style="height:520px;border-radius:0 0 16px 16px;z-index:1;"></div>
         </div>
       </dmis-panel>
@@ -89,8 +101,18 @@ interface EcResponse {
                         <div class="ctx-wrap">
                           <button class="ctx-trigger" type="button" (click)="toggleMenu(c.ecentreId, $event)"><i class="fas fa-ellipsis-v"></i></button>
                           <div class="ctx-menu" [class.open]="openMenu() === c.ecentreId">
-                            <a class="ctx-item" [routerLink]="['/m/preparedness/evacuation-centers/create']" [queryParams]="{edit: c.id}"><i class="fas fa-eye"></i> View</a>
-                            <a class="ctx-item success" [routerLink]="['/m/preparedness/evacuation-centers/create']" [queryParams]="{edit: c.id}"><i class="fas fa-edit"></i> Edit</a>
+                            @if (canManage()) {
+                              <a class="ctx-item" [routerLink]="['/m/preparedness/evacuation-centers/create']" [queryParams]="{edit: c.id}"><i class="fas fa-eye"></i> View</a>
+                              <a class="ctx-item success" [routerLink]="['/m/preparedness/evacuation-centers/create']" [queryParams]="{edit: c.id}"><i class="fas fa-edit"></i> Edit</a>
+                            } @else {
+                              <span class="ctx-item" style="cursor:default;opacity:0.75"><i class="fas fa-info-circle"></i> Read-only (EW/response)</span>
+                            }
+                            @if (c.latitude != null && c.longitude != null) {
+                              <a class="ctx-item" target="_blank" rel="noopener"
+                                 [href]="'https://www.google.com/maps/dir/?api=1&destination=' + c.latitude + ',' + c.longitude">
+                                <i class="fas fa-directions"></i> Directions
+                              </a>
+                            }
                           </div>
                         </div>
                       </td>
@@ -109,6 +131,7 @@ interface EcResponse {
 })
 export class EvacuationCentersComponent {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   mapEl = viewChild<ElementRef>('centerMap');
   centers = signal<CenterRow[]>([]);
   stats = signal({ total: 0, active: 0, totalCapacity: 0, regionsCovered: 0 });
@@ -117,6 +140,8 @@ export class EvacuationCentersComponent {
   status = signal('');
   openMenu = signal<string | null>(null);
   private map: any;
+  /** Create/edit requires preparedness.manage; EW/incident roles get read + directions only. */
+  canManage = computed(() => this.auth.hasPermission('preparedness.manage'));
 
   constructor() {
     this.http.get<EcResponse>('/api/v1/evacuation-centers').subscribe(response => {

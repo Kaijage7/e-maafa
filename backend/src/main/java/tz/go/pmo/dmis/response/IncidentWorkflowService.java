@@ -131,8 +131,16 @@ public class IncidentWorkflowService {
             return;
         }
         Map<String, Object> me = jdbc.queryForMap(
-                "select region_id, district_id from public.users where id = ?", actingUserId());
+                "select region_id, district_id, council_id from public.users where id = ?", actingUserId());
         if (scope == Scope.DISTRICT) {
+            Long incidentCouncil = asLong(incident.get("council_id"));
+            if (incidentCouncil != null) {
+                Long myCouncil = asLong(me.get("council_id"));
+                if (myCouncil == null || !myCouncil.equals(incidentCouncil)) {
+                    throw new ResourceNotFoundException("Record not found.");
+                }
+                return;
+            }
             Long myDistrict = asLong(me.get("district_id"));
             if (myDistrict == null || !myDistrict.equals(asLong(incident.get("district_id")))) {
                 throw new ResourceNotFoundException("Record not found.");
@@ -160,9 +168,13 @@ public class IncidentWorkflowService {
             return;
         }
         Map<String, Object> me = jdbc.queryForMap(
-                "select region_id, district_id from public.users where id = ?", actingUserId());
+                "select region_id, district_id, council_id from public.users where id = ?", actingUserId());
+        Long myCouncil = asLong(me.get("council_id"));
         Long myDistrict = asLong(me.get("district_id"));
         Long myRegion = asLong(me.get("region_id"));
+        if (myCouncil != null && !myCouncil.equals(asLong(incident.get("council_id")))) {
+            throw new BusinessRuleException("This incident is in another council/LGA; you can only submit incidents in your own council/LGA.");
+        }
         if (myDistrict != null && !myDistrict.equals(asLong(incident.get("district_id")))) {
             throw new BusinessRuleException("This incident is in another district; you can only submit incidents in your own district.");
         }
@@ -206,6 +218,18 @@ public class IncidentWorkflowService {
         Map<String, Object> incident = findOr404(incidentId);
         String from = (String) incident.get("workflow_status");
         assertStageAccess(from, incident);   // role + jurisdiction (own district / own region / national)
+        // F36 — dual axes: refuse ladder advances when operations already closed; re-open "Resolved"
+        // so a live approval queue item is not both "Resolved" and still waiting on a desk.
+        String op = incident.get("status") == null ? null : String.valueOf(incident.get("status"));
+        if ("Closed".equalsIgnoreCase(op)) {
+            throw new BusinessRuleException(
+                    "This incident is operationally Closed. Re-open it (set status to Active) before advancing the approval ladder.");
+        }
+        if ("Resolved".equalsIgnoreCase(op)) {
+            jdbc.update("update public.incidents set status = 'Active', updated_at = now() where id = ?", incidentId);
+            logHistory(incidentId, "edited", "Resolved", "Active",
+                    "Operational status re-opened because the approval ladder is still advancing.");
+        }
         String to = NEXT_STAGE.get(from);
         if (to == null) {
             throw new BusinessRuleException("This incident is not at an approvable stage.");
@@ -318,54 +342,101 @@ public class IncidentWorkflowService {
     }
 
     /**
-     * Forward to a specific Assistant Director role or to the Director — the
-     * source's forwardByNationalCoordinator / forwardByAssistantDirectorToDirector /
-     * forwardByDirectorToAssistantDirector merged on the same stage rules.
+     * Resubmit after corrections (F48 — live button, modern ladder).
+     * <ul>
+     *   <li>Legacy {@code rolled_back_to_*} rows re-enter the DDMC→PS ladder at the matching waiting_* stage.</li>
+     *   <li>Modern path: after {@link #rollback} lands on a {@code waiting_*} desk, the stage owner
+     *       resubmits → same escalate as {@link #approve}, history action {@code resubmitted}.</li>
+     * </ul>
      */
-    @Transactional
-    public String forward(long incidentId, String toRole, String recommendation) {
-        List<String> validRoles = new java.util.ArrayList<>(IncidentOptions.ASSISTANT_DIRECTOR_ROLES);
-        validRoles.add("Director");
-        if (toRole == null || !validRoles.contains(toRole)) {
-            throw new BusinessRuleException("The selected forward target role is invalid.");
-        }
-        Map<String, Object> incident = findOr404(incidentId);
-        String from = (String) incident.get("workflow_status");
-        assertStageAccess(from, incident);   // only the role that owns this stage may forward it
-        if (!List.of("waiting_national_approval", "waiting_assistant_director_approval",
-                "waiting_director_approval", "rolled_back_to_national").contains(from)) {
-            throw new BusinessRuleException("This incident is not at a stage that can be forwarded.");
-        }
-        String to = "Director".equals(toRole)
-                ? "waiting_director_approval"
-                : "waiting_assistant_director_approval";
-        jdbc.update("""
-                update public.incidents set workflow_status = ?, assigned_to_role = ?, updated_at = now()
-                where id = ?
-                """, to, toRole, incidentId);
-        stampReviewer(incidentId, from, null);
-        logHistory(incidentId, "edited", from, to,
-                "Forwarded to " + toRole + ". Recommendation: " + (recommendation == null ? "" : recommendation));
-        notifyStage(incident, to);   // ping the reviewer it was forwarded to (Director / Asst.Director)
-        return to;
-    }
-
-    /** Resubmit after a rollback — DAS variant from the source (rolled_back_to_das → RAS). */
     @Transactional
     public String resubmit(long incidentId, String comments) {
         Map<String, Object> incident = findOr404(incidentId);
         String from = (String) incident.get("workflow_status");
-        String to = switch (from) {
+        // Legacy residual statuses (pre-ladder rework)
+        String legacyTo = switch (from == null ? "" : from) {
             case "rolled_back_to_district" -> "waiting_ddmc";
             case "rolled_back_to_regional" -> "waiting_rdmc";
             case "rolled_back_to_das" -> "waiting_ded";
             case "rolled_back_to_national" -> "waiting_eocc";
-            default -> throw new BusinessRuleException("This incident has not been rolled back, nothing to resubmit.");
+            default -> null;
         };
-        assertActorInIncidentArea(incident);   // only the incident's own area (or national) may resubmit it
+        if (legacyTo != null) {
+            assertActorInIncidentArea(incident);
+            jdbc.update("update public.incidents set workflow_status = ?, updated_at = now() where id = ?",
+                    legacyTo, incidentId);
+            logHistory(incidentId, "resubmitted", from, legacyTo,
+                    comments == null || comments.isBlank() ? "Resubmitted after corrections (legacy status)." : comments);
+            return settleStage(incidentId, incident, legacyTo);
+        }
+        // Modern: stage owner re-escalates after a rollback (or any waiting_* re-send up the ladder)
+        if (!NEXT_STAGE.containsKey(from)) {
+            throw new BusinessRuleException(
+                    "This incident is not at a stage that can be resubmitted. Use Submit from draft, or Approve when you own the stage.");
+        }
+        assertStageAccess(from, incident);
+        String to = NEXT_STAGE.get(from);
+        stampReviewer(incidentId, from, comments);
         jdbc.update("update public.incidents set workflow_status = ?, updated_at = now() where id = ?", to, incidentId);
-        logHistory(incidentId, "resubmitted", from, to, comments);
-        return settleStage(incidentId, incident, to);   // auto-advance past unstaffed/auto tiers, then notify
+        String note = comments == null || comments.isBlank()
+                ? "Resubmitted after corrections — escalated to the next level."
+                : comments;
+        logHistory(incidentId, "resubmitted", from, to, note);
+        return settleStage(incidentId, incident, to);
+    }
+
+    /**
+     * National forward (F49 — live button on modern ladder).
+     * EOCC may forward to the Director (or name an assistant-director desk via {@code assigned_to_role});
+     * Director may forward to the Permanent Secretary. Always role- and stage-gated.
+     */
+    @Transactional
+    public String forward(long incidentId, String toRole, String recommendation) {
+        Map<String, Object> incident = findOr404(incidentId);
+        String from = (String) incident.get("workflow_status");
+        assertStageAccess(from, incident);
+
+        List<String> validTargets = new java.util.ArrayList<>(IncidentOptions.ASSISTANT_DIRECTOR_ROLES);
+        validTargets.add("Director");
+        validTargets.add("Secretary");
+        validTargets.add("PS");
+        if (toRole == null || toRole.isBlank() || !validTargets.contains(toRole)) {
+            throw new BusinessRuleException(
+                    "Choose a valid forward target: Director, Secretary/PS, or an Assistant Director role.");
+        }
+        String target = "PS".equals(toRole) ? "Secretary" : toRole;
+
+        String to;
+        if ("waiting_eocc".equals(from)) {
+            // EOCC hands national review to Director (assistant-director title stored on assignment)
+            to = "waiting_director";
+        } else if ("waiting_director".equals(from)) {
+            if (!"Secretary".equals(target) && !"Director".equals(target)) {
+                throw new BusinessRuleException("From the Director stage, forward only to the Permanent Secretary (Secretary/PS).");
+            }
+            to = "waiting_ps";
+            target = "Secretary";
+        } else if (List.of("waiting_national_approval", "waiting_assistant_director_approval",
+                "waiting_director_approval", "rolled_back_to_national").contains(from)) {
+            // Residual legacy rows only
+            to = "Director".equals(target) || "Secretary".equals(target)
+                    ? ("Secretary".equals(target) ? "waiting_ps" : "waiting_director_approval")
+                    : "waiting_assistant_director_approval";
+        } else {
+            throw new BusinessRuleException(
+                    "Forward is available at EOCC (to Director) or Director (to PS). At other stages use Approve / Resubmit.");
+        }
+
+        stampReviewer(incidentId, from, recommendation);
+        jdbc.update("""
+                update public.incidents set workflow_status = ?, assigned_to_role = ?, updated_at = now()
+                where id = ?
+                """, to, target, incidentId);
+        String note = "Forwarded to " + target
+                + (recommendation == null || recommendation.isBlank() ? "" : ". " + recommendation);
+        logHistory(incidentId, "edited", from, to, note);
+        notifyStage(incident, to);
+        return to;
     }
 
     /**
@@ -380,6 +451,22 @@ public class IncidentWorkflowService {
             throw new BusinessRuleException("The selected status is invalid.");
         }
         String from = (String) incident.get("status");
+        String wf = incident.get("workflow_status") == null ? null : String.valueOf(incident.get("workflow_status"));
+        // F36 — Closing freezes the ladder (cannot sit in waiting_* while Closed). Terminal ladder
+        // states (approved/resolved/closed_rumor) keep their own semantics; open ladder → closed_rumor
+        // is wrong, so we park workflow as "resolved" when ops Close mid-ladder.
+        if ("Closed".equals(newStatus) && wf != null
+                && !List.of("approved", "resolved", "closed_rumor").contains(wf)
+                && !"Closed".equalsIgnoreCase(from)) {
+            jdbc.update("""
+                    update public.incidents set status = ?, workflow_status = 'resolved', updated_at = now()
+                    where id = ?
+                    """, newStatus, incidentId);
+            logHistory(incidentId, "edited", from, newStatus,
+                    (comments == null ? "Operational status Closed" : comments)
+                            + " — approval ladder frozen (workflow_status set to resolved).");
+            return;
+        }
         jdbc.update("update public.incidents set status = ?, updated_at = now() where id = ?", newStatus, incidentId);
         logHistory(incidentId, "edited", from, newStatus,
                 comments == null ? "Operational status changed to " + newStatus : comments);
@@ -455,6 +542,13 @@ public class IncidentWorkflowService {
         List<Object> params = new java.util.ArrayList<>();
         Scope scope = STAGE_SCOPE.getOrDefault(stage, Scope.NATIONAL);
         if (scope == Scope.DISTRICT) {
+            Long council = asLong(incident.get("council_id"));
+            if (council != null) {
+                sql.append(" and u.council_id = ?");
+                params.add(council);
+                Integer n = jdbc.queryForObject(sql.toString(), Integer.class, params.toArray());
+                return n != null && n > 0;
+            }
             Long d = asLong(incident.get("district_id"));
             if (d == null) { return false; }   // untagged district → treat as unstaffed so it skips to the next tier
             sql.append(" and u.district_id = ?");
@@ -580,8 +674,8 @@ public class IncidentWorkflowService {
         Long regionId = asLong(incident.get("region_id"));
         Long districtId = asLong(incident.get("district_id"));
         return switch (stage) {
-            case "waiting_ddmc" -> usersByRoleInArea(Authz.DIST_DC, "district_id", districtId);  // DDMC of the district
-            case "waiting_ded" -> usersByRoleInArea(Authz.DED, "district_id", districtId);        // DED of the district
+            case "waiting_ddmc" -> usersByRoleInLocalArea(Authz.DIST_DC, incident);  // DDMC of the council/LGA, district fallback
+            case "waiting_ded" -> usersByRoleInLocalArea(Authz.DED, incident);        // DED of the council/LGA, district fallback
             case "waiting_rdmc" -> usersByRoleInArea(Authz.REG_DC, "region_id", regionId);        // RDMC of the region
             case "waiting_ras" -> usersByRoleInArea(Authz.RAS, "region_id", regionId);            // RAS of the region
             case "waiting_eocc" -> usersByRole(Authz.EOCC);
@@ -589,8 +683,8 @@ public class IncidentWorkflowService {
             case "waiting_ps" -> usersByRole(Authz.SECRETARY);
             // DDMC closed it as a rumour/normal case → inform the district leadership (DED + DAS) for the record.
             case "closed_rumor" -> {
-                List<Long> r = new java.util.ArrayList<>(usersByRoleInArea(Authz.DED, "district_id", districtId));
-                r.addAll(usersByRoleInArea(Authz.DAS, "district_id", districtId));
+                List<Long> r = new java.util.ArrayList<>(usersByRoleInLocalArea(Authz.DED, incident));
+                r.addAll(usersByRoleInLocalArea(Authz.DAS, incident));
                 yield r;
             }
             // resolved locally → inform the levels above (region RAS/RC + national EOCC) for the record.
@@ -613,6 +707,7 @@ public class IncidentWorkflowService {
      *  districts/regions tables by the ids on the incident (portal-origin rows predating the name
      *  backfill), else "" — a location-less incident must never read "(null)". */
     private String areaLabel(Map<String, Object> incident) {
+        String council = areaNameById("councils", asLong(incident.get("council_id")));
         String district = str(incident.get("district_name"));
         if (district == null || district.isBlank()) {
             district = areaNameById("districts", asLong(incident.get("district_id")));
@@ -621,8 +716,10 @@ public class IncidentWorkflowService {
         if (region == null || region.isBlank()) {
             region = areaNameById("regions", asLong(incident.get("region_id")));
         }
-        String where = (district == null || district.isBlank()) ? region
+        String districtRegion = (district == null || district.isBlank()) ? region
                 : (region == null || region.isBlank()) ? district : district + ", " + region;
+        String where = (council == null || council.isBlank()) ? districtRegion
+                : (districtRegion == null || districtRegion.isBlank()) ? council : council + ", " + districtRegion;
         return (where == null || where.isBlank()) ? "" : " (" + where + ")";
     }
 
@@ -644,6 +741,14 @@ public class IncidentWorkflowService {
                 + "join public.roles r on r.id = mhr.role_id "
                 + "where r.name = ? and u." + areaColumn + " = ?",
                 Long.class, role, areaId);
+    }
+
+    private List<Long> usersByRoleInLocalArea(String role, Map<String, Object> incident) {
+        Long councilId = asLong(incident.get("council_id"));
+        if (councilId != null) {
+            return usersByRoleInArea(role, "council_id", councilId);
+        }
+        return usersByRoleInArea(role, "district_id", asLong(incident.get("district_id")));
     }
 
     private List<Long> usersByRole(String role) {

@@ -2,6 +2,7 @@ import { SlicePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, HostListener, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -55,7 +56,9 @@ interface IndexResponse {
     <dmis-page-header title="Risk Assessment Management" icon="fa-shield-alt"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Admin'}, {label:'Risk Assessments'}]">
       <!-- Source broken create modal deliberately FIXED: opens the working form page. -->
-      <button class="btn-add" (click)="openCreateModal()"><i class="fas fa-plus"></i> New Assessment</button>
+      @if (canCreate()) {
+        <button class="btn-add" (click)="openCreateModal()"><i class="fas fa-plus"></i> New Assessment</button>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -136,16 +139,20 @@ interface IndexResponse {
                           <button class="ctx-trigger" type="button" (click)="toggleMenu(a.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
                           <div class="ctx-menu" [class.open]="openMenu() === a.id">
                             <button class="ctx-item" (click)="viewAssessment(a.id)"><i class="fas fa-eye"></i> View</button>
-                            <button class="ctx-item success" (click)="openEditModal(a.id)"><i class="fas fa-edit"></i> Edit</button>
-                            @if (a.assessmentStatus === 'draft' || a.assessmentStatus === 'under_review') {
+                            @if (canCreate()) {
+                              <button class="ctx-item success" (click)="openEditModal(a.id)"><i class="fas fa-edit"></i> Edit</button>
+                            }
+                            @if (canApprove() && (a.assessmentStatus === 'draft' || a.assessmentStatus === 'under_review')) {
                               <button class="ctx-item success" (click)="approveAssessment(a.id)"><i class="fas fa-check"></i> Approve</button>
                             }
-                            @if (a.assessmentStatus === 'approved' && !a.isPublished) {
+                            @if (canApprove() && a.assessmentStatus === 'approved' && !a.isPublished) {
                               <button class="ctx-item" (click)="publishAssessment(a.id)"><i class="fas fa-globe"></i> Publish</button>
                             }
                             <button class="ctx-item" (click)="viewVersionHistory(a.id)"><i class="fas fa-history"></i> History</button>
-                            <div class="ctx-divider"></div>
-                            <button class="ctx-item danger" (click)="deleteAssessment(a.id)"><i class="fas fa-trash"></i> Delete</button>
+                            @if (canCreate()) {
+                              <div class="ctx-divider"></div>
+                              <button class="ctx-item danger" (click)="deleteAssessment(a.id)"><i class="fas fa-trash"></i> Delete</button>
+                            }
                           </div>
                         </div>
                       </td>
@@ -158,9 +165,11 @@ interface IndexResponse {
             <div class="empty-state">
               <i class="fas fa-folder-open"></i>
               No risk assessments found.<br>
-              <button class="btn-add" (click)="openCreateModal()" style="margin-top:0.6rem;display:inline-flex;">
-                <i class="fas fa-plus"></i> Create First Assessment
-              </button>
+              @if (canCreate()) {
+                <button class="btn-add" (click)="openCreateModal()" style="margin-top:0.6rem;display:inline-flex;">
+                  <i class="fas fa-plus"></i> Create First Assessment
+                </button>
+              }
             </div>
           }
         </div>
@@ -307,8 +316,10 @@ interface IndexResponse {
 
             <div class="text-end mt-4 pt-3 border-top">
               <button type="button" class="btn btn-secondary" (click)="viewOpen.set(false)"><i class="fas fa-times me-2"></i>Close</button>
-              <button type="button" class="btn btn-warning" (click)="openEditModal(d['id'])"><i class="fas fa-edit me-2"></i>Edit</button>
-              @if (d['assessmentStatus'] !== 'published') {
+              @if (canCreate()) {
+                <button type="button" class="btn btn-warning" (click)="openEditModal(d['id'])"><i class="fas fa-edit me-2"></i>Edit</button>
+              }
+              @if (canApprove() && d['assessmentStatus'] !== 'published') {
                 <button type="button" class="btn btn-success" (click)="viewOpen.set(false); approveAssessment(d['id'])"><i class="fas fa-check me-2"></i>Approve</button>
               }
             </div>
@@ -349,6 +360,7 @@ interface IndexResponse {
 })
 export class RiskAssessmentsComponent {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
 
   rows = signal<AssessmentRow[]>([]);
   pagination = signal({ currentPage: 1, lastPage: 1, total: 0, firstItem: 0, lastItem: 0 });
@@ -440,6 +452,14 @@ export class RiskAssessmentsComponent {
     return true;
   }
 
+  canCreate(): boolean {
+    return this.auth.hasPermission('risk_assessment.create');
+  }
+
+  canApprove(): boolean {
+    return this.auth.hasPermission('risk_assessment.approve');
+  }
+
   toggleMenu(id: number, event: Event): void {
     event.stopPropagation();
     this.openMenu.update(c => (c === id ? null : id));
@@ -476,6 +496,9 @@ export class RiskAssessmentsComponent {
   }
 
   deleteAssessment(id: number): void {
+    if (!this.canCreate()) {
+      return;
+    }
     ensureSweetAlert().then(() => {
       Swal.fire({
         title: 'Confirm Deletion', text: 'This risk assessment will be permanently deleted.', icon: 'warning',
@@ -492,6 +515,9 @@ export class RiskAssessmentsComponent {
   }
 
   approveAssessment(id: number): void {
+    if (!this.canApprove()) {
+      return;
+    }
     ensureSweetAlert().then(() => {
       Swal.fire({
         title: 'Approve Assessment?', text: 'You are about to approve this risk assessment.', icon: 'question',
@@ -508,6 +534,9 @@ export class RiskAssessmentsComponent {
   }
 
   publishAssessment(id: number): void {
+    if (!this.canApprove()) {
+      return;
+    }
     ensureSweetAlert().then(() => {
       Swal.fire({
         title: 'Publish Assessment?', text: 'This will make the assessment publicly visible.', icon: 'info',
@@ -525,11 +554,17 @@ export class RiskAssessmentsComponent {
 
   /** Source broken modal deliberately FIXED: routes to the working standalone form. */
   openCreateModal(): void {
+    if (!this.canCreate()) {
+      return;
+    }
     this.router.navigate(['/m/prevention-mitigation/risk-assessments/create']);
   }
 
   /** Source broken modal deliberately FIXED: routes to the working edit form. */
   openEditModal(id: number): void {
+    if (!this.canCreate()) {
+      return;
+    }
     this.viewOpen.set(false);
     this.router.navigate(['/m/prevention-mitigation/risk-assessments', id, 'edit']);
   }

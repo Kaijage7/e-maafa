@@ -13,8 +13,44 @@ server:
   # HSTS header (set in SecurityHardeningConfig) actually emit, and keeps redirect/scheme correct.
   # The proxy MUST set X-Forwarded-Proto and strip any client-supplied X-Forwarded-* first.
   forward-headers-strategy: framework
+  error:
+    # VAPT iv / vii — never emit stack traces, exception messages, or binding details to clients.
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    include-exception: false
 
 logging:
   level:
     root: WARN
     tz.go.pmo.dmis: INFO
+    # Avoid accidental SQL dump in production logs unless explicitly enabled.
+    org.hibernate.SQL: WARN
+    org.springframework.jdbc.core: WARN
+
+# PSA / production: privileged roles must enroll TOTP (override via DMIS_AUTH_FORCE_2FA_ROLES).
+dmis:
+  auth:
+    force-2fa-roles: ${DMIS_AUTH_FORCE_2FA_ROLES:Super Admin,Director,Asst. Director,Secretary,EOCC,ICT Admin}
+  mgov:
+    # Required in prod for DLR webhook; blank secret disables the public DLR endpoint (503).
+    dlr-secret: ${DMIS_MGOV_DLR_SECRET:}
+  delivery:
+    # Retries re-hit real gateways — keep enabled only when SMS/email are intentionally live.
+    retry-enabled: ${DMIS_DELIVERY_RETRY_ENABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+# Do not ship interactive API docs on production.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

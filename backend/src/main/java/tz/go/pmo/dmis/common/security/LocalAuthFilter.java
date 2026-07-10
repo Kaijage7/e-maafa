@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
@@ -22,25 +23,16 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Local-profile persona filter. It lets developers and the E2E harness act as a chosen set of roles
- * via the {@code X-Local-Roles} header (comma-separated), without a Keycloak server — but it now
- * coexists with real bearer-token auth and real method security:
+ * Local-profile persona filter. Coexists with real bearer-token auth and method security.
  *
+ * <p><b>Security reassessment 2026-07-10:</b> default god-mode (tokenless Super Admin) is
+ * <strong>OFF</strong>. Tokenless requests stay anonymous and protected APIs return 401 — same
+ * posture as production for security assessment. Opt-in:
  * <ul>
- *   <li><b>Yields to a real token.</b> If the request carries {@code Authorization: Bearer ...}, this
- *       filter does nothing and the resource-server JWT validation handles it — so the real login
- *       path is exercised end-to-end even locally.</li>
- *   <li><b>Real numeric subject.</b> For a tokenless request it resolves the {@code sub} to an actual
- *       {@code users.id} of someone holding the chosen role, so {@link CurrentUserResolver} attributes
- *       audit-who to a real user (not the {@code admin@example.com} fallback the old synthetic sub
- *       forced).</li>
- *   <li><b>Least-privilege testing.</b> With {@code X-Local-Roles=DAS} only the DAS gates pass — so
- *       {@code @PreAuthorize} 403s are observable locally. With no header it falls back to the full
- *       canonical role set ({@link Authz#ALL}) so existing flows and the puppeteer harness keep working.</li>
+ *   <li>{@code X-Local-Roles: DAS} (or Super Admin, …) injects that persona for E2E;</li>
+ *   <li>{@code dmis.security.local-god-mode=true} restores legacy full-access without a header
+ *       (dev convenience only — never production).</li>
  * </ul>
- *
- * <p>Instantiated as a {@code @Component} (needs {@link JdbcTemplate}) only under the {@code local}
- * profile, and wired into {@link LocalSecurityConfig}. Never active in any shared/production profile.
  */
 @Component
 @Profile("local")
@@ -48,30 +40,35 @@ public class LocalAuthFilter extends OncePerRequestFilter {
 
     private final JdbcTemplate jdbc;
     private final PermissionResolver permissions;
-    /** role name -> a representative users.id, cached so the persona resolution isn't a per-request query. */
+    private final boolean godModeDefault;
     private final Map<String, Long> roleUserCache = new ConcurrentHashMap<>();
 
-    public LocalAuthFilter(JdbcTemplate jdbc, PermissionResolver permissions) {
+    public LocalAuthFilter(JdbcTemplate jdbc,
+                           PermissionResolver permissions,
+                           @Value("${dmis.security.local-god-mode:false}") boolean godModeDefault) {
         this.jdbc = jdbc;
         this.permissions = permissions;
+        this.godModeDefault = godModeDefault;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String authHeader = request.getHeader("Authorization");
-        // A real signed JWT wins — let the resource-server filter validate it. We only yield for a
-        // JWT-SHAPED bearer (header.payload.signature = two dots). Any other bearer shape must NOT
-        // reach the JWT decoder (it would 401 as "malformed"); it falls through to the local persona.
         if (authHeader != null && authHeader.startsWith("Bearer ") && isJwtShaped(authHeader.substring(7))) {
             chain.doFilter(request, response);
             return;
         }
-        SecurityContextHolder.getContext().setAuthentication(authFor(request.getHeader("X-Local-Roles")));
+        String rolesHeader = request.getHeader("X-Local-Roles");
+        if (!StringUtils.hasText(rolesHeader) && !godModeDefault) {
+            // Fail closed: no persona, no token → leave SecurityContext empty → 401 on protected paths.
+            chain.doFilter(request, response);
+            return;
+        }
+        SecurityContextHolder.getContext().setAuthentication(authFor(rolesHeader));
         chain.doFilter(request, response);
     }
 
-    /** A JWS (the platform's signed token) has exactly two dots; the EW SSO HMAC token has one. */
     private static boolean isJwtShaped(String token) {
         return token != null && token.chars().filter(c -> c == '.').count() == 2;
     }
@@ -90,14 +87,11 @@ public class LocalAuthFilter extends OncePerRequestFilter {
         List<GrantedAuthority> authorities = new java.util.ArrayList<>(roles.stream()
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
                 .toList());
-        // Fine-grained permission authorities for the RBAC layer: the chosen persona's role permissions,
-        // or ALL of them for the no-header god-mode persona (keeps dev/E2E full access when gates flip).
         (godMode ? permissions.all() : permissions.forRoles(roles))
                 .forEach(p -> authorities.add(new SimpleGrantedAuthority(p)));
         return new JwtAuthenticationToken(jwt, authorities);
     }
 
-    /** A real users.id for the first chosen role, so audit attribution is a genuine account. */
     private Long resolveSubjectId(List<String> roles) {
         String primary = roles.isEmpty() ? Authz.SUPER_ADMIN : roles.get(0);
         return roleUserCache.computeIfAbsent(primary, role -> {

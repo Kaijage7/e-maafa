@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { escapeHtml } from '../../core/html';
 import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -43,7 +44,9 @@ interface IndexResponse {
   template: `
     <dmis-page-header title="Strategic Infrastructure" icon="fa-road"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Strategic Infrastructure'}]">
-      <a class="btn-add" routerLink="/m/prevention-mitigation/infrastructure/create"><i class="fas fa-plus"></i> Add New Item</a>
+      @if (canManage()) {
+        <a class="btn-add" routerLink="/m/prevention-mitigation/infrastructure/create"><i class="fas fa-plus"></i> Add New Item</a>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -109,9 +112,11 @@ interface IndexResponse {
                           <button class="ctx-trigger" type="button" (click)="toggleMenu(item.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
                           <div class="ctx-menu" [class.open]="openMenu() === item.id">
                             <button class="ctx-item" (click)="viewItem(item.id)"><i class="fas fa-eye"></i> View</button>
-                            <a class="ctx-item success" [routerLink]="['/m/prevention-mitigation/infrastructure', item.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
-                            <div class="ctx-divider"></div>
-                            <button class="ctx-item danger" (click)="askDelete(item)"><i class="fas fa-trash"></i> Delete</button>
+                            @if (canManage()) {
+                              <a class="ctx-item success" [routerLink]="['/m/prevention-mitigation/infrastructure', item.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
+                              <div class="ctx-divider"></div>
+                              <button class="ctx-item danger" (click)="askDelete(item)"><i class="fas fa-trash"></i> Delete</button>
+                            }
                           </div>
                         </div>
                       </td>
@@ -124,9 +129,11 @@ interface IndexResponse {
             <div class="empty-state">
               <i class="fas fa-road"></i>
               No infrastructure items registered yet.<br>
-              <a class="btn-add" routerLink="/m/prevention-mitigation/infrastructure/create" style="margin-top:0.6rem;display:inline-flex;">
-                <i class="fas fa-plus"></i> Add First Item
-              </a>
+              @if (canManage()) {
+                <a class="btn-add" routerLink="/m/prevention-mitigation/infrastructure/create" style="margin-top:0.6rem;display:inline-flex;">
+                  <i class="fas fa-plus"></i> Add First Item
+                </a>
+              }
             </div>
           }
         </div>
@@ -215,6 +222,7 @@ interface IndexResponse {
 })
 export class InfrastructureComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   mapEl = viewChild<ElementRef>('infraMap');
 
   items = signal<InfraRow[]>([]);
@@ -285,6 +293,10 @@ export class InfrastructureComponent implements AfterViewInit, OnDestroy {
     return value.length > max ? value.slice(0, max) + '...' : value;
   }
 
+  canManage(): boolean {
+    return this.auth.hasPermission('strategic_infrastructure.manage');
+  }
+
   statusClass(status: string): string {
     switch (status) {
       case 'Operational': return 'st-operational';
@@ -315,11 +327,17 @@ export class InfrastructureComponent implements AfterViewInit, OnDestroy {
   }
 
   askDelete(item: InfraRow): void {
+    if (!this.canManage()) {
+      return;
+    }
     this.deleteTarget.set(item);
     this.deleteOpen.set(true);
   }
 
   confirmDelete(): void {
+    if (!this.canManage()) {
+      return;
+    }
     const target = this.deleteTarget();
     if (!target) {
       return;

@@ -9,14 +9,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Server-side jurisdiction (area) visibility, shared by every registry that must show a region/district
+ * Server-side jurisdiction (area) visibility, shared by every registry that must show a region/district/council
  * officer only their own area while the national tier sees the whole country.
  *
  * <p>The model mirrors the incident chain ("only the nation sees everywhere"):
  * <ul>
  *   <li>NATIONAL roles (national command + admins) — every area, no predicate added.</li>
  *   <li>REGION roles (RAS / RC / Regional DC) — only rows in the user's own region.</li>
- *   <li>DISTRICT roles (DED / DAS / District DC) — only rows in the user's own district.</li>
+ *   <li>DISTRICT roles (DED / DAS / District DC) — only rows in the user's own council/LGA when present,
+ *       with district fallback for older rows that have no council.</li>
  *   <li>Any other role, or an area role with no area assigned — sees nothing ({@code 1=0}), strict.</li>
  * </ul>
  *
@@ -47,20 +48,21 @@ public class JurisdictionScope {
      * {@code region_id = :regionId or region_id is null}; DISTRICT → {@code district_id = :districtId or
      * district_id is null} (NULL = national/shared, always visible).
      */
-    public record AreaFilter(String scope, Long regionId, Long districtId) {}
+    public record AreaFilter(String scope, Long regionId, Long districtId, Long councilId) {}
 
     /** Build the {@link AreaFilter} for the current actor (shared-or-own policy; see {@link #appendAreaScopeSharedOrOwn}). */
     public AreaFilter sharedOrOwnFilter() {
         Tier t = currentTier();
         if (t != Tier.REGION && t != Tier.DISTRICT) {
-            return new AreaFilter("NATIONAL", null, null);   // national + non-area roles → full view
+            return new AreaFilter("NATIONAL", null, null, null);   // national + non-area roles → full view
         }
         Map<String, Object> area = currentArea();
         Long regionId = asLong(area.get("region_id"));
         Long districtId = asLong(area.get("district_id"));
+        Long councilId = asLong(area.get("council_id"));
         return t == Tier.REGION
-                ? new AreaFilter("REGION", regionId, null)
-                : new AreaFilter("DISTRICT", null, districtId);
+                ? new AreaFilter("REGION", regionId, null, null)
+                : new AreaFilter("DISTRICT", null, districtId, councilId);
     }
 
     private static Long asLong(Object v) {
@@ -96,7 +98,7 @@ public class JurisdictionScope {
         if (!Collections.disjoint(roles, NATIONAL)) {
             return Tier.NATIONAL;
         }
-        if (area.get("district_id") != null) {
+        if (area.get("council_id") != null || area.get("district_id") != null) {
             return Tier.DISTRICT;
         }
         if (area.get("region_id") != null) {
@@ -111,10 +113,10 @@ public class JurisdictionScope {
         return Tier.NONE;
     }
 
-    /** The acting user's own area ids ({@code region_id}, {@code district_id}); either may be null. */
+    /** The acting user's own area ids ({@code region_id}, {@code district_id}, {@code council_id}); any may be null. */
     public Map<String, Object> currentArea() {
         try {
-            return jdbc.queryForMap("select region_id, district_id from public.users where id = ?",
+            return jdbc.queryForMap("select region_id, district_id, council_id from public.users where id = ?",
                     currentUser.actingUserId());
         } catch (EmptyResultDataAccessException noSuchUser) {
             return Map.of();
@@ -189,6 +191,48 @@ public class JurisdictionScope {
                 } else {
                     where.append(" and ").append(p).append("district_id = ?");
                     params.add(districtId);
+                }
+            }
+            default -> where.append(" and 1=0");
+        }
+    }
+
+    /**
+     * Strict jurisdiction predicate for incident-style tables that carry all three numeric area columns:
+     * {@code region_id}, {@code district_id} and {@code council_id}. District-tier users with a council/LGA
+     * attachment see only that council plus older same-district rows whose {@code council_id} is still null.
+     */
+    public void appendAreaScopeWithCouncil(String alias, StringBuilder where, List<Object> params) {
+        String p = alias == null || alias.isBlank() ? "" : alias + ".";
+        Map<String, Object> area = currentArea();
+        switch (tierFor(area)) {
+            case NATIONAL -> { /* all areas */ }
+            case REGION -> {
+                Object regionId = area.get("region_id");
+                if (regionId == null) {
+                    where.append(" and 1=0");
+                } else {
+                    where.append(" and ").append(p).append("region_id = ?");
+                    params.add(regionId);
+                }
+            }
+            case DISTRICT -> {
+                Object councilId = area.get("council_id");
+                Object districtId = area.get("district_id");
+                if (councilId != null && districtId != null) {
+                    where.append(" and (").append(p).append("council_id = ? or (")
+                            .append(p).append("council_id is null and ")
+                            .append(p).append("district_id = ?))");
+                    params.add(councilId);
+                    params.add(districtId);
+                } else if (councilId != null) {
+                    where.append(" and ").append(p).append("council_id = ?");
+                    params.add(councilId);
+                } else if (districtId != null) {
+                    where.append(" and ").append(p).append("district_id = ?");
+                    params.add(districtId);
+                } else {
+                    where.append(" and 1=0");
                 }
             }
             default -> where.append(" and 1=0");

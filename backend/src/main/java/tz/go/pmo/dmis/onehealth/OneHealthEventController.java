@@ -471,7 +471,91 @@ public class OneHealthEventController {
         out.put("has_directives", !directives.isEmpty());
         out.put("can_issue_directive", true); // local sessions act as PMO admin
         out.put("can_review", true);
+        out.put("comments", listComments(id));
         return out;
+    }
+
+    /**
+     * F58 — discussion thread on oh_event_comments (schema since V15; was never ported).
+     * Read follows event area guard; write requires a One Health action permission.
+     */
+    @GetMapping("/{id}/comments")
+    public Map<String, Object> comments(@PathVariable long id) {
+        service.findEventOr404(id);
+        areaGuard.assertOwnOrShared("public.oh_events", id);
+        return Map.of("comments", listComments(id));
+    }
+
+    @PostMapping("/{id}/comments")
+    @PreAuthorize("hasAnyAuthority('one_health.view','one_health.manage','one_health.approve','one_health.directive')")
+    public Map<String, Object> addComment(@PathVariable long id, @RequestBody Map<String, Object> body) {
+        service.findEventOr404(id);
+        areaGuard.assertOwnOrShared("public.oh_events", id);
+        String text = body == null ? null : OneHealthEventService.strOf(body.get("comment_text"));
+        if (text == null || text.isBlank()) {
+            text = body == null ? null : OneHealthEventService.strOf(body.get("comments"));
+        }
+        if (text == null || text.isBlank()) {
+            throw new tz.go.pmo.dmis.common.error.BusinessRuleException("Comment text is required.");
+        }
+        text = text.trim();
+        if (text.length() > 4000) {
+            text = text.substring(0, 4000);
+        }
+        Long parentId = null;
+        if (body != null && body.get("parent_id") != null) {
+            parentId = OneHealthEventService.longOf(body.get("parent_id"));
+            if (parentId != null) {
+                Long parentEvent = jdbc.queryForObject(
+                        "select event_id from public.oh_event_comments where id = ? and deleted_at is null",
+                        Long.class, parentId);
+                if (parentEvent == null || !parentEvent.equals(id)) {
+                    throw new tz.go.pmo.dmis.common.error.BusinessRuleException(
+                            "Parent comment is not on this event.");
+                }
+            }
+        }
+        String commentType = body == null ? null : OneHealthEventService.strOf(body.get("comment_type"));
+        if (commentType == null || commentType.isBlank()) {
+            commentType = "general";
+        }
+        Long userId = service.actingUserId();
+        if (userId == null) {
+            throw new tz.go.pmo.dmis.common.error.BusinessRuleException("Sign in to comment.");
+        }
+        Long stakeholderId = jdbc.queryForObject(
+                "select stakeholder_id from public.users where id = ?", Long.class, userId);
+        Long newId = jdbc.queryForObject("""
+                insert into public.oh_event_comments(
+                    event_id, user_id, stakeholder_id, comment_text, parent_id, comment_type,
+                    created_at, updated_at)
+                values (?,?,?,?,?,?, now(), now())
+                returning id
+                """, Long.class, id, userId, stakeholderId, text, parentId, commentType);
+        return Map.of("success", true, "id", newId, "comments", listComments(id));
+    }
+
+    private List<Map<String, Object>> listComments(long eventId) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select c.id, c.event_id, c.user_id, c.stakeholder_id, c.comment_text, c.parent_id,
+                       c.comment_type, c.created_at, c.updated_at,
+                       u.name as user_name,
+                       coalesce(s.organization, s.name) as stakeholder_name
+                  from public.oh_event_comments c
+                  left join public.users u on u.id = c.user_id
+                  left join public.stakeholders s on s.id = c.stakeholder_id
+                 where c.event_id = ? and c.deleted_at is null
+                 order by c.created_at asc, c.id asc
+                """, eventId);
+        for (Map<String, Object> c : rows) {
+            if (c.get("created_at") instanceof java.sql.Timestamp t) {
+                c.put("created_at", OneHealthEventService.formatDateTime(t));
+            }
+            if (c.get("updated_at") instanceof java.sql.Timestamp t2) {
+                c.put("updated_at", OneHealthEventService.formatDateTime(t2));
+            }
+        }
+        return rows;
     }
 
     // ─── Edit / Update: locked after submission (source invariant) ───

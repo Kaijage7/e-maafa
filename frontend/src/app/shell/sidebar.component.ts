@@ -13,21 +13,30 @@ import { qrcodegen } from '../shared/qrcodegen';
   template: `
     <div class="sidebar" id="sidebar">
       <div class="sidebar-scroll">
-        <a routerLink="/home" class="sb-standalone" data-tip="All Modules">
-          <div class="sb-section-icon"><i class="fas fa-arrow-left"></i></div>
-          <div class="sb-section-text"><div class="sb-section-name">All Modules</div><div class="sb-section-count">Back to hub</div></div>
+        <a routerLink="/home" class="sb-standalone sb-hub-panel" data-tip="All Modules">
+          <div class="sb-section-icon"><i class="fas fa-th-large"></i></div>
+          <div class="sb-section-text">
+            <div class="sb-section-name">All Modules</div>
+            <div class="sb-section-count">Back to hub</div>
+          </div>
         </a>
         <div class="sb-divider"></div>
         @if (module(); as m) {
-          <div class="sb-section" [attr.data-section]="m.slug">
+          <div class="sb-section sb-module-panel" [attr.data-section]="m.slug">
             <div class="sb-section-header" style="cursor:default;" [attr.data-tip]="m.name">
-              <div class="sb-section-icon"><i class="fas {{ m.icon }}"></i></div>
-              <div class="sb-section-text"><div class="sb-section-name">{{ m.name }}</div><div class="sb-section-count">{{ items().length }} items</div></div>
+              <div class="sb-section-icon" [style.color]="m.color"><i class="fas {{ m.icon }}"></i></div>
+              <div class="sb-section-text">
+                <div class="sb-section-name">{{ m.name }}</div>
+                <div class="sb-section-count">{{ items().length }} items · full list</div>
+              </div>
             </div>
             <div class="sb-items">
               @for (item of items(); track item.path) {
-                <a [routerLink]="linkFor(m.slug, item.path)" class="sb-link" [class.active]="item.path === activeItem()">
-                  <i class="fas {{ item.icon }} sb-link-icon"></i><span class="sb-link-text">{{ item.name }}</span>
+                <a [routerLink]="linkFor(m.slug, item.path)" class="sb-link"
+                   [class.active]="item.path === activeItem()"
+                   [attr.title]="item.name + ' — ' + item.description">
+                  <i class="fas {{ item.icon }} sb-link-icon"></i>
+                  <span class="sb-link-text">{{ item.name }}</span>
                 </a>
               }
             </div>

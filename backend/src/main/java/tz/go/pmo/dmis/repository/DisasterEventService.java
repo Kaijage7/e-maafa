@@ -534,15 +534,58 @@ public class DisasterEventService {
                         + "   and l.entity_type='incident' and l.entity_id=i.id)"
                         + " order by i.reported_at desc limit 12",
                 e.get("startedOn"), e.get("endedOn"), e.get("startedOn"), eventId));
-        out.put("early_warning", jdbc.queryForList(
-                "select w.id, coalesce(w.warning_code, w.hazard_type) as label, w.affected_regions as detail,"
-                        + " to_char(w.created_at,'DD Mon YYYY') as \"when\" from early_warnings w"
-                        + " where w.created_at between (?::date - interval '30 days')"
-                        + "   and (coalesce(?::date, ?::date) + interval '14 days')"
-                        + " and not exists (select 1 from disaster_event_links l where l.event_id=?"
-                        + "   and l.entity_type='early_warning' and l.entity_id=w.id)"
-                        + " order by w.created_at desc limit 12",
+        // F69 — rank EW candidates by hazard + area overlap (not date-only noise).
+        String region = str(e.get("primaryRegion"));
+        String hazard = str(e.get("hazardType"));
+        out.put("early_warning", jdbc.queryForList("""
+                select w.id,
+                       coalesce(w.warning_code, w.hazard_type) as label,
+                       w.affected_regions as detail,
+                       to_char(w.created_at,'DD Mon YYYY') as "when",
+                       case
+                         when ? is not null and ? <> ''
+                              and lower(coalesce(w.hazard_type,'')) like '%'||lower(?)||'%' then 2 else 0
+                       end
+                       + case
+                         when ? is not null and ? <> ''
+                              and lower(coalesce(w.affected_regions,'')) like '%'||lower(?)||'%' then 2 else 0
+                       end as match_score
+                  from early_warnings w
+                 where w.created_at between (?::date - interval '30 days')
+                   and (coalesce(?::date, ?::date) + interval '14 days')
+                   and not exists (
+                         select 1 from disaster_event_links l
+                          where l.event_id = ? and l.entity_type = 'early_warning' and l.entity_id = w.id)
+                 order by match_score desc, w.created_at desc
+                 limit 12
+                """,
+                hazard, hazard, hazard == null ? "" : hazard,
+                region, region, region == null ? "" : region,
                 e.get("startedOn"), e.get("endedOn"), e.get("startedOn"), eventId));
+        // F73 — narrative past_disasters in the same date window (name similarity ranked).
+        String eventName = str(e.get("name"));
+        String nameToken = eventName == null ? "" : eventName.replaceAll("[^A-Za-zÀ-ÿ ]", " ").trim();
+        if (nameToken.length() > 24) {
+            nameToken = nameToken.substring(0, 24).trim();
+        }
+        out.put("past_disaster", jdbc.queryForList("""
+                select p.id, p.event_name as label,
+                       coalesce(p.location_description, '') as detail,
+                       to_char(p.event_date,'DD Mon YYYY') as "when"
+                  from past_disasters p
+                 where p.event_date between (?::date - interval '45 days')
+                   and (coalesce(?::date, ?::date) + interval '45 days')
+                   and not exists (
+                         select 1 from disaster_event_links l
+                          where l.event_id = ? and l.entity_type = 'past_disaster' and l.entity_id = p.id)
+                 order by
+                   case when ? <> '' and lower(p.event_name) like '%'||lower(?)||'%' then 0 else 1 end,
+                   abs(p.event_date - ?::date)
+                 limit 8
+                """,
+                e.get("startedOn"), e.get("endedOn"), e.get("startedOn"), eventId,
+                nameToken, nameToken.isEmpty() ? "~" : nameToken.split("\\s+")[0],
+                e.get("startedOn")));
         out.put("damage_assessment", jdbc.queryForList(
                 "select a.id, concat(a.assessment_type,' — ',coalesce(a.district, a.location)) as label,"
                         + " concat('Est. loss TZS ', coalesce(a.estimated_loss,0)) as detail,"

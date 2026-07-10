@@ -11,7 +11,7 @@ import java.util.Map;
 /** Read/write API for the INFORM model. Same /api/v1/... contract DMIS uses, so it folds in cleanly. */
 @RestController
 @RequestMapping("/v1/inform")
-@org.springframework.security.access.prepost.PreAuthorize("hasAuthority('prevention_and_mitigation.view')")
+@org.springframework.security.access.prepost.PreAuthorize("hasAuthority('risk_index.view')")
 public class InformController {
 
     private final IndicatorRepository indicators;
@@ -55,6 +55,38 @@ public class InformController {
         return service.submit(indicatorId, areaCode, raw, value0to10, by);
     }
 
+    /** Bulk-key many indicator/area values in one request; each row still passes sector ownership checks. */
+    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('risk_index.create')")
+    @PostMapping("/values/batch")
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> submitBatch(@RequestBody Map<String, Object> body) {
+        List<?> rows = body.get("values") instanceof List<?> list ? list : List.of();
+        String by = str(body.get("by"));
+        int submitted = 0;
+        List<Map<String, Object>> errors = new java.util.ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            Object row = rows.get(i);
+            if (!(row instanceof Map<?, ?> rawMap)) {
+                errors.add(Map.of("row", i + 1, "error", "Invalid row"));
+                continue;
+            }
+            Map<String, Object> r = (Map<String, Object>) rawMap;
+            try {
+                service.submit(str(r.get("indicatorId")), str(r.get("areaCode")),
+                        num(r.get("raw")), num(r.get("value0to10")), by == null ? str(r.get("by")) : by);
+                submitted++;
+            } catch (Exception e) {
+                Map<String, Object> error = new LinkedHashMap<>();
+                error.put("row", i + 1);
+                error.put("indicatorId", str(r.get("indicatorId")));
+                error.put("areaCode", str(r.get("areaCode")));
+                error.put("error", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+                errors.add(error);
+            }
+        }
+        return Map.of("submitted", submitted, "failed", errors.size(), "errors", errors);
+    }
+
     /** The latest keyed values for an area (one row per indicator). */
     @GetMapping("/values")
     public List<IndicatorValue> values(@RequestParam String area) {
@@ -63,6 +95,7 @@ public class InformController {
 
     /** The PMO approval queue (pending submissions). {@code ?owner=tma} scopes to one sector. */
     @GetMapping("/pending")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('risk_index.approve')")
     public List<PendingValue> pending(@RequestParam(required = false) String owner) {
         return service.pendingQueue(owner);
     }

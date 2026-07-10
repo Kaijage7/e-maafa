@@ -136,4 +136,76 @@ public class EvacuationCenterService {
     private static Double toDouble(BigDecimal value) {
         return value == null ? null : value.doubleValue();
     }
+
+    /**
+     * Nearest registered evacuation centres to a point (incident / warning centroid).
+     * Distance is great-circle km (honest straight-line estimate — not a road network).
+     * Drive minutes assume ~40 km/h average, matching the public portal route estimator.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> nearest(double lat, double lng, int limit) {
+        int lim = Math.max(1, Math.min(limit, 20));
+        List<EvacuationCenter> all = centers.findAllByOrderByIdDesc();
+        return all.stream()
+                .filter(c -> c.getLatitude() != null && c.getLongitude() != null)
+                .filter(c -> {
+                    String st = c.getStatus() == null ? "active" : c.getStatus().toLowerCase();
+                    return !st.contains("closed") && !st.contains("inactive");
+                })
+                .map(c -> {
+                    double clat = c.getLatitude().doubleValue();
+                    double clng = c.getLongitude().doubleValue();
+                    double km = haversineKm(lat, lng, clat, clng);
+                    int driveMin = Math.max(1, (int) Math.round((km / 40.0) * 60.0));
+                    String st = c.getStatus() == null ? "Active" : c.getStatus();
+                    boolean active = st.toLowerCase().contains("active")
+                            && !st.toLowerCase().contains("renovation");
+                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id", c.getId());
+                    m.put("ecentreId", c.getEcentreId());
+                    m.put("centreName", c.getCentreName());
+                    m.put("region", c.getRegion());
+                    m.put("district", c.getDistrict());
+                    m.put("capacityPeople", c.getCapacityPeople());
+                    m.put("status", st);
+                    m.put("accessibility", c.getAccessibility());
+                    m.put("latitude", clat);
+                    m.put("longitude", clng);
+                    m.put("distanceKm", Math.round(km * 10.0) / 10.0);
+                    m.put("driveMinutesEstimate", driveMin);
+                    m.put("operationalPreferred", active);
+                    m.put("routeNote", "Straight-line estimate; open road directions for navigable route");
+                    m.put("gmapsDirectionsUrl",
+                            "https://www.google.com/maps/dir/?api=1&origin=" + lat + "," + lng
+                                    + "&destination=" + clat + "," + clng);
+                    return m;
+                })
+                // Nearest first (primary); when distances are within 15 km, prefer Active over renovation
+                .sorted((a, b) -> {
+                    double da = ((Number) a.get("distanceKm")).doubleValue();
+                    double db = ((Number) b.get("distanceKm")).doubleValue();
+                    if (Math.abs(da - db) > 15.0) {
+                        return Double.compare(da, db);
+                    }
+                    boolean ap = Boolean.TRUE.equals(a.get("operationalPreferred"));
+                    boolean bp = Boolean.TRUE.equals(b.get("operationalPreferred"));
+                    if (ap != bp) {
+                        return ap ? -1 : 1;
+                    }
+                    return Double.compare(da, db);
+                })
+                .limit(lim)
+                .toList();
+    }
+
+    /** Earth great-circle distance in kilometres (WGS84 sphere). */
+    static double haversineKm(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
 }

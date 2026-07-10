@@ -8,6 +8,7 @@ import { Observable } from 'rxjs';
 
 export interface Indicator {
   id: string;
+  name?: string;
   dimension?: string;
   component?: string;
   owner?: string;
@@ -55,6 +56,12 @@ export interface SignalsRow { area: string; name: string; signals: HazardSignal[
 
 export interface ValuePost { indicatorId: string; areaCode: string; raw?: number; value0to10?: number; by: string; }
 
+export interface BatchPostResult {
+  submitted: number;
+  failed: number;
+  errors: { row: number; indicatorId?: string; areaCode?: string; error?: string }[];
+}
+
 export interface PendingValue {
   id: number; indicatorId: string; indicatorName: string; component: string | null; owner: string;
   areaCode: string; areaName: string; rawValue: number; value0to10: number; submittedBy: string; ts: string | null;
@@ -81,6 +88,10 @@ export class InformService {
 
   postValue(body: ValuePost): Observable<IndicatorValue> {
     return this.http.post<IndicatorValue>(`${BASE}/values`, body);
+  }
+
+  postValuesBatch(values: ValuePost[], by: string): Observable<BatchPostResult> {
+    return this.http.post<BatchPostResult>(`${BASE}/values/batch`, { values, by });
   }
 
   getPending(owner?: string): Observable<PendingValue[]> {

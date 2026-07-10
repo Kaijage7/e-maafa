@@ -40,6 +40,7 @@ const STATUS_BADGE: Record<string, string> = {
       <dmis-stat-card [value]="s()['failed'] ?? 0" label="Failed" icon="fa-triangle-exclamation" color="#dc2626" />
     </div>
 
+    @if (canSend) {
     <div class="panel-row">
       <dmis-panel title="Compose & Send SMS" icon="fa-paper-plane">
         <div class="panel-body" style="display:flex;flex-direction:column;gap:0.6rem;">
@@ -95,6 +96,7 @@ const STATUS_BADGE: Record<string, string> = {
         </div>
       </dmis-panel>
     </div>
+    }
 
     <div class="panel-row">
       <dmis-panel title="SMS Delivery Log" icon="fa-list" [badge]="rows().length + ' shown'">
@@ -144,6 +146,7 @@ const STATUS_BADGE: Record<string, string> = {
 })
 export class SmsManagementComponent {
   @Input() embedded = false;
+  @Input() canSend = true;
 
   private http = inject(HttpClient);
   private base = '/api/v1/content/sms-logs';

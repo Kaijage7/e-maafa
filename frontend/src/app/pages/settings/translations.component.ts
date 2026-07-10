@@ -1,26 +1,29 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
+import { AuthService } from '../../core/auth.service';
 
 interface Translation { id: number; labelKey: string; group: string; en: string; sw: string; }
 
 /**
- * Content Management → Translations. The bilingual (English / Kiswahili) UI-string registry that the
- * public portal hydrates live (PortalLabels fetches GET /v1/portal/i18n over its built-in fallback).
- * Content managers edit EN/SW inline; "untranslated" flags rows where the Swahili still equals the
- * English. Lives in Content Management alongside the other portal content (news, publications, etc.).
+	 * System Settings -> Translations. The bilingual (English / Kiswahili) UI-string registry that the
+	 * public portal hydrates live (PortalLabels fetches GET /v1/portal/i18n over its built-in fallback).
+	 * Translation managers edit EN/SW inline; "untranslated" flags rows where the Swahili still equals the
+	 * English.
  */
 @Component({
   selector: 'page-translations',
   standalone: true,
   imports: [FormsModule, PageHeaderComponent, PanelComponent, StatCardComponent],
   template: `
-    <dmis-page-header title="Translations" icon="fa-language"
-      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Translations'}]">
-      <button class="btn-add" type="button" (click)="openForm()"><i class="fas fa-plus"></i> Add Key</button>
+	    <dmis-page-header title="Translations" icon="fa-language"
+	      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Translations'}]">
+      @if (canManage()) {
+        <button class="btn-add" type="button" (click)="openForm()"><i class="fas fa-plus"></i> Add Key</button>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -41,27 +44,29 @@ interface Translation { id: number; labelKey: string; group: string; en: string;
         </div>
         <div class="panel-body" style="padding:0;">
           <table class="r-table">
-            <thead><tr><th style="width:22%;">Key</th><th>English</th><th>Kiswahili</th><th style="width:90px;"></th></tr></thead>
+            <thead><tr><th style="width:22%;">Key</th><th>English</th><th>Kiswahili</th>@if (canManage()) { <th style="width:90px;"></th> }</tr></thead>
             <tbody>
               @for (t of rows(); track t.id) {
                 <tr class="data-row">
                   <td><code style="font-size:0.78rem;color:var(--text-mid);">{{ t.labelKey }}</code>
                     <div style="font-size:0.75rem;color:var(--text-light);text-transform:uppercase;letter-spacing:0.4px;">{{ t.group }}</div></td>
                   <td>
-                    <input class="cell" [ngModel]="t.en" (change)="saveCell(t, 'en', $any($event.target).value)">
+                    <input class="cell" [readonly]="!canManage()" [ngModel]="t.en" (change)="saveCell(t, 'en', $any($event.target).value)">
                   </td>
                   <td>
-                    <input class="cell" [class.flag]="t.en === t.sw" [ngModel]="t.sw" (change)="saveCell(t, 'sw', $any($event.target).value)">
+                    <input class="cell" [readonly]="!canManage()" [class.flag]="t.en === t.sw" [ngModel]="t.sw" (change)="saveCell(t, 'sw', $any($event.target).value)">
                   </td>
-                  <td style="text-align:right;white-space:nowrap;">
-                    <div class="ctx-wrap">
-                      <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + t.labelKey" (click)="toggleMenu(t.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
-                      <div class="ctx-menu" [class.open]="openMenu() === t.id">
-                        <a class="ctx-item" (click)="openEdit(t)"><i class="fas fa-pen"></i> Edit</a>
-                        <a class="ctx-item danger" (click)="remove(t)"><i class="fas fa-trash"></i> Delete</a>
+                  @if (canManage()) {
+                    <td style="text-align:right;white-space:nowrap;">
+                      <div class="ctx-wrap">
+                        <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + t.labelKey" (click)="toggleMenu(t.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
+                        <div class="ctx-menu" [class.open]="openMenu() === t.id">
+                          <a class="ctx-item" (click)="openEdit(t)"><i class="fas fa-pen"></i> Edit</a>
+                          <a class="ctx-item danger" (click)="remove(t)"><i class="fas fa-trash"></i> Delete</a>
+                        </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
+                  }
                 </tr>
               } @empty { <tr><td colspan="4" style="text-align:center;color:var(--text-light);padding:2rem;">No translations match.</td></tr> }
             </tbody>
@@ -105,6 +110,7 @@ interface Translation { id: number; labelKey: string; group: string; en: string;
 })
 export class TranslationsComponent {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   private base = '/api/v1/settings/translations';
 
   rows = signal<Translation[]>([]);
@@ -117,6 +123,8 @@ export class TranslationsComponent {
   m: any = {};
 
   constructor() { this.reload(); }
+
+  canManage = computed(() => this.auth.hasPermission('translations.manage'));
 
   reload(): void {
     const q = new URLSearchParams();
@@ -131,6 +139,7 @@ export class TranslationsComponent {
 
   /** Inline save of one cell (en or sw) on blur. */
   saveCell(t: Translation, field: 'en' | 'sw', value: string): void {
+    if (!this.canManage()) { return; }
     if (value === t[field]) { return; }
     this.http.put(`${this.base}/${t.id}`, { [field]: value }).subscribe({
       next: () => { t[field] = value; this.stats.update(s => ({ ...s, untranslated: this.rows().filter(x => x.en === x.sw).length })); },
@@ -139,6 +148,7 @@ export class TranslationsComponent {
   }
 
   openForm(): void {
+    if (!this.canManage()) { return; }
     this.editId = null;
     this.m = { group: this.groups()[0] ?? 'General' };
     this.openMenu.set(null);
@@ -146,6 +156,7 @@ export class TranslationsComponent {
   }
 
   openEdit(t: Translation): void {
+    if (!this.canManage()) { return; }
     this.editId = t.id;
     this.m = { labelKey: t.labelKey, group: t.group, en: t.en, sw: t.sw };
     this.openMenu.set(null);
@@ -153,6 +164,7 @@ export class TranslationsComponent {
   }
 
   save(): void {
+    if (!this.canManage()) { return; }
     if (this.editId) {
       this.http.put(`${this.base}/${this.editId}`, {
         group: this.m.group, en: this.m.en?.trim(), sw: this.m.sw?.trim(),
@@ -172,6 +184,7 @@ export class TranslationsComponent {
   }
 
   remove(t: Translation): void {
+    if (!this.canManage()) { return; }
     if (!confirm(`Delete "${t.labelKey}"?`)) { return; }
     this.http.delete(`${this.base}/${t.id}`).subscribe({ next: () => this.reload(), error: () => this.reload() });
   }

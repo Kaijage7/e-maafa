@@ -32,15 +32,29 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @Profile("local")
 @EnableMethodSecurity
+/**
+ * Local-only security chain. {@link LocalAuthFilter} injects a full Super-Admin-style persona for
+ * tokenless browser calls so the Angular app can develop without Keycloak.
+ *
+ * <p><b>F85 honesty:</b> anonymous {@code 200}s on protected APIs under {@code spring.profiles.active=local}
+ * are the local persona, <em>not</em> a production auth hole. Production ({@link SecurityConfig}) requires
+ * a real bearer token; re-verify with the {@code !local} profile before claiming a public exposure.</p>
+ */
 public class LocalSecurityConfig {
 
     private final LocalAuthFilter localAuthFilter;
     private final JwtAuthenticationConverter jwtAuthenticationConverter;
+    private final TokenRevocationFilter tokenRevocationFilter;
+    private final RestrictedTokenUseFilter restrictedTokenUseFilter;
 
     public LocalSecurityConfig(LocalAuthFilter localAuthFilter,
-                               JwtAuthenticationConverter jwtAuthenticationConverter) {
+                               JwtAuthenticationConverter jwtAuthenticationConverter,
+                               TokenRevocationFilter tokenRevocationFilter,
+                               RestrictedTokenUseFilter restrictedTokenUseFilter) {
         this.localAuthFilter = localAuthFilter;
         this.jwtAuthenticationConverter = jwtAuthenticationConverter;
+        this.tokenRevocationFilter = tokenRevocationFilter;
+        this.restrictedTokenUseFilter = restrictedTokenUseFilter;
     }
 
     @Bean
@@ -65,8 +79,10 @@ public class LocalSecurityConfig {
                 .oauth2ResourceServer(oauth -> oauth
                         .bearerTokenResolver(new JwtShapedBearerTokenResolver())
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
-                // Module-level permission gate, after persona/token auth has populated the SecurityContext.
-                .addFilterAfter(new ModuleGuardFilter(), BearerTokenAuthenticationFilter.class);
+                // After JWT/persona: denylist → limited token_use → module map.
+                .addFilterAfter(tokenRevocationFilter, BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(restrictedTokenUseFilter, TokenRevocationFilter.class)
+                .addFilterAfter(new ModuleGuardFilter(), RestrictedTokenUseFilter.class);
         return http.build();
     }
 }

@@ -263,9 +263,37 @@ public class SettingsController {
             Map<String, Object> row = new LinkedHashMap<>(t);
             row.put("mode", mode);
             row.put("officers", officers == null ? 0 : officers);
+            row.putAll(automationCoverage(t.get("scope"), t.get("role")));
             tiers.add(row);
         }
         return Map.of("tiers", tiers, "modes", List.of("manual", "auto", "skip_if_unstaffed"));
+    }
+
+    private Map<String, Object> automationCoverage(String scope, String role) {
+        if ("District".equals(scope)) {
+            Long covered = staffedAreaCount(role, "district_id");
+            Long total = jdbc.queryForObject("select count(*) from public.districts", Long.class);
+            return Map.of("coveredAreas", covered == null ? 0 : covered,
+                    "totalAreas", total == null ? 0 : total,
+                    "coverageLabel", "districts covered");
+        }
+        if ("Region".equals(scope)) {
+            Long covered = staffedAreaCount(role, "region_id");
+            Long total = jdbc.queryForObject("select count(*) from public.regions", Long.class);
+            return Map.of("coveredAreas", covered == null ? 0 : covered,
+                    "totalAreas", total == null ? 0 : total,
+                    "coverageLabel", "regions covered");
+        }
+        return Map.of("coveredAreas", 0, "totalAreas", 0, "coverageLabel", "national desk");
+    }
+
+    private Long staffedAreaCount(String role, String areaColumn) {
+        return jdbc.queryForObject("""
+                select count(distinct u.%s) from public.users u
+                join public.model_has_roles mhr on mhr.model_id = u.id
+                join public.roles r on r.id = mhr.role_id
+                where r.name = ? and u.%s is not null
+                """.formatted(areaColumn, areaColumn), Long.class, role);
     }
 
     /** Save the stage modes. Body: { "waiting_ddmc": "skip_if_unstaffed", "waiting_ras": "manual", ... }. */

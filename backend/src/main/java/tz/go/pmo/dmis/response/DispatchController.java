@@ -245,6 +245,16 @@ public class DispatchController {
                     """, id, "warehouse".equals(sourceType) ? "Warehouse" : "Temporary Warehouse",
                     sourceId, quantity, users.actingUserId(), str(body.get("notes")));
             jdbc.update("update public.allocated_resources set status = 'Awaiting Dispatch Approval', updated_at = now() where id = ?", id);
+            // F77: notify warehouse/stock managers via the ONE notification backbone (not silent insert).
+            String resName = jdbc.queryForObject("select name from public.resources where id = ?", String.class, resourceId);
+            notifications.notifyRoles(java.util.List.of("EOCC", "Director", "Asst. Director", "Super Admin"),
+                    tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
+                            "dispatch_approval_needed",
+                            "Dispatch approval needed",
+                            (resName == null ? "Stock" : resName) + " ×" + quantity
+                                    + " requested from warehouse source #" + sourceId
+                                    + " for allocation #" + id + ".",
+                            "/m/response/dispatch", "allocation", id, "warning"));
             return Map.of("success", true,
                     "message", "Dispatch request submitted and pending approval from the source manager.");
         }
@@ -739,10 +749,8 @@ public class DispatchController {
 
     private static double positive(Object v) {
         double q = v instanceof Number n ? n.doubleValue() : Double.parseDouble(String.valueOf(v));
-        if (q <= 0) {
-            throw new BusinessRuleException("Quantity must be greater than zero.");
-        }
-        return q;
+        // F64 — whole units only (matches integer inventory ledger)
+        return DispatchSupportService.requireWholeUnits(q);
     }
 
     private static long lng(Object v, String field) {

@@ -207,7 +207,12 @@ export class KnowledgeRepositoryComponent {
     });
   }
 
-  approve(r: Row): void { this.http.post(`${this.base}/${r.id}/approve`, {}).subscribe({ next: () => this.reload() }); }
+  approve(r: Row): void {
+    this.http.post<any>(`${this.base}/${r.id}/approve`, {}).subscribe({
+      next: () => this.reload(),
+      error: e => alert(e?.error?.detail ?? e?.error?.message ?? 'Could not approve entry.'),
+    });
+  }
   download(r: Row): void {
     this.http.get(`${this.base}/${r.id}/download`, { responseType: 'blob' }).subscribe({
       next: blob => {

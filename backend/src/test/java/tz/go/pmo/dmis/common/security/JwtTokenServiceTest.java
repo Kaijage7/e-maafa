@@ -35,23 +35,35 @@ class JwtTokenServiceTest {
 
     @Test
     void mintsTokenWhoseSubjectIsNumericUserIdAndCarriesRealmRoles() {
-        String token = new JwtTokenService(encoder(GOOD_SECRET, "test"), "dmis", 720)
+        String token = new JwtTokenService(encoder(GOOD_SECRET, "test"), "dmis", 30, 15)
                 .mint(42L, "Jane Doe", "jane@pmo.go.tz", List.of("Director", "EOCC"), List.of("incidents.view"));
 
         Jwt jwt = decoder(GOOD_SECRET, "test").decode(token);
 
         assertThat(jwt.getSubject()).isEqualTo("42");
+        assertThat(jwt.getId()).isNotBlank();
         assertThat(jwt.getClaimAsString("name")).isEqualTo("Jane Doe");
         assertThat(jwt.getClaimAsString("email")).isEqualTo("jane@pmo.go.tz");
         Map<String, Object> realm = jwt.getClaimAsMap("realm_access");
         assertThat(realm.get("roles")).isEqualTo(List.of("Director", "EOCC"));
         assertThat(jwt.getExpiresAt()).isAfter(jwt.getIssuedAt());
         assertThat(jwt.getClaimAsString("iss")).isEqualTo("dmis");
+        assertThat(jwt.getClaimAsString("token_use")).isNull();
+    }
+
+    @Test
+    void limitedTokenCarriesTokenUseWithoutRoles() {
+        String token = new JwtTokenService(encoder(GOOD_SECRET, "test"), "dmis", 30, 15)
+                .mintLimited(9L, "Jane", "j@pmo.go.tz", RestrictedTokenUseFilter.USE_PASSWORD_CHANGE);
+        Jwt jwt = decoder(GOOD_SECRET, "test").decode(token);
+        assertThat(jwt.getClaimAsString("token_use")).isEqualTo("password_change");
+        Map<String, Object> realm = jwt.getClaimAsMap("realm_access");
+        assertThat(realm.get("roles")).isEqualTo(List.of());
     }
 
     @Test
     void tokenSignedWithOneSecretIsRejectedByAnother() {
-        String token = new JwtTokenService(encoder(GOOD_SECRET, "test"), "dmis", 720)
+        String token = new JwtTokenService(encoder(GOOD_SECRET, "test"), "dmis", 30, 15)
                 .mint(1L, "A", "a@b.go.tz", List.of("Super Admin"), List.of());
 
         JwtDecoder otherKey = decoder("another-secret-another-secret-1234567890ab", "test");
@@ -77,7 +89,7 @@ class JwtTokenServiceTest {
     @Test
     void localProfileAllowsBlankSecretUsingDevDefault() {
         // Must NOT throw; the round-trip works with the bundled dev default under local.
-        String token = new JwtTokenService(encoder("", "local"), "dmis", 720)
+        String token = new JwtTokenService(encoder("", "local"), "dmis", 30, 15)
                 .mint(7L, "Dev", "dev@local", List.of("Super Admin"), List.of());
         assertThat(decoder("", "local").decode(token).getSubject()).isEqualTo("7");
     }

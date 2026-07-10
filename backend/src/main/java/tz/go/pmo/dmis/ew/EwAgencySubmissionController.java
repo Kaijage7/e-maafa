@@ -78,10 +78,18 @@ public class EwAgencySubmissionController {
     /** Resolves the authenticated caller's agency CODE (tma/mow/…) so an entity authors only its OWN
      *  bulletin; null for PMO/EOCC/national/admin logins, who may act for any agency. */
     private final JurisdictionScope jurisdiction;
+    /** Additive PMO decision-support (INFORM + suggested red/orange/yellow) — never mutates consolidation. */
+    private final DmdImpactSupportService impactSupport;
+    /** Action Guide Book statement proposals (deterministic) for painted impact colours — never auto-sends. */
+    private final ActionGuideStatementService actionGuide;
 
-    public EwAgencySubmissionController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
+    public EwAgencySubmissionController(JdbcTemplate jdbc, JurisdictionScope jurisdiction,
+                                        DmdImpactSupportService impactSupport,
+                                        ActionGuideStatementService actionGuide) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
+        this.impactSupport = impactSupport;
+        this.actionGuide = actionGuide;
         this.regionDistricts = loadRegionDistricts();
     }
 
@@ -454,6 +462,89 @@ public class EwAgencySubmissionController {
         }
         return Map.of("days", out, "comments", comments,
             "sources", rows.stream().map(r -> r.get("agency")).distinct().toList());
+    }
+
+    /**
+     * PMO Impact Analysis decision-support (additive). Does <b>not</b> change {@link #consolidated}
+     * merge or bulletin ingest. Returns INFORM context + suggested red/orange/yellow per district
+     * under entity hydromet tiers for the requested day so PMO can paint more realistically.
+     */
+    @GetMapping("/dmd/impact-support")
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> impactSupport(@RequestParam(required = false, defaultValue = "1") int day,
+                                            @RequestParam(required = false, defaultValue = "5") int days,
+                                            @RequestParam(required = false, defaultValue = "auto") String hazardFocus) {
+        Map<String, Object> cons = consolidated(days);
+        List<Map<String, Object>> dayList = (List<Map<String, Object>>) cons.get("days");
+        Map<String, Object> dayRow = null;
+        for (Map<String, Object> d : dayList) {
+            if (((Number) d.get("day")).intValue() == day) {
+                dayRow = d;
+                break;
+            }
+        }
+        if (dayRow == null && !dayList.isEmpty()) {
+            dayRow = dayList.get(0);
+        }
+        Map<String, String> levels = new LinkedHashMap<>();
+        Map<String, String> sources = new LinkedHashMap<>();
+        List<String> multi = new ArrayList<>();
+        if (dayRow != null) {
+            Map<String, List<String>> tiers = (Map<String, List<String>>) dayRow.get("tiers");
+            Map<String, String> tierSources = (Map<String, String>) dayRow.get("tier_sources");
+            if (tierSources != null) {
+                sources.putAll(tierSources);
+            }
+            if (tiers != null) {
+                for (String name : tiers.getOrDefault("major_warning", List.of())) {
+                    levels.put(name, "MAJOR_WARNING");
+                }
+                for (String name : tiers.getOrDefault("warning", List.of())) {
+                    levels.putIfAbsent(name, "WARNING");
+                }
+                for (String name : tiers.getOrDefault("advisory", List.of())) {
+                    levels.putIfAbsent(name, "ADVISORY");
+                }
+            }
+            List<Map<String, Object>> overlays = (List<Map<String, Object>>) dayRow.get("overlays");
+            if (overlays != null) {
+                for (Map<String, Object> ov : overlays) {
+                    Object dist = ov.get("districts");
+                    if (dist instanceof List<?> list) {
+                        for (Object n : list) {
+                            if (n != null) {
+                                multi.add(String.valueOf(n));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // hazardFocus: auto | flood | drought | landslide | storm | earthquake | coastal | overall
+        // Lets PMO re-weight impact colours under e.g. heavy-rainfall → Flood hazard component + EO signal.
+        Map<String, Object> support = impactSupport.support(levels, sources, multi, hazardFocus);
+        support.put("day", day);
+        support.put("entitySources", cons.get("sources"));
+        return support;
+    }
+
+    /**
+     * Action Guide Book catalog metadata (hazards, levels, no-harm scaling). Read-only assist for PMO.
+     */
+    @GetMapping("/dmd/action-guide")
+    public Map<String, Object> actionGuideMeta() {
+        return actionGuide.meta();
+    }
+
+    /**
+     * Propose ~3 editable statements from the official Action Guide Book for a painted impact colour
+     * (yellow/orange/red) + hazard + areas. Does <b>not</b> publish, generate PDF, or send SMS/email —
+     * PMO applies a proposal into on-screen comment/directive boxes, then continues the normal flow:
+     * Generate Impact Bulletin → Publish to EOCC → portal / dissemination.
+     */
+    @PostMapping("/dmd/action-statements")
+    public Map<String, Object> actionStatements(@RequestBody Map<String, Object> body) {
+        return actionGuide.propose(body);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────────────────────────

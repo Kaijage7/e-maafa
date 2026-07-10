@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 
@@ -47,6 +48,8 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
   template: `
     <dmis-page-header title="Communication & Alert Center" icon="fa-bullhorn"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Alert Dissemination'}]">
+      <button type="button" class="btn-add" style="background:#0f766e;margin-right:0.4rem;" (click)="testChannel('sms')"><i class="fas fa-sms"></i> Test SMS</button>
+      <button type="button" class="btn-add" style="background:#0369a1;" (click)="testChannel('email')"><i class="fas fa-envelope"></i> Test Email</button>
     </dmis-page-header>
 
     <div class="stat-strip">
@@ -61,6 +64,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
       <button [class.active]="tab() === 'compose'" (click)="tab.set('compose')">Compose Alert</button>
       <button [class.active]="tab() === 'history'" (click)="tab.set('history')">Alert History</button>
       <button [class.active]="tab() === 'templates'" (click)="tab.set('templates')">Templates</button>
+      <button [class.active]="tab() === 'analytics'" (click)="openAnalytics()">Analytics</button>
     </div>
 
     <!-- ── Compose ── -->
@@ -171,15 +175,57 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
         </table>
       </dmis-panel>
     }
+
+    <!-- ── Analytics (F50 — live consumer of GET /communication/analytics) ── -->
+    @if (tab() === 'analytics') {
+      <dmis-panel title="Alert analytics" icon="fa-chart-column">
+        @if (analytics(); as a) {
+          <div class="stat-strip" style="margin-bottom:16px">
+            <div class="stat"><b>{{ a.periods?.last_24h ?? 0 }}</b><span>Last 24h</span></div>
+            <div class="stat"><b>{{ a.periods?.last_7d ?? 0 }}</b><span>Last 7 days</span></div>
+            <div class="stat"><b>{{ a.periods?.last_30d ?? 0 }}</b><span>Last 30 days</span></div>
+            <div class="stat"><b>{{ dash().delivery?.delivery_rate ?? 0 }}%</b><span>Delivery rate</span></div>
+            <div class="stat"><b>{{ dash().delivery?.failed ?? 0 }}</b><span>Failed</span></div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <label>By type</label>
+              <table>
+                <thead><tr><th>Type</th><th>Count</th></tr></thead>
+                <tbody>
+                  @for (row of a.by_type ?? []; track row.alert_type) {
+                    <tr><td>{{ row.alert_type }}</td><td><b>{{ row.count }}</b></td></tr>
+                  } @empty { <tr><td colspan="2" class="empty">No type data</td></tr> }
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <label>By severity</label>
+              <table>
+                <thead><tr><th>Severity</th><th>Count</th></tr></thead>
+                <tbody>
+                  @for (row of a.by_severity ?? []; track row.severity) {
+                    <tr><td class="sev-{{ row.severity }}">{{ row.severity }}</td><td><b>{{ row.count }}</b></td></tr>
+                  } @empty { <tr><td colspan="2" class="empty">No severity data</td></tr> }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        } @else {
+          <div class="empty">Loading analytics…</div>
+        }
+      </dmis-panel>
+    }
   `,
 })
 export class CommunicationComponent implements OnInit {
   private readonly http = inject(HttpClient);
 
-  readonly tab = signal<'compose' | 'history' | 'templates'>('compose');
+  readonly tab = signal<'compose' | 'history' | 'templates' | 'analytics'>('compose');
   readonly dash = signal<any>({});
   readonly fd = signal<any | null>(null);
   readonly history = signal<any[]>([]);
+  readonly analytics = signal<any | null>(null);
 
   compose = { template_id: null as number | null, incident_id: null as number | null,
     alert_type: 'warning', severity: 'high', title: '', message: '',
@@ -194,6 +240,52 @@ export class CommunicationComponent implements OnInit {
     this.http.get<any>('/api/v1/response/communication').subscribe(d => this.dash.set(d));
     this.http.get<any>('/api/v1/response/communication/form-data').subscribe(d => this.fd.set(d));
     this.http.get<any>('/api/v1/response/communication/alerts').subscribe(d => this.history.set(d.alerts));
+  }
+
+  openAnalytics(): void {
+    this.tab.set('analytics');
+    this.http.get<any>('/api/v1/response/communication/analytics').subscribe({
+      next: d => this.analytics.set(d),
+      error: () => this.analytics.set({ periods: {}, by_type: [], by_severity: [] }),
+    });
+  }
+
+  /** F55: real gateway test via ChannelTestController (ops button, not hidden). */
+  testChannel(kind: 'sms' | 'email'): void {
+    ensureSweetAlert().then(() => {
+      if (kind === 'sms') {
+        Swal.fire({
+          title: 'Send test SMS',
+          input: 'text',
+          inputLabel: 'Tanzanian mobile (e.g. 0712345678)',
+          inputPlaceholder: '07…',
+          showCancelButton: true,
+          confirmButtonText: 'Send test',
+          confirmButtonColor: '#0f766e',
+        }).then((r: any) => {
+          if (!r.isConfirmed || !r.value) { return; }
+          this.http.post<any>('/api/v1/notifications/test/sms', { phone: r.value, message: 'e-MAAFA DMIS channel test SMS.' }).subscribe({
+            next: res => Swal.fire(res.success ? 'SMS accepted' : 'SMS failed', res.message || JSON.stringify(res), res.success ? 'success' : 'error'),
+            error: err => Swal.fire('Error', err?.error?.message || err?.error?.detail || 'SMS test failed', 'error'),
+          });
+        });
+      } else {
+        Swal.fire({
+          title: 'Send test email',
+          input: 'email',
+          inputLabel: 'Destination email',
+          showCancelButton: true,
+          confirmButtonText: 'Send test',
+          confirmButtonColor: '#0369a1',
+        }).then((r: any) => {
+          if (!r.isConfirmed || !r.value) { return; }
+          this.http.post<any>('/api/v1/notifications/test/email', { email: r.value }).subscribe({
+            next: res => Swal.fire(res.success ? 'Email accepted' : 'Email failed', res.message || JSON.stringify(res), res.success ? 'success' : 'error'),
+            error: err => Swal.fire('Error', err?.error?.message || err?.error?.detail || 'Email test failed', 'error'),
+          });
+        });
+      }
+    });
   }
 
   toggle(list: string[], value: string): void {
@@ -225,14 +317,14 @@ export class CommunicationComponent implements OnInit {
   }
 
   details(id: number): void {
-    this.http.get<any>(`/api/v1/response/communication/alerts/${id}`).subscribe(d => {
-      const rows = d.channel_breakdown.map((c: any) =>
-        `<tr><td style="padding:3px 10px">${c.channel.toUpperCase()}</td><td>${c.delivered}/${c.total} delivered</td><td>${c.failed} failed</td></tr>`).join('');
-      ensureSweetAlert().then(() => Swal.fire({
-        title: d.alert.title, width: 620,
-        html: `<p style="font-size:0.85rem; text-align:left">${d.alert.message}</p>
-               <table style="margin:auto; font-size:0.82rem"><tbody>${rows}</tbody></table>
-               <p style="font-size:0.75rem; color:#6c757d">${d.recipients.length} recipient deliveries logged</p>`,
+	    this.http.get<any>(`/api/v1/response/communication/alerts/${id}`).subscribe(d => {
+	      const rows = d.channel_breakdown.map((c: any) =>
+	        `<tr><td style="padding:3px 10px">${escapeHtml(String(c.channel ?? '').toUpperCase())}</td><td>${Number(c.delivered)}/${Number(c.total)} delivered</td><td>${Number(c.failed)} failed</td></tr>`).join('');
+	      ensureSweetAlert().then(() => Swal.fire({
+	        titleText: d.alert.title ?? 'Alert details', width: 620,
+	        html: `<p style="font-size:0.85rem; text-align:left">${escapeHtml(d.alert.message)}</p>
+	               <table style="margin:auto; font-size:0.82rem"><tbody>${rows}</tbody></table>
+	               <p style="font-size:0.75rem; color:#6c757d">${Number(d.recipients.length)} recipient deliveries logged</p>`,
         confirmButtonColor: '#dc3545',
       }));
     });
@@ -256,16 +348,16 @@ export class CommunicationComponent implements OnInit {
 
   // ── Template management ──
 
-  editTemplate(t: any | null): void {
-    ensureSweetAlert().then(() => Swal.fire({
-      title: t ? 'Edit template' : 'New template', width: 640,
-      html: `<input id="tp-name" class="swal2-input" placeholder="Name" value="${t?.name ?? ''}">
-             <select id="tp-type" class="swal2-select" style="width:85%">
-               ${['evacuation', 'warning', 'update', 'all_clear', 'custom'].map(x =>
-                 `<option value="${x}" ${t?.type === x ? 'selected' : ''}>${x}</option>`).join('')}
-             </select>
-             <input id="tp-title" class="swal2-input" placeholder="Title (may use {placeholders})" value="${t?.title ?? ''}">
-             <textarea id="tp-msg" class="swal2-textarea" placeholder="Message with {placeholders}">${t?.message ?? ''}</textarea>`,
+	  editTemplate(t: any | null): void {
+	    ensureSweetAlert().then(() => Swal.fire({
+	      title: t ? 'Edit template' : 'New template', width: 640,
+	      html: `<input id="tp-name" class="swal2-input" placeholder="Name" value="${escapeHtml(t?.name ?? '')}">
+	             <select id="tp-type" class="swal2-select" style="width:85%">
+	               ${['evacuation', 'warning', 'update', 'all_clear', 'custom'].map(x =>
+	                 `<option value="${x}" ${t?.type === x ? 'selected' : ''}>${x}</option>`).join('')}
+	             </select>
+	             <input id="tp-title" class="swal2-input" placeholder="Title (may use {placeholders})" value="${escapeHtml(t?.title ?? '')}">
+	             <textarea id="tp-msg" class="swal2-textarea" placeholder="Message with {placeholders}">${escapeHtml(t?.message ?? '')}</textarea>`,
       showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Save',
       preConfirm: () => {
         const get = (id: string) => (document.getElementById(id) as HTMLInputElement).value.trim();

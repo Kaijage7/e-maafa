@@ -30,10 +30,7 @@ public class GisMapController {
 
     @GetMapping
     @Operation(summary = "GIS map payload: 5 marker layers + stats + choropleth region data")
-    // VAPT i (read leak): was isAuthenticated(). This map is routed under BOTH Risk Mapping (Prevention &
-    // Mitigation) and Reports GIS, so require EITHER module's view permission (not a single one, which would
-    // lock out the other module's legitimate users). Its incident layer is already jurisdiction-scoped.
-    @PreAuthorize("hasAnyAuthority('prevention_and_mitigation.view','reports_and_analytics.view')")
+    @PreAuthorize("hasAnyAuthority('risk_mapping.view','reports_and_analytics.view')")
     public Map<String, Object> index() {
         List<Map<String, Object>> infrastructure = rows(
                 "select id, name, type, latitude, longitude, status from public.infrastructure_items "

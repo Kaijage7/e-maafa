@@ -104,6 +104,8 @@ public class AreaGuard {
         params.add(id);
         if (shared) {
             scope.appendAreaScopeSharedOrOwn(alias, where, params);
+        } else if ("public.incidents".equals(table)) {
+            scope.appendAreaScopeWithCouncil(alias, where, params);
         } else {
             scope.appendAreaScope(alias, where, params);
         }
@@ -117,6 +119,8 @@ public class AreaGuard {
         params.add(childId);
         if (shared) {
             scope.appendAreaScopeSharedOrOwn("p", where, params);
+        } else if ("public.incidents".equals(parentTable)) {
+            scope.appendAreaScopeWithCouncil("p", where, params);
         } else {
             scope.appendAreaScope("p", where, params);
         }

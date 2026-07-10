@@ -19,16 +19,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
 
 /**
- * Content Management → Agencies — partner agency registry CRUD over agencies,
+ * System Settings -> Agencies — partner agency registry CRUD over agencies,
  * reproducing Admin/AgencyController (the EWE institutions + partners directory).
  */
 @RestController
-@RequestMapping("/v1/content/agencies")
+@RequestMapping("/v1/settings/agencies")
 @RequiredArgsConstructor
-@Tag(name = "Content Management", description = "Partner agencies (admin)")
+@Tag(name = "System Settings", description = "Partner agencies (admin)")
 public class AgencyAdminController {
 
     private final JdbcTemplate jdbc;
@@ -38,10 +37,10 @@ public class AgencyAdminController {
                                      String website, Boolean isActive) {
     }
 
-    @GetMapping
-    @Operation(summary = "Agency registry + stats")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> index() {
+	    @GetMapping
+	    @Operation(summary = "Agency registry + stats")
+	    @PreAuthorize("hasAuthority('user_management.view')")
+	    public Map<String, Object> index() {
         List<Map<String, Object>> items = jdbc.queryForList(
                 "select id, name, acronym, agency_type as \"agencyType\", mandate_description as \"mandate\","
                         + " contact_person_name as \"contactPersonName\", contact_person_email as \"contactPersonEmail\","

@@ -32,6 +32,11 @@ interface HubHistory {
   to_status: string | null; user_name: string; performed_by_role: string | null;
   comments: string | null; created_at: string;
 }
+interface EventComment {
+  id: number; event_id: number; user_id: number; stakeholder_id: number | null;
+  comment_text: string; parent_id: number | null; comment_type: string;
+  created_at: string; user_name?: string | null; stakeholder_name?: string | null;
+}
 interface ShowResponse {
   event: any;
   environmental_detail: any; health_detail: any; agricultural_detail: any; food_safety_detail: any;
@@ -40,6 +45,7 @@ interface ShowResponse {
   workflow_histories: HubHistory[];
   area_stakeholders: { id: number; organization: string; name: string }[];
   has_directives: boolean; can_issue_directive: boolean; can_review: boolean;
+  comments?: EventComment[];
 }
 
 const WORKFLOW_STEPS = [
@@ -281,6 +287,7 @@ const WORKFLOW_STEPS = [
             <li><button [class.active]="tab() === 'directives'" (click)="tab.set('directives')"><i class="fas fa-bullhorn me-1"></i> Directives @if (d.directives.length) { <span class="oh-show-tab-badge">{{ d.directives.length }}</span> }</button></li>
             <li><button [class.active]="tab() === 'disseminations'" (click)="tab.set('disseminations')"><i class="fas fa-share-alt me-1"></i> Disseminations @if (d.disseminations.length) { <span class="oh-show-tab-badge">{{ d.disseminations.length }}</span> }</button></li>
             <li><button [class.active]="tab() === 'actions'" (click)="tab.set('actions')"><i class="fas fa-tasks me-1"></i> Actions @if (d.action_trackings.length) { <span class="oh-show-tab-badge">{{ d.action_trackings.length }}</span> }</button></li>
+            <li><button [class.active]="tab() === 'discussion'" (click)="tab.set('discussion')"><i class="fas fa-comments me-1"></i> Discussion @if ((d.comments?.length ?? 0) > 0) { <span class="oh-show-tab-badge">{{ d.comments!.length }}</span> }</button></li>
           </ul>
 
           <!-- ══ Tab: Overview ══ -->
@@ -680,7 +687,7 @@ const WORKFLOW_STEPS = [
           @if (tab() === 'disseminations') {
             <div class="oh-show-tab-header">
               <h6 class="mb-0 fw-bold text-muted"><i class="fas fa-share-alt me-1"></i> Disseminations ({{ d.disseminations.length }})</h6>
-              <button type="button" class="btn btn-sm oh-show-action-btn" (click)="dissPanelOpen.set(!dissPanelOpen())"><i class="fas fa-plus me-1"></i> Create Dissemination</button>
+              <button type="button" class="btn btn-sm oh-show-action-btn" (click)="openDissPanel()"><i class="fas fa-plus me-1"></i> Create Dissemination</button>
             </div>
 
             @if (dissPanelOpen()) {
@@ -696,9 +703,18 @@ const WORKFLOW_STEPS = [
                   @if (dissErrors().length) {
                     <div class="alert alert-danger mb-3" style="font-size: 0.82rem;"><ul class="mb-0">@for (e of dissErrors(); track $index) { <li>{{ e }}</li> }</ul></div>
                   }
+                  <!-- F53: live recipients preview from GET /disseminations/recipients -->
+                  <div class="alert alert-info mb-3" style="font-size:0.8rem;padding:0.5rem 0.75rem;">
+                    @if (recipPreviewLoading()) { Loading recipient preview… }
+                    @else if (recipPreviewCount() != null) {
+                      <b>Recipient preview:</b> {{ recipPreviewCount() }} contact(s) match this track
+                      @if (dissTrack() === 'stakeholder') { (area stakeholders). }
+                      @else { (active stakeholder directory). }
+                    } @else { Recipient preview unavailable. }
+                  </div>
                   <div class="oh-show-track-selector mb-3">
-                    <button type="button" class="oh-show-track-btn" [class.active]="dissTrack() === 'stakeholder'" (click)="dissTrack.set('stakeholder')"><i class="fas fa-building me-1"></i> Stakeholder Alert</button>
-                    <button type="button" class="oh-show-track-btn" [class.active]="dissTrack() === 'public'" (click)="dissTrack.set('public')"><i class="fas fa-users me-1"></i> Public Alert</button>
+                    <button type="button" class="oh-show-track-btn" [class.active]="dissTrack() === 'stakeholder'" (click)="setDissTrack('stakeholder')"><i class="fas fa-building me-1"></i> Stakeholder Alert</button>
+                    <button type="button" class="oh-show-track-btn" [class.active]="dissTrack() === 'public'" (click)="setDissTrack('public')"><i class="fas fa-users me-1"></i> Public Alert</button>
                   </div>
 
                   <div class="row g-3">
@@ -806,6 +822,59 @@ const WORKFLOW_STEPS = [
           }
 
           <!-- ══ Tab: Actions ══ -->
+          @if (tab() === 'discussion') {
+            <div class="oh-show-card" style="border-radius: 0 0 12px 12px; margin-top: 0;">
+              <div class="oh-show-card-header">
+                <div class="oh-show-card-icon icon-info"><i class="fas fa-comments"></i></div>
+                <h6 class="fw-bold">Discussion</h6>
+                @if (d.comments?.length) { <span class="oh-show-tab-badge ms-auto">{{ d.comments!.length }}</span> }
+              </div>
+              <div class="oh-show-card-body">
+                @if (d.comments?.length) {
+                  <div class="oh-show-tl" style="margin-bottom:1rem;">
+                    <div class="oh-show-tl-line"></div>
+                    @for (c of d.comments!; track c.id) {
+                      <div class="oh-show-tl-item" [style.margin-left.px]="c.parent_id ? 18 : 0">
+                        <div class="oh-show-tl-dot" style="background:#0891b2;"><i class="fas fa-comment" style="font-size:0.7rem;"></i></div>
+                        <div class="oh-show-tl-body">
+                          <div class="oh-show-tl-header">
+                            <span class="fw-semibold" style="font-size:0.85rem;">{{ c.user_name || 'User' }}</span>
+                            @if (c.stakeholder_name) { <span class="oh-show-tl-role">({{ c.stakeholder_name }})</span> }
+                            @if (c.comment_type && c.comment_type !== 'general') {
+                              <span class="badge bg-secondary" style="font-size:0.65rem;">{{ c.comment_type }}</span>
+                            }
+                          </div>
+                          <div class="oh-show-tl-time">{{ c.created_at }}</div>
+                          <div class="oh-show-tl-comment">{{ c.comment_text }}</div>
+                          <button type="button" class="btn btn-link btn-sm p-0 mt-1" style="font-size:0.75rem;" (click)="replyTo(c)">Reply</button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="oh-show-empty-state" style="padding:1rem 0;"><i class="fas fa-comments"></i><p>No discussion yet. Start the thread below.</p></div>
+                }
+                <div class="mt-2">
+                  @if (replyParentId()) {
+                    <div class="text-muted mb-1" style="font-size:0.78rem;">
+                      Replying to #{{ replyParentId() }}
+                      <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="replyParentId.set(null)">Cancel</button>
+                    </div>
+                  }
+                  <textarea class="form-control form-control-sm" rows="3" placeholder="Add a comment…"
+                    [(ngModel)]="commentDraft" [disabled]="commentSubmitting()"></textarea>
+                  <div class="d-flex justify-content-end mt-2">
+                    <button type="button" class="btn btn-sm btn-primary" [disabled]="!commentDraft.trim() || commentSubmitting()" (click)="postComment()">
+                      <i class="fas" [class.fa-paper-plane]="!commentSubmitting()" [class.fa-spinner]="commentSubmitting()" [class.fa-spin]="commentSubmitting()"></i>
+                      Post comment
+                    </button>
+                  </div>
+                  @if (commentError()) { <div class="text-danger mt-2" style="font-size:0.8rem;">{{ commentError() }}</div> }
+                </div>
+              </div>
+            </div>
+          }
+
           @if (tab() === 'actions') {
             <div class="oh-show-tab-header">
               <h6 class="mb-0 fw-bold text-muted"><i class="fas fa-tasks me-1"></i> Action Items ({{ d.action_trackings.length }})</h6>
@@ -1068,8 +1137,12 @@ export class OhEventShowComponent implements OnInit {
   ];
 
   data = signal<ShowResponse | null>(null);
-  tab = signal<'overview' | 'cases' | 'directives' | 'disseminations' | 'actions'>('overview');
+  tab = signal<'overview' | 'cases' | 'directives' | 'disseminations' | 'actions' | 'discussion'>('overview');
   expandedDir = signal<number | null>(null);
+  commentDraft = '';
+  commentSubmitting = signal(false);
+  commentError = signal('');
+  replyParentId = signal<number | null>(null);
 
   // directive inline panel
   dirPanelOpen = signal(false);
@@ -1120,13 +1193,45 @@ export class OhEventShowComponent implements OnInit {
     const fragment = this.route.snapshot.fragment;
     if (fragment?.startsWith('tab')) {
       const t = fragment.substring(3).toLowerCase();
-      if (['overview', 'cases', 'directives', 'disseminations', 'actions'].includes(t)) { this.tab.set(t as any); }
+      if (['overview', 'cases', 'directives', 'disseminations', 'actions', 'discussion'].includes(t)) { this.tab.set(t as any); }
     }
     this.load();
   }
 
   load(): void {
     this.http.get<ShowResponse>(`/api/v1/onehealth/events/${this.id}`).subscribe(d => this.data.set(d));
+  }
+
+  replyTo(c: EventComment): void {
+    this.replyParentId.set(c.id);
+    this.tab.set('discussion');
+  }
+
+  postComment(): void {
+    const text = this.commentDraft.trim();
+    if (!text) { return; }
+    this.commentSubmitting.set(true);
+    this.commentError.set('');
+    const body: Record<string, unknown> = { comment_text: text };
+    if (this.replyParentId()) { body['parent_id'] = this.replyParentId(); }
+    this.http.post<{ success?: boolean; comments?: EventComment[] }>(
+      `/api/v1/onehealth/events/${this.id}/comments`, body
+    ).subscribe({
+      next: r => {
+        this.commentSubmitting.set(false);
+        this.commentDraft = '';
+        this.replyParentId.set(null);
+        if (r.comments) {
+          this.data.update(d => d ? { ...d, comments: r.comments! } : d);
+        } else {
+          this.load();
+        }
+      },
+      error: err => {
+        this.commentSubmitting.set(false);
+        this.commentError.set(err?.error?.detail || err?.error?.message || 'Could not post the comment.');
+      },
+    });
   }
 
   actionsFor(directiveId: number): HubAction[] {
@@ -1227,6 +1332,34 @@ export class OhEventShowComponent implements OnInit {
   }
 
   // ── disseminations ──
+
+  readonly recipPreviewLoading = signal(false);
+  readonly recipPreviewCount = signal<number | null>(null);
+
+  openDissPanel(): void {
+    this.dissPanelOpen.set(true);
+    this.refreshRecipientPreview();
+  }
+
+  setDissTrack(track: 'stakeholder' | 'public'): void {
+    this.dissTrack.set(track);
+    this.refreshRecipientPreview();
+  }
+
+  private refreshRecipientPreview(): void {
+    this.recipPreviewLoading.set(true);
+    const type = this.dissTrack();
+    this.http.get<any>(`/api/v1/onehealth/disseminations/recipients`, {
+      params: { event_id: String(this.id), type },
+    }).subscribe({
+      next: res => {
+        const list = res?.recipients ?? [];
+        this.recipPreviewCount.set(Array.isArray(list) ? list.length : 0);
+        this.recipPreviewLoading.set(false);
+      },
+      error: () => { this.recipPreviewCount.set(null); this.recipPreviewLoading.set(false); },
+    });
+  }
 
   toggleDissStakeholder(id: number): void {
     const next = new Set(this.dissSelected());

@@ -5,7 +5,8 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { RegionDistrictPickerComponent } from '../../shell/region-district-picker.component';
 
-const CHANNELS = ['SMS', 'Email', 'WhatsApp', 'Push'];
+/** Channels with a real delivery path today. (Push/WhatsApp reserved until gateways exist.) */
+const CHANNELS = ['SMS', 'Email'];
 const HAZARDS = ['Floods', 'Heavy Rainfall', 'Strong Winds', 'Drought', 'Large Waves', 'Earthquake', 'Disease Outbreak'];
 
 /** Alert Subscriptions → New Subscriber — a real create form that POSTs to the Spring Boot API. */

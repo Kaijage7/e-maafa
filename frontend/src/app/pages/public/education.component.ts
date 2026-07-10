@@ -38,8 +38,25 @@ interface EduItem {
           <button type="button" class="edu-btn-outline" (click)="printPage()">
             <i class="fas fa-print"></i> {{ L.lang() === 'sw' ? 'Chapisha / Hifadhi' : 'Print / Save' }}
           </button>
-          @if (eduSummary(it)) { <p class="edu-detail-lede">{{ eduSummary(it) }}</p> }
-          <div class="edu-detail-body">{{ eduBody(it) }}</div>
+          @if (!eduTitle(it)) {
+            <div class="edu-empty" style="margin-top:1rem;">
+              <i class="fas fa-language"></i>
+              <p>{{ copy(
+                'This article is not available in English yet.',
+                'Makala hii bado haipatikani kwa Kiswahili.'
+              ) }}</p>
+            </div>
+          } @else {
+            @if (eduSummary(it)) { <p class="edu-detail-lede">{{ eduSummary(it) }}</p> }
+            @if (eduBody(it)) {
+              <div class="edu-detail-body">{{ eduBody(it) }}</div>
+            } @else {
+              <p class="edu-detail-lede muted">{{ copy(
+                'Full text not available in this language.',
+                'Maandishi kamili hayapatikani katika lugha hii.'
+              ) }}</p>
+            }
+          }
           <a routerLink="/education" class="edu-back edu-detail-return"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_education') }}</a>
         </article>
       } @else {
@@ -60,6 +77,52 @@ interface EduItem {
             <span><i class="fas fa-calendar-days me-1"></i><b>1</b> {{ L.lang() === 'sw' ? 'kalenda ya kitaifa' : 'national calendar' }}</span>
           </div>
         </header>
+
+        <section class="edu-pathway" aria-label="Education pathway">
+          <div>
+            <div class="edu-path-eyebrow">{{ copy('Learning pathway', 'Mtiririko wa kujifunza') }}</div>
+            <h2>{{ copy('From awareness to action', 'Kutoka uelewa hadi hatua') }}</h2>
+            <p>{{ copy('Start with the risk framework, move into hazard-specific guidance, then use official articles and materials for community action.', 'Anza na mfumo wa hatari, endelea kwenye mwongozo wa kila janga, kisha tumia makala na nyenzo rasmi kwa hatua za jamii.') }}</p>
+          </div>
+          <div class="edu-path-steps">
+            <a routerLink="/inform-education" class="edu-path-step">
+              <b>01</b><span>{{ copy('Understand risk', 'Elewa hatari') }}</span><small>{{ copy('INFORM guided course', 'Kozi elekezi ya INFORM') }}</small>
+            </a>
+            <a href="#hazard-guides" class="edu-path-step">
+              <b>02</b><span>{{ copy('Know hazards', 'Fahamu majanga') }}</span><small>{{ copy('Before, during and after', 'Kabla, wakati na baada') }}</small>
+            </a>
+            <a routerLink="/hazard-calendar" class="edu-path-step">
+              <b>03</b><span>{{ copy('Plan by season', 'Panga kwa msimu') }}</span><small>{{ copy('National hazard calendar', 'Kalenda ya kitaifa ya majanga') }}</small>
+            </a>
+            <a href="#guides-articles" class="edu-path-step">
+              <b>04</b><span>{{ copy('Use official guidance', 'Tumia mwongozo rasmi') }}</span><small>{{ copy('Articles, bulletins and guides', 'Makala, taarifa na miongozo') }}</small>
+            </a>
+          </div>
+        </section>
+
+        <!-- Quick tools that were easy to miss -->
+        <div class="edu-tools-row" aria-label="Education tools">
+          <a routerLink="/inform-risk" class="edu-tool">
+            <i class="fas fa-map-marked-alt"></i>
+            <span>{{ copy('Explore INFORM map', 'Chunguza ramani ya INFORM') }}</span>
+            <small>{{ copy('Council risk choropleth', 'Hatari kwa halmashauri') }}</small>
+          </a>
+          <a routerLink="/subscribe" class="edu-tool">
+            <i class="fas fa-bell"></i>
+            <span>{{ copy('Subscribe to alerts', 'Jisajili kwa tahadhari') }}</span>
+            <small>{{ copy('SMS / email free of charge', 'SMS / barua pepe bila malipo') }}</small>
+          </a>
+          <a routerLink="/portal" class="edu-tool">
+            <i class="fas fa-broadcast-tower"></i>
+            <span>{{ copy('Live portal', 'Portal ya moja kwa moja') }}</span>
+            <small>{{ copy('Active warnings & incidents', 'Tahadhari na matukio yaliyo hai') }}</small>
+          </a>
+          <a routerLink="/publications/Policies" class="edu-tool">
+            <i class="fas fa-file-pdf"></i>
+            <span>{{ copy('Policies & frameworks', 'Sera na mifumo') }}</span>
+            <small>{{ copy('Official documents', 'Nyaraka rasmi') }}</small>
+          </a>
+        </div>
 
         <!-- Featured: the INFORM guided course + the National Hazard Calendar, as equals -->
         <div class="edu-featured">
@@ -106,7 +169,7 @@ interface EduItem {
         }
 
         <!-- Hazard guide hubs: one repository per hazard (action guides, videos, materials by audience) -->
-        <div class="edu-sec-head">
+        <div class="edu-sec-head" id="hazard-guides">
           <h2>{{ L.t('lbl_know_your_hazards') }}</h2>
           <p>{{ L.lang() === 'sw' ? 'Mwongozo wa kila janga — hatua za kuchukua kabla, wakati na baada' : 'A guide for every hazard — what to do before, during and after' }}</p>
         </div>
@@ -136,9 +199,19 @@ interface EduItem {
         </div>
 
         <!-- Published guidelines, bulletins and articles -->
-        <div class="edu-sec-head">
+        <div class="edu-sec-head" id="guides-articles">
           <h2>{{ L.t('edu_guides_articles') }}</h2>
           <p>{{ L.lang() === 'sw' ? 'Miongozo, taarifa na makala zilizochapishwa na Idara ya Menejimenti ya Maafa' : 'Published guidelines, bulletins and articles from the Disaster Management Department' }}</p>
+        </div>
+        <div class="edu-content-tools">
+          <select [value]="typeF()" (change)="typeF.set($any($event.target).value)">
+            <option value="">{{ copy('All content types', 'Aina zote za maudhui') }}</option>
+            @for (t of contentTypes(); track t) { <option [value]="t">{{ t }}</option> }
+          </select>
+          <select [value]="audienceF()" (change)="audienceF.set($any($event.target).value)">
+            <option value="">{{ copy('All audiences', 'Hadhira zote') }}</option>
+            @for (a of contentAudiences(); track a) { <option [value]="a">{{ a }}</option> }
+          </select>
         </div>
         <div class="art-grid">
           @for (c of filteredContents(); track c.id) {
@@ -185,6 +258,32 @@ interface EduItem {
     .edu-stats { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 0.9rem;
       font-size: 0.9rem; color: var(--text-secondary, #64748b); }
     .edu-stats b { color: var(--text-primary, #2C3E50); font-weight: 800; }
+
+    /* --- Quick tools --- */
+    .edu-tools-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr)); gap:0.75rem; margin-top:1.2rem; }
+    .edu-tool { display:flex; flex-direction:column; gap:0.2rem; padding:0.9rem 1rem; border:1px solid rgba(13,43,77,0.12);
+      border-radius:10px; background:var(--card-bg,#fff); text-decoration:none; color:var(--text-primary,#2C3E50);
+      box-shadow:0 2px 8px rgba(9,30,58,0.05); }
+    .edu-tool i { color:#0d3b66; font-size:1.1rem; margin-bottom:0.2rem; }
+    .edu-tool span { font-weight:800; font-size:0.95rem; }
+    .edu-tool small { color:var(--text-secondary,#64748b); line-height:1.35; }
+    .edu-tool:hover { border-color:#0d3b66; background:#eef6ff; }
+
+    /* --- Learning pathway --- */
+    .edu-pathway { display:grid; grid-template-columns:minmax(260px, 0.8fr) minmax(0, 1.2fr); gap:1.2rem;
+      margin:1.6rem 0 0; padding:1.2rem; border:1px solid rgba(13,43,77,0.12); border-radius:12px;
+      background:var(--card-bg,#fff); box-shadow:0 2px 8px rgba(9,30,58,0.05); }
+    .edu-path-eyebrow { font-size:0.78rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#0d3b66; }
+    .edu-pathway h2 { margin:0.2rem 0 0.35rem; font-size:1.35rem; font-weight:800; color:var(--text-primary,#2C3E50); }
+    .edu-pathway p { margin:0; color:var(--text-secondary,#64748b); line-height:1.65; }
+    .edu-path-steps { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0.65rem; }
+    .edu-path-step { min-height:112px; display:flex; flex-direction:column; gap:0.25rem; justify-content:center;
+      padding:0.9rem; border:1px solid rgba(13,43,77,0.12); border-radius:10px; text-decoration:none;
+      background:#f8fafc; color:var(--text-primary,#2C3E50); }
+    .edu-path-step b { font-size:0.78rem; color:#0d3b66; letter-spacing:0.08em; }
+    .edu-path-step span { font-weight:800; line-height:1.25; }
+    .edu-path-step small { color:var(--text-secondary,#64748b); line-height:1.35; }
+    .edu-path-step:hover { border-color:#0d3b66; background:#eef6ff; }
 
     /* --- Featured row (flat solids, no gradients) --- */
     .edu-featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 1rem; margin: 1.8rem 0 0; }
@@ -239,6 +338,9 @@ interface EduItem {
 
     /* --- Guides & Articles --- */
     .art-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 1.1rem; }
+    .edu-content-tools { display:flex; flex-wrap:wrap; gap:0.75rem; margin:-0.55rem 0 1rem; }
+    .edu-content-tools select { min-height:42px; min-width:190px; border:1.5px solid rgba(13,43,77,0.18);
+      border-radius:8px; background:var(--card-bg,#fff); color:var(--text-primary,#2C3E50); padding:0 0.75rem; font:inherit; }
     .art-card { flex-direction: column; gap: 0.6rem; padding: 1.2rem 1.3rem; height: 100%; }
     .art-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .art-type { display: inline-block; background: rgba(0, 51, 102, 0.08); color: #0d3b66; font-size: 0.8rem;
@@ -273,6 +375,12 @@ interface EduItem {
 
     @media (max-width: 640px) {
       .edu-wrap { padding: 6rem 1rem 2.5rem; }
+      .edu-pathway { grid-template-columns:1fr; }
+      .edu-path-steps { grid-template-columns:1fr; }
+    }
+    @media (min-width: 641px) and (max-width: 980px) {
+      .edu-pathway { grid-template-columns:1fr; }
+      .edu-path-steps { grid-template-columns:repeat(2,minmax(0,1fr)); }
     }
   `],
 })
@@ -280,14 +388,29 @@ export class EducationComponent {
   L = inject(PortalLabels);
   private http = inject(HttpClient);
 
-  /** Swahili value when the visitor is on Swahili AND the _sw field is non-empty; otherwise English. */
+  /** UI chrome strings always authored in both languages — never mix. */
+  copy(en: string, sw: string): string { return this.L.lang() === 'sw' ? sw : en; }
   eduTitle(c: EduItem): string { return this.pick(c.titleSw, c.title); }
   eduSummary(c: EduItem): string { return this.pick(c.summarySw, c.summary); }
   eduBody(c: EduItem): string { return this.pick(c.fullContentSw, c.fullContent ?? ''); }
   hazardName(hz: HazardCard): string { return this.pick(hz.nameSw, hz.name); }
   hazardDesc(hz: HazardCard): string { return this.pick(hz.descriptionSw, hz.descriptionEn); }
-  private pick(sw: string | undefined | null, en: string): string {
-    return this.L.lang() === 'sw' && sw != null && sw.trim() !== '' ? sw : en;
+  /**
+   * Language isolation: EN mode shows English only; SW mode shows Kiswahili only.
+   * No silent cross-language fallback (empty string when the requested edition is missing).
+   */
+  private pick(sw: string | undefined | null, en: string | undefined | null): string {
+    if (this.L.lang() === 'sw') {
+      return (sw ?? '').trim();
+    }
+    return (en ?? '').trim();
+  }
+  /** True when the visitor-language edition has a title (list filters hide the rest). */
+  hasLangEdition(c: EduItem): boolean {
+    return this.eduTitle(c).length > 0;
+  }
+  hasHazardLang(hz: HazardCard): boolean {
+    return this.hazardName(hz).length > 0;
   }
 
   contents = signal<EduItem[]>([]);
@@ -299,17 +422,38 @@ export class EducationComponent {
 
   /** Live search query — filters both the hazard hubs and the articles as the visitor types. */
   q = signal('');
+  typeF = signal('');
+  audienceF = signal('');
+  contentTypes = computed(() => [...new Set(this.contents().map(c => c.contentType).filter(Boolean))].sort());
+  contentAudiences = computed(() => [...new Set(this.contents().map(c => c.targetAudience).filter(Boolean))].sort());
   filteredHazards = computed(() => {
     const s = this.q().trim().toLowerCase();
-    if (!s) return this.hazardCards();
-    return this.hazardCards().filter(h =>
-      [h.name, h.nameSw, h.descriptionEn, h.descriptionSw].some(v => (v ?? '').toLowerCase().includes(s)));
+    const lang = this.L.lang();
+    return this.hazardCards().filter(h => {
+      if (!this.hasHazardLang(h)) return false;
+      if (!s) return true;
+      // Search only in the active language fields.
+      const hay = lang === 'sw'
+        ? [h.nameSw, h.descriptionSw]
+        : [h.name, h.descriptionEn];
+      return hay.some(v => (v ?? '').toLowerCase().includes(s));
+    });
   });
   filteredContents = computed(() => {
     const s = this.q().trim().toLowerCase();
-    if (!s) return this.contents();
-    return this.contents().filter(c =>
-      [c.title, c.titleSw, c.summary, c.summarySw].some(v => (v ?? '').toLowerCase().includes(s)));
+    const type = this.typeF();
+    const audience = this.audienceF();
+    const lang = this.L.lang();
+    return this.contents().filter(c => {
+      if (!this.hasLangEdition(c)) return false;
+      if (type && c.contentType !== type) return false;
+      if (audience && c.targetAudience !== audience) return false;
+      if (!s) return true;
+      const hay = lang === 'sw'
+        ? [c.titleSw, c.summarySw, c.contentType, c.targetAudience]
+        : [c.title, c.summary, c.contentType, c.targetAudience];
+      return hay.some(v => (v ?? '').toLowerCase().includes(s));
+    });
   });
 
   /** Reading time at ~200 words/minute over the visitor-language summary + body, minimum 1. */

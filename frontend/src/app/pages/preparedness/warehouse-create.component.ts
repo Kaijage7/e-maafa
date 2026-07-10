@@ -15,6 +15,13 @@ import { RegionDistrictPickerComponent } from '../../shell/region-district-picke
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Warehouses', url:'/m/preparedness/warehouses'}, {label:'New Warehouse'}]">
     </dmis-page-header>
 
+    <div style="margin:0 0 12px;padding:10px 12px;background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;font-size:0.8rem;color:#1e3a8a;line-height:1.4">
+      <i class="fas fa-map-marker-alt"></i>
+      Region and district stamp the store for area-specific operations and incident resource matching.
+      Sub-national officers are force-bound to their own area (payload region/district is overridden server-side).
+      Leave area empty only for genuine national/shared stores (requires national placement rights).
+    </div>
+
     <div class="panel-row">
       <dmis-panel title="Warehouse Details" icon="fa-clipboard-list">
         <div class="form-body">

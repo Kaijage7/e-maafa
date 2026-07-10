@@ -164,9 +164,14 @@ public class TaskController {
                 "select i.id, i.title, i.severity_level from public.incidents i where " + incWhere
                         + " order by i.severity_level limit 100",
                 incParams.toArray()));
-        // Source filters User::where('is_active', true); the local users read model
-        // has no such column yet — every local account is assignable.
-        out.put("users", jdbc.queryForList("select id, name from public.users order by name"));
+        // F81: only accounts that hold at least one role; cap list for picker UX.
+        out.put("users", jdbc.queryForList("""
+                select u.id, u.name
+                from public.users u
+                where exists (select 1 from public.model_has_roles mhr where mhr.model_id = u.id)
+                order by coalesce(u.seeded_officer, false), u.name
+                limit 300
+                """));
         out.put("priorities", PRIORITIES);
         out.put("statuses", STATUSES);
         // Dependency candidates: other tasks of the same incident (edit()'s rule)

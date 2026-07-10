@@ -156,7 +156,7 @@ public class IncidentTimelineController {
         StringBuilder where = new StringBuilder("i.id = ?");
         List<Object> params = new ArrayList<>();
         params.add(id);
-        jurisdiction.appendAreaScope("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
         Long found = jdbc.queryForObject("select count(*) from public.incidents i where " + where,
                 Long.class, params.toArray());
         if (found == null || found == 0) {

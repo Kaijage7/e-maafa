@@ -50,58 +50,147 @@ public class UserManagementController {
     @Operation(summary = "Users with their roles + the role catalogue + stats")
     @PreAuthorize("isAuthenticated()")
     public Map<String, Object> index(@RequestParam(required = false) String search,
-                                     @RequestParam(required = false) String role) {
+                                     @RequestParam(required = false) String role,
+                                     @RequestParam(required = false) String roleCategory,
+                                     @RequestParam(required = false) String scopeLevel,
+                                     @RequestParam(required = false) Long regionId,
+                                     @RequestParam(required = false) Long districtId,
+                                     @RequestParam(required = false) Long councilId,
+                                     @RequestParam(required = false) Boolean seeded,
+                                     @RequestParam(required = false) String accountGroup) {
         StringBuilder where = new StringBuilder(" where 1=1");
         List<Object> args = new ArrayList<>();
         if (search != null && !search.isBlank()) {
-            where.append(" and (u.name ilike ? or u.email ilike ?)");
-            args.add("%" + search + "%");
-            args.add("%" + search + "%");
+            where.append(" and (u.name ilike ? or u.email ilike ? or u.officer_position ilike ?"
+                    + " or coalesce(ag.name,'') ilike ? or coalesce(ag.acronym,'') ilike ?"
+                    + " or coalesce(st.organization, st.name, '') ilike ?)");
+            String q = "%" + search + "%";
+            args.add(q); args.add(q); args.add(q); args.add(q); args.add(q); args.add(q);
         }
         if (role != null && !role.isBlank()) {
             where.append(" and exists (select 1 from public.model_has_roles m join public.roles r2 on r2.id = m.role_id"
                     + " where m.model_id = u.id and r2.name = ?)");
             args.add(role);
         }
+        if (roleCategory != null && !roleCategory.isBlank()) {
+            where.append(" and exists (select 1 from public.model_has_roles m join public.roles r2 on r2.id = m.role_id"
+                    + " where m.model_id = u.id and coalesce(r2.category, 'Other') = ?)");
+            args.add(roleCategory);
+        }
+        if (scopeLevel != null && !scopeLevel.isBlank()) {
+            where.append(" and exists (select 1 from public.model_has_roles m join public.roles r2 on r2.id = m.role_id"
+                    + " where m.model_id = u.id and coalesce(r2.scope_level, 'system') = ?)");
+            args.add(scopeLevel);
+        }
+        if (regionId != null) {
+            where.append(" and u.region_id = ?");
+            args.add(regionId);
+        }
+        if (districtId != null) {
+            where.append(" and u.district_id = ?");
+            args.add(districtId);
+        }
+        if (councilId != null) {
+            where.append(" and u.council_id = ?");
+            args.add(councilId);
+        }
+        if (seeded != null) {
+            where.append(" and coalesce(u.seeded_officer, false) = ?");
+            args.add(seeded);
+        }
+        // Smart account groups — keeps the 900+ area seats from drowning MDA/partner focals
+        if (accountGroup != null && !accountGroup.isBlank()) {
+            switch (accountGroup.trim().toLowerCase()) {
+                case "mda", "sector" -> where.append(" and u.agency_id is not null");
+                case "partner", "stakeholder" -> where.append(" and u.stakeholder_id is not null");
+                case "area", "area_seats" -> where.append(
+                        " and (u.region_id is not null or u.district_id is not null or u.council_id is not null)"
+                                + " and u.agency_id is null and u.stakeholder_id is null");
+                case "national", "system" -> where.append(
+                        " and u.agency_id is null and u.stakeholder_id is null"
+                                + " and u.region_id is null and u.district_id is null and u.council_id is null");
+                case "institution" -> where.append(
+                        " and (u.agency_id is not null or u.stakeholder_id is not null)");
+                default -> { /* all */ }
+            }
+        }
         List<Map<String, Object>> users = jdbc.queryForList(
                 "select u.id, u.name, u.email, u.email_verified_at as \"emailVerifiedAt\","
                         + " to_char(u.created_at,'DD Mon YYYY') as \"createdAt\","
                         + " u.region_id as \"regionId\", reg.name as \"regionName\","
                         + " u.district_id as \"districtId\", dis.name as \"districtName\","
+                        + " u.council_id as \"councilId\", co.name as \"councilName\","
                         + " u.agency_id as \"agencyId\", coalesce(ag.acronym, ag.name) as \"agencyName\","
+                        + " ag.institution_class as \"agencyClass\","
                         + " u.stakeholder_id as \"stakeholderId\","
                         + " coalesce(st.organization, st.name) as \"stakeholderName\","
-                        + " coalesce((select string_agg(r.name, ', ' order by r.name)"
+                        + " st.institution_class as \"stakeholderClass\","
+                        + " u.officer_position as \"officerPosition\", u.position_key as \"positionKey\","
+                        + " coalesce(u.seeded_officer, false) as \"seededOfficer\","
+                        + " case"
+                        + "   when u.agency_id is not null then 'MDA / Agency'"
+                        + "   when u.stakeholder_id is not null then 'Partner'"
+                        + "   when u.region_id is not null or u.district_id is not null or u.council_id is not null then 'Area seat'"
+                        + "   else 'National / System'"
+                        + " end as \"accountGroup\","
+                        + " coalesce((select string_agg(r.name, ', ' order by coalesce(r.sort_order, 500), r.name)"
                         + "   from public.model_has_roles mhr join public.roles r on r.id = mhr.role_id"
                         + "   where mhr.model_id = u.id), '') as roles"
                         + " from public.users u"
                         + " left join public.regions reg on reg.id = u.region_id"
                         + " left join public.districts dis on dis.id = u.district_id"
+                        + " left join public.councils co on co.id = u.council_id"
                         + " left join public.agencies ag on ag.id = u.agency_id"
                         + " left join public.stakeholders st on st.id = u.stakeholder_id"
-                        + where + " order by u.name", args.toArray());
+                        + where
+                        + " order by case"
+                        + "   when u.agency_id is not null then 1"
+                        + "   when u.stakeholder_id is not null then 2"
+                        + "   when u.region_id is not null or u.district_id is not null or u.council_id is not null then 4"
+                        + "   else 3 end,"
+                        + " coalesce(ag.institution_class, st.institution_class, ''),"
+                        + " u.name",
+                args.toArray());
         for (Map<String, Object> u : users) {
             String roles = String.valueOf(u.getOrDefault("roles", ""));
             u.put("roleList", roles.isEmpty() ? List.of() : List.of(roles.split(", ")));
         }
         Map<String, Object> out = new LinkedHashMap<>();
+        List<Map<String, Object>> roleDetails = RoleCatalogue.roleDetails(jdbc);
         out.put("users", users);
-        out.put("roles", jdbc.queryForList("select name from public.roles order by name", String.class));
-        // Attachment catalogues for the create/edit modal — served here (not from the content/stakeholder
-        // modules) so the User Management screen works for admins who hold only user_management.manage.
+        out.put("roles", RoleCatalogue.names(roleDetails));
+        out.put("roleDetails", roleDetails);
+        out.put("roleGroups", RoleCatalogue.groups(roleDetails));
         Map<String, Object> lookups = new LinkedHashMap<>();
         lookups.put("regions", jdbc.queryForList("select id, name from public.regions order by name"));
         lookups.put("agencies", jdbc.queryForList(
-                "select id, name, acronym from public.agencies where coalesce(is_active, true) = true order by name"));
+                "select id, name, acronym, institution_class as \"institutionClass\" from public.agencies"
+                        + " where coalesce(is_active, true) = true"
+                        + " order by case institution_class when 'Ministry' then 1 when 'Government Institution' then 2 else 3 end, name"));
         lookups.put("stakeholders", jdbc.queryForList(
-                "select id, coalesce(organization, name) as name from public.stakeholders"
-                        + " where coalesce(is_active, true) = true order by 2"));
+                "select id, coalesce(organization, name) as name, institution_class as \"institutionClass\""
+                        + " from public.stakeholders where coalesce(is_active, true) = true"
+                        + " order by institution_class nulls last, 2"));
         out.put("lookups", lookups);
         out.put("stats", jdbc.queryForMap(
                 "select count(*) as total,"
                         + " (select count(*) from public.model_has_roles mhr join public.roles r on r.id = mhr.role_id"
                         + "   where r.name = 'Super Admin') as \"superAdmins\","
-                        + " count(*) filter (where email_verified_at is not null) as verified from public.users"));
+                        + " count(*) filter (where email_verified_at is not null) as verified,"
+                        + " count(*) filter (where coalesce(seeded_officer, false)) as \"seededOfficers\","
+                        + " count(*) filter (where region_id is not null or district_id is not null or council_id is not null) as \"areaLinked\","
+                        + " count(*) filter (where agency_id is not null) as \"mdaFocals\","
+                        + " count(*) filter (where stakeholder_id is not null) as \"partnerFocals\","
+                        + " count(*) filter (where agency_id is null and stakeholder_id is null"
+                        + "   and region_id is null and district_id is null and council_id is null) as \"nationalSystem\""
+                        + " from public.users"));
+        out.put("accountGroups", List.of(
+                Map.of("code", "institution", "label", "MDA + Partner focals (M&E feeders)"),
+                Map.of("code", "mda", "label", "MDA / Agency focals"),
+                Map.of("code", "partner", "label", "Partners"),
+                Map.of("code", "national", "label", "National / System"),
+                Map.of("code", "area", "label", "Area seats (RC/RAS/DED/DAS…)"),
+                Map.of("code", "all", "label", "All accounts")));
         return out;
     }
 
@@ -125,12 +214,14 @@ public class UserManagementController {
         jdbc.queryForObject("select setval('public.users_id_seq', greatest("
                 + "coalesce((select max(id) from public.users), 1), (select last_value from public.users_id_seq)))",
                 Long.class);
+        // Admin-issued password → must_change_password so the user sets their own secret on first login (PSA v).
         Long id = jdbc.queryForObject(
                 "insert into public.users(name, email, password, email_verified_at,"
-                        + " region_id, district_id, agency_id, stakeholder_id, created_at, updated_at)"
-                        + " values (?,?,?, now(), ?,?,?,?, now(), now()) returning id",
+                        + " region_id, district_id, council_id, agency_id, stakeholder_id,"
+                        + " must_change_password, created_at, updated_at)"
+                        + " values (?,?,?, now(), ?,?,?,?,?, true, now(), now()) returning id",
                 Long.class, name, email, encoder.encode(password),
-                area.regionId(), area.districtId(), area.agencyId(), area.stakeholderId());
+                area.regionId(), area.districtId(), area.councilId(), area.agencyId(), area.stakeholderId());
         setRoles(id, roleList(req.get("roles")));
         syncStakeholderLink(id, area.stakeholderId());
         return Map.of("id", id, "message", "User created");
@@ -154,12 +245,12 @@ public class UserManagementController {
                 + " updated_at = now() where id = ?", str(req.get("name")), email, id);
         // Area attachment is a REPLACE, but only when the caller sends any of the keys (a legacy
         // name/email-only body leaves the attachment untouched; an explicit null clears it).
-        if (req.containsKey("regionId") || req.containsKey("districtId")
+        if (req.containsKey("regionId") || req.containsKey("districtId") || req.containsKey("councilId")
                 || req.containsKey("agencyId") || req.containsKey("stakeholderId")) {
             Area area = areaAttachment(req);
-            jdbc.update("update public.users set region_id = ?, district_id = ?, agency_id = ?,"
+            jdbc.update("update public.users set region_id = ?, district_id = ?, council_id = ?, agency_id = ?,"
                             + " stakeholder_id = ?, updated_at = now() where id = ?",
-                    area.regionId(), area.districtId(), area.agencyId(), area.stakeholderId(), id);
+                    area.regionId(), area.districtId(), area.councilId(), area.agencyId(), area.stakeholderId(), id);
             syncStakeholderLink(id, area.stakeholderId());
         }
         return Map.of("message", "User updated");
@@ -184,9 +275,12 @@ public class UserManagementController {
         find(id);
         String password = req(req, "password");
         validatePassword(password);
-        jdbc.update("update public.users set password = ?, updated_at = now() where id = ?",
-                encoder.encode(password), id);
-        return Map.of("message", "Password reset");
+        jdbc.update("""
+                update public.users
+                   set password = ?, must_change_password = true, updated_at = now()
+                 where id = ?
+                """, encoder.encode(password), id);
+        return Map.of("message", "Password reset — user must change it on next sign-in");
     }
 
     /** Admin-set passwords use the same shared policy as self-service change (single source of truth). */
@@ -209,21 +303,41 @@ public class UserManagementController {
     // ── helpers ──
 
     /** The user's jurisdiction/institution attachment — what JurisdictionScope reads for area scoping. */
-    private record Area(Long regionId, Long districtId, Long agencyId, Long stakeholderId) {
+    private record Area(Long regionId, Long districtId, Long councilId, Long agencyId, Long stakeholderId) {
     }
 
     /**
-     * Parse + validate the optional attachment ids ({@code regionId}/{@code districtId}/{@code agencyId}/
-     * {@code stakeholderId}). Every id must exist; a district must belong to the given region (and fills
-     * the region in when omitted, so a district officer always carries a coherent region_id too).
+     * Parse + validate the optional attachment ids ({@code regionId}/{@code districtId}/{@code councilId}/
+     * {@code agencyId}/{@code stakeholderId}). Every id must exist; a council fills its parent district
+     * and region when omitted, so an LGA officer always carries a coherent region_id + district_id too.
      */
     private Area areaAttachment(Map<String, Object> req) {
         Long regionId = idOf(req.get("regionId"), "regionId");
         Long districtId = idOf(req.get("districtId"), "districtId");
+        Long councilId = idOf(req.get("councilId"), "councilId");
         Long agencyId = idOf(req.get("agencyId"), "agencyId");
         Long stakeholderId = idOf(req.get("stakeholderId"), "stakeholderId");
         if (regionId != null && !exists("regions", regionId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Region " + regionId + " does not exist");
+        }
+        if (councilId != null) {
+            List<Map<String, Object>> parent = jdbc.queryForList(
+                    "select region_id, district_id from public.councils where id = ?", councilId);
+            if (parent.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Council/LGA " + councilId + " does not exist");
+            }
+            Long councilRegion = ((Number) parent.get(0).get("region_id")).longValue();
+            Long councilDistrict = ((Number) parent.get(0).get("district_id")).longValue();
+            if (regionId != null && !regionId.equals(councilRegion)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Council/LGA " + councilId + " does not belong to region " + regionId);
+            }
+            if (districtId != null && !districtId.equals(councilDistrict)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Council/LGA " + councilId + " does not belong to district " + districtId);
+            }
+            regionId = councilRegion;
+            districtId = councilDistrict;
         }
         if (districtId != null) {
             List<Long> parent = jdbc.queryForList(
@@ -244,7 +358,7 @@ public class UserManagementController {
         if (stakeholderId != null && !exists("stakeholders", stakeholderId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stakeholder " + stakeholderId + " does not exist");
         }
-        return new Area(regionId, districtId, agencyId, stakeholderId);
+        return new Area(regionId, districtId, councilId, agencyId, stakeholderId);
     }
 
     /**

@@ -24,9 +24,15 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     private final JwtAuthenticationConverter jwtAuthenticationConverter;
+    private final TokenRevocationFilter tokenRevocationFilter;
+    private final RestrictedTokenUseFilter restrictedTokenUseFilter;
 
-    public SecurityConfig(JwtAuthenticationConverter jwtAuthenticationConverter) {
+    public SecurityConfig(JwtAuthenticationConverter jwtAuthenticationConverter,
+                          TokenRevocationFilter tokenRevocationFilter,
+                          RestrictedTokenUseFilter restrictedTokenUseFilter) {
         this.jwtAuthenticationConverter = jwtAuthenticationConverter;
+        this.tokenRevocationFilter = tokenRevocationFilter;
+        this.restrictedTokenUseFilter = restrictedTokenUseFilter;
     }
 
     @Bean
@@ -44,9 +50,11 @@ public class SecurityConfig {
                         .requestMatchers(SecurityPaths.publicMatchers()).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
-                // Module-level permission gate runs after token auth populates the SecurityContext.
-                .addFilterAfter(new ModuleGuardFilter(),
-                        org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter.class);
+                // After JWT is authenticated: denylist → limited token_use → module permission map.
+                .addFilterAfter(tokenRevocationFilter,
+                        org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter.class)
+                .addFilterAfter(restrictedTokenUseFilter, TokenRevocationFilter.class)
+                .addFilterAfter(new ModuleGuardFilter(), RestrictedTokenUseFilter.class);
         return http.build();
     }
 }

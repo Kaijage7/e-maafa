@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { RegionDistrictPickerComponent } from '../../shell/region-district-picker.component';
+import { AuthService } from '../../core/auth.service';
 
 /** Evacuation Centers → New Center — a real create form that POSTs to the Spring Boot API. */
 @Component({
@@ -11,9 +12,25 @@ import { RegionDistrictPickerComponent } from '../../shell/region-district-picke
   standalone: true,
   imports: [PageHeaderComponent, PanelComponent, RegionDistrictPickerComponent],
   template: `
-    <dmis-page-header title="New Evacuation Center" icon="fa-house-user"
-      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Evacuation Centers', url:'/m/preparedness/evacuation-centers'}, {label:'New Center'}]">
+    <dmis-page-header [title]="editId() ? 'Edit Evacuation Center' : 'New Evacuation Center'" icon="fa-house-user"
+      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Evacuation Centers', url:'/m/preparedness/evacuation-centers'}, {label: editId() ? 'Edit' : 'New Center'}]">
     </dmis-page-header>
+
+    @if (!canManage()) {
+      <div class="panel-row">
+        <dmis-panel title="Access" icon="fa-lock">
+          <div class="form-body">
+            <p style="margin:0;color:var(--text-mid);font-size:0.95rem">
+              Creating or editing evacuation centres requires <b>preparedness.manage</b>.
+              You can still open the registry and use EW/incident route estimates.
+            </p>
+            <div class="form-actions" style="margin-top:1rem">
+              <button type="button" class="btn-add" (click)="cancel()"><i class="fas fa-arrow-left"></i> Back to registry</button>
+            </div>
+          </div>
+        </dmis-panel>
+      </div>
+    } @else {
 
     <div class="panel-row">
       <dmis-panel title="Center Details" icon="fa-clipboard-list">
@@ -73,6 +90,7 @@ import { RegionDistrictPickerComponent } from '../../shell/region-district-picke
         </div>
       </dmis-panel>
     </div>
+    }
   `,
   styles: [`
     .form-body { padding: 1.1rem 1.2rem; }
@@ -94,7 +112,9 @@ export class EvacuationCenterCreateComponent implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private auth = inject(AuthService);
   editId = signal<number | null>(null);
+  canManage = computed(() => this.auth.hasPermission('preparedness.manage'));
 
   types = ['Church hall', 'Community center', 'School', 'Stadium', 'Government building', 'Religious facility', 'Open ground'];
   statuses = ['Active', 'Under renovation', 'Inactive', 'Full'];
@@ -137,6 +157,7 @@ export class EvacuationCenterCreateComponent implements OnInit {
   }
 
   submit(): void {
+    if (!this.canManage()) { this.error.set('preparedness.manage is required to save.'); return; }
     if (!this.valid()) { this.error.set('Center Name, Type and Status are required.'); return; }
     this.saving.set(true);
     this.error.set('');

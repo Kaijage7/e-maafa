@@ -14,6 +14,7 @@ interface WarehouseRow {
   id: number; name: string; cityOrRegion: string; address: string; zone: string; capacitySqm: number | null;
   status: string; stocks: number; contactName: string; contactPhone: string;
   latitude: number | null; longitude: number | null;
+  region?: string | null; district?: string | null;
 }
 interface WhResponse {
   warehouses: WarehouseRow[];
@@ -29,6 +30,14 @@ interface WhResponse {
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Warehouses'}]">
       <a class="btn-add" routerLink="/m/preparedness/warehouses/create"><i class="fas fa-plus"></i> New Warehouse</a>
     </dmis-page-header>
+
+    <div style="margin:0 0 12px;padding:10px 12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:0.8rem;color:#166534;line-height:1.4">
+      <i class="fas fa-link"></i>
+      <b>Area-specific stores.</b> Region/district officers only see (and create) warehouses in their own area.
+      During incidents, resource requests auto-prefer a warehouse matching the incident district, then region.
+      When there is no incident traffic, this registry is for <b>preparedness stocking</b> — use Warehouse Ops to intake/transfer stock.
+      National/zonal shared stores require the <code>warehouse_and_stock.view_national</code> permission (System Settings → Roles).
+    </div>
 
     <div class="stats-row">
       <dmis-stat-card [value]="stats().total" label="Total Warehouses" icon="fa-list" color="#198754" />
@@ -71,13 +80,20 @@ interface WhResponse {
             <div style="overflow-x:auto;">
               <table class="r-table">
                 <thead><tr>
-                  <th>Name</th><th>Location</th><th>Zone</th><th>Capacity (sqm)</th>
+                  <th>Name</th><th>Area</th><th>Location</th><th>Zone</th><th>Capacity (sqm)</th>
                   <th>Status</th><th>Stock (units)</th><th>Contact</th><th>Actions</th>
                 </tr></thead>
                 <tbody>
                   @for (w of filtered(); track w.name) {
                     <tr class="data-row">
                       <td><div class="r-title">{{ w.name }}</div></td>
+                      <td style="font-size:0.78rem;color:#475569">
+                        @if (w.region || w.district) {
+                          {{ w.region || '—' }}@if (w.district) { · {{ w.district }} }
+                        } @else {
+                          <span style="color:#94a3b8">National / shared</span>
+                        }
+                      </td>
                       <td>
                         <div style="font-size:0.82rem;color:var(--text-mid);">{{ w.cityOrRegion || '-' }}</div>
                         <div class="r-subtitle">{{ w.address }}</div>

@@ -131,7 +131,9 @@ public class EwBulletinIngestController {
         // can never mark the ingest rollback-only. (code/warningId/created are effectively final here.)
         Runnable notifyReceived = () -> {
             try {
-                notifications.notifyAllUsers(tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
+                // F72: approvers only — not every DMIS account.
+                notifications.notifyRoles(java.util.List.of("EOCC", "Director", "Asst. Director", "Super Admin"),
+                        tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
                         "ew_bulletin_received", "Early-warning bulletin received",
                         "Bulletin " + code + " (" + created + " hazard area" + (created == 1 ? "" : "s")
                                 + ") was received from PMO and is pending approval.",

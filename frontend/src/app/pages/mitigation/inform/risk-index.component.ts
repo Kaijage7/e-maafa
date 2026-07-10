@@ -1,4 +1,5 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { AuthService } from '../../../core/auth.service';
 import { PageHeaderComponent } from '../../../shell/page-header.component';
 import { InformMapComponent } from './inform-map.component';
 import { InformRegistryComponent } from './inform-registry.component';
@@ -33,11 +34,17 @@ type Tab = 'map' | 'registry' | 'analytics' | 'entry' | 'approvals';
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Risk Index'}]" />
 
     <div class="tabbar">
-      <button [class.on]="tab()==='map'" (click)="tab.set('map')"><i class="fas fa-map-marked-alt"></i> Risk Map</button>
-      <button [class.on]="tab()==='registry'" (click)="tab.set('registry')"><i class="fas fa-table-list"></i> Indicators</button>
-      <button [class.on]="tab()==='analytics'" (click)="tab.set('analytics')"><i class="fas fa-chart-column"></i> Analytics</button>
-      <button [class.on]="tab()==='entry'" (click)="tab.set('entry')"><i class="fas fa-keyboard"></i> Data Entry</button>
-      <button [class.on]="tab()==='approvals'" (click)="tab.set('approvals')"><i class="fas fa-check-double"></i> Approvals</button>
+      @if (canView()) {
+        <button [class.on]="tab()==='map'" (click)="setTab('map')"><i class="fas fa-map-marked-alt"></i> Risk Map</button>
+        <button [class.on]="tab()==='registry'" (click)="setTab('registry')"><i class="fas fa-table-list"></i> Indicators</button>
+        <button [class.on]="tab()==='analytics'" (click)="setTab('analytics')"><i class="fas fa-chart-column"></i> Analytics</button>
+      }
+      @if (canCreate()) {
+        <button [class.on]="tab()==='entry'" (click)="setTab('entry')"><i class="fas fa-keyboard"></i> Data Entry</button>
+      }
+      @if (canApprove()) {
+        <button [class.on]="tab()==='approvals'" (click)="setTab('approvals')"><i class="fas fa-check-double"></i> Approvals</button>
+      }
     </div>
 
     @switch (tab()) {
@@ -49,6 +56,50 @@ type Tab = 'map' | 'registry' | 'analytics' | 'entry' | 'approvals';
     }
   `,
 })
-export class RiskIndexComponent {
+export class RiskIndexComponent implements OnInit {
+  private auth = inject(AuthService);
   tab = signal<Tab>('map');
+
+  ngOnInit(): void {
+    this.ensureAllowedTab();
+  }
+
+  canView(): boolean {
+    return this.auth.hasPermission('risk_index.view');
+  }
+
+  canCreate(): boolean {
+    return this.auth.hasPermission('risk_index.create');
+  }
+
+  canApprove(): boolean {
+    return this.auth.hasPermission('risk_index.approve');
+  }
+
+  setTab(tab: Tab): void {
+    if (!this.isAllowed(tab)) {
+      return;
+    }
+    this.tab.set(tab);
+  }
+
+  private ensureAllowedTab(): void {
+    if (this.isAllowed(this.tab())) {
+      return;
+    }
+    const first = (['map', 'registry', 'analytics', 'entry', 'approvals'] as Tab[]).find(t => this.isAllowed(t));
+    if (first) {
+      this.tab.set(first);
+    }
+  }
+
+  private isAllowed(tab: Tab): boolean {
+    if (tab === 'entry') {
+      return this.canCreate();
+    }
+    if (tab === 'approvals') {
+      return this.canApprove();
+    }
+    return this.canView();
+  }
 }

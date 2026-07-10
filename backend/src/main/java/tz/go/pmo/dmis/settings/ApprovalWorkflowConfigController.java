@@ -59,8 +59,11 @@ public class ApprovalWorkflowConfigController {
                             + " where module_id = ? order by \"order\", level", m.get("id")));
         }
         Map<String, Object> out = new LinkedHashMap<>();
+        List<Map<String, Object>> roleDetails = RoleCatalogue.roleDetails(jdbc);
         out.put("modules", modules);
-        out.put("roles", jdbc.queryForList("select name from public.roles order by name", String.class));
+        out.put("roles", RoleCatalogue.names(roleDetails));
+        out.put("roleDetails", roleDetails);
+        out.put("roleGroups", RoleCatalogue.groups(roleDetails));
         return out;
     }
 

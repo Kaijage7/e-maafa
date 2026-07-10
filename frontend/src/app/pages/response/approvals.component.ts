@@ -332,7 +332,7 @@ export class ResponseApprovalsComponent implements OnInit {
     }
     ensureSweetAlert().then(() => {
       Swal.fire({
-        title: `Approve ${ids.length} request${ids.length === 1 ? '' : 's'}?`,
+        titleText: `Approve ${ids.length} request${ids.length === 1 ? '' : 's'}?`,
         icon: 'question',
         input: 'textarea',
         inputLabel: 'Remarks (optional)',
@@ -385,7 +385,7 @@ export class ResponseApprovalsComponent implements OnInit {
     const id = this.detail()!.id;
     ensureSweetAlert().then(() => {
       Swal.fire({
-        title, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
+        titleText: title, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
         ...(inputLabel ? { input: 'textarea', inputLabel } : {}),
         preConfirm: (value: string) => {
           if (required && !value?.trim()) {

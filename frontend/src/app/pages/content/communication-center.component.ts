@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -116,14 +117,15 @@ const STATUS_BADGE: Record<string, string> = {
         </dmis-panel>
       </div>
     } @else if (tab() === 'sms') {
-      <page-sms-management [embedded]="true" />
+      <page-sms-management [embedded]="true" [canSend]="canSend()" />
     } @else {
-      <page-email-management [embedded]="true" />
+      <page-email-management [embedded]="true" [canSend]="canSend()" />
     }
   `,
 })
 export class CommunicationCenterComponent {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   private base = '/api/v1/communication/overview';
 
   readonly tabs = [
@@ -143,6 +145,7 @@ export class CommunicationCenterComponent {
   byChannel = computed<any[]>(() => this.data()?.by_channel ?? []);
   byCorner = computed<any[]>(() => this.data()?.by_corner ?? []);
   recent = computed<any[]>(() => this.data()?.recent ?? []);
+  canSend = computed(() => this.auth.hasPermission('communication_and_alerts.send'));
 
   private maxChannel = computed<number>(() => Math.max(1, ...this.byChannel().map(c => Number(c.count) || 0)));
 

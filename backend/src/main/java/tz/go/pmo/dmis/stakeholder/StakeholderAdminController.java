@@ -335,7 +335,8 @@ public class StakeholderAdminController {
 
     /**
      * Link (or unlink) a login account to this stakeholder so the partner can submit donations as
-     * themselves from Open Needs. One login maps to one partner; passing a blank email unlinks.
+     * themselves from the partner-facing donation/support pages. One login maps to one partner; passing a
+     * blank email unlinks.
      */
     @PutMapping("/{id}/link-user")
     @Operation(summary = "Link a login account to this partner (enables self-service donations)")
@@ -364,7 +365,7 @@ public class StakeholderAdminController {
         jdbc.update("update public.users set stakeholder_id = null, updated_at = now() where stakeholder_id = ? and id <> ?", id, uid);
         jdbc.update("update public.stakeholders set user_id = ?, updated_at = now() where id = ?", uid, id);
         jdbc.update("update public.users set stakeholder_id = ?, updated_at = now() where id = ?", id, uid);
-        return Map.of("id", id, "userId", uid, "message", "Login linked. The partner can now donate from Open Needs.");
+        return Map.of("id", id, "userId", uid, "message", "Login linked. The partner can now donate from the Stakeholder Portal.");
     }
 
     private void find(long id) {

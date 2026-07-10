@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
+import { FontScaleService } from '../core/font-scale.service';
 
 interface Showcase { src: string; tag: string; icon: string; title: string; desc: string; }
 
@@ -17,6 +18,11 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
   imports: [FormsModule, RouterLink],
   template: `
     <a href="/" class="back-home"><i class="fas fa-arrow-left"></i> Home</a>
+    <div class="font-scale-login" role="group" aria-label="Text size">
+      <button type="button" class="fs-btn" (click)="font.decrease()" [disabled]="!font.canDecrease()" title="Smaller text">A−</button>
+      <button type="button" class="fs-label" (click)="font.reset()" title="Reset text size">{{ font.percentLabel() }}</button>
+      <button type="button" class="fs-btn" (click)="font.increase()" [disabled]="!font.canIncrease()" title="Larger text">A+</button>
+    </div>
 
     <div class="login-page">
       <div class="login-card">
@@ -76,30 +82,112 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
           @if (error()) {
             <div class="alert-card"><i class="fas fa-exclamation-circle"></i><span>{{ error() }}</span></div>
           }
+          @if (info()) {
+            <div class="alert-card info"><i class="fas fa-shield-halved"></i><span>{{ info() }}</span></div>
+          }
 
-          <form (ngSubmit)="onSubmit()">
-            <div class="field-group">
-              <input type="email" name="email" [(ngModel)]="email" placeholder=" " required autocomplete="email">
-              <i class="fas fa-envelope f-icon"></i>
-              <span class="f-label">Email Address</span>
-            </div>
-            <div class="field-group">
-              <input [type]="showPwd() ? 'text' : 'password'" name="password" [(ngModel)]="password" placeholder=" " required autocomplete="current-password">
-              <i class="fas fa-lock f-icon"></i>
-              <span class="f-label">Password</span>
-              <button type="button" class="pwd-toggle" (click)="showPwd.set(!showPwd())">
-                <i class="fas" [class.fa-eye]="!showPwd()" [class.fa-eye-slash]="showPwd()"></i>
+          @if (step() === 'credentials') {
+            <form (ngSubmit)="onSubmit()">
+              <div class="field-group">
+                <input type="email" name="email" [(ngModel)]="email" placeholder=" " required autocomplete="email">
+                <i class="fas fa-envelope f-icon"></i>
+                <span class="f-label">Email Address</span>
+              </div>
+              <div class="field-group">
+                <input [type]="showPwd() ? 'text' : 'password'" name="password" [(ngModel)]="password" placeholder=" " required autocomplete="current-password">
+                <i class="fas fa-lock f-icon"></i>
+                <span class="f-label">Password</span>
+                <button type="button" class="pwd-toggle" (click)="showPwd.set(!showPwd())">
+                  <i class="fas" [class.fa-eye]="!showPwd()" [class.fa-eye-slash]="showPwd()"></i>
+                </button>
+              </div>
+              <div class="options-row" style="justify-content:flex-end;">
+                <a class="forgot-link" routerLink="/forgot-password">Forgot your password?</a>
+              </div>
+              <button type="submit" class="btn-primary-tz" [class.is-loading]="loading()">
+                <span class="btn-text"><i class="fas fa-right-to-bracket"></i> Sign In</span>
+                <span class="spinner"></span>
               </button>
+              <div class="register-row"><span>Accounts are issued by your system administrator.</span></div>
+            </form>
+          }
+
+          @if (step() === 'mfa') {
+            <form (ngSubmit)="onMfa()">
+              <p class="step-help">Enter the 6-digit code from your authenticator app.</p>
+              <div class="field-group">
+                <input type="text" name="mfaCode" inputmode="numeric" pattern="[0-9]*" maxlength="8"
+                       [(ngModel)]="mfaCode" placeholder=" " required autocomplete="one-time-code">
+                <i class="fas fa-mobile-screen-button f-icon"></i>
+                <span class="f-label">Authenticator code</span>
+              </div>
+              <button type="submit" class="btn-primary-tz" [class.is-loading]="loading()">
+                <span class="btn-text"><i class="fas fa-shield-halved"></i> Verify &amp; continue</span>
+                <span class="spinner"></span>
+              </button>
+              <button type="button" class="btn-link" (click)="backToCredentials()">← Back to email / password</button>
+            </form>
+          }
+
+          @if (step() === 'password') {
+            <form (ngSubmit)="onForcedPassword()">
+              <p class="step-help">Your administrator set a temporary password. Choose a new one before using the system.</p>
+              <div class="field-group">
+                <input type="password" name="curPwd" [(ngModel)]="curPwd" placeholder=" " required autocomplete="current-password">
+                <i class="fas fa-key f-icon"></i>
+                <span class="f-label">Current (temporary) password</span>
+              </div>
+              <div class="field-group">
+                <input type="password" name="newPwd" [(ngModel)]="newPwd" placeholder=" " required autocomplete="new-password">
+                <i class="fas fa-lock f-icon"></i>
+                <span class="f-label">New password</span>
+              </div>
+              <div class="field-group">
+                <input type="password" name="newPwd2" [(ngModel)]="newPwd2" placeholder=" " required autocomplete="new-password">
+                <i class="fas fa-lock f-icon"></i>
+                <span class="f-label">Confirm new password</span>
+              </div>
+              <p class="policy-hint">Min 10 characters · upper · lower · number · special · not a common password.</p>
+              <button type="submit" class="btn-primary-tz" [class.is-loading]="loading()">
+                <span class="btn-text"><i class="fas fa-check"></i> Save new password</span>
+                <span class="spinner"></span>
+              </button>
+            </form>
+          }
+
+          @if (step() === 'enroll') {
+            <div>
+              <p class="step-help">
+                Your role requires two-factor authentication. Set up an authenticator app
+                (Google Authenticator, Microsoft Authenticator, FreeOTP, etc.) before continuing.
+              </p>
+              @if (!enrollSecret()) {
+                <button type="button" class="btn-primary-tz" [class.is-loading]="loading()" (click)="startEnroll()">
+                  <span class="btn-text"><i class="fas fa-shield-halved"></i> Generate authenticator secret</span>
+                  <span class="spinner"></span>
+                </button>
+                <button type="button" class="btn-link" (click)="backToCredentials()">← Back to email / password</button>
+              } @else {
+                <div class="alert-card info" style="flex-direction:column;align-items:flex-start;gap:0.35rem;">
+                  <span style="font-weight:700;">Manual entry secret</span>
+                  <code style="font-size:0.85rem;word-break:break-all;user-select:all;">{{ enrollSecret() }}</code>
+                  <span style="font-size:0.78rem;opacity:0.9;">Add this key in your app, then enter the 6-digit code below.</span>
+                </div>
+                <form (ngSubmit)="confirmEnroll()">
+                  <div class="field-group">
+                    <input type="text" name="enrollCode" inputmode="numeric" pattern="[0-9]*" maxlength="8"
+                           [(ngModel)]="enrollCode" placeholder=" " required autocomplete="one-time-code">
+                    <i class="fas fa-mobile-screen-button f-icon"></i>
+                    <span class="f-label">Authenticator code</span>
+                  </div>
+                  <button type="submit" class="btn-primary-tz" [class.is-loading]="loading()">
+                    <span class="btn-text"><i class="fas fa-check"></i> Enable 2FA &amp; continue</span>
+                    <span class="spinner"></span>
+                  </button>
+                </form>
+              }
             </div>
-            <div class="options-row" style="justify-content:flex-end;">
-              <a class="forgot-link" routerLink="/forgot-password">Forgot your password?</a>
-            </div>
-            <button type="submit" class="btn-primary-tz" [class.is-loading]="loading()">
-              <span class="btn-text"><i class="fas fa-right-to-bracket"></i> Sign In</span>
-              <span class="spinner"></span>
-            </button>
-            <div class="register-row"><span>Accounts are issued by your system administrator.</span></div>
-          </form>
+          }
 
           <div class="card-footer-text">&copy; {{ year }} Prime Minister's Office &mdash; United Republic of Tanzania</div>
         </div>
@@ -110,6 +198,23 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
     :host { display:block; min-height:100vh; background:var(--bg); }
     .login-page { width:100vw; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
     .back-home { position:fixed; top:1.25rem; left:1.5rem; z-index:50; display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:6px; font-size:0.8rem; font-weight:600; color:var(--ink); text-decoration:none; background:var(--surface); border:1px solid var(--line); }
+    .font-scale-login {
+      position: fixed; top: 1.25rem; right: 1.5rem; z-index: 50;
+      display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px;
+      background: var(--surface); overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .font-scale-login .fs-btn, .font-scale-login .fs-label {
+      border: none; background: transparent; cursor: pointer; font-family: inherit;
+      color: #334155; font-weight: 800; line-height: 1; padding: 0.45rem 0.6rem;
+    }
+    .font-scale-login .fs-btn { font-size: 0.95rem; min-width: 2rem; }
+    .font-scale-login .fs-btn:hover:not(:disabled) { background: #eef4fb; color: var(--navy); }
+    .font-scale-login .fs-btn:disabled { opacity: 0.35; cursor: default; }
+    .font-scale-login .fs-label {
+      font-size: 0.78rem; font-weight: 700; color: var(--navy);
+      border-left: 1px solid var(--line); border-right: 1px solid var(--line); min-width: 2.8rem; text-align: center;
+    }
+    .font-scale-login .fs-label:hover { background: #eef4fb; }
     .back-home:hover { background:#f7f9fb; border-color:var(--navy); color:var(--navy); }
     .login-card { width:100%; max-width:880px; background:var(--surface); border-radius:10px; border:1px solid var(--line); box-shadow:0 6px 24px rgba(11,61,107,0.10); display:flex; overflow:hidden; }
 
@@ -155,6 +260,10 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
     .s-pill.watch { background:#fff7d6; color:#8a6d00; } .s-pill.watch .dot { background:var(--watch); }
     .card-divider { height:1px; background:var(--line); margin-bottom:1rem; }
     .alert-card { padding:0.55rem 0.75rem; background:#fde3e3; border:1px solid #f3c4c4; border-left:3px solid var(--emergency); border-radius:6px; margin-bottom:0.85rem; display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; color:#b51c1c; }
+    .alert-card.info { background:#e8f0fe; border-color:#c5d4f5; border-left-color:var(--navy); color:#0b3d6b; }
+    .step-help { font-size:0.88rem; color:var(--muted); margin:0 0 0.85rem; line-height:1.45; }
+    .policy-hint { font-size:0.75rem; color:var(--muted); margin:0 0 0.75rem; }
+    .btn-link { display:block; width:100%; margin-top:0.75rem; background:none; border:none; color:var(--navy); font-size:0.85rem; font-weight:600; cursor:pointer; text-align:center; }
 
     .field-group { position:relative; margin-bottom:0.85rem; }
     .field-group input { width:100%; padding:0.6rem 0.85rem 0.6rem 2.4rem; background:var(--surface); border:1px solid var(--line); border-radius:6px; font-size:0.9rem; font-weight:500; color:var(--ink); outline:none; transition:border-color .15s, box-shadow .15s; }
@@ -192,11 +301,21 @@ export class LoginComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   private router = inject(Router);
 
+  font = inject(FontScaleService);
   email = '';
   password = '';
+  mfaCode = '';
+  enrollCode = '';
+  curPwd = '';
+  newPwd = '';
+  newPwd2 = '';
+  private challengeToken = '';
   showPwd = signal(false);
   loading = signal(false);
   error = signal('');
+  info = signal('');
+  enrollSecret = signal('');
+  step = signal<'credentials' | 'mfa' | 'password' | 'enroll'>('credentials');
   slide = signal(0);
   year = 2026;
 
@@ -220,10 +339,122 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   onSubmit(): void {
     this.error.set('');
+    this.info.set('');
     this.loading.set(true);
     this.auth.login(this.email, this.password).subscribe({
-      next: () => this.router.navigateByUrl('/home'),
-      error: () => { this.error.set('These credentials do not match our records.'); this.loading.set(false); },
+      next: res => {
+        this.loading.set(false);
+        if (res.status === 'MFA_REQUIRED') {
+          this.challengeToken = res.challengeToken || '';
+          this.info.set(res.message || 'Enter your authenticator code.');
+          this.step.set('mfa');
+          return;
+        }
+        if (res.status === 'PASSWORD_CHANGE_REQUIRED') {
+          this.info.set(res.message || 'You must set a new password before continuing.');
+          this.curPwd = this.password;
+          this.step.set('password');
+          return;
+        }
+        if (res.status === 'MFA_ENROLL_REQUIRED') {
+          this.info.set(res.message || 'Your role requires two-factor authentication.');
+          this.enrollSecret.set('');
+          this.enrollCode = '';
+          this.step.set('enroll');
+          return;
+        }
+        if (res.status === 'OK') {
+          this.router.navigateByUrl('/home');
+          return;
+        }
+        this.error.set(res.message || 'Sign-in could not be completed.');
+      },
+      error: () => {
+        this.error.set('These credentials do not match our records.');
+        this.loading.set(false);
+      },
     });
+  }
+
+  startEnroll(): void {
+    this.error.set('');
+    this.loading.set(true);
+    this.auth.setupTotp().subscribe({
+      next: r => {
+        this.loading.set(false);
+        this.enrollSecret.set(r.secret || '');
+        this.info.set(r.message || 'Enter the secret in your authenticator app, then confirm with a code.');
+      },
+      error: err => {
+        this.loading.set(false);
+        this.error.set(err?.error?.message || err?.error?.detail || 'Could not start 2FA setup.');
+      },
+    });
+  }
+
+  confirmEnroll(): void {
+    this.error.set('');
+    this.loading.set(true);
+    this.auth.enableTotp(this.enrollCode.trim()).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.auth.markTotpEnabled();
+        this.router.navigateByUrl('/home');
+      },
+      error: err => {
+        this.loading.set(false);
+        this.error.set(err?.error?.message || err?.error?.detail || 'Invalid authenticator code.');
+      },
+    });
+  }
+
+  onMfa(): void {
+    this.error.set('');
+    this.loading.set(true);
+    this.auth.verifyMfa(this.challengeToken, this.mfaCode.trim()).subscribe({
+      next: res => {
+        this.loading.set(false);
+        if (res.status === 'OK') {
+          this.router.navigateByUrl('/home');
+          return;
+        }
+        this.error.set(res.message || 'Verification failed.');
+      },
+      error: err => {
+        this.loading.set(false);
+        this.error.set(err?.error?.message || err?.error?.detail || 'Invalid authenticator code.');
+      },
+    });
+  }
+
+  onForcedPassword(): void {
+    this.error.set('');
+    if (this.newPwd !== this.newPwd2) {
+      this.error.set('New password and confirmation do not match.');
+      return;
+    }
+    this.loading.set(true);
+    this.auth.changePassword(this.curPwd, this.newPwd).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.router.navigateByUrl('/home');
+      },
+      error: err => {
+        this.loading.set(false);
+        this.error.set(err?.error?.message || err?.error?.detail || 'Could not change password.');
+      },
+    });
+  }
+
+  backToCredentials(): void {
+    this.step.set('credentials');
+    this.mfaCode = '';
+    this.enrollCode = '';
+    this.enrollSecret.set('');
+    this.challengeToken = '';
+    this.info.set('');
+    this.error.set('');
+    // Drop partial session from MFA_ENROLL / password-change so a different account can sign in.
+    this.auth.logout();
   }
 }

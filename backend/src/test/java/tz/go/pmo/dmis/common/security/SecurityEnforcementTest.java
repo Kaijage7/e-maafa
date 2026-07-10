@@ -164,11 +164,13 @@ class SecurityEnforcementTest {
     }
 
     @Test
-    void ewDisseminateDeniesFieldRole() throws Exception {
-        // EW_DISSEMINATE excludes field officers — a DAS cannot fire the public/leaders SMS + stakeholder email blast.
+    void ewDisseminateLegacyPathIsGone() throws Exception {
+        // F01/F102: the legacy Blade /ew/disseminate path was removed. DAS must not hit a live
+        // disseminator there — expect 404 (no handler), not a successful send. Product dissemination
+        // lives under /v1/ew/** with proper @PreAuthorize (see ewWarningPublishDeniesFieldRole).
         mvc.perform(post("/ew/disseminate").contentType(MediaType.APPLICATION_JSON).content("{}")
                         .header("X-Local-Roles", "DAS"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -178,12 +180,12 @@ class SecurityEnforcementTest {
                 .andExpect(status().isForbidden());
     }
 
-    @Test
-    void agencyDeleteDeniesNonSysAdmin() throws Exception {
-        // Deleting a partner agency tightens to SYS_ADMIN (Super Admin/ICT) — a Director cannot delete one.
-        mvc.perform(delete("/v1/content/agencies/1").header("X-Local-Roles", "Director"))
-                .andExpect(status().isForbidden());
-    }
+	    @Test
+	    void agencyDeleteDeniesNonSysAdmin() throws Exception {
+	        // Partner agencies are a System Settings/User Management surface; a Director cannot delete one.
+	        mvc.perform(delete("/v1/settings/agencies/1").header("X-Local-Roles", "Director"))
+	                .andExpect(status().isForbidden());
+	    }
 
     @Test
     void stakeholderVerifyDeniesRegistrarOnlyRole() throws Exception {

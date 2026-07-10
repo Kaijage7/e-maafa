@@ -1,5 +1,6 @@
+import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { addTanzaniaGisBase, addAdminDrilldown, addMapNav, RegionFill, DistrictFill } from '../../core/tz-map';
 import { PortalLabels } from './portal-i18n';
@@ -11,6 +12,14 @@ declare const L: any;
 interface Shelter {
   name: string; region: string; district: string; capacity: number | null;
   status: string; accessibility: string; latitude: number; longitude: number;
+}
+
+/** Shelter ranked from a warning (or user) origin with straight-line distance estimate. */
+interface ShelterLink {
+  shelter: Shelter;
+  km: number;
+  /** Rough drive-time minutes assuming ~40 km/h average on local roads (estimate only). */
+  driveMin: number;
 }
 
 interface PortalWarning {
@@ -38,7 +47,7 @@ interface PortalBulletin {
 @Component({
   selector: 'public-live-portal',
   standalone: true,
-  imports: [RouterLink, PublicInformExplorerComponent],
+  imports: [RouterLink, PublicInformExplorerComponent, DecimalPipe],
   template: `
     <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 6.5rem 1.5rem 3rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;margin-bottom:1rem;">
@@ -53,6 +62,9 @@ interface PortalBulletin {
                     style="border:none;padding:0 1.1rem;min-height:42px;display:inline-flex;align-items:center;font-size:0.95rem;font-weight:600;cursor:pointer;"><i class="fas fa-exclamation-triangle me-1"></i>{{ L.t('lbl_alerts') }}</button>
             <button type="button" (click)="setLayer('shelters')" [style.background]="layer() === 'shelters' ? '#059669' : 'transparent'" [style.color]="layer() === 'shelters' ? '#fff' : '#475569'"
                     style="border:none;padding:0 1.1rem;min-height:42px;display:inline-flex;align-items:center;font-size:0.95rem;font-weight:600;cursor:pointer;"><i class="fas fa-house-user me-1"></i>{{ L.t('pp_evacuation_centers') }}</button>
+            <button type="button" (click)="setLayer('linked')" [style.background]="layer() === 'linked' ? '#7c3aed' : 'transparent'" [style.color]="layer() === 'linked' ? '#fff' : '#475569'"
+                    [title]="L.lang()==='sw' ? 'Onyo + vituo vya uhamishaji vilivyo karibu na makadirio ya umbali' : 'Warning + nearest evacuation centres with distance estimates'"
+                    style="border:none;padding:0 1.1rem;min-height:42px;display:inline-flex;align-items:center;font-size:0.95rem;font-weight:600;cursor:pointer;"><i class="fas fa-route me-1"></i>{{ L.lang()==='sw' ? 'Njia' : 'Routes' }}</button>
           </div>
           }
           <a routerLink="/" fragment="report" class="btn-gold" style="text-decoration:none;"><i class="fas fa-flag"></i> {{ L.t('lbl_report_hazard') }}</a>
@@ -75,13 +87,17 @@ interface PortalBulletin {
         <!-- Live map -->
         <div style="position:relative;">
           <div #portalMap style="height:calc(100vh - 240px);min-height:480px;border-radius:16px;border:1px solid rgba(0,0,0,0.08);background:#d7e8f5;z-index:1;"></div>
-          <div style="position:absolute;bottom:14px;right:14px;z-index:600;background:rgba(255,255,255,0.92);border:1px solid rgba(0,51,102,0.12);border-radius:10px;padding:0.5rem 0.7rem;box-shadow:0 2px 10px rgba(0,0,0,0.08);">
+          <div style="position:absolute;bottom:14px;right:14px;z-index:600;background:rgba(255,255,255,0.92);border:1px solid rgba(0,51,102,0.12);border-radius:10px;padding:0.5rem 0.7rem;box-shadow:0 2px 10px rgba(0,0,0,0.08);max-width:200px;">
             <div style="font-size:0.8rem;font-weight:700;color:#2C3E50;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">{{ L.t('pp_alert_level') }}</div>
             <div style="display:flex;flex-direction:column;gap:2px;font-size:0.8rem;font-weight:600;color:#475569;">
               <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#ef4444;margin-right:5px;"></span>{{ L.t('pp_emergency') }}</span>
               <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#f59e0b;margin-right:5px;"></span>{{ L.t('pp_warning') }}</span>
               <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#3b82f6;margin-right:5px;"></span>{{ L.t('pp_watch') }}</span>
               <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#eef2f5;border:1px solid #c2ccd6;margin-right:5px;"></span>{{ L.t('pp_no_alerts') }}</span>
+              @if (layer() === 'linked' || layer() === 'shelters') {
+                <span style="margin-top:4px;padding-top:4px;border-top:1px solid #e2e8f0;"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#059669;margin-right:5px;"></span>{{ L.t('pp_evacuation_centers') }}</span>
+                <span><span style="display:inline-block;width:14px;height:2px;background:#7c3aed;margin-right:5px;vertical-align:middle;"></span>{{ L.lang()==='sw' ? 'Njia (makadirio)' : 'Route estimate' }}</span>
+              }
             </div>
           </div>
           @if (drilled()) {
@@ -98,7 +114,81 @@ interface PortalBulletin {
               <i class="fas fa-clock me-1"></i>{{ L.lang() === 'sw' ? 'Imesasishwa' : 'Updated' }} {{ loadedAt() }}
             </div>
           }
-          @if (layer() === 'shelters') {
+          @if (layer() === 'linked') {
+            <div style="border:1px solid #ddd6fe;border-radius:14px;background:#f5f3ff;padding:0.85rem 1rem;font-size:0.88rem;color:#5b21b6;line-height:1.45;">
+              <i class="fas fa-route me-1"></i>
+              {{ L.lang()==='sw'
+                ? 'Chagua tahadhari ili kuona vituo vya uhamishaji vilivyo karibu, umbali wa mstari wa moja kwa moja, na njia zinazokadiriwa kwenye ramani. Maelekezo ya barabara hufunguliwa kwenye Google Maps.'
+                : 'Select a warning to see nearest evacuation centres, straight-line distance, and estimated routes on the map. Road directions open in Google Maps.' }}
+            </div>
+            @if (selectedWarning(); as sw) {
+              <div style="border:1px solid rgba(0,0,0,0.08);border-radius:14px;background:var(--card-bg,#fff);padding:0.9rem 1rem;">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <span class="pp-sev {{ sevClass(sw.severityLevel) }}">{{ sw.severityLevel }}</span>
+                  <span style="font-size:0.85rem;color:#64748b;font-weight:600;">{{ sw.warningCode }}</span>
+                </div>
+                <div style="font-size:1.05rem;font-weight:800;margin:0.4rem 0 0.2rem;">{{ sw.hazardType }}</div>
+                <div style="font-size:0.9rem;color:#64748b;">{{ sw.affectedRegions }}</div>
+                <button type="button" (click)="clearWarningLink()" style="margin-top:0.5rem;border:none;background:none;color:#7c3aed;font-weight:700;font-size:0.85rem;cursor:pointer;padding:0;">
+                  {{ L.lang()==='sw' ? 'Futa uteuzi' : 'Clear selection' }}
+                </button>
+              </div>
+              <div style="font-size:0.8rem;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#64748b;margin-top:0.3rem;">
+                {{ L.lang()==='sw' ? 'Vituo vya karibu (hadi 5)' : 'Nearest centres (up to 5)' }}
+              </div>
+              @for (link of nearestForSelected(); track link.shelter.name) {
+                <div style="border:1px solid rgba(5,150,105,0.25);border-radius:14px;background:var(--card-bg,#fff);padding:0.85rem 1rem;cursor:pointer;"
+                     (click)="focusShelter(link.shelter)" (keydown.enter)="focusShelter(link.shelter)" tabindex="0">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <div style="min-width:0;">
+                      <div style="font-weight:800;color:#0f172a;">{{ link.shelter.name }}</div>
+                      <div style="font-size:0.85rem;color:#64748b;">{{ link.shelter.region }}{{ link.shelter.district ? ' · ' + link.shelter.district : '' }}</div>
+                    </div>
+                    <div style="text-align:right;flex:none;">
+                      <div style="font-size:1.15rem;font-weight:900;color:#059669;font-variant-numeric:tabular-nums;">{{ link.km | number:'1.0-1' }} km</div>
+                      <div style="font-size:0.75rem;color:#64748b;">~{{ link.driveMin }} {{ L.lang()==='sw' ? 'dakika (gari)' : 'min drive' }}</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:10px;margin-top:0.45rem;flex-wrap:wrap;">
+                    <a target="_blank" rel="noopener"
+                       [href]="gmapsDir(sw.latitude, sw.longitude, link.shelter.latitude, link.shelter.longitude)"
+                       (click)="$event.stopPropagation()"
+                       style="font-size:0.85rem;color:#7c3aed;font-weight:700;text-decoration:none;"><i class="fas fa-route me-1"></i>{{ L.lang()==='sw' ? 'Njia ya barabara' : 'Road route' }}</a>
+                    <span style="font-size:0.8rem;color:#94a3b8;">{{ L.t('pp_capacity') }} {{ link.shelter.capacity ?? 'N/A' }}</span>
+                  </div>
+                </div>
+              } @empty {
+                <div style="padding:1rem;text-align:center;color:#64748b;border:1px dashed #e2e8f0;border-radius:12px;font-size:0.9rem;">
+                  {{ L.lang()==='sw' ? 'Hakuna vituo vya uhamishaji vilivyo na kuratibu katika mfumo.' : 'No evacuation centres with coordinates are registered yet.' }}
+                </div>
+              }
+              <div style="font-size:0.75rem;color:#94a3b8;line-height:1.4;">
+                {{ L.lang()==='sw'
+                  ? 'Umbali ni mstari wa moja kwa moja (km). Muda wa gari ni makadirio (~40 km/saa). Njia halisi ya barabara: fungua Google Maps.'
+                  : 'Distance is straight-line (km). Drive time is an estimate (~40 km/h). For actual road routes, open Google Maps.' }}
+              </div>
+            } @else {
+              <div style="font-size:0.8rem;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#64748b;">
+                {{ L.lang()==='sw' ? 'Chagua tahadhari' : 'Select a warning' }}
+              </div>
+              @for (w of warningsWithCoords(); track w.id) {
+                <button type="button" (click)="selectWarningForRoutes(w)"
+                        style="text-align:left;border:1px solid rgba(0,0,0,0.08);border-radius:14px;background:var(--card-bg,#fff);padding:0.9rem 1rem;cursor:pointer;width:100%;font:inherit;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="pp-sev {{ sevClass(w.severityLevel) }}">{{ w.severityLevel }}</span>
+                    <span style="font-size:0.85rem;color:#64748b;">{{ w.warningCode }}</span>
+                  </div>
+                  <div style="font-weight:800;margin-top:0.35rem;color:#0f172a;">{{ w.hazardType }}</div>
+                  <div style="font-size:0.85rem;color:#64748b;">{{ w.affectedRegions }}</div>
+                  <div style="font-size:0.8rem;color:#7c3aed;font-weight:700;margin-top:0.35rem;"><i class="fas fa-route me-1"></i>{{ L.lang()==='sw' ? 'Onyesha vituo vya karibu' : 'Show nearest centres' }}</div>
+                </button>
+              } @empty {
+                <div style="padding:1.2rem;text-align:center;color:#64748b;border:1px dashed #e2e8f0;border-radius:12px;">
+                  {{ L.t('lbl_no_active_alerts') }}
+                </div>
+              }
+            }
+          } @else if (layer() === 'shelters') {
             @for (sh of shelters(); track sh.name) {
               <div style="border:1px solid rgba(0,0,0,0.08);border-radius:14px;background:var(--card-bg, #fff);padding:0.9rem 1rem;">
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -139,6 +229,13 @@ interface PortalBulletin {
               }
               @if (w.bulletinUrl) {
                 <a [href]="w.bulletinUrl" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-top:0.6rem;font-size:0.9rem;font-weight:700;color:#1d4ed8;text-decoration:none;"><i class="fas fa-file-pdf"></i> {{ L.t('pp_view_bulletin_pdf') }}</a>
+              }
+              @if (w.latitude != null && w.longitude != null && shelters().length) {
+                <button type="button" (click)="selectWarningForRoutes(w)"
+                        style="display:inline-flex;align-items:center;gap:5px;margin-top:0.55rem;border:1px solid #c4b5fd;background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:0.35rem 0.7rem;font-size:0.85rem;font-weight:700;cursor:pointer;font:inherit;">
+                  <i class="fas fa-route"></i>
+                  {{ L.lang()==='sw' ? 'Vituo vya karibu + njia' : 'Nearest centres + routes' }}
+                </button>
               }
             </div>
           }
@@ -220,11 +317,20 @@ export class PublicLivePortalComponent {
   bulletins = signal<PortalBulletin[]>([]);
   incidents = signal<PortalIncident[]>([]);
   shelters = signal<Shelter[]>([]);
-  /** Map layer: live warnings or the evacuation-center finder (FEMA shelter-finder pattern). */
-  layer = signal<'warnings' | 'shelters'>('warnings');
+  /**
+   * Map layer:
+   * - warnings — alerts only
+   * - shelters — evacuation centres finder
+   * - linked — early warning ↔ nearest centres with distance + route lines
+   */
+  layer = signal<'warnings' | 'shelters' | 'linked'>('warnings');
   view = signal<'live' | 'inform'>('live');   // portal sub-view: live monitoring vs the embedded INFORM risk explorer
+  /** Warning chosen for route-to-shelter linking (linked layer). */
+  selectedWarning = signal<PortalWarning | null>(null);
   private shelterMarkers: any[] = [];
   private warningMarkers: any[] = [];
+  /** Polylines + highlight markers for EW→shelter links. */
+  private routeLayers: any[] = [];
   registerOpen = signal(false);
   regDone = signal(false);
   regSaving = signal(false);
@@ -357,26 +463,169 @@ export class PublicLivePortalComponent {
     };
   }
 
-  /** Switch the map between live warnings and the evacuation-center finder. */
-  setLayer(layer: 'warnings' | 'shelters'): void {
+  warningsWithCoords = computed(() =>
+    this.warnings().filter(w => w.latitude != null && w.longitude != null
+      && Number.isFinite(w.latitude) && Number.isFinite(w.longitude)));
+
+  nearestForSelected = computed((): ShelterLink[] => {
+    const w = this.selectedWarning();
+    if (!w) return [];
+    return this.nearestShelters(w.latitude, w.longitude, 5);
+  });
+
+  /** Switch the map between alerts, shelters, or linked routes. */
+  setLayer(layer: 'warnings' | 'shelters' | 'linked'): void {
     this.layer.set(layer);
-    this.warningMarkers.forEach(m => layer === 'warnings' ? m.addTo(this.map) : this.map.removeLayer(m));
-    if (layer === 'shelters' && !this.shelterMarkers.length) {
-      for (const sh of this.shelters()) {
-        const marker = L.circleMarker([sh.latitude, sh.longitude],
-          { radius: 9, fillColor: '#059669', color: '#fff', weight: 2, fillOpacity: 0.9 })
-          .bindPopup(
-            `<div class="mp-head" style="background:#059669;"><i class="fas fa-house-user"></i> ${this.escHtml(sh.name)}</div>`
-            + `<div class="mp-body">`
-            + `<div class="mp-row"><i class="fas fa-map-marker-alt"></i><span>${this.escHtml(sh.region ?? '')}${sh.district ? ' · ' + this.escHtml(sh.district) : ''}</span></div>`
-            + `<div class="mp-row"><i class="fas fa-users"></i><span>${this.L.t('pp_capacity_label')} ${sh.capacity ?? 'N/A'} · ${this.escHtml(sh.status ?? '')}</span></div>`
-            + `</div>`
-            + `<div class="mp-actions"><a class="mp-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${sh.latitude},${sh.longitude}"><i class="fas fa-directions"></i> ${this.L.t('pp_directions')}</a></div>`,
-            { className: 'map-pop', maxWidth: 360 });
-        this.shelterMarkers.push(marker);
+    if (layer !== 'linked') {
+      this.clearRouteLayers();
+      if (layer !== 'warnings') {
+        this.selectedWarning.set(null);
       }
     }
-    this.shelterMarkers.forEach(m => layer === 'shelters' ? m.addTo(this.map) : this.map.removeLayer(m));
+    const showWarnings = layer === 'warnings' || layer === 'linked';
+    const showShelters = layer === 'shelters' || layer === 'linked';
+    this.warningMarkers.forEach(m => showWarnings ? m.addTo(this.map) : this.map.removeLayer(m));
+    this.ensureShelterMarkers();
+    this.shelterMarkers.forEach(m => showShelters ? m.addTo(this.map) : this.map.removeLayer(m));
+    if (layer === 'linked' && this.selectedWarning()) {
+      this.drawRoutesForWarning(this.selectedWarning()!);
+    }
+  }
+
+  selectWarningForRoutes(w: PortalWarning): void {
+    if (w.latitude == null || w.longitude == null) return;
+    this.selectedWarning.set(w);
+    this.layer.set('linked');
+    this.setLayer('linked');
+    this.drawRoutesForWarning(w);
+    if (this.map) {
+      this.map.flyTo([w.latitude, w.longitude], Math.max(this.map.getZoom(), 8), { duration: 0.6 });
+    }
+  }
+
+  clearWarningLink(): void {
+    this.selectedWarning.set(null);
+    this.clearRouteLayers();
+  }
+
+  focusShelter(sh: Shelter): void {
+    if (!this.map) return;
+    this.map.flyTo([sh.latitude, sh.longitude], 11, { duration: 0.5 });
+  }
+
+  gmapsDir(fromLat: number, fromLng: number, toLat: number, toLng: number): string {
+    return `https://www.google.com/maps/dir/?api=1&origin=${fromLat},${fromLng}&destination=${toLat},${toLng}`;
+  }
+
+  private ensureShelterMarkers(): void {
+    if (!this.map || this.shelterMarkers.length || typeof L === 'undefined') return;
+    for (const sh of this.shelters()) {
+      if (sh.latitude == null || sh.longitude == null) continue;
+      const marker = L.circleMarker([sh.latitude, sh.longitude],
+        { radius: 9, fillColor: '#059669', color: '#fff', weight: 2, fillOpacity: 0.9 })
+        .bindPopup(
+          `<div class="mp-head" style="background:#059669;"><i class="fas fa-house-user"></i> ${this.escHtml(sh.name)}</div>`
+          + `<div class="mp-body">`
+          + `<div class="mp-row"><i class="fas fa-map-marker-alt"></i><span>${this.escHtml(sh.region ?? '')}${sh.district ? ' · ' + this.escHtml(sh.district) : ''}</span></div>`
+          + `<div class="mp-row"><i class="fas fa-users"></i><span>${this.L.t('pp_capacity_label')} ${sh.capacity ?? 'N/A'} · ${this.escHtml(sh.status ?? '')}</span></div>`
+          + `</div>`
+          + `<div class="mp-actions"><a class="mp-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${sh.latitude},${sh.longitude}"><i class="fas fa-directions"></i> ${this.L.t('pp_directions')}</a></div>`,
+          { className: 'map-pop', maxWidth: 360 });
+      this.shelterMarkers.push(marker);
+    }
+  }
+
+  private nearestShelters(lat: number, lng: number, limit: number): ShelterLink[] {
+    const list = this.shelters()
+      .filter(s => s.latitude != null && s.longitude != null
+        && Number.isFinite(s.latitude) && Number.isFinite(s.longitude))
+      .map(s => {
+        const km = this.haversineKm(lat, lng, s.latitude, s.longitude);
+        return { shelter: s, km, driveMin: Math.max(1, Math.round((km / 40) * 60)) };
+      })
+      .sort((a, b) => a.km - b.km);
+    return list.slice(0, limit);
+  }
+
+  /** Great-circle distance (km). Honest straight-line estimate, not road network. */
+  private haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const toRad = (d: number) => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  private clearRouteLayers(): void {
+    if (!this.map) return;
+    for (const lyr of this.routeLayers) {
+      try { this.map.removeLayer(lyr); } catch { /* ignore */ }
+    }
+    this.routeLayers = [];
+  }
+
+  private drawRoutesForWarning(w: PortalWarning): void {
+    if (!this.map || typeof L === 'undefined') return;
+    this.clearRouteLayers();
+    const links = this.nearestShelters(w.latitude, w.longitude, 5);
+    if (!links.length) return;
+
+    // Origin pin at warning
+    const origin = L.circleMarker([w.latitude, w.longitude], {
+      radius: 11, fillColor: this.sevColor(w.severityLevel), color: '#fff', weight: 3, fillOpacity: 1,
+    }).bindPopup(
+      `<div class="mp-head" style="background:${this.sevColor(w.severityLevel)};"><i class="fas fa-exclamation-triangle"></i> ${this.escHtml(w.hazardType)}</div>`
+      + `<div class="mp-body"><div class="mp-row"><span>${this.escHtml(w.alertMessage || w.affectedRegions || '')}</span></div></div>`,
+      { className: 'map-pop', maxWidth: 320 });
+    origin.addTo(this.map);
+    this.routeLayers.push(origin);
+
+    const colors = ['#7c3aed', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe'];
+    const bounds: [number, number][] = [[w.latitude, w.longitude]];
+
+    links.forEach((link, i) => {
+      const sh = link.shelter;
+      const line = L.polyline(
+        [[w.latitude, w.longitude], [sh.latitude, sh.longitude]],
+        {
+          color: colors[i % colors.length],
+          weight: i === 0 ? 4 : 3,
+          opacity: 0.85,
+          dashArray: i === 0 ? undefined : '8 6',
+        },
+      ).bindPopup(
+        `<div class="mp-head" style="background:#059669;"><i class="fas fa-route"></i> ${this.escHtml(sh.name)}</div>`
+        + `<div class="mp-body">`
+        + `<div class="mp-row"><i class="fas fa-ruler"></i><span><b>${link.km.toFixed(1)} km</b> ${this.L.lang() === 'sw' ? 'mstari wa moja kwa moja' : 'straight-line'}</span></div>`
+        + `<div class="mp-row"><i class="fas fa-car"></i><span>~${link.driveMin} ${this.L.lang() === 'sw' ? 'dakika (makadirio)' : 'min estimate @ 40 km/h'}</span></div>`
+        + `</div>`
+        + `<div class="mp-actions"><a class="mp-btn" target="_blank" rel="noopener" href="${this.gmapsDir(w.latitude, w.longitude, sh.latitude, sh.longitude)}"><i class="fas fa-directions"></i> ${this.L.lang() === 'sw' ? 'Njia ya barabara' : 'Road route'}</a></div>`,
+        { className: 'map-pop', maxWidth: 340 },
+      );
+      line.addTo(this.map);
+      this.routeLayers.push(line);
+
+      const dest = L.circleMarker([sh.latitude, sh.longitude], {
+        radius: i === 0 ? 10 : 8,
+        fillColor: '#059669',
+        color: '#fff',
+        weight: 2,
+        fillOpacity: 0.95,
+      }).bindPopup(
+        `<div class="mp-head" style="background:#059669;"><i class="fas fa-house-user"></i> ${this.escHtml(sh.name)}</div>`
+        + `<div class="mp-body"><div class="mp-row"><span>${link.km.toFixed(1)} km · ~${link.driveMin} min</span></div></div>`,
+        { className: 'map-pop', maxWidth: 300 },
+      );
+      dest.addTo(this.map);
+      this.routeLayers.push(dest);
+      bounds.push([sh.latitude, sh.longitude]);
+    });
+
+    try {
+      this.map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 11 });
+    } catch { /* ignore */ }
   }
 
   resetMap(): void {
@@ -406,6 +655,11 @@ export class PublicLivePortalComponent {
             + `<span class="marker-pulse-ring"></span><span class="marker-pulse-ring-2"></span>`
             + `<i style="width:8px;height:8px;border-radius:50%;background:#fff;display:block;"></i></div>`,
       });
+      const nearest = this.nearestShelters(w.latitude, w.longitude, 3);
+      const nearestHtml = nearest.length
+        ? `<div class="mp-row"><i class="fas fa-house-user"></i><span>${nearest.map(n =>
+            `${this.escHtml(n.shelter.name)} <b>${n.km.toFixed(1)} km</b>`).join('<br>')}</span></div>`
+        : '';
       const marker = L.marker([w.latitude, w.longitude], { icon })
         .addTo(this.map)
         .bindPopup(
@@ -414,9 +668,22 @@ export class PublicLivePortalComponent {
           + (w.alertMessage ? `<div class="mp-row"><i class="fas fa-bullhorn"></i><span>${this.escHtml(w.alertMessage)}</span></div>` : '')
           + (w.affectedRegions ? `<div class="mp-row"><i class="fas fa-map-marker-alt"></i><span>${this.escHtml(w.affectedRegions)}</span></div>` : '')
           + (w.bulletinDescription ? `<div class="mp-row"><i class="fas fa-align-left"></i><span>${this.escHtml(w.bulletinDescription)}</span></div>` : '')
+          + nearestHtml
           + `</div>`
-          + (w.bulletinUrl ? `<div class="mp-actions"><a class="mp-btn" href="${this.escHtml(w.bulletinUrl)}" target="_blank" rel="noopener"><i class="fas fa-file-pdf"></i> ${this.L.t('pp_view_bulletin_pdf')}</a></div>` : ''),
+          + `<div class="mp-actions">`
+          + (w.bulletinUrl ? `<a class="mp-btn" href="${this.escHtml(w.bulletinUrl)}" target="_blank" rel="noopener"><i class="fas fa-file-pdf"></i> ${this.L.t('pp_view_bulletin_pdf')}</a>` : '')
+          + (nearest.length ? `<button type="button" class="mp-btn" data-ew-routes="${w.id}" style="cursor:pointer;border:none;font:inherit;"><i class="fas fa-route"></i> ${this.L.lang() === 'sw' ? 'Njia za uhamishaji' : 'Evacuation routes'}</button>` : '')
+          + `</div>`,
           { className: 'map-pop', maxWidth: 360 });
+      marker.on('popupopen', () => {
+        const btn = document.querySelector(`button[data-ew-routes="${w.id}"]`);
+        if (btn) {
+          btn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            this.selectWarningForRoutes(w);
+          }, { once: true });
+        }
+      });
       this.warningMarkers.push(marker);
     }
     // Incidents pushed to the portal map (Response → push-map) — purple dashed rings, distinct from warning

@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { escapeHtml } from '../../../core/html';
 import { alertColor, HAZ_ICON } from './ew-agency.model';
 import { addDmisBaseLayer } from '../../../core/tz-map';
 
@@ -60,9 +61,12 @@ export class RegionPickerComponent implements OnInit, OnChanges, OnDestroy {
       this.layer = L.geoJSON(gj, {
         style: (f: any) => this.styleOf(this.nameOf(f)),
         onEachFeature: (f: any, lyr: any) => {
-          const nm = this.nameOf(f);
-          lyr.on('click', () => this.toggle.emit(nm));
-          lyr.bindTooltip(() => `${nm}${this.selected.includes(nm) ? ' · ' + this.levelOf(nm).replace('_', ' ') : ''}`, { sticky: true });
+	          const nm = this.nameOf(f);
+	          lyr.on('click', () => this.toggle.emit(nm));
+	          lyr.bindTooltip(
+	            () => escapeHtml(`${nm}${this.selected.includes(nm) ? ' · ' + this.levelOf(nm).replace('_', ' ') : ''}`),
+	            { sticky: true },
+	          );
         },
       }).addTo(this.map);
       try { this.map.fitBounds(this.layer.getBounds(), { padding: [8, 8] }); } catch {}
@@ -169,7 +173,10 @@ export class RegionPickerComponent implements OnInit, OnChanges, OnDestroy {
       const m = L.marker([c.lat, c.lng], { icon: L.divIcon({ className: 'rp-ref',
         html: '<div style="width:18px;height:18px;border-radius:50%;border:1.5px solid ' + r.color + ';background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.2)"><i class="fas ' + r.faIcon + '" style="color:' + r.color + ';font-size:12px"></i></div>',
         iconSize: [18, 18], iconAnchor: [9, 9] }) });
-      m.bindTooltip(r.entity + (r.level ? ' · ' + String(r.level).replace('_', ' ') : ''), { sticky: true });
+	      m.bindTooltip(
+	        escapeHtml(r.entity + (r.level ? ' · ' + String(r.level).replace('_', ' ') : '')),
+	        { sticky: true },
+	      );
       this.refGroup.addLayer(m);
     }
   }

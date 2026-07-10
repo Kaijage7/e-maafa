@@ -17,6 +17,21 @@
   <script src="/vendor/leaflet/leaflet.js"></script>
   <link rel="stylesheet" href="/vendor/leaflet-draw/leaflet.draw.css" />
   <script src="/vendor/leaflet-draw/leaflet.draw.js"></script>
+  <!-- Early font-scale apply (before Angular boot) so size preference does not flash default. -->
+  <script>
+    (function () {
+      try {
+        var k = 'dmis.fontRootPx';
+        var v = localStorage.getItem(k);
+        var n = v == null ? 19 : parseInt(v, 10);
+        if (!isFinite(n)) n = 19;
+        if (n < 15) n = 15;
+        if (n > 24) n = 24;
+        document.documentElement.style.fontSize = n + 'px';
+        document.documentElement.style.setProperty('--fs-root', n + 'px');
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

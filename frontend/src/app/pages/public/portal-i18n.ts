@@ -19,6 +19,7 @@ export class PortalLabels {
   private labels = signal<Record<string, Entry>>({ ...LABELS });
 
   constructor() {
+    this.applyLang(this.lang());
     // Hydrate from the translations registry; merge over the defaults. On any failure the
     // built-in labels stand — the public site never renders blank because i18n was unreachable.
     this.http.get<Record<string, Entry>>('/api/v1/portal/i18n').subscribe({
@@ -34,12 +35,30 @@ export class PortalLabels {
   toggle(): void {
     this.lang.set(this.lang() === 'en' ? 'sw' : 'en');
     localStorage.setItem('dmis-lang', this.lang());
+    this.applyLang(this.lang());
   }
 
-  /** label('key') — resolves in the current language (registry value if present, else default). */
+  /**
+   * label('key') in the **active language only**.
+   * English mode never returns Kiswahili; Swahili mode never falls back to English
+   * (missing translation surfaces the key so content teams can see gaps).
+   */
   t(key: string): string {
-    const labels = this.labels();
-    return labels[key]?.[this.lang()] ?? labels[key]?.en ?? key;
+    const entry = this.labels()[key];
+    if (!entry) {
+      return key;
+    }
+    const lang = this.lang();
+    const primary = (entry[lang] ?? '').trim();
+    if (primary) {
+      return primary;
+    }
+    // Honest gap: do not cross-language fall back.
+    return key;
+  }
+
+  private applyLang(lang: 'en' | 'sw'): void {
+    document.documentElement.lang = lang === 'sw' ? 'sw-TZ' : 'en';
   }
 }
 
@@ -241,6 +260,62 @@ const LABELS: Record<string, Entry> = {
   lbl_report_hazard: { en: 'Report Hazard', sw: 'Ripoti Hatari' },
   lbl_track_report: { en: 'Track Report', sw: 'Fuatilia Ripoti' },
   lbl_track_report_hint: { en: 'Enter the reference code you received after submitting a public hazard report.', sw: 'Weka namba ya rejea uliyopewa baada ya kutuma ripoti ya hatari.' },
+  lbl_checking: { en: 'Checking...', sw: 'Inakagua...' },
+  lbl_select_hazard_type: { en: 'Select hazard type...', sw: 'Chagua aina ya hatari...' },
+  lbl_describe_what_you_are_seeing: { en: 'Describe what you are seeing...', sw: 'Eleza unachokiona...' },
+  lbl_location_detail: { en: 'Location (street / village / landmark)', sw: 'Mahali (mtaa / kijiji / alama maarufu)' },
+  lbl_low_urgency: { en: 'Low urgency', sw: 'Uharaka mdogo' },
+  lbl_medium_urgency: { en: 'Medium urgency', sw: 'Uharaka wa wastani' },
+  lbl_high_urgency: { en: 'High urgency', sw: 'Uharaka mkubwa' },
+  lbl_reporting_public: { en: 'Reporting as a member of the public', sw: 'Ninaripoti kama mwananchi' },
+  lbl_reporting_institution: { en: 'Institution', sw: 'Taasisi' },
+  lbl_reporting_sector: { en: 'Sector / MDA', sw: 'Sekta / Taasisi ya Serikali' },
+  lbl_reporting_ministry: { en: 'Ministry', sw: 'Wizara' },
+  lbl_reporting_region: { en: 'Region (RAS)', sw: 'Mkoa (RAS)' },
+  lbl_reporter_org_name: { en: 'Institution / sector / ministry / region name', sw: 'Jina la taasisi / sekta / wizara / mkoa' },
+  lbl_official_report_hint: {
+    en: 'Official reports go straight to the EOCC for action; they skip the district/region verification a public report goes through.',
+    sw: 'Ripoti rasmi huenda moja kwa moja EOCC kwa hatua; hazipiti uthibitishaji wa wilaya/mkoa kama ripoti za wananchi.',
+  },
+  lbl_your_name_optional: { en: 'Your name (optional)', sw: 'Jina lako (si lazima)' },
+  lbl_phone_optional: { en: 'Phone (optional)', sw: 'Simu (si lazima)' },
+  lbl_email_optional: { en: 'Email (optional)', sw: 'Barua pepe (si lazima)' },
+  lbl_submitting: { en: 'Submitting...', sw: 'Inawasilisha...' },
+  lbl_submit_report: { en: 'Submit Report', sw: 'Wasilisha Ripoti' },
+  lbl_report_received: { en: 'Report received', sw: 'Ripoti imepokelewa' },
+  lbl_reference_code: { en: 'Your reference code:', sw: 'Namba yako ya rejea:' },
+  lbl_could_not_submit_report: { en: 'Could not submit. Please check your entries and try again.', sw: 'Imeshindwa kuwasilisha. Hakiki taarifa zako kisha jaribu tena.' },
+  lbl_report_status_received: { en: 'Received', sw: 'Imepokelewa' },
+  lbl_report_status_reviewing: { en: 'Under review', sw: 'Inakaguliwa' },
+  lbl_report_status_converted: { en: 'Converted to an incident', sw: 'Imebadilishwa kuwa tukio' },
+  lbl_report_status_dismissed: { en: 'Closed after review', sw: 'Imefungwa baada ya mapitio' },
+  lbl_hazard: { en: 'Hazard', sw: 'Hatari' },
+  lbl_urgency: { en: 'Urgency', sw: 'Uharaka' },
+  lbl_submitted: { en: 'Submitted', sw: 'Imewasilishwa' },
+  lbl_last_review: { en: 'Last review', sw: 'Mapitio ya mwisho' },
+  lbl_pending: { en: 'Pending', sw: 'Inasubiri' },
+  lbl_area: { en: 'Area', sw: 'Eneo' },
+  lbl_location: { en: 'Location', sw: 'Mahali' },
+  lbl_review_note: { en: 'Review note', sw: 'Dokezo la mapitio' },
+  lbl_linked_incident: { en: 'Linked incident', sw: 'Tukio lililounganishwa' },
+  lbl_incident_number: { en: 'Incident #', sw: 'Tukio #' },
+  lbl_open_public_incident: { en: 'Open public incident', sw: 'Fungua tukio la umma' },
+  lbl_incident_not_published: { en: 'The incident has not been published to the public portal.', sw: 'Tukio bado halijachapishwa kwenye tovuti ya umma.' },
+  lbl_report_reference_not_found: { en: 'Report reference not found. Check the code and try again.', sw: 'Namba ya rejea haijapatikana. Hakiki namba kisha jaribu tena.' },
+  lbl_not_assigned_yet: { en: 'Not assigned yet', sw: 'Bado halijapangiwa' },
+  lbl_urgency_low: { en: 'Low', sw: 'Chini' },
+  lbl_urgency_medium: { en: 'Medium', sw: 'Wastani' },
+  lbl_urgency_high: { en: 'High', sw: 'Juu' },
+  lbl_urgency_critical: { en: 'Critical', sw: 'Muhimu sana' },
+  lbl_status_reported: { en: 'Reported', sw: 'Limeripotiwa' },
+  lbl_status_pending_verification: { en: 'Pending Verification', sw: 'Inasubiri uthibitisho' },
+  lbl_status_verified: { en: 'Verified', sw: 'Limethibitishwa' },
+  lbl_status_active_response: { en: 'Active Response', sw: 'Mwitikio unaendelea' },
+  lbl_status_monitoring: { en: 'Monitoring', sw: 'Linafuatiliwa' },
+  lbl_status_escalated: { en: 'Escalated', sw: 'Limepandishwa ngazi' },
+  lbl_status_resolved: { en: 'Resolved', sw: 'Limatatuliwa' },
+  lbl_status_closed: { en: 'Closed', sw: 'Limefungwa' },
+  lbl_status_information_only: { en: 'Information Only', sw: 'Taarifa tu' },
   lbl_subscribe_to_alerts: { en: 'Subscribe to Alerts', sw: 'Jiandikishe Tahadhari' },
   lbl_live_monitoring: { en: 'LIVE MONITORING', sw: 'UFUATILIAJI MOJA KWA MOJA' },
   lbl_emergency: { en: 'Emergency', sw: 'Dharura' },

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.notification.NotificationService;
 
 /**
  * Formal disaster declarations under the Disaster Management Act No. 6 of 2022 —
@@ -38,10 +39,13 @@ public class DeclarationController {
 
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService users;
+    private final NotificationService notifications;
 
-    public DeclarationController(JdbcTemplate jdbc, IncidentWorkflowService users) {
+    public DeclarationController(JdbcTemplate jdbc, IncidentWorkflowService users,
+                                 NotificationService notifications) {
         this.jdbc = jdbc;
         this.users = users;
+        this.notifications = notifications;
     }
 
     @GetMapping
@@ -162,9 +166,21 @@ public class DeclarationController {
                 """, users.actingUserId(), from, until,
                 str(body == null ? null : body.get("gazette_reference")), id);
         String authority = String.valueOf(d.get("authority"));
-        event(id, "declared", authority,
-                disasterArea ? "Disaster Area declared by the Minister (Gazette); NDPRP directed for the area until " + until
-                        : "State of Emergency proclaimed by the President");
+        String eventMsg = disasterArea
+                ? "Disaster Area declared by the Minister (Gazette); NDPRP directed for the area until " + until
+                : "State of Emergency proclaimed by the President";
+        event(id, "declared", authority, eventMsg);
+        // F27 — declaration was silent; notify national desks (in-app).
+        try {
+            String title = disasterArea ? "Disaster Area declared (s.32)" : "State of Emergency proclaimed (s.33)";
+            notifications.notifyRoles(
+                    List.of("EOCC", "Director", "Asst. Director", "Super Admin", "Minister", "Secretary"),
+                    NotificationService.Notice.inApp(
+                            "disaster_declaration", title, eventMsg,
+                            "/m/response/declarations", "disaster_declaration", id, "critical"));
+        } catch (Exception ignored) {
+            // Non-fatal.
+        }
         return ok((disasterArea ? "Disaster Area declared (s.32). Effective until " + until + "."
                 : "State of Emergency proclaimed (s.33)."));
     }

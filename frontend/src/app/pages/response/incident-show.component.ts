@@ -217,10 +217,13 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
                   <button class="btn btn-sm btn-add" (click)="act('submit', 'Submit this incident into the approval chain?')"><i class="fas fa-paper-plane me-1"></i> Submit</button>
                 }
                 @if (canResubmit()) {
-                  <button class="btn btn-sm btn-add" (click)="act('resubmit', 'Resubmit after corrections?')"><i class="fas fa-redo me-1"></i> Resubmit</button>
+                  <button class="btn btn-sm btn-add" (click)="act('resubmit', 'Corrections done — resubmit and escalate to the next level?')"><i class="fas fa-redo me-1"></i> Resubmit after corrections</button>
                 }
                 @if (canApprove()) {
                   <button class="btn btn-sm btn-success" (click)="act('approve', 'Approve and escalate to the next level?')"><i class="fas fa-check me-1"></i> Approve / Escalate</button>
+                }
+                @if (canForward()) {
+                  <button class="btn btn-sm btn-outline-primary" (click)="forwardNational()"><i class="fas fa-share me-1"></i> Forward (national desk)</button>
                 }
                 @if (canRollback()) {
                   <button class="btn btn-sm btn-outline-danger" (click)="act('rollback', 'Roll back to the previous level for corrections? Comments are required.', true)"><i class="fas fa-undo me-1"></i> Roll Back</button>
@@ -307,6 +310,70 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
         </div>
       </div>
 
+      <!-- Possible routes to registered evacuation centres (restored from portal estimator + EC registry) -->
+      <div class="panel-row full">
+        <dmis-panel title="Evacuation routes (registered centres)" icon="fa-route"
+          [badge]="evacCenters().length ? (evacCenters().length + ' nearest') : (evacNote() || '—')">
+          <div class="panel-body">
+            @if (!hasCoords(d.incident)) {
+              <div class="empty-state" style="padding:1rem;">
+                <i class="fas fa-map-marker-alt"></i>
+                No incident coordinates — set latitude/longitude on the incident to estimate routes to registered centres.
+              </div>
+            } @else if (evacLoading()) {
+              <div style="font-size:0.9rem;color:var(--text-mid);"><i class="fas fa-spinner fa-spin me-1"></i> Computing nearest centres…</div>
+            } @else if (evacCenters().length) {
+              <p style="font-size:0.85rem;color:var(--text-mid);margin:0 0 0.75rem;">
+                Straight-line distance from the incident to active registered evacuation centres
+                (honest estimate — not a road network). Open <b>Road directions</b> for navigable routing.
+              </p>
+              <div style="overflow-x:auto;">
+                <table class="r-table">
+                  <thead><tr>
+                    <th>#</th><th>Centre</th><th>Area</th><th>Capacity</th>
+                    <th>Distance</th><th>~Drive</th><th>Route</th>
+                  </tr></thead>
+                  <tbody>
+                    @for (c of evacCenters(); track c.id; let i = $index) {
+                      <tr>
+                        <td style="font-weight:700;color:var(--primary);">{{ i + 1 }}</td>
+                        <td>
+                          <div class="r-title">{{ c.centreName }}</div>
+                          <div class="r-subtitle">{{ c.ecentreId }} · {{ c.status || 'Active' }}</div>
+                        </td>
+                        <td style="font-size:0.88rem;">{{ c.district || '—' }} / {{ c.region || '—' }}</td>
+                        <td style="font-weight:600;">{{ c.capacityPeople ?? '—' }}</td>
+                        <td style="font-weight:700;">{{ c.distanceKm }} km</td>
+                        <td>~{{ c.driveMinutesEstimate }} min</td>
+                        <td>
+                          <a class="r-view" [href]="c.gmapsDirectionsUrl" target="_blank" rel="noopener">
+                            <i class="fas fa-directions"></i> Road directions
+                          </a>
+                          <a class="r-view" style="margin-left:0.35rem;"
+                             [routerLink]="['/m/preparedness/evacuation-centers/create']"
+                             [queryParams]="{edit: c.id}">
+                            <i class="fas fa-house-user"></i> Centre
+                          </a>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              @if (evacNote()) {
+                <div style="margin-top:0.6rem;font-size:0.8rem;color:var(--text-light);">{{ evacNote() }}</div>
+              }
+            } @else {
+              <div class="empty-state" style="padding:1rem;">
+                <i class="fas fa-house-user"></i>
+                No active registered evacuation centres with coordinates in range.
+                Register centres under Preparedness → Evacuation Centers.
+              </div>
+            }
+          </div>
+        </dmis-panel>
+      </div>
+
       <!-- F12: the unified per-incident operations timeline (master ops log), full width -->
       <div class="panel-row full">
         <dmis-incident-ops-timeline [incidentId]="d.incident.id" />
@@ -327,6 +394,10 @@ export class IncidentShowComponent implements OnInit {
   readonly mediaUrls = signal<Record<string, string>>({});
   /** NDRF Annex-1 DLNAs opened against this incident (keeps the instrument incident-linked). */
   readonly dlnas = signal<any[]>([]);
+  /** Nearest registered evacuation centres + straight-line route estimates. */
+  readonly evacCenters = signal<any[]>([]);
+  readonly evacLoading = signal(false);
+  readonly evacNote = signal('');
   updateText = '';
   updateType = 'General Update';
 
@@ -337,6 +408,12 @@ export class IncidentShowComponent implements OnInit {
   ngOnInit(): void {
     ensureSweetAlert();
     this.load();
+  }
+
+  hasCoords(inc: any): boolean {
+    const lat = Number(inc?.latitude);
+    const lng = Number(inc?.longitude);
+    return Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
   }
 
   load(): void {
@@ -356,6 +433,32 @@ export class IncidentShowComponent implements OnInit {
           if (src) { this.mediaUrls.update(m => ({ ...m, [p]: src })); }
         });
       }
+      this.loadNearestEvac(d.incident);
+    });
+  }
+
+  private loadNearestEvac(inc: any): void {
+    if (!this.hasCoords(inc)) {
+      this.evacCenters.set([]);
+      this.evacNote.set('');
+      return;
+    }
+    this.evacLoading.set(true);
+    const lat = Number(inc.latitude);
+    const lng = Number(inc.longitude);
+    this.http.get<any>('/api/v1/evacuation-centers/nearest', {
+      params: { lat: String(lat), lng: String(lng), limit: '8' },
+    }).subscribe({
+      next: r => {
+        this.evacCenters.set(r.centers ?? []);
+        this.evacNote.set(r.note ?? '');
+        this.evacLoading.set(false);
+      },
+      error: () => {
+        this.evacCenters.set([]);
+        this.evacNote.set('Could not load nearest centres.');
+        this.evacLoading.set(false);
+      },
     });
   }
 
@@ -374,17 +477,40 @@ export class IncidentShowComponent implements OnInit {
   }
 
   canSubmit(): boolean {
+    // Residual rolled_back_to_* rows (pre-ladder rework) may still re-enter via submit.
     return this.auth.hasPermission('incidents.create')
       && ['draft', 'rolled_back_to_district', 'rolled_back_to_regional'].includes(this.wf());
   }
 
+  /**
+   * Resubmit after corrections (F48): visible when this desk owns the stage and either
+   * (a) legacy rolled_back_to_* status, or (b) modern waiting_* after a rollback (returned flag).
+   * Role-gated via ownsCurrentWorkflowStage — not a hidden dead button.
+   */
   canResubmit(): boolean {
-    return this.auth.hasPermission('incidents.approve') && this.wf() === 'rolled_back_to_das';
+    if (!this.auth.hasPermission('incidents.approve')) { return false; }
+    const wf = this.wf();
+    if (['rolled_back_to_district', 'rolled_back_to_regional', 'rolled_back_to_das', 'rolled_back_to_national'].includes(wf)) {
+      return true;
+    }
+    const returned = !!(this.data()?.incident as any)?.returned
+      || Number((this.data()?.incident as any)?.rollback_count ?? 0) > 0;
+    return returned && this.ownsCurrentWorkflowStage()
+      && ['waiting_ddmc', 'waiting_ded', 'waiting_rdmc', 'waiting_ras', 'waiting_eocc', 'waiting_director', 'waiting_ps'].includes(wf);
   }
 
   /** Escalation ladder stages (INCIDENT-WORKFLOW-PLAN.md). The backend still gates WHO may act at each. */
   canApprove(): boolean {
-    return this.auth.hasPermission('incidents.approve') && this.ownsCurrentWorkflowStage();
+    return this.auth.hasPermission('incidents.approve') && this.ownsCurrentWorkflowStage()
+      && ['waiting_ddmc', 'waiting_ded', 'waiting_rdmc', 'waiting_ras', 'waiting_eocc', 'waiting_director', 'waiting_ps'].includes(this.wf());
+  }
+
+  /**
+   * National forward (F49): EOCC → Director desk; Director → PS. Role-gated, not hidden.
+   */
+  canForward(): boolean {
+    if (!this.auth.hasPermission('incidents.approve') || !this.ownsCurrentWorkflowStage()) { return false; }
+    return this.wf() === 'waiting_eocc' || this.wf() === 'waiting_director';
   }
 
   /** Roll-back is available at every stage except the DDMC entry. */
@@ -453,7 +579,7 @@ export class IncidentShowComponent implements OnInit {
   act(action: string, confirmText: string, commentsRequired = false): void {
     ensureSweetAlert().then(() => {
       Swal.fire({
-        title: confirmText, icon: 'question', input: 'textarea',
+        titleText: confirmText, icon: 'question', input: 'textarea',
         inputLabel: commentsRequired ? 'Comments (required)' : 'Comments (optional)',
         showCancelButton: true, confirmButtonColor: '#dc3545',
         preConfirm: (value: string) => {
@@ -467,7 +593,57 @@ export class IncidentShowComponent implements OnInit {
         if (!res.isConfirmed) { return; }
         this.http.post<any>(`/api/v1/response/incidents/${this.id}/${action}`, { comments: res.value || null }).subscribe({
           next: r => Swal.fire({ icon: 'success', title: 'Done', text: r.message, timer: 2000, showConfirmButton: false }).then(() => this.load()),
-          error: err => Swal.fire('Error', err?.error?.message ?? 'An error occurred.', 'error'),
+          error: err => Swal.fire('Error', err?.error?.message ?? err?.error?.detail ?? 'An error occurred.', 'error'),
+        });
+      });
+    });
+  }
+
+  /**
+   * National forward with explicit desk target (F49). EOCC → Director / Asst Director;
+   * Director → Permanent Secretary. Errors are always shown — never a silent fail.
+   */
+  forwardNational(): void {
+    const wf = this.wf();
+    const options: Record<string, string> = wf === 'waiting_director'
+      ? { Secretary: 'Permanent Secretary (PS)' }
+      : {
+          Director: 'Director (DMD)',
+          'Asst. Director': 'Asst. Director',
+          'Assistant Director EOCC': 'Assistant Director EOCC',
+          'Assistant Director Operation': 'Assistant Director Operation',
+          'Assistant Director Research': 'Assistant Director Research',
+          'Assistant Director One Health': 'Assistant Director One Health',
+        };
+    ensureSweetAlert().then(() => {
+      Swal.fire({
+        titleText: 'Forward to national desk',
+        icon: 'question',
+        input: 'select',
+        inputOptions: options,
+        inputPlaceholder: 'Select desk',
+        inputValidator: (v: string) => (!v ? 'Choose a forward target' : null),
+        inputLabel: 'Target desk',
+        showCancelButton: true,
+        confirmButtonText: 'Forward',
+        confirmButtonColor: '#0d6efd',
+      }).then((pick: any) => {
+        if (!pick.isConfirmed || !pick.value) { return; }
+        Swal.fire({
+          titleText: 'Recommendation / notes (optional)',
+          input: 'textarea',
+          showCancelButton: true,
+          confirmButtonText: 'Send',
+          confirmButtonColor: '#0d6efd',
+        }).then((note: any) => {
+          if (!note.isConfirmed) { return; }
+          this.http.post<any>(`/api/v1/response/incidents/${this.id}/forward`, {
+            to_role: pick.value,
+            recommendation: note.value || null,
+          }).subscribe({
+            next: r => Swal.fire({ icon: 'success', title: 'Forwarded', text: r.message, timer: 2000, showConfirmButton: false }).then(() => this.load()),
+            error: err => Swal.fire('Error', err?.error?.message ?? err?.error?.detail ?? 'Forward failed.', 'error'),
+          });
         });
       });
     });

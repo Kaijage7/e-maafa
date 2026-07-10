@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 
 /**
  * Reads the existing temporary_warehouses table and resolves region/district names for the index screen.
@@ -110,6 +111,20 @@ public class TemporaryWarehouseService {
         }
         String status = req.operationalStatus() == null || req.operationalStatus().isBlank()
                 ? "Active" : req.operationalStatus();
+        boolean active = "Active".equalsIgnoreCase(status);
+        // F66 — deactivating (or non-Active ops status) hides the store from dispatch/ops while KPIs
+        // still counted residual stock. Block until stock is transferred out.
+        if (!active) {
+            Long residual = jdbc.queryForObject("""
+                    select coalesce(sum(quantity), 0) from public.inventory_items
+                     where temporary_warehouse_id = ? and coalesce(quantity, 0) > 0
+                    """, Long.class, id);
+            if (residual != null && residual > 0) {
+                throw new BusinessRuleException(
+                        "Cannot deactivate this temporary warehouse while it still holds "
+                                + residual + " stock unit(s). Transfer the stock out first.");
+            }
+        }
         Long regionId = resolveRegion(req.region());
         Long districtId = resolveDistrict(req.district(), regionId);
         Long councilId = resolveCouncil(req.council(), districtId);
@@ -120,7 +135,7 @@ public class TemporaryWarehouseService {
                         + " where id=?",
                 req.name().trim(), req.level().toLowerCase(), regionId, districtId, councilId,
                 blank(req.locationDescription()), status,
-                "Active".equalsIgnoreCase(status), blank(req.contactPersonName()), blank(req.contactPersonPhone()),
+                active, blank(req.contactPersonName()), blank(req.contactPersonPhone()),
                 req.latitude(), req.longitude(), id);
         if (n == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Temporary warehouse not found");

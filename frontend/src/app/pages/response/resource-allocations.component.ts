@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 
@@ -302,17 +303,17 @@ export class ResourceAllocationsComponent implements OnInit {
         notes => this.http.post<any>(`/api/v1/response/allocations/${a.id}/status`, { status, notes }));
   }
 
-  track(a: AllocationRow): void {
-    this.http.get<any>(`/api/v1/response/allocations/${a.id}/track`).subscribe(d => {
-      const steps = ['requested', 'forwarded', 'approved', 'dispatched', 'deployed', 'delivered']
-          .map(k => `<div style="padding:2px 0;">${d.timeline[k] ? '<i class="fas fa-check-circle" style="color:#198754;"></i>' : '<i class="fas fa-circle" style="color:#cbd5e1;"></i>'} ${k[0].toUpperCase() + k.slice(1)}</div>`).join('');
-      const history = (d.history as any[]).map(h =>
-          `<div style="font-size:0.78rem;color:#4a5568;">• ${h.action} — ${h.remarks ?? ''} <span style="color:#9ca3af;">(${h.user_name ?? ''})</span></div>`).join('');
-      ensureSweetAlert().then(() => Swal.fire({
-        title: `${d.resource_name} → ${d.status}`,
-        html: `<div class="text-start" style="font-size:0.85rem;">
-                 <b>Incident:</b> ${d.incident_title}<br><b>From:</b> ${d.warehouse_name ?? 'Not yet assigned'}<br><br>
-                 ${steps}<hr style="margin:8px 0;">${history || '<i>No history.</i>'}</div>`,
+	  track(a: AllocationRow): void {
+	    this.http.get<any>(`/api/v1/response/allocations/${a.id}/track`).subscribe(d => {
+	      const steps = ['requested', 'forwarded', 'approved', 'dispatched', 'deployed', 'delivered']
+	          .map(k => `<div style="padding:2px 0;">${d.timeline[k] ? '<i class="fas fa-check-circle" style="color:#198754;"></i>' : '<i class="fas fa-circle" style="color:#cbd5e1;"></i>'} ${k[0].toUpperCase() + k.slice(1)}</div>`).join('');
+	      const history = (d.history as any[]).map(h =>
+	          `<div style="font-size:0.78rem;color:#4a5568;">• ${escapeHtml(h.action)} - ${escapeHtml(h.remarks ?? '')} <span style="color:#9ca3af;">(${escapeHtml(h.user_name ?? '')})</span></div>`).join('');
+	      ensureSweetAlert().then(() => Swal.fire({
+	        titleText: `${d.resource_name ?? 'Resource'} -> ${d.status ?? ''}`,
+	        html: `<div class="text-start" style="font-size:0.85rem;">
+	                 <b>Incident:</b> ${escapeHtml(d.incident_title)}<br><b>From:</b> ${escapeHtml(d.warehouse_name ?? 'Not yet assigned')}<br><br>
+	                 ${steps}<hr style="margin:8px 0;">${history || '<i>No history.</i>'}</div>`,
         width: 520, confirmButtonColor: '#dc3545',
       }));
     });
@@ -321,9 +322,9 @@ export class ResourceAllocationsComponent implements OnInit {
   /** Shared confirm → optional input → POST → toast → reload pattern for queue actions. */
   private confirmAction(title: string, inputLabel: string | null, inputRequired: boolean,
                         request: (value: string | null) => any): void {
-    ensureSweetAlert().then(() => {
-      Swal.fire({
-        title, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
+	    ensureSweetAlert().then(() => {
+	      Swal.fire({
+	        titleText: title, icon: 'question', showCancelButton: true, confirmButtonColor: '#dc3545',
         ...(inputLabel ? { input: 'textarea', inputLabel } : {}),
         preConfirm: (value: string) => {
           if (inputRequired && !value?.trim()) {

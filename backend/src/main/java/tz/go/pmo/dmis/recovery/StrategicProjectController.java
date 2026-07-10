@@ -72,21 +72,23 @@ public class StrategicProjectController {
     @PostMapping
     @Transactional
     public Map<String, Object> store(@RequestBody Map<String, Object> b) throws Exception {
-        long seq = jdbc.queryForObject("select coalesce(max(id),0)+1 from public.strategic_projects", Long.class);
-        String entryId = "SP-" + String.format("%04d", seq);
+        // F98: derive entry_id from inserted id (not max(id)+1 race). Placeholder entry_id then update.
+        String provisional = "SP-TMP-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Long id = jdbc.queryForObject("""
                 insert into public.strategic_projects(entry_id, project_name, project_category, project_sector,
                     location, project_coverage, project_status, risk_hazard_type, risk_hazard_names,
                     impacts_identified, has_management_plan, budget, elements_at_risk, challenges,
                     action_taken, created_at, updated_at)
                 values (?,?,?,?,?::json,?,?,?,?::json,?::json,?,?,?,?,?, now(), now()) returning id
-                """, Long.class, entryId, require(b.get("project_name"), "project_name"),
+                """, Long.class, provisional, require(b.get("project_name"), "project_name"),
                 enumOr(b.get("project_category"), "Government"), enumOr(b.get("project_sector"), "Other"),
                 jsonOrNull(b.get("location")), str(b.get("project_coverage")),
                 statusOr(b.get("project_status")), str(b.get("risk_hazard_type")),
                 jsonOrNull(b.get("risk_hazard_names")), jsonOrNull(b.get("impacts_identified")),
                 bool(b.get("has_management_plan")), dbl(b.get("budget")), str(b.get("elements_at_risk")),
                 str(b.get("challenges")), str(b.get("action_taken")));
+        String entryId = "SP-" + String.format("%04d", id);
+        jdbc.update("update public.strategic_projects set entry_id = ? where id = ?", entryId, id);
         return Map.of("success", true, "id", id, "entry_id", entryId, "message", "Project " + entryId + " registered.");
     }
 

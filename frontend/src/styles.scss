@@ -23,46 +23,68 @@
 
   --radius: 8px;
   --shadow: 0 1px 2px rgba(16, 32, 56, .06), 0 1px 3px rgba(16, 32, 56, .04);
-  --sidebar-w: 236px;
-  --topbar-h: 58px;
+  /* Keep shell sidebar width aligned with dmis-v2 expanded module panel */
+  --sidebar-w: 304px;
+  --topbar-h: 60px;
+
+  /* Global type scale — single control for system-wide readability.
+     Raising --fs-root scales every rem-based size (shell, dmis-v2, most pages). */
+  --fs-root: 19px;       /* was 17px — ~12% larger system-wide rem */
+  --fs-body: 1.05rem;    /* primary reading size */
+  --fs-sm: 0.92rem;
+  --fs-xs: 0.84rem;
+  --fs-lg: 1.15rem;
+  --fs-xl: 1.35rem;
+  --fs-display: 1.55rem;
 }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
-/* Readability (user directive): raise the ROOT type scale ONCE so every rem-based font across the whole
-   app is comfortably legible for general / non-technical users — handled automatically, not per element.
-   17px root (was the 16px default) scales all rem ~+6%; body 15px lifts inherited text. Flat & professional
-   per DMIS-DESIGN-STANDARD.md — bigger body text, not bigger decorative display text. */
-html { font-size: 17px; }
+/* System-wide readability: root rem drives shell + component rem fonts; body uses rem so it tracks. */
+html { font-size: var(--fs-root); }
 body {
   font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   color: var(--ink);
   background: var(--bg);
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: var(--fs-body);
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 a { color: var(--navy); text-decoration: none; }
 h1, h2, h3, h4 { margin: 0 0 .4rem; font-weight: 650; color: var(--ink); }
-h1 { font-size: 22px; } h2 { font-size: 18px; } h3 { font-size: 15px; }
+h1 { font-size: var(--fs-display); }
+h2 { font-size: var(--fs-xl); }
+h3 { font-size: var(--fs-lg); }
+h4 { font-size: 1.08rem; }
+
+/* Form controls inherit the system scale (Bootstrap + native) */
+input, select, textarea, button, .form-control, .form-select, .btn, label {
+  font-family: inherit;
+}
+input:not([type="checkbox"]):not([type="radio"]),
+select, textarea, .form-control, .form-select {
+  font-size: 1rem;
+  line-height: 1.45;
+}
+.form-label, label.form-label { font-size: var(--fs-sm); }
 
 /* Surfaces */
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 .card-h { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
-.card-h h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.card-h h3 { margin: 0; font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
 .card-b { padding: 16px; }
 
 /* Buttons */
-.btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 6px;
-  border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 550; cursor: pointer; transition: background .12s, border-color .12s; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 2.4rem; padding: 0 0.9rem; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 1rem; font-weight: 550; cursor: pointer; transition: background .12s, border-color .12s; }
 .btn:hover { background: #f7f9fb; }
 .btn-primary { background: var(--navy); border-color: var(--navy); color: #fff; }
 .btn-primary:hover { background: var(--navy-700); }
-.btn-sm { height: 30px; padding: 0 10px; font-size: 13px; }
+.btn-sm { height: 2rem; padding: 0 0.7rem; font-size: var(--fs-sm); }
 .btn-ghost { border-color: transparent; background: transparent; }
 
 /* Badges / chips */
-.badge { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 650; letter-spacing: .3px; }
+.badge { display: inline-flex; align-items: center; gap: 5px; height: 1.45rem; padding: 0 0.55rem; border-radius: 999px; font-size: var(--fs-xs); font-weight: 650; letter-spacing: .3px; }
 .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .b-watch { background: #fff7d6; color: #8a6d00; }
 .b-warning { background: #ffeede; color: #a85607; }
@@ -72,8 +94,8 @@ h1 { font-size: 22px; } h2 { font-size: 18px; } h3 { font-size: 15px; }
 
 /* Tables */
 .tbl { width: 100%; border-collapse: collapse; }
-.tbl th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); font-weight: 600; padding: 9px 12px; border-bottom: 1px solid var(--line); }
-.tbl td { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.tbl th { text-align: left; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .4px; color: var(--muted); font-weight: 600; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--line); }
+.tbl td { padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--line); font-size: 1rem; }
 .tbl tr:last-child td { border-bottom: none; }
 .tbl tbody tr:hover { background: #fafbfc; }
 
@@ -83,8 +105,8 @@ h1 { font-size: 22px; } h2 { font-size: 18px; } h3 { font-size: 15px; }
 .tile.accent-red { border-left-color: var(--emergency); }
 .tile.accent-orange { border-left-color: var(--warning); }
 .tile.accent-green { border-left-color: var(--green); }
-.tile .n { font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
-.tile .l { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .3px; }
+.tile .n { font-size: 1.7rem; font-weight: 700; letter-spacing: -.5px; }
+.tile .l { font-size: var(--fs-sm); color: var(--muted); text-transform: uppercase; letter-spacing: .3px; }
 
 .muted { color: var(--muted); }
 /* NOTE: no `.row` utility here — Bootstrap's .row grid (used by the reproduced forms) must win. */
@@ -122,10 +144,21 @@ h1 { font-size: 22px; } h2 { font-size: 18px; } h3 { font-size: 15px; }
 .tz-pan { display: grid; grid-template-columns: repeat(3, 26px); grid-template-rows: repeat(3, 26px);
   border-radius: 6px; overflow: hidden; box-shadow: 0 1px 5px rgba(0,0,0,0.35); margin-top: 8px; }
 .tz-pan-btn { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px;
-  background: #fff; color: #334155; font-size: 14px; line-height: 1; text-decoration: none; cursor: pointer;
+  background: #fff; color: #334155; font-size: 1rem; line-height: 1; text-decoration: none; cursor: pointer;
   border-right: 1px solid #e6ebf1; border-bottom: 1px solid #e6ebf1; }
 .tz-pan-btn:hover { background: #eef4fb; color: #0d6efd; }
-.tz-pan-home { color: #94a3b8; font-size: 13px; }
+.tz-pan-home { color: #94a3b8; font-size: var(--fs-sm); }
+
+/* ── Global table / muted / helper text floor (pages that hard-code tiny rem still get legible baseline) ── */
+table { font-size: 1rem; }
+.table { font-size: 1rem; }
+.table th, .table thead th { font-size: var(--fs-sm); }
+.muted, .text-muted, small, .small { font-size: var(--fs-sm); }
+.swal2-popup { font-size: 1rem !important; }
+.swal2-title { font-size: 1.25rem !important; }
+.swal2-html-container { font-size: 1rem !important; }
+.leaflet-container { font-size: 0.95rem; }
+.leaflet-popup-content { font-size: 0.95rem; line-height: 1.45; }
 .tz-pan-home:hover { color: #059669; }
 .tz-pan-dark .tz-pan-btn { background: #1e293b; color: #cbd5e1; border-color: #334155; }
 .tz-pan-dark .tz-pan-btn:hover { background: #273449; color: #7dd3fc; }

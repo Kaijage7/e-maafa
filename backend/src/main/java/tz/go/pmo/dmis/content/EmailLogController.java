@@ -19,7 +19,7 @@ import tz.go.pmo.dmis.notification.AudienceService;
 import tz.go.pmo.dmis.notification.MailService;
 
 /**
- * Email Management (Content Management) — the delivery log of every email the platform sends through
+ * Email Management (Communication Center) — the delivery log of every email the platform sends through
  * the SMTP gateway, with status (pending/sent/delivered/failed), subject and error. The exact mirror
  * of {@link SmsLogController} over {@code email_logs}, plus a compose surface (send to one or many).
  * Every send goes through {@link MailService}, which records the {@code email_logs} row — so a manual

@@ -19,7 +19,7 @@ import tz.go.pmo.dmis.ew.MgovSmsService;
 import tz.go.pmo.dmis.notification.AudienceService;
 
 /**
- * SMS Management (Content Management) — the delivery log of every SMS the platform sends through the
+ * SMS Management (Communication Center) — the delivery log of every SMS the platform sends through the
  * M-Gov gateway (public alerts, stakeholder notifications, dissemination), with status
  * (pending/sent/delivered/failed), gateway id and error. Also the compose surface: send a message to
  * one number or in bulk, straight from here. Every send goes through {@link MgovSmsService}, which

@@ -84,7 +84,7 @@ const HAZARD_CARDS = [
 
 /** Capability cards — the welcomeV2 defaults (overridable later via portal_settings). */
 const CAPABILITIES = [
-  { title: 'Early Warning System', icon: 'fa-satellite-dish', color: '#ef4444', description: 'Multi-hazard early warning with automated SMS, email, and WhatsApp alerts to communities at risk.' },
+  { title: 'Early Warning System', icon: 'fa-satellite-dish', color: '#ef4444', description: 'Multi-hazard early warning with SMS and email alerts to communities at risk (where gateways are configured).' },
   { title: 'GIS Mapping', icon: 'fa-map-marked-alt', color: '#60a5fa', description: 'Interactive geospatial mapping of hazards, risks, resources, and evacuation routes across all regions.' },
   { title: 'Incident Management', icon: 'fa-tasks', color: '#4ade80', description: 'End-to-end incident tracking from initial report through response coordination to recovery programs.' },
   { title: 'Resource Management', icon: 'fa-warehouse', color: '#60a5fa', description: 'Track warehouses, inventory, and allocated resources for rapid deployment during emergencies.' },
@@ -343,7 +343,11 @@ export class LandingComponent implements OnDestroy {
       regionId: this.rRegionId() || null, districtId: this.rDistrictId() || null,
     }).subscribe({
       next: r => { this.reportSaving.set(false); this.reportDone.set(r.reportCode); },
-      error: (err) => { this.reportSaving.set(false); this.reportError.set(err?.error?.detail || err?.error?.message || 'Could not submit — please check your entries and try again.'); },
+      error: (err) => {
+        this.reportSaving.set(false);
+        const remote = err?.error?.detail || err?.error?.message;
+        this.reportError.set(this.L.lang() === 'en' && remote ? remote : this.L.t('lbl_could_not_submit_report'));
+      },
     });
   }
 

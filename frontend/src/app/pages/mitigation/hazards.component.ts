@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -44,7 +45,9 @@ interface HazardIndexResponse {
   template: `
     <dmis-page-header title="Hazard Management" icon="fa-exclamation-triangle"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Hazard Management'}]">
-      <a class="btn-add" routerLink="/m/prevention-mitigation/hazards/create"><i class="fas fa-plus"></i> Register New Hazard</a>
+      @if (canManage()) {
+        <a class="btn-add" routerLink="/m/prevention-mitigation/hazards/create"><i class="fas fa-plus"></i> Register New Hazard</a>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -131,19 +134,26 @@ interface HazardIndexResponse {
                       </td>
                       <td style="color:var(--text-mid);">{{ h.frequency || '-' }}</td>
                       <td>
-                        <label class="status-switch">
-                          <input type="checkbox" [checked]="h.isActive" (change)="toggleStatus(h, $any($event.target))">
-                          <span class="status-slider"></span>
-                        </label>
+                        @if (canManage()) {
+                          <label class="status-switch">
+                            <input type="checkbox" [checked]="h.isActive" (change)="toggleStatus(h, $any($event.target))">
+                            <span class="status-slider"></span>
+                          </label>
+                        } @else {
+                          @if (h.isActive) { <span class="r-badge" style="background:rgba(16,185,129,0.12);color:#059669;">Active</span> }
+                          @else { <span class="r-badge" style="background:rgba(156,163,175,0.12);color:#6b7280;">Inactive</span> }
+                        }
                       </td>
                       <td>
                         <div class="ctx-wrap">
                           <button class="ctx-trigger" type="button" (click)="toggleMenu(h.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
                           <div class="ctx-menu" [class.open]="openMenu() === h.id">
                             <button class="ctx-item" (click)="viewHazard(h.id)"><i class="fas fa-eye"></i> View</button>
-                            <a class="ctx-item success" [routerLink]="['/m/prevention-mitigation/hazards', h.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
-                            <div class="ctx-divider"></div>
-                            <button class="ctx-item danger" (click)="askDelete(h)"><i class="fas fa-trash"></i> Delete</button>
+                            @if (canManage()) {
+                              <a class="ctx-item success" [routerLink]="['/m/prevention-mitigation/hazards', h.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
+                              <div class="ctx-divider"></div>
+                              <button class="ctx-item danger" (click)="askDelete(h)"><i class="fas fa-trash"></i> Delete</button>
+                            }
                           </div>
                         </div>
                       </td>
@@ -156,9 +166,11 @@ interface HazardIndexResponse {
             <div class="empty-state">
               <i class="fas fa-exclamation-triangle"></i>
               No hazards registered yet.<br>
-              <a class="btn-add" routerLink="/m/prevention-mitigation/hazards/create" style="margin-top:0.6rem;display:inline-flex;">
-                <i class="fas fa-plus"></i> Register First Hazard
-              </a>
+              @if (canManage()) {
+                <a class="btn-add" routerLink="/m/prevention-mitigation/hazards/create" style="margin-top:0.6rem;display:inline-flex;">
+                  <i class="fas fa-plus"></i> Register First Hazard
+                </a>
+              }
             </div>
           }
         </div>
@@ -262,6 +274,7 @@ interface HazardIndexResponse {
 })
 export class HazardsComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   categoryCanvas = viewChild<ElementRef<HTMLCanvasElement>>('categoryChart');
   bubbleCanvas = viewChild<ElementRef<HTMLCanvasElement>>('bubbleChart');
 
@@ -329,6 +342,10 @@ export class HazardsComponent implements AfterViewInit, OnDestroy {
     return this.byCategory().reduce((s, c) => s + c.total, 0);
   }
 
+  canManage(): boolean {
+    return this.auth.hasPermission('hazards.manage');
+  }
+
   typeLabel(type: string): string {
     return type.replace('_', ' ');
   }
@@ -345,6 +362,10 @@ export class HazardsComponent implements AfterViewInit, OnDestroy {
   }
 
   toggleStatus(h: HazardRow, checkbox: HTMLInputElement): void {
+    if (!this.canManage()) {
+      checkbox.checked = h.isActive;
+      return;
+    }
     const isActive = checkbox.checked;
     this.http.post(`/api/v1/hazards/${h.id}/status`, { isActive }).subscribe({
       next: () => this.showAlert('Status updated', 'success'),
@@ -366,11 +387,17 @@ export class HazardsComponent implements AfterViewInit, OnDestroy {
   }
 
   askDelete(h: HazardRow): void {
+    if (!this.canManage()) {
+      return;
+    }
     this.deleteTarget.set(h);
     this.deleteOpen.set(true);
   }
 
   confirmDelete(): void {
+    if (!this.canManage()) {
+      return;
+    }
     const target = this.deleteTarget();
     if (!target) {
       return;

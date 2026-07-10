@@ -42,6 +42,38 @@ export class EwAgencyService {
     return this.http.get<Consolidated>(`${this.base}/dmd/consolidated?days=${days}`);
   }
 
+  /**
+   * PMO decision-support for red/orange/yellow painting (full INFORM H/V/C + hazard focus + exposures).
+   * hazardFocus: auto | flood | drought | landslide | storm | earthquake | coastal | overall
+   * Additive — does not change consolidation merge or bulletin publish.
+   */
+  impactSupport(day = 1, days = 5, hazardFocus = 'auto'): Observable<any> {
+    const focus = encodeURIComponent(hazardFocus || 'auto');
+    return this.http.get(`${this.base}/dmd/impact-support?day=${day}&days=${days}&hazardFocus=${focus}`);
+  }
+
+  /** Action Guide Book catalog (hazards / levels / no-harm scaling). */
+  actionGuideMeta(): Observable<any> {
+    return this.http.get(`${this.base}/dmd/action-guide`);
+  }
+
+  /**
+   * Propose ~3 editable statements from the Action Guide Book for a painted colour + hazard + areas.
+   * Does not auto-publish or send SMS/email — PMO applies into comment/directive boxes only.
+   */
+  actionStatements(body: {
+    impactLevel?: string;
+    color?: string;
+    hazard?: string;
+    hazardFocus?: string;
+    entitySource?: string;
+    areas?: string[];
+    language?: string;
+    limit?: number;
+  }): Observable<any> {
+    return this.http.post(`${this.base}/dmd/action-statements`, body);
+  }
+
   /** Generate the entity's PDF via the UNCHANGED Python engine (kind = agency key, 722e4 or multirisk).
    * Returns the application/pdf blob; the engine answers 500 (→ error callback) when it cannot build it,
    * so a caller only ever stores a real PDF. */

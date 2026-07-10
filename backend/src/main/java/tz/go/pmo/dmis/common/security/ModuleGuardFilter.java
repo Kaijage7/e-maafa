@@ -47,7 +47,12 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
         MODULE_PERMISSION.put("/v1/temporary-warehouses", "warehouse_and_stock.view");
         MODULE_PERMISSION.put("/v1/inventory", "warehouse_and_stock.view");
         MODULE_PERMISSION.put("/v1/training-plans", "preparedness.view");
-        MODULE_PERMISSION.put("/v1/evacuation-centers", "preparedness.view");
+        // Nearest-route estimator + read-only registry for EW / incident decision support.
+        // Writes stay @PreAuthorize preparedness.manage on POST/PUT.
+        MODULE_PERMISSION.put("/v1/evacuation-centers/nearest",
+                "preparedness.view|early_warning.view|incidents.view");
+        MODULE_PERMISSION.put("/v1/evacuation-centers",
+                "preparedness.view|early_warning.view|incidents.view");
         MODULE_PERMISSION.put("/v1/alert-subscriptions", "preparedness.view");
         MODULE_PERMISSION.put("/v1/onehealth", "one_health.view");
         MODULE_PERMISSION.put("/v1/recovery", "recovery.view");
@@ -56,19 +61,25 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
         MODULE_PERMISSION.put("/v1/reports/resource-allocations", "resource_allocation.view");
         MODULE_PERMISSION.put("/v1/reports/generated", "damage_assessment.view");
         MODULE_PERMISSION.put("/v1/reports", "reports_and_analytics.view");
+        MODULE_PERMISSION.put("/v1/monitoring-evaluation", "monitoring_evaluation.view");
         MODULE_PERMISSION.put("/v1/repository/events", "disaster_repository.enter");
         MODULE_PERMISSION.put("/v1/repository/analytics", "reports_and_analytics.view");
         MODULE_PERMISSION.put("/v1/repository", "reports_and_analytics.view");
-        MODULE_PERMISSION.put("/v1/hazards", "prevention_and_mitigation.view");
-        MODULE_PERMISSION.put("/v1/mitigation-measures", "prevention_and_mitigation.view");
-        MODULE_PERMISSION.put("/v1/infrastructure-items", "prevention_and_mitigation.view");
-        MODULE_PERMISSION.put("/v1/past-disasters", "prevention_and_mitigation.view");
-        MODULE_PERMISSION.put("/v1/inform", "prevention_and_mitigation.view");
+        MODULE_PERMISSION.put("/v1/frameworks", "content_management.view");
+        MODULE_PERMISSION.put("/v1/mitigation/dashboard", "prevention_dashboard.view");
+        MODULE_PERMISSION.put("/v1/hazards", "hazards.view");
+        MODULE_PERMISSION.put("/v1/mitigation-measures", "mitigation_measures.view");
+        MODULE_PERMISSION.put("/v1/infrastructure-items", "strategic_infrastructure.view");
+        MODULE_PERMISSION.put("/v1/past-disasters", "disaster_repository.view");
+        MODULE_PERMISSION.put("/v1/inform", "risk_index.view");
         MODULE_PERMISSION.put("/v1/settings/users", "user_management.view");
-        MODULE_PERMISSION.put("/v1/settings/roles", "roles_and_permissions.view");
-        MODULE_PERMISSION.put("/v1/settings/resources", "resource_catalogue.view");
-        MODULE_PERMISSION.put("/v1/settings/locations", "location_management.view");
-        MODULE_PERMISSION.put("/v1/content", "content_management.view");
+	        MODULE_PERMISSION.put("/v1/settings/roles", "roles_and_permissions.view");
+	        MODULE_PERMISSION.put("/v1/settings/resources", "resource_catalogue.view");
+	        MODULE_PERMISSION.put("/v1/settings/locations", "location_management.view");
+	        MODULE_PERMISSION.put("/v1/settings/institutions", "user_management.view");
+	        MODULE_PERMISSION.put("/v1/settings/agencies", "user_management.view");
+	        MODULE_PERMISSION.put("/v1/content/threats", "hazards.view");
+	        MODULE_PERMISSION.put("/v1/content", "content_management.view");
         // Response sub-modules that were reachable by any authenticated role (audit 2026-06-21): gate their reads.
         MODULE_PERMISSION.put("/v1/response/tasks", "tasks.view");
         MODULE_PERMISSION.put("/v1/response/communication", "communication_and_alerts.view");
@@ -78,18 +89,26 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
         MODULE_PERMISSION.put("/v1/response/settings/incident-types", "resource_catalogue.view");
         MODULE_PERMISSION.put("/v1/settings/approval-workflows", "approval_workflows.view");
         MODULE_PERMISSION.put("/v1/settings/translations", "translations.view");
+        MODULE_PERMISSION.put("/v1/communication", "communication_and_alerts.view");
+        MODULE_PERMISSION.put("/v1/content/sms-logs", "communication_and_alerts.view");
+        MODULE_PERMISSION.put("/v1/content/email-logs", "communication_and_alerts.view");
         // Modules that were method-gated but missing from the path map (matrix module-perm not enforced at the
         // filter). Mapped to a permission their endpoint holders already hold, so no access changes — it only
         // makes the matrix module the authoritative gate and stops a future un-@PreAuthorize'd endpoint leaking.
         MODULE_PERMISSION.put("/v1/finance", "budget_and_finance.view");
+        MODULE_PERMISSION.put("/v1/response/bidding/bids", "resource_allocation.request|stakeholder_portal.donate");
+        MODULE_PERMISSION.put("/v1/response/bidding/pledge", "resource_allocation.request|stakeholder_portal.donate");
+        MODULE_PERMISSION.put("/v1/response/bidding/donations", "resource_allocation.view|stakeholder_portal.donate");
+        MODULE_PERMISSION.put("/v1/response/bidding/open-needs", "resource_allocation.view");
         MODULE_PERMISSION.put("/v1/response/bidding", "resource_allocation.view");
-        MODULE_PERMISSION.put("/v1/response/support", "resource_allocation.view");
+        MODULE_PERMISSION.put("/v1/response/support", "resource_allocation.view|stakeholder_portal.donate");
         MODULE_PERMISSION.put("/v1/response/public-reports", "incidents.view");
-        // Risk Assessment lives under Prevention & Mitigation (its read list was only isAuthenticated()-gated,
-        // i.e. open to any logged-in user). Gate the whole module on prevention_and_mitigation.view — same as
-        // /v1/hazards and /v1/mitigation-measures. Safe: every risk_assessment.create/approve holder also has
-        // prevention_and_mitigation.view, so the write endpoints are not double-gated out.
-        MODULE_PERMISSION.put("/v1/risk-assessments", "prevention_and_mitigation.view");
+        // Risk Assessment lives under Prevention & Mitigation, but the subpage is now its own matrix switch
+        // so sector users can keep INFORM access without inheriting assessment registry/navigation.
+        MODULE_PERMISSION.put("/v1/risk-assessments", "risk_assessment.view");
+        // GIS map is shared by Risk Mapping + Reports — either permission unlocks (SEC-2).
+        MODULE_PERMISSION.put("/v1/gis-map", "prevention_and_mitigation.view|reports_and_analytics.view");
+        MODULE_PERMISSION.put("/v1/stakeholders", "stakeholders.view|stakeholder_portal.view|user_management.view");
     }
 
     @Override
@@ -128,9 +147,12 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
     }
 
     private static boolean hasAuthority(Authentication auth, String permission) {
+        String[] alternatives = permission.split("\\|");
         for (GrantedAuthority a : auth.getAuthorities()) {
-            if (permission.equals(a.getAuthority())) {
-                return true;
+            for (String required : alternatives) {
+                if (required.trim().equals(a.getAuthority())) {
+                    return true;
+                }
             }
         }
         return false;

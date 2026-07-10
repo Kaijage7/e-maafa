@@ -44,14 +44,14 @@ public class InfrastructureItemController {
     @PostMapping
     @Operation(summary = "Create an infrastructure item")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
+    @PreAuthorize("hasAuthority('strategic_infrastructure.manage')")
     public InfrastructureItemResponses.Detail store(@Valid @RequestBody InfrastructureItemWriteRequest request) {
         return infrastructureItemService.store(request);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update an infrastructure item")
-    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
+    @PreAuthorize("hasAuthority('strategic_infrastructure.manage')")
     public InfrastructureItemResponses.Detail update(@PathVariable Long id,
                                                      @Valid @RequestBody InfrastructureItemWriteRequest request) {
         return infrastructureItemService.update(id, request);
@@ -60,7 +60,7 @@ public class InfrastructureItemController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete an infrastructure item")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
+    @PreAuthorize("hasAuthority('strategic_infrastructure.manage')")
     public void destroy(@PathVariable Long id) {
         infrastructureItemService.destroy(id);
     }

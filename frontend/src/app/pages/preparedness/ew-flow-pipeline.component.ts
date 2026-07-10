@@ -67,7 +67,8 @@ import { AuthService } from '../../core/auth.service';
             <span class="node">2</span>
             <div class="stage-hd"><h3>Impact Analysis</h3><div class="sub">PMO-DMD consolidates every entity's push as a layer and generates the impact bulletin.</div></div>
             <div class="cards">
-              <a class="card" style="--c:#4527A0" routerLink="/m/preparedness/early-warnings/consolidated"><span class="ic"><i class="fas fa-layer-group"></i></span><div><div class="nm">PMO-DMD Consolidated Impact</div><div class="ds">Overlay layers → multirisk impact bulletin → push</div></div></a>
+              <a class="card" style="--c:#4527A0" routerLink="/m/preparedness/early-warnings/consolidated"><span class="ic"><i class="fas fa-layer-group"></i></span><div><div class="nm">PMO-DMD Consolidated Impact</div><div class="ds">Overlay layers · EC route estimates · multirisk bulletin → push</div></div></a>
+              <a class="card" style="--c:#059669" routerLink="/m/preparedness/evacuation-centers"><span class="ic"><i class="fas fa-house-user"></i></span><div><div class="nm">Evacuation Centers</div><div class="ds">Registered centres used for EW &amp; incident route estimates</div></div></a>
             </div>
           </section>
 

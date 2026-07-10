@@ -156,13 +156,18 @@ public class DispatchSupportService {
     /**
      * FIFO deduction: oldest ledger rows drain first, under row locks so two
      * approvers cannot double-spend the same batch. Caller must be in a transaction.
+     *
+     * <p>F64: the physical ledger ({@code inventory_items.quantity}, stock movements) is integer.
+     * Fractional dispatch quantities are rejected at the boundary so we never under-deduct via
+     * {@code Math.round} (e.g. 2.5 against 10 must not leave 8 while journaling 2.5).</p>
      */
     public void deductStock(String sourceType, long sourceId, long resourceId, double quantity) {
+        long units = requireWholeUnits(quantity);
         if ("agency".equals(sourceType)) {
             int updated = jdbc.update("""
                     update public.agency_resources set quantity = quantity - ?, updated_at = now()
                     where id = ? and resource_id = ? and quantity >= ?
-                    """, quantity, sourceId, resourceId, quantity);
+                    """, units, sourceId, resourceId, units);
             if (updated == 0) {
                 throw new BusinessRuleException("Insufficient stock at the selected agency.");
             }
@@ -176,15 +181,15 @@ public class DispatchSupportService {
                 where resource_id = ? and quantity > 0 and %s
                 order by id for update
                 """.formatted(locationFilter), resourceId, sourceId);
-        double remaining = quantity;
+        long remaining = units;
         for (Map<String, Object> batch : batches) {
             if (remaining <= 0) {
                 break;
             }
-            double available = ((Number) batch.get("quantity")).doubleValue();
-            double deduct = Math.min(available, remaining);
+            long available = ((Number) batch.get("quantity")).longValue();
+            long deduct = Math.min(available, remaining);
             jdbc.update("update public.inventory_items set quantity = ?, updated_at = now() where id = ?",
-                    (int) Math.max(0, Math.round(available - deduct)), batch.get("id"));
+                    (int) (available - deduct), batch.get("id"));
             remaining -= deduct;
         }
         if (remaining > 0) {
@@ -196,7 +201,12 @@ public class DispatchSupportService {
     /** Intake: top up an existing batch for the resource at the destination, or open a new one. */
     public void addStock(String warehouseType, long warehouseId, long resourceId, double quantity,
                          String itemName, Long userId) {
-        String locationFilter = "zonal".equals(warehouseType)
+        long units = requireWholeUnits(quantity);
+        if (warehouseId <= 0) {
+            throw new BusinessRuleException("A destination warehouse is required for stock intake.");
+        }
+        boolean zonal = "zonal".equals(warehouseType) || "warehouse".equals(warehouseType);
+        String locationFilter = zonal
                 ? "warehouse_id = ? and temporary_warehouse_id is null" : "temporary_warehouse_id = ?";
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select id from public.inventory_items where resource_id = ? and %s
@@ -204,16 +214,30 @@ public class DispatchSupportService {
                 """.formatted(locationFilter), resourceId, warehouseId);
         if (!rows.isEmpty()) {
             jdbc.update("update public.inventory_items set quantity = quantity + ?, updated_at = now() where id = ?",
-                    (int) quantity, rows.get(0).get("id"));
+                    (int) units, rows.get(0).get("id"));
             return;
         }
+        // F65 guard: never create store-less ledger rows (orphan stock invisible to dispatch).
         jdbc.update("""
                 insert into public.inventory_items(resource_id, warehouse_id, temporary_warehouse_id, warehouse_type,
                     item_name, quantity, status, received_date, created_at, updated_at)
                 values (?,?,?,?,?,?,'Good Condition', current_date, now(), now())
-                """, resourceId, "zonal".equals(warehouseType) ? warehouseId : null,
-                "temporary".equals(warehouseType) ? warehouseId : null, warehouseType,
-                itemName, (int) quantity);
+                """, resourceId, zonal ? warehouseId : null,
+                zonal ? null : warehouseId, zonal ? "zonal" : "temporary",
+                itemName, (int) units);
+    }
+
+    /** F64 — physical stock ledger is integer; reject 2.5-style quantities at the gate. */
+    public static long requireWholeUnits(double quantity) {
+        if (!(quantity > 0) || Double.isNaN(quantity) || Double.isInfinite(quantity)) {
+            throw new BusinessRuleException("Quantity must be greater than zero.");
+        }
+        long units = Math.round(quantity);
+        if (Math.abs(quantity - units) > 1e-9) {
+            throw new BusinessRuleException(
+                    "Stock quantities must be whole units (no fractions). The warehouse ledger is integer.");
+        }
+        return units;
     }
 
     // ─── helpers ───

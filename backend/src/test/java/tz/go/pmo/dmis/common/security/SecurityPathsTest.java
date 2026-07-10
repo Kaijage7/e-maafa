@@ -30,9 +30,14 @@ class SecurityPathsTest {
     @Test
     void portalAndLoginAndDocsArePublic() {
         assertThat(isPublic("POST", "/v1/auth/login")).isTrue();
+        // MFA_REQUIRED completion has no session — only challengeToken from login
+        assertThat(isPublic("POST", "/v1/auth/2fa/verify")).isTrue();
         assertThat(isPublic("GET", "/v1/portal/landing")).isTrue();
         assertThat(isPublic("GET", "/swagger-ui.html")).isTrue();
         assertThat(isPublic("GET", "/actuator/health/readiness")).isTrue();
+        // F59/F60 DLR webhooks (optional shared secret enforced in controller, not JWT)
+        assertThat(isPublic("POST", "/v1/webhooks/mgov/dlr")).isTrue();
+        assertThat(isPublic("POST", "/v1/webhooks/sms/dlr")).isTrue();
     }
 
     @Test
@@ -40,5 +45,17 @@ class SecurityPathsTest {
         assertThat(isPublic("POST", "/v1/settings/users")).isFalse();
         assertThat(isPublic("GET", "/v1/onehealth/events")).isFalse();
         assertThat(isPublic("GET", "/user")).isFalse();
+        // Actuator env/beans must never be anonymous-public (only health probes).
+        assertThat(isPublic("GET", "/actuator/env")).isFalse();
+        assertThat(isPublic("GET", "/actuator")).isFalse();
+    }
+
+    @Test
+    void restrictedStorageRequiresAuthMatcher() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/storage/assessments/1/x.png");
+        request.setServletPath("/storage/assessments/1/x.png");
+        boolean restricted = Arrays.stream(SecurityPaths.restrictedStorageMatchers())
+                .anyMatch(m -> m.matches(request));
+        assertThat(restricted).isTrue();
     }
 }

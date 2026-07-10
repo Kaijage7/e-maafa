@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -39,7 +40,9 @@ interface IndexResponse {
   template: `
     <dmis-page-header title="Disaster Repository" icon="fa-history"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Disaster Repository'}]">
-      <a class="btn-add" routerLink="/m/prevention-mitigation/past-disasters/create"><i class="fas fa-plus"></i> Add New Record</a>
+      @if (canEnter()) {
+        <a class="btn-add" routerLink="/m/prevention-mitigation/past-disasters/create"><i class="fas fa-plus"></i> Add New Record</a>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -109,9 +112,11 @@ interface IndexResponse {
                           <button class="ctx-trigger" type="button" (click)="toggleMenu(d.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
                           <div class="ctx-menu" [class.open]="openMenu() === d.id">
                             <button class="ctx-item" (click)="viewDisaster(d.id)"><i class="fas fa-eye"></i> View</button>
-                            <a class="ctx-item success" [routerLink]="['/m/prevention-mitigation/past-disasters', d.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
-                            <div class="ctx-divider"></div>
-                            <button class="ctx-item danger" (click)="askDelete(d)"><i class="fas fa-trash"></i> Delete</button>
+                            @if (canEnter()) {
+                              <a class="ctx-item success" [routerLink]="['/m/prevention-mitigation/past-disasters', d.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
+                              <div class="ctx-divider"></div>
+                              <button class="ctx-item danger" (click)="askDelete(d)"><i class="fas fa-trash"></i> Delete</button>
+                            }
                           </div>
                         </div>
                       </td>
@@ -124,9 +129,11 @@ interface IndexResponse {
             <div class="empty-state">
               <i class="fas fa-history"></i>
               No disaster records yet.<br>
-              <a class="btn-add" routerLink="/m/prevention-mitigation/past-disasters/create" style="margin-top:0.6rem;display:inline-flex;">
-                <i class="fas fa-plus"></i> Add First Record
-              </a>
+              @if (canEnter()) {
+                <a class="btn-add" routerLink="/m/prevention-mitigation/past-disasters/create" style="margin-top:0.6rem;display:inline-flex;">
+                  <i class="fas fa-plus"></i> Add First Record
+                </a>
+              }
             </div>
           }
         </div>
@@ -222,6 +229,7 @@ interface IndexResponse {
 })
 export class PastDisastersComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   hazardTypeCanvas = viewChild<ElementRef<HTMLCanvasElement>>('hazardTypeChart');
   yearCanvas = viewChild<ElementRef<HTMLCanvasElement>>('yearChart');
 
@@ -284,6 +292,10 @@ export class PastDisastersComponent implements AfterViewInit, OnDestroy {
     return this.byHazardType().reduce((s, c) => s + c.total, 0);
   }
 
+  canEnter(): boolean {
+    return this.auth.hasPermission('disaster_repository.enter');
+  }
+
   /** Str::limit equivalent (40 for event, 25 for location). */
   limit(value: string | null, max: number): string {
     if (!value) {
@@ -319,11 +331,17 @@ export class PastDisastersComponent implements AfterViewInit, OnDestroy {
   }
 
   askDelete(d: DisasterRow): void {
+    if (!this.canEnter()) {
+      return;
+    }
     this.deleteTarget.set(d);
     this.deleteOpen.set(true);
   }
 
   confirmDelete(): void {
+    if (!this.canEnter()) {
+      return;
+    }
     const target = this.deleteTarget();
     if (!target) {
       return;

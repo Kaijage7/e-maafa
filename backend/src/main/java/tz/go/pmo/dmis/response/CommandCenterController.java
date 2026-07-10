@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +64,7 @@ public class CommandCenterController {
     }
     private static final com.fasterxml.jackson.databind.ObjectMapper JSON =
             new com.fasterxml.jackson.databind.ObjectMapper();
+    private static final TypeReference<List<Map<String, Object>>> JOURNAL = new TypeReference<>() {};
 
     private final JdbcTemplate jdbc;
     private final ActivationService activations;
@@ -317,16 +319,62 @@ public class CommandCenterController {
         boolean simulation = Boolean.TRUE.equals(activation.get("is_simulation"));
         // affected_areas is a json array column; format it as a readable location, not raw JSON.
         String location = formatAreas(activation.get("affected_areas"));
+        // F80: resolve first matching region/district so CP board area readiness is not empty.
+        Long regionId = null;
+        Long districtId = null;
+        String regionName = null;
+        String districtName = null;
+        try {
+            List<String> areaNames = new ArrayList<>();
+            if (activation.get("affected_areas") != null) {
+                for (Object area : JSON.readValue(String.valueOf(activation.get("affected_areas")), List.class)) {
+                    if (area != null && !String.valueOf(area).isBlank()) {
+                        areaNames.add(String.valueOf(area).trim());
+                    }
+                }
+            }
+            for (String area : areaNames) {
+                List<Map<String, Object>> dist = jdbc.queryForList("""
+                        select d.id as district_id, d.name as district_name, r.id as region_id, r.name as region_name
+                        from public.districts d
+                        join public.regions r on r.id = d.region_id
+                        where lower(d.name) = lower(?) or lower(d.name) like lower(?)
+                        order by case when lower(d.name) = lower(?) then 0 else 1 end, d.id
+                        limit 1
+                        """, area, area + "%", area);
+                if (!dist.isEmpty()) {
+                    districtId = ((Number) dist.get(0).get("district_id")).longValue();
+                    districtName = String.valueOf(dist.get(0).get("district_name"));
+                    regionId = ((Number) dist.get(0).get("region_id")).longValue();
+                    regionName = String.valueOf(dist.get(0).get("region_name"));
+                    break;
+                }
+                List<Map<String, Object>> reg = jdbc.queryForList("""
+                        select id as region_id, name as region_name from public.regions
+                        where lower(name) = lower(?) or lower(name) like lower(?)
+                        order by case when lower(name) = lower(?) then 0 else 1 end, id
+                        limit 1
+                        """, area, area + "%", area);
+                if (!reg.isEmpty()) {
+                    regionId = ((Number) reg.get(0).get("region_id")).longValue();
+                    regionName = String.valueOf(reg.get(0).get("region_name"));
+                    break;
+                }
+            }
+        } catch (Exception ignored) {
+            // keep null ids — location_description still carries the free-text areas
+        }
         Long incidentId = jdbc.queryForObject("""
                 insert into public.incidents(title, description, severity_level, status, workflow_status,
-                    location_description, reported_at, is_simulation, created_at, updated_at)
-                values (?, ?, 'Critical', 'Active Response', 'approved', ?, now(), ?, now(), now())
+                    location_description, region_id, region_name, district_id, district_name,
+                    reported_at, is_simulation, created_at, updated_at)
+                values (?, ?, 'Critical', 'Active Response', 'approved', ?, ?, ?, ?, ?, now(), ?, now(), now())
                 returning id
                 """, Long.class,
                 (simulation ? "[SIMULATION] " : "") + "Impact: " + activation.get("hazard_description"),
                 "Created on impact confirmation from anticipatory activation #" + id
                         + (body == null || body.get("details") == null ? "" : ". " + body.get("details")),
-                location, simulation);
+                location, regionId, regionName, districtId, districtName, simulation);
         jdbc.update("""
                 update public.response_activations set incident_id = ?, posture = 'disaster', updated_at = now()
                 where id = ?
@@ -383,11 +431,17 @@ public class CommandCenterController {
                 where ? = 0 or coalesce(w.city_or_region, w.location_address, w.zone, '') ilike any (?)
                 group by w.id order by stock_units desc limit 20
                 """, areas.size(), like));
+        // F68: scope EW chips to activation affected areas (same ilike-any pattern as evac centres).
         out.put("early_warnings", jdbc.queryForList("""
-                select warning_code, hazard_type, severity_level, affected_regions, people_at_risk, status
-                from public.early_warnings where status not in ('expired','cancelled')
+                select warning_code, hazard_type, severity_level, affected_regions, affected_districts,
+                       people_at_risk, status
+                from public.early_warnings
+                where status not in ('expired','cancelled')
+                  and (? = 0
+                       or coalesce(affected_regions,'') ilike any (?)
+                       or coalesce(affected_districts,'') ilike any (?))
                 order by created_at desc limit 10
-                """));
+                """, areas.size(), like, like));
         out.put("stakeholders_on_call", jdbc.queryForList("""
                 select distinct s.id, s.name, s.organization from public.incident_tasks t
                 join public.stakeholders s on s.id = t.stakeholder_id
@@ -460,6 +514,10 @@ public class CommandCenterController {
                        count(distinct stakeholder_id) filter (where stakeholder_id is not null) as assigned_stakeholders
                 from public.incident_tasks where activation_id = ?
                 """, id));
+        out.put("logistics", buildLogisticsBlock(activation.get("incident_id")));
+        out.put("situation_reports", buildSituationReportsBlock(activation));
+        // F31 — real operational periods (IAP cadence), not only age-derived labels.
+        out.put("operational_periods", buildOperationalPeriodsBlock(id));
         out.put("stakeholders", jdbc.queryForList(
                 "select id, name, organization from public.stakeholders where coalesce(is_active, true) order by organization nulls last, name"));
         // ICS org chart (F05, V140): one entry per standard command role — the active holder
@@ -491,6 +549,69 @@ public class CommandCenterController {
             out.put("aar", buildAar(id));
         }
         return out;
+    }
+
+    // ─── Operational periods (IAP cadence — F31) ───
+
+    /**
+     * Open a new operational period. Closes any currently open period (with optional handover notes
+     * on that close via a separate close call — this method only opens the next numbered period).
+     */
+    @PostMapping("/{id}/periods")
+    @Transactional
+    @PreAuthorize("hasAuthority('command_post.posture')")
+    public Map<String, Object> openPeriod(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+        findOr404(id);
+        ensurePeriodTable();
+        // Auto-close previous open period if any
+        jdbc.update("""
+                update public.activation_periods
+                   set status = 'closed', ended_at = coalesce(ended_at, now()), updated_at = now()
+                 where activation_id = ? and status = 'open'
+                """, id);
+        Integer next = jdbc.queryForObject(
+                "select coalesce(max(period_number), 0) + 1 from public.activation_periods where activation_id = ?",
+                Integer.class, id);
+        int n = next == null ? 1 : next;
+        String label = body != null && str(body.get("label")) != null
+                ? str(body.get("label"))
+                : "Operational Period " + n;
+        String objectives = body == null ? null : str(body.get("objectives"));
+        Long periodId = jdbc.queryForObject("""
+                insert into public.activation_periods
+                    (activation_id, period_number, label, objectives, status, started_at, created_by, created_at, updated_at)
+                values (?,?,?,?, 'open', now(), ?, now(), now())
+                returning id
+                """, Long.class, id, n, label, objectives, users.actingUserId());
+        activations.log(id, users.actingUserId(), "period_opened",
+                "Opened " + label + (objectives == null || objectives.isBlank() ? "" : " — " + objectives), null);
+        return Map.of("success", true, "period_id", periodId, "period_number", n, "label", label);
+    }
+
+    /** Close an open operational period with optional handover notes (feeds AAR). */
+    @PostMapping("/{id}/periods/{periodId}/close")
+    @Transactional
+    @PreAuthorize("hasAuthority('command_post.posture')")
+    public Map<String, Object> closePeriod(@PathVariable long id, @PathVariable long periodId,
+                                           @RequestBody(required = false) Map<String, Object> body) {
+        findOr404(id);
+        ensurePeriodTable();
+        String notes = body == null ? null : str(body.get("handover_notes"));
+        int n = jdbc.update("""
+                update public.activation_periods
+                   set status = 'closed', ended_at = now(), handover_notes = coalesce(?, handover_notes),
+                       updated_at = now()
+                 where id = ? and activation_id = ? and status = 'open'
+                """, notes, periodId, id);
+        if (n == 0) {
+            throw new BusinessRuleException("Period not found or already closed.");
+        }
+        Map<String, Object> row = jdbc.queryForMap(
+                "select label, period_number from public.activation_periods where id = ?", periodId);
+        activations.log(id, users.actingUserId(), "period_closed",
+                "Closed " + row.get("label")
+                        + (notes == null || notes.isBlank() ? "" : " — handover: " + notes), null);
+        return Map.of("success", true, "status", "closed", "period_id", periodId);
     }
 
     // ─── Scenario injects (exercise director tools) ───
@@ -901,6 +1022,238 @@ public class CommandCenterController {
         return roles;
     }
 
+    private Map<String, Object> buildLogisticsBlock(Object incidentIdRaw) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (incidentIdRaw == null) {
+            out.put("available", false);
+            out.put("summary", Map.of("allocation_count", 0, "resource_count", 0));
+            out.put("resources", List.of());
+            out.put("status_summary", List.of());
+            return out;
+        }
+        long incidentId = ((Number) incidentIdRaw).longValue();
+        out.put("available", true);
+        out.put("dispatch_console_url", "/m/response/dispatch?incident_id=" + incidentId);
+        out.put("summary", jdbc.queryForMap("""
+                select count(*) as allocation_count,
+                       count(distinct resource_id) as resource_count,
+                       count(*) filter (where status in ('Approved','Sourcing','Requested to Stakeholders','Awaiting Dispatch Approval')) as pending_dispatch,
+                       count(*) filter (where status in ('Dispatch Approved','In Transit')) as in_transit,
+                       count(*) filter (where status in ('Deployed','Delivered','Partially Fulfilled')) as delivered_or_deployed,
+                       (select count(*) from public.dispatch_approvals da
+                        join public.allocated_resources ar2 on ar2.id = da.allocated_resource_id
+                        where ar2.incident_id = ? and da.status = 'Pending' and da.deleted_at is null) as pending_source_approvals
+                from public.allocated_resources ar
+                where ar.incident_id = ?
+                """, incidentId, incidentId));
+        out.put("status_summary", jdbc.queryForList("""
+                select status, count(*) as count
+                from public.allocated_resources
+                where incident_id = ?
+                group by status
+                order by count(*) desc, status
+                """, incidentId));
+        List<Map<String, Object>> resources = jdbc.queryForList("""
+                select ar.id, ar.resource_id, r.name as resource_name, r.category as resource_category,
+                       ar.status, ar.quantity_requested, ar.quantity_allocated, ar.unit_of_measure,
+                       ar.source, ar.source_details, ar.allocation_date, ar.created_at, ar.updated_at
+                from public.allocated_resources ar
+                join public.resources r on r.id = ar.resource_id
+                where ar.incident_id = ?
+                order by ar.updated_at desc nulls last, ar.created_at desc nulls last, ar.id desc
+                limit 12
+                """, incidentId);
+        for (Map<String, Object> resource : resources) {
+            List<Map<String, Object>> journal = journal(resource.get("source_details"));
+            double requested = dbl(resource.get("quantity_requested"));
+            double allocated = dbl(resource.get("quantity_allocated"));
+            double need = allocated > 0 ? allocated : requested;
+            double dispatched = journal.stream()
+                    .mapToDouble(item -> dbl(firstNonNull(item.get("quantity_dispatched"), item.get("dispatched_quantity"))))
+                    .sum();
+            double delivered = journal.stream()
+                    .mapToDouble(item -> dbl(firstNonNull(item.get("quantity_delivered"), item.get("delivered_quantity"))))
+                    .sum();
+            Map<String, Object> latest = journal.isEmpty() ? null : journal.get(journal.size() - 1);
+            resource.put("dispatched_quantity", dispatched);
+            resource.put("delivered_quantity", delivered);
+            resource.put("pending_quantity", Math.max(0, need - Math.max(dispatched, delivered)));
+            resource.put("journal_count", journal.size());
+            resource.put("latest_source", latestSource(latest, resource.get("source")));
+            resource.remove("source_details");
+        }
+        out.put("resources", resources);
+        return out;
+    }
+
+    private Map<String, Object> buildSituationReportsBlock(Map<String, Object> activation) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        Object incidentIdRaw = activation.get("incident_id");
+        if (incidentIdRaw == null) {
+            out.put("available", false);
+            out.put("reports", List.of());
+            out.put("summary", Map.of("reports_count", 0));
+            return out;
+        }
+        long incidentId = ((Number) incidentIdRaw).longValue();
+        out.put("available", true);
+        out.put("incident_id", incidentId);
+        out.put("incident_url", "/m/response/incidents/" + incidentId);
+        out.put("summary", jdbc.queryForMap("""
+                select count(*) as reports_count,
+                       max(created_at) as latest_report_at,
+                       coalesce(round(extract(epoch from (now() - max(created_at))) / 3600.0, 1), null) as hours_since_latest
+                from public.incident_history_reports
+                where incident_id = ?
+                """, incidentId));
+        out.put("cadence", currentOperationalCadence(activation));
+        List<Map<String, Object>> reports = jdbc.queryForList("""
+                select hr.id, hr.deaths_total, hr.injured_total, hr.missing_total, hr.displaced,
+                       hr.people_with_disabilities, hr.pregnant_affected, hr.children_affected,
+                       hr.government_property_loss, hr.private_property_loss,
+                       hr.services_unavailable, hr.remarks, hr.created_at, u.name as reported_by_name
+                from public.incident_history_reports hr
+                left join public.users u on u.id = hr.user_id
+                where hr.incident_id = ?
+                order by hr.created_at desc
+                limit 6
+                """, incidentId);
+        for (Map<String, Object> report : reports) {
+            report.put("services_unavailable", parseJson(report.get("services_unavailable")));
+        }
+        out.put("reports", reports);
+        return out;
+    }
+
+    private Map<String, Object> currentOperationalCadence(Map<String, Object> activation) {
+        Map<String, Object> cadence = new LinkedHashMap<>();
+        Object activatedAt = activation.get("activated_at");
+        Object activationId = activation.get("id");
+        // Prefer a real open period row when V181 is present.
+        if (activationId != null && periodTableReady()) {
+            List<Map<String, Object>> open = jdbc.queryForList("""
+                    select id, period_number, label, objectives, started_at,
+                           round(extract(epoch from (now() - started_at)) / 3600.0, 1) as hours_open
+                    from public.activation_periods
+                    where activation_id = ? and status = 'open'
+                    order by period_number desc limit 1
+                    """, ((Number) activationId).longValue());
+            if (!open.isEmpty()) {
+                Map<String, Object> p = open.get(0);
+                cadence.put("label", p.get("label"));
+                cadence.put("period_id", p.get("id"));
+                cadence.put("period_number", p.get("period_number"));
+                cadence.put("objectives", p.get("objectives"));
+                cadence.put("hours_elapsed", p.get("hours_open"));
+                cadence.put("window", "Open since " + p.get("started_at"));
+                cadence.put("source", "activation_periods");
+                cadence.put("next_report_hint",
+                        "Keep situation reports current for this operational period; close the period with handover notes when shifting command.");
+                return cadence;
+            }
+        }
+        if (activatedAt == null) {
+            cadence.put("label", "Operational period pending");
+            cadence.put("hours_elapsed", 0);
+            cadence.put("source", "derived");
+            cadence.put("next_report_hint", "Open Period 1 from the Command Post or create the first situation report from the incident page.");
+            return cadence;
+        }
+        double hours = jdbc.queryForObject(
+                "select round(extract(epoch from (now() - ?::timestamptz)) / 3600.0, 1)",
+                Double.class, activatedAt);
+        int period = Math.max(1, ((int) Math.floor(hours / 24.0)) + 1);
+        int capped = Math.min(period, 3);
+        cadence.put("label", period <= 3 ? "Operational Period " + capped : "Post-72 Hour Sustained Operations");
+        cadence.put("hours_elapsed", hours);
+        cadence.put("window", period <= 3
+                ? "H+" + ((capped - 1) * 24) + " to H+" + (capped * 24)
+                : "H+72 and beyond");
+        cadence.put("source", "derived");
+        cadence.put("next_report_hint", "Open a formal operational period to capture IAP objectives and handover notes.");
+        return cadence;
+    }
+
+    private Map<String, Object> buildOperationalPeriodsBlock(long activationId) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (!periodTableReady()) {
+            out.put("available", false);
+            out.put("periods", List.of());
+            out.put("message", "Run Flyway V181 to enable formal operational periods.");
+            return out;
+        }
+        out.put("available", true);
+        List<Map<String, Object>> periods = jdbc.queryForList("""
+                select p.id, p.period_number, p.label, p.objectives, p.status,
+                       p.started_at, p.ended_at, p.handover_notes,
+                       u.name as created_by_name,
+                       round(extract(epoch from (coalesce(p.ended_at, now()) - p.started_at)) / 3600.0, 1) as hours_duration
+                from public.activation_periods p
+                left join public.users u on u.id = p.created_by
+                where p.activation_id = ?
+                order by p.period_number
+                """, activationId);
+        // F31 residual: task activity rollups inside each period window (from activity log + task status).
+        for (Map<String, Object> p : periods) {
+            Object start = p.get("started_at");
+            Object end = p.get("ended_at");
+            Map<String, Object> rollup = jdbc.queryForMap("""
+                    select
+                      count(*) filter (where l.action = 'task_updated' and l.message ilike '%%Completed%%') as tasks_completed_events,
+                      count(*) filter (where l.action = 'task_updated') as task_update_events,
+                      count(distinct l.task_id) filter (where l.task_id is not null) as tasks_touched,
+                      count(*) filter (where l.action in ('period_opened','period_closed','inject_fired','inject_resolved','posture_changed')) as command_events,
+                      count(*) filter (where l.action = 'inject_fired') as injects_fired
+                    from public.task_activity_log l
+                    where l.activation_id = ?
+                      and l.created_at >= ?::timestamptz
+                      and l.created_at < coalesce(?::timestamptz, now() + interval '1 second')
+                    """, activationId, start, end);
+            // Tasks currently completed that were last updated inside the window
+            Map<String, Object> taskSnap = jdbc.queryForMap("""
+                    select
+                      count(*) filter (where t.status = 'Completed'
+                        and t.updated_at >= ?::timestamptz
+                        and t.updated_at < coalesce(?::timestamptz, now() + interval '1 second')) as completed_in_window,
+                      count(*) filter (where t.status = 'In Progress'
+                        and t.updated_at >= ?::timestamptz
+                        and t.updated_at < coalesce(?::timestamptz, now() + interval '1 second')) as in_progress_in_window,
+                      count(*) filter (where t.is_72hr_critical
+                        and t.status = 'Completed'
+                        and t.updated_at >= ?::timestamptz
+                        and t.updated_at < coalesce(?::timestamptz, now() + interval '1 second')) as critical_completed_in_window
+                    from public.incident_tasks t
+                    where t.activation_id = ?
+                    """, start, end, start, end, start, end, activationId);
+            Map<String, Object> tasks = new LinkedHashMap<>();
+            tasks.putAll(rollup);
+            tasks.putAll(taskSnap);
+            p.put("task_rollup", tasks);
+        }
+        out.put("periods", periods);
+        out.put("open_count", periods.stream().filter(p -> "open".equals(String.valueOf(p.get("status")))).count());
+        out.put("closed_count", periods.stream().filter(p -> "closed".equals(String.valueOf(p.get("status")))).count());
+        return out;
+    }
+
+    private boolean periodTableReady() {
+        try {
+            Boolean exists = jdbc.queryForObject(
+                    "select exists(select 1 from information_schema.tables where table_schema='public' and table_name='activation_periods')",
+                    Boolean.class);
+            return Boolean.TRUE.equals(exists);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Soft-fail if migration not yet applied (board still works). */
+    private void ensurePeriodTable() {
+        if (!periodTableReady()) {
+            throw new BusinessRuleException("Operational periods require migration V181 (activation_periods).");
+        }
+    }
+
     /** Full institutional title for an ICS role code (journal + UI wording). */
     private static String roleTitle(String role) {
         return switch (role) {
@@ -1052,6 +1405,15 @@ public class CommandCenterController {
         return null;
     }
 
+    private static Object firstNonNull(Object... values) {
+        for (Object value : values) {
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
+    }
+
     private static String requireIn(Object v, List<String> allowed, String field) {
         String s = require(v, field);
         if (!allowed.contains(s)) {
@@ -1073,6 +1435,42 @@ public class CommandCenterController {
             throw new BusinessRuleException("The " + field + " field is required.");
         }
         return (long) Double.parseDouble(String.valueOf(v));
+    }
+
+    private static double dbl(Object v) {
+        if (v == null) {
+            return 0d;
+        }
+        try {
+            return Double.parseDouble(String.valueOf(v));
+        } catch (NumberFormatException e) {
+            return 0d;
+        }
+    }
+
+    private static String latestSource(Map<String, Object> latest, Object fallback) {
+        if (latest == null) {
+            return str(fallback);
+        }
+        return firstNonBlank(
+                str(latest.get("source_name")),
+                str(latest.get("agency_name")),
+                str(latest.get("warehouse_name")),
+                str(latest.get("source_type")),
+                str(latest.get("type")),
+                str(fallback));
+    }
+
+    private static List<Map<String, Object>> journal(Object raw) {
+        String value = str(raw);
+        if (value == null || !value.startsWith("[")) {
+            return List.of();
+        }
+        try {
+            return JSON.readValue(value, JOURNAL);
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 
     private static String str(Object v) {

@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { AuthService } from '../../core/auth.service';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
@@ -10,15 +11,17 @@ interface Agency {
   website: string; isActive: boolean;
 }
 
-/** Content Management → Agencies — partner agency registry (the EWE institutions + partners). */
+/** System Settings -> Agencies — partner agency registry (the EWE institutions + partners). */
 @Component({
   selector: 'page-agencies',
   standalone: true,
   imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
   template: `
     <dmis-page-header title="Agencies" icon="fa-building"
-      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Agencies'}]">
-      <button class="btn-add" type="button" (click)="openCreate()"><i class="fas fa-plus"></i> New Agency</button>
+      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Agencies'}]">
+      @if (canManage()) {
+        <button class="btn-add" type="button" (click)="openCreate()"><i class="fas fa-plus"></i> New Agency</button>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -39,7 +42,7 @@ interface Agency {
           @if (filtered().length) {
             <div style="overflow-x:auto;">
               <table class="r-table">
-                <thead><tr><th>Agency</th><th>Type</th><th>Mandate</th><th>Website</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Agency</th><th>Type</th><th>Mandate</th><th>Website</th><th>Status</th>@if (canManage()) { <th>Actions</th> }</tr></thead>
                 <tbody>
                   @for (a of filtered(); track a.id) {
                     <tr class="data-row">
@@ -48,15 +51,17 @@ interface Agency {
                       <td style="font-size:0.8rem;color:var(--text-mid);max-width:340px;">{{ (a.mandate || '-').slice(0, 90) }}</td>
                       <td style="font-size:0.8rem;">@if (a.website) { <a [href]="a.website" target="_blank" style="color:#2563eb;">{{ a.website.replace('https://','') }}</a> } @else { - }</td>
                       <td><span class="r-badge {{ a.isActive ? 'badge-approved' : 'badge-rejected' }}">{{ a.isActive ? 'Active' : 'Inactive' }}</span></td>
-                      <td>
-                        <div class="ctx-wrap">
-                          <button class="ctx-trigger" type="button" (click)="toggleMenu(a.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
-                          <div class="ctx-menu" [class.open]="openMenu() === a.id">
-                            <a class="ctx-item success" (click)="openEdit(a)"><i class="fas fa-edit"></i> Edit</a>
-                            <a class="ctx-item" (click)="toggleActive(a)"><i class="fas" [class.fa-ban]="a.isActive" [class.fa-check]="!a.isActive"></i> {{ a.isActive ? 'Deactivate' : 'Activate' }}</a>
+                      @if (canManage()) {
+                        <td>
+                          <div class="ctx-wrap">
+                            <button class="ctx-trigger" type="button" (click)="toggleMenu(a.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
+                            <div class="ctx-menu" [class.open]="openMenu() === a.id">
+                              <a class="ctx-item success" (click)="openEdit(a)"><i class="fas fa-edit"></i> Edit</a>
+                              <a class="ctx-item" (click)="toggleActive(a)"><i class="fas" [class.fa-ban]="a.isActive" [class.fa-check]="!a.isActive"></i> {{ a.isActive ? 'Deactivate' : 'Activate' }}</a>
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
+                      }
                     </tr>
                   }
                 </tbody>
@@ -67,7 +72,7 @@ interface Agency {
       </dmis-panel>
     </div>
 
-    @if (editorOpen()) {
+    @if (editorOpen() && canManage()) {
       <div style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1500;display:flex;align-items:center;justify-content:center;padding:1rem;" (click)="editorOpen.set(false)">
         <div style="background:#fff;border-radius:12px;border:1px solid var(--border);max-width:640px;width:100%;padding:1.3rem 1.4rem;" (click)="$event.stopPropagation()">
           <h5 style="font-weight:800;margin-bottom:1rem;">{{ editId() ? 'Edit Agency' : 'New Agency' }}</h5>
@@ -96,6 +101,8 @@ interface Agency {
 })
 export class AgenciesComponent {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
+  private base = '/api/v1/settings/agencies';
   items = signal<Agency[]>([]);
   stats = signal({ total: 0, active: 0, government: 0, other: 0 });
   search = signal('');
@@ -105,6 +112,7 @@ export class AgenciesComponent {
   fName = signal(''); fAcr = signal(''); fType = signal('Government'); fWeb = signal('');
   fCName = signal(''); fCPhone = signal(''); fMandate = signal('');
   saving = signal(false); error = signal('');
+  canManage = computed(() => this.auth.hasPermission('user_management.manage'));
 
   constructor() { this.reload(); }
 
@@ -114,11 +122,12 @@ export class AgenciesComponent {
   });
 
   reload(): void {
-    this.http.get<{ items: Agency[]; stats: any }>('/api/v1/content/agencies')
+    this.http.get<{ items: Agency[]; stats: any }>(this.base)
       .subscribe(r => { this.items.set(r.items); this.stats.set(r.stats); });
   }
 
   openCreate(): void {
+    if (!this.canManage()) { return; }
     this.editId.set(null);
     this.fName.set(''); this.fAcr.set(''); this.fType.set('Government'); this.fWeb.set('');
     this.fCName.set(''); this.fCPhone.set(''); this.fMandate.set('');
@@ -127,6 +136,7 @@ export class AgenciesComponent {
   }
 
   openEdit(a: Agency): void {
+    if (!this.canManage()) { return; }
     this.editId.set(a.id);
     this.fName.set(a.name); this.fAcr.set(a.acronym ?? ''); this.fType.set(a.agencyType);
     this.fWeb.set(a.website ?? ''); this.fCName.set(a.contactPersonName ?? '');
@@ -136,13 +146,14 @@ export class AgenciesComponent {
   }
 
   save(): void {
+    if (!this.canManage()) { return; }
     this.saving.set(true);
     const payload = { name: this.fName().trim(), acronym: this.fAcr() || null, agencyType: this.fType(),
       website: this.fWeb() || null, contactPersonName: this.fCName() || null,
       contactPersonPhone: this.fCPhone() || null, mandateDescription: this.fMandate() || null };
     const req = this.editId()
-      ? this.http.put(`/api/v1/content/agencies/${this.editId()}`, payload)
-      : this.http.post('/api/v1/content/agencies', payload);
+      ? this.http.put(`${this.base}/${this.editId()}`, payload)
+      : this.http.post(this.base, payload);
     req.subscribe({
       next: () => { this.saving.set(false); this.editorOpen.set(false); this.reload(); },
       error: e => { this.saving.set(false); this.error.set(e?.error?.message || 'Could not save.'); },
@@ -150,7 +161,8 @@ export class AgenciesComponent {
   }
 
   toggleActive(a: Agency): void {
-    this.http.put(`/api/v1/content/agencies/${a.id}`, { isActive: !a.isActive }).subscribe(() => this.reload());
+    if (!this.canManage()) { return; }
+    this.http.put(`${this.base}/${a.id}`, { isActive: !a.isActive }).subscribe(() => this.reload());
   }
 
   toggleMenu(id: number, e: Event): void { e.stopPropagation(); this.openMenu.update(c => c === id ? null : id); }

@@ -64,15 +64,27 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
             <div class="brand-info"><div class="brand-title">e-MAAFA</div></div>
           </a>
           <div class="nav-links">
-            <a routerLink="/" [class.active]="active === 'home'" style="font-size: 1rem;"><i class="fas fa-home me-1"></i> {{ L.t('lbl_home') }}</a>
-            <a routerLink="/about" [class.active]="active === 'about'" style="font-size: 1rem;"><i class="fas fa-info-circle me-1"></i> {{ L.t('lbl_about') }}</a>
-            <a routerLink="/portal" [class.active]="active === 'portal'" style="font-size: 1rem;"><i class="fas fa-globe-africa me-1"></i> {{ L.t('lbl_portal') }}</a>
-            <a routerLink="/track-report" [class.active]="active === 'track-report'" style="font-size: 1rem;"><i class="fas fa-magnifying-glass-location me-1"></i> {{ L.t('lbl_track_report') }}</a>
-            <a routerLink="/publications/Policies" [class.active]="active === 'publications'" style="font-size: 1rem;"><i class="fas fa-book-open me-1"></i> {{ L.t('lbl_publication') }}</a>
-            <a routerLink="/education" [class.active]="active === 'education'" style="font-size: 1rem;"><i class="fas fa-graduation-cap me-1"></i> {{ L.t('lbl_education') }}</a>
-            <button (click)="L.toggle()" style="font-size: 1rem;"><i class="fas fa-language me-1"></i> {{ L.lang() === 'en' ? 'Swahili' : 'English' }}</button>
-            <button (click)="toggleTheme()" class="theme-toggle" title="Toggle dark mode"><i class="fas" [class.fa-moon]="!dark()" [class.fa-sun]="dark()"></i></button>
-            <a routerLink="/login" class="btn-glass" style="font-size: 1rem;"><i class="fas fa-sign-in-alt me-1"></i> {{ L.t('lbl_login') }}</a>
+            <a routerLink="/" [class.active]="active === 'home'" style="font-size: 1rem;"
+               [title]="tip('home')"><i class="fas fa-home me-1"></i> {{ L.t('lbl_home') }}</a>
+            <a routerLink="/about" [class.active]="active === 'about'" style="font-size: 1rem;"
+               [title]="tip('about')"><i class="fas fa-info-circle me-1"></i> {{ L.t('lbl_about') }}</a>
+            <a routerLink="/portal" [class.active]="active === 'portal'" style="font-size: 1rem;"
+               [title]="tip('portal')"><i class="fas fa-globe-africa me-1"></i> {{ L.t('lbl_portal') }}</a>
+            <a routerLink="/track-report" [class.active]="active === 'track-report'" style="font-size: 1rem;"
+               [title]="tip('track')"><i class="fas fa-magnifying-glass-location me-1"></i> {{ L.t('lbl_track_report') }}</a>
+            <a routerLink="/publications/Policies" [class.active]="active === 'publications'" style="font-size: 1rem;"
+               [title]="tip('publications')"><i class="fas fa-book-open me-1"></i> {{ L.t('lbl_publication') }}</a>
+            <a routerLink="/education" [class.active]="active === 'education'" style="font-size: 1rem;"
+               [title]="tip('education')"><i class="fas fa-graduation-cap me-1"></i> {{ L.t('lbl_education') }}</a>
+            <button (click)="L.toggle()" style="font-size: 1rem;" [title]="tip('lang')">
+              <i class="fas fa-language me-1"></i> {{ L.lang() === 'en' ? 'Swahili' : 'English' }}
+            </button>
+            <button (click)="toggleTheme()" class="theme-toggle" [title]="tip('theme')">
+              <i class="fas" [class.fa-moon]="!dark()" [class.fa-sun]="dark()"></i>
+            </button>
+            <a routerLink="/login" class="btn-glass" style="font-size: 1rem;" [title]="tip('login')">
+              <i class="fas fa-sign-in-alt me-1"></i> {{ L.t('lbl_login') }}
+            </a>
           </div>
           <button class="mobile-toggle btn p-0" (click)="mobileOpen.set(true)" style="color: var(--navbar-text); font-size: 1.4rem; border: none; background: none;">
             <i class="fas fa-bars"></i>
@@ -244,6 +256,52 @@ export class PublicLayoutComponent implements OnDestroy {
 
   scrollTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /** Navigation tooltips — plain-language help as visitors hover the portal chrome. */
+  tip(key: string): string {
+    const sw = this.L.lang() === 'sw';
+    const tips: Record<string, { en: string; sw: string }> = {
+      home: {
+        en: 'Public home — overview of e-MAAFA and how to get help',
+        sw: 'Ukurasa wa nyumbani — muhtasari wa e-MAAFA na jinsi ya kupata msaada',
+      },
+      about: {
+        en: 'About the Disaster Management Department and its mandate',
+        sw: 'Kuhusu Idara ya Menejimenti ya Maafa na majukumu yake',
+      },
+      portal: {
+        en: 'Live map of active warnings, incidents and public resources',
+        sw: 'Ramani ya moja kwa moja ya tahadhari, matukio na rasilimali za umma',
+      },
+      track: {
+        en: 'Track a citizen hazard report using the PHR reference code you received',
+        sw: 'Fuatilia ripoti ya raia kwa kutumia nambari ya PHR uliyopewa',
+      },
+      publications: {
+        en: 'Policies, strategies and official frameworks published by PMO-DMD',
+        sw: 'Sera, mikakati na mifumo rasmi iliyochapishwa na OWM-DMD',
+      },
+      education: {
+        en: 'Hazard guides, INFORM course, calendar and official education materials',
+        sw: 'Miongozo ya majanga, kozi ya INFORM, kalenda na nyenzo za elimu',
+      },
+      lang: {
+        en: 'Switch the whole public portal to Kiswahili (no English mixed in)',
+        sw: 'Badilisha portal yote ya umma kuwa Kiingereza (hakuna Kiswahili kikichanganywa)',
+      },
+      theme: {
+        en: 'Toggle light / dark appearance',
+        sw: 'Badilisha mwonekano wa mwanga / giza',
+      },
+      login: {
+        en: 'Staff and partner login to the operational DMIS (not the public portal)',
+        sw: 'Kuingia kwa wafanyakazi na wadau kwenye DMIS ya uendeshaji (si portal ya umma)',
+      },
+    };
+    const t = tips[key];
+    if (!t) return '';
+    return sw ? t.sw : t.en;
   }
 
   /** Dark mode — same html[data-theme] + localStorage('dmis-theme') contract as the source. */

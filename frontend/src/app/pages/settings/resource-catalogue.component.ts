@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
+import { AuthService } from '../../core/auth.service';
 
 interface Resource {
   id: number; name: string; category: string; description: string | null;
@@ -25,7 +26,9 @@ interface Resource {
   template: `
     <dmis-page-header title="Resource Catalogue" icon="fa-cubes"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Resource Management'}]">
-      <button class="btn-add" type="button" (click)="openForm(null)"><i class="fas fa-plus"></i> Add Item</button>
+      @if (canManage()) {
+        <button class="btn-add" type="button" (click)="openForm(null)"><i class="fas fa-plus"></i> Add Item</button>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -49,7 +52,7 @@ interface Resource {
             <thead><tr>
               <th>Item</th><th>Category</th><th>Unit</th>
               <th style="text-align:right;">Unit cost (TZS)</th><th style="text-align:right;">Low-stock</th>
-              <th style="text-align:right;">In stock</th><th></th>
+              <th style="text-align:right;">In stock</th>@if (canManage()) { <th></th> }
             </tr></thead>
             <tbody>
               @for (r of resources(); track r.id) {
@@ -63,15 +66,17 @@ interface Resource {
                     <span [style.color]="lowStock(r) ? '#dc2626' : 'var(--text-mid)'" [style.font-weight]="lowStock(r) ? '700' : '400'">{{ r.inStock | number }}</span>
                     @if (lowStock(r)) { <i class="fas fa-triangle-exclamation" style="color:#dc2626;margin-left:4px;" title="Below low-stock threshold"></i> }
                   </td>
-                  <td style="text-align:right;white-space:nowrap;">
-                    <div class="ctx-wrap">
-                      <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + r.name" (click)="toggleMenu(r.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
-                      <div class="ctx-menu" [class.open]="openMenu() === r.id">
-                        <a class="ctx-item" (click)="openForm(r)"><i class="fas fa-pen"></i> Edit</a>
-                        <a class="ctx-item danger" (click)="remove(r)"><i class="fas fa-trash"></i> Delete</a>
+                  @if (canManage()) {
+                    <td style="text-align:right;white-space:nowrap;">
+                      <div class="ctx-wrap">
+                        <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + r.name" (click)="toggleMenu(r.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
+                        <div class="ctx-menu" [class.open]="openMenu() === r.id">
+                          <a class="ctx-item" (click)="openForm(r)"><i class="fas fa-pen"></i> Edit</a>
+                          <a class="ctx-item danger" (click)="remove(r)"><i class="fas fa-trash"></i> Delete</a>
+                        </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
+                  }
                 </tr>
               } @empty {
                 <tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:2rem;">No items match — add the first catalogue item.</td></tr>
@@ -130,6 +135,7 @@ interface Resource {
 })
 export class ResourceCatalogueComponent {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   private base = '/api/v1/settings/resources';
 
   resources = signal<Resource[]>([]);
@@ -145,6 +151,7 @@ export class ResourceCatalogueComponent {
   m: any = {};
 
   costedCount = computed(() => this.resources().filter(r => r.unitCost && r.unitCost > 0).length);
+  canManage = computed(() => this.auth.hasPermission('resource_catalogue.manage'));
 
   constructor() { this.reload(); }
 
@@ -165,12 +172,14 @@ export class ResourceCatalogueComponent {
   }
 
   openForm(r: Resource | null): void {
+    if (!this.canManage()) { return; }
     this.editId = r?.id ?? null;
     this.m = r ? { ...r } : {};
     this.formOpen.set(true);
   }
 
   save(): void {
+    if (!this.canManage()) { return; }
     this.saving.set(true);
     const body = {
       name: this.m.name, category: this.m.category, description: this.m.description,
@@ -187,6 +196,7 @@ export class ResourceCatalogueComponent {
   }
 
   remove(r: Resource): void {
+    if (!this.canManage()) { return; }
     if (!confirm(`Delete "${r.name}" from the catalogue?`)) { return; }
     this.http.delete(`${this.base}/${r.id}`).subscribe({
       next: () => this.reload(),

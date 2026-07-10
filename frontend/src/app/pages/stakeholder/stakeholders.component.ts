@@ -4,6 +4,7 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 import { RegionDistrictPickerComponent } from '../../shell/region-district-picker.component';
+import { AuthService } from '../../core/auth.service';
 
 interface Stakeholder {
   id: number; name: string; organization: string; type: string; sector: string;
@@ -25,7 +26,9 @@ interface Stakeholder {
   template: `
     <dmis-page-header title="Stakeholder Portal" icon="fa-handshake"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Stakeholder Portal'}]">
-      <button class="btn-add" type="button" (click)="openCreate()"><i class="fas fa-plus"></i> Register Stakeholder</button>
+      @if (canManage()) {
+        <button class="btn-add" type="button" (click)="openCreate()"><i class="fas fa-plus"></i> Register Stakeholder</button>
+      }
     </dmis-page-header>
 
     <div class="stats-row">
@@ -53,7 +56,7 @@ interface Stakeholder {
           @if (filtered().length) {
             <div style="overflow-x:auto;">
               <table class="r-table">
-                <thead><tr><th>Organization</th><th>Type</th><th>Contact</th><th>Location</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Organization</th><th>Type</th><th>Contact</th><th>Location</th><th>Status</th>@if (canAct()) { <th>Actions</th> }</tr></thead>
                 <tbody>
                   @for (s of filtered(); track s.id) {
                     <tr class="data-row">
@@ -69,17 +72,23 @@ interface Stakeholder {
                         @if (!s.isActive) { <span class="r-badge badge-rejected" style="margin-left:0.25rem;">Inactive</span> }
                         @if (s.userId) { <span class="r-badge badge-approved" style="margin-left:0.25rem;" [title]="s.linkedUserEmail || ''"><i class="fas fa-link"></i> Login</span> }
                       </td>
-                      <td>
-                        <div class="ctx-wrap">
-                          <button class="ctx-trigger" type="button" (click)="toggleMenu(s.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
-                          <div class="ctx-menu" [class.open]="openMenu() === s.id">
-                            @if (!s.isVerified) { <a class="ctx-item success" (click)="verify(s, true)"><i class="fas fa-check-double"></i> Verify Partner</a> }
-                            @else { <a class="ctx-item" (click)="verify(s, false)"><i class="fas fa-undo"></i> Revoke Verification</a> }
-                            <a class="ctx-item" (click)="toggleActive(s)"><i class="fas" [class.fa-ban]="s.isActive" [class.fa-check]="!s.isActive"></i> {{ s.isActive ? 'Deactivate' : 'Activate' }}</a>
-                            <a class="ctx-item" (click)="linkLogin(s)"><i class="fas fa-link"></i> {{ s.userId ? 'Change / unlink login' : 'Link login (enable donations)' }}</a>
+                      @if (canAct()) {
+                        <td>
+                          <div class="ctx-wrap">
+                            <button class="ctx-trigger" type="button" (click)="toggleMenu(s.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
+                            <div class="ctx-menu" [class.open]="openMenu() === s.id">
+                              @if (canVerify()) {
+                                @if (!s.isVerified) { <a class="ctx-item success" (click)="verify(s, true)"><i class="fas fa-check-double"></i> Verify Partner</a> }
+                                @else { <a class="ctx-item" (click)="verify(s, false)"><i class="fas fa-undo"></i> Revoke Verification</a> }
+                              }
+                              @if (canManage()) {
+                                <a class="ctx-item" (click)="toggleActive(s)"><i class="fas" [class.fa-ban]="s.isActive" [class.fa-check]="!s.isActive"></i> {{ s.isActive ? 'Deactivate' : 'Activate' }}</a>
+                                <a class="ctx-item" (click)="linkLogin(s)"><i class="fas fa-link"></i> {{ s.userId ? 'Change / unlink login' : 'Link login (enable donations)' }}</a>
+                              }
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
+                      }
                     </tr>
                   }
                 </tbody>
@@ -124,6 +133,7 @@ interface Stakeholder {
 })
 export class StakeholdersComponent {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   rows = signal<Stakeholder[]>([]);
   stats = signal({ total: 0, verified: 0, pending: 0, active: 0 });
   search = signal(''); type = signal(''); verifiedF = signal('');
@@ -136,6 +146,10 @@ export class StakeholdersComponent {
   fEmail = signal(''); fPhone = signal(''); fRegion = signal(''); fDistrict = signal('');
 
   constructor() { this.reload(); }
+
+  canManage = computed(() => this.auth.hasPermission('stakeholders.manage'));
+  canVerify = computed(() => this.auth.hasPermission('resource_allocation.approve'));
+  canAct = computed(() => this.canManage() || this.canVerify());
 
   types = computed(() => [...new Set(this.rows().map(s => s.type).filter(Boolean))]);
 
@@ -156,6 +170,9 @@ export class StakeholdersComponent {
   }
 
   openCreate(): void {
+    if (!this.canManage()) {
+      return;
+    }
     this.fOrg.set(''); this.fName.set(''); this.fType.set('NGO'); this.fSector.set('');
     this.fEmail.set(''); this.fPhone.set(''); this.fRegion.set(''); this.fDistrict.set('');
     this.error.set('');
@@ -163,6 +180,9 @@ export class StakeholdersComponent {
   }
 
   save(): void {
+    if (!this.canManage()) {
+      return;
+    }
     this.saving.set(true);
     this.http.post('/api/v1/stakeholders', {
       organization: this.fOrg().trim(), name: this.fName().trim(), type: this.fType(),
@@ -174,8 +194,11 @@ export class StakeholdersComponent {
     });
   }
 
-  /** Link (or unlink) a login account to this partner so they can donate from Open Needs. */
+  /** Link (or unlink) a login account to this partner so they can use partner donation/support pages. */
   linkLogin(s: Stakeholder): void {
+    if (!this.canManage()) {
+      return;
+    }
     this.openMenu.set(null);
     const email = window.prompt(
       `Link a login to "${s.name}".\nEnter the user account's email (leave blank to unlink):`,
@@ -188,6 +211,9 @@ export class StakeholdersComponent {
   }
 
   verify(s: Stakeholder, verified: boolean): void {
+    if (!this.canVerify()) {
+      return;
+    }
     this.http.put<any>(`/api/v1/stakeholders/${s.id}/verify`, { verified }).subscribe({
       next: r => { this.reload(); window.alert(r?.accountMessage ?? r?.message ?? 'Updated.'); },
       error: e => window.alert(e?.error?.detail || e?.error?.message || 'Could not update verification.'),
@@ -195,6 +221,9 @@ export class StakeholdersComponent {
   }
 
   toggleActive(s: Stakeholder): void {
+    if (!this.canManage()) {
+      return;
+    }
     this.http.put(`/api/v1/stakeholders/${s.id}`, { isActive: !s.isActive }).subscribe(() => this.reload());
   }
 

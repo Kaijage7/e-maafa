@@ -1,0 +1,2046 @@
+{
+  "source": "ACTION_GUIDE_BOOK.docx (PMO-DMD Action Guide)",
+  "version": "action-guide-v1",
+  "commonStatement": {
+    "en": "Regional, District, Ward and Village Disaster Management Committees are required to take appropriate measures to prepare for and respond to disasters in order to reduce the impacts of disasters.",
+    "sw": "Kamati za Usimamizi wa Maafa za Mikoa, Wilaya, Kata na Vijiji zinatakiwa kuchukua hatua stahiki za kujiandaa na kukabiliana na maafa ili kupunguza athari za majanga."
+  },
+  "noHarmScaling": {
+    "note": "Message intensity scales with colour so public messaging stays proportionate (no unnecessary alarm).",
+    "ADVISORY": {
+      "scale": 1,
+      "tone": "calm_prepare",
+      "smsStyle": "advisory",
+      "channels": [
+        "portal",
+        "email",
+        "sms_optional"
+      ]
+    },
+    "WARNING": {
+      "scale": 2,
+      "tone": "act_now",
+      "smsStyle": "warning",
+      "channels": [
+        "portal",
+        "email",
+        "sms"
+      ]
+    },
+    "MAJOR_WARNING": {
+      "scale": 3,
+      "tone": "immediate_protect",
+      "smsStyle": "major",
+      "channels": [
+        "portal",
+        "email",
+        "sms",
+        "broadcast"
+      ]
+    }
+  },
+  "levels": {
+    "ADVISORY": {
+      "labelEn": "Advisory — Be Prepared",
+      "labelSw": "Tahadhari — Jitayarishe",
+      "color": "yellow",
+      "scale": 1
+    },
+    "WARNING": {
+      "labelEn": "Warning — Take Action",
+      "labelSw": "Onyo — Chukua Hatua",
+      "color": "orange",
+      "scale": 2
+    },
+    "MAJOR_WARNING": {
+      "labelEn": "Major Warning — Take Action Immediately",
+      "labelSw": "Onyo Kubwa — Chukua Hatua Mara Moja",
+      "color": "red",
+      "scale": 3
+    }
+  },
+  "hazardAliases": {
+    "heavy_rainfall": [
+      "heavy rainfall",
+      "heavy rain",
+      "rainfall",
+      "rain",
+      "precip",
+      "tma"
+    ],
+    "floods": [
+      "flood",
+      "floods",
+      "flash flood",
+      "inundation",
+      "mow"
+    ],
+    "landslide": [
+      "landslide",
+      "mudslide",
+      "slope"
+    ],
+    "strong_winds": [
+      "strong wind",
+      "strong winds",
+      "wind",
+      "storm",
+      "cyclone",
+      "gale"
+    ],
+    "large_waves": [
+      "large waves",
+      "wave",
+      "swell",
+      "coastal",
+      "storm surge"
+    ],
+    "wildfire": [
+      "wildfire",
+      "bushfire",
+      "fire"
+    ],
+    "drought": [
+      "drought",
+      "dry spell",
+      "food security",
+      "moa"
+    ],
+    "earthquake_and_tsunami": [
+      "earthquake",
+      "tsunami",
+      "seismic",
+      "gst"
+    ],
+    "public_health": [
+      "public health",
+      "disease",
+      "epidemic",
+      "cholera",
+      "moh",
+      "health"
+    ]
+  },
+  "hazards": {
+    "Heavy rainfall": {
+      "id": "heavy_rainfall",
+      "name": "Heavy rainfall",
+      "levels": {
+        "ADVISORY": {
+          "rows": [
+            {
+              "impactEn": "Reduced visibility on roads during rainfall",
+              "impactSw": "Kupungua kwa uwezo wa kuona barabarani wakati wa mvua",
+              "actionEn": "Drive slowly with headlights on. Keep a safe distance from other vehicles. Avoid unnecessary travel.",
+              "actionSw": "Endesha taratibu ukiwasha taa za mbele. Weka umbali salama kati yako na magari mengine. Epuka safari zisizo za lazima."
+            },
+            {
+              "impactEn": "Slippery and water-covered roads in few areas",
+              "impactSw": "Barabara zinazoteleza na zilizofunikwa na maji katika maeneo machache",
+              "actionEn": "Avoid sudden braking. Reduce speed. Pedestrians should use elevated walkways.",
+              "actionSw": "Epuka kukanyaga breki ghafla. Punguza mwendo. Watembea kwa miguu watumie vijia vya juu."
+            },
+            {
+              "impactEn": "Few homes affected by surface water",
+              "impactSw": "Makazi machache kuathiriwa na maji yaliyojaa juu ya ardhi",
+              "actionEn": "Clear blocked drains around homes. Raise valuables above the floor. Place sandbags at doorways where needed.",
+              "actionSw": "Safisha mitaro iliyoziba karibu na nyumba. Inua vitu vya thamani juu ya sakafu. Weka magunia ya mchanga milangoni inapohitajika."
+            },
+            {
+              "impactEn": "Disruption of social and economic activities in few areas",
+              "impactSw": "Kuathirika kwa shughuli za kijamii na kiuchumi katika maeneo machache",
+              "actionEn": "Special groups including people with disabilities, children and the elderly should be given early warning information and appropriate measures should be taken by the community concerned. Continue to follow weather information from the Tanzania Meteorological Authority.",
+              "actionSw": "Makundi maalum ikijumuisha watu wenye ulemavu, watoto na wazee wapatiwe taarifa ya tahadhari ya mapema na hatua stahiki zichukuliwe na jamii husika. Endelea kufuatilia taarifa za hali ya hewa zinazotolewa na Mamlaka ya Hali ya Hewa Tanzania."
+            },
+            {
+              "impactEn": "Possibility of isolated lightning strikes",
+              "impactSw": "Uwezekano wa mapigo ya radi katika maeneo machache",
+              "actionEn": "Stay indoors during thunderstorms. Avoid trees, open fields and metal objects. Unplug electrical equipment.",
+              "actionSw": "Kaa ndani wakati wa radi. Epuka miti, maeneo ya wazi na vitu vya chuma. Toa vifaa vya umeme kwenye soketi."
+            },
+            {
+              "impactEn": "Risk of children falling into open wells or drains hidden by water",
+              "impactSw": "Hatari ya watoto kuanguka kwenye visima vilivyo wazi au mitaro iliyofunikwa na maji",
+              "actionEn": "Cover open wells and drains. Keep children away from areas with standing water.",
+              "actionSw": "Funika visima vilivyo wazi na mitaro. Waweke watoto mbali na maeneo yenye maji yaliyotuama."
+            },
+            {
+              "impactEn": "Localised soil erosion and waterlogging of farmland",
+              "impactSw": "Mmomonyoko wa udongo na kujaa kwa maji shambani katika maeneo machache",
+              "actionEn": "Open drainage furrows in fields. Protect newly planted crops. Postpone field operations on saturated soil.",
+              "actionSw": "Fungua mitaro ya maji shambani. Linda mazao yaliyopandwa upya. Ahirisha kazi za shambani ikiwa udongo umejaa maji."
+            },
+            {
+              "impactEn": "Increased breeding of mosquitoes in stagnant water",
+              "impactSw": "Kuongezeka kwa kuzaliana kwa mbu kwenye maji yaliyotuama",
+              "actionEn": "Drain stagnant water around homes. Cover water containers. Sleep under treated bed nets.",
+              "actionSw": "Ondoa maji yaliyotuama karibu na nyumba. Funika vyombo vya maji. Lala chini ya vyandarua vyenye dawa."
+            },
+            {
+              "impactEn": "Possibility of weak roofs leaking or being damaged",
+              "impactSw": "Uwezekano wa paa dhaifu kuvuja au kuharibika",
+              "actionEn": "Inspect and repair roofs before heavy rain. Place buckets under leaks. Move belongings away from leaking spots.",
+              "actionSw": "Kagua na rekebisha paa kabla ya mvua kubwa. Weka ndoo chini ya sehemu zinazovuja. Ondoa vitu kutoka maeneo yanayovuja."
+            },
+            {
+              "impactEn": "Risk of isolated landslides in few hazardous areas",
+              "impactSw": "Hatari ya maporomoko ya ardhi katika maeneo machache hatarishi",
+              "actionEn": "Avoid steep slopes. Monitor cracks and soil movements. Relocate when you see signs of soil collapse.",
+              "actionSw": "Epuka miteremko mikali. Fuatilia nyufa na mienendo ya udongo. Hama ukiona dalili za kuporomoka kwa udongo."
+            }
+          ]
+        },
+        "WARNING": {
+          "rows": [
+            {
+              "impactEn": "Significantly reduced visibility on roads",
+              "impactSw": "Kupungua kwa kiasi kikubwa kwa uwezo wa kuona barabarani",
+              "actionEn": "Avoid unnecessary travel. If travelling drive slowly with headlights on. Allow extra travel time.",
+              "actionSw": "Epuka safari zisizo za lazima. Ukisafiri endesha taratibu ukiwasha taa za mbele. Weka muda wa ziada wa safari."
+            },
+            {
+              "impactEn": "Many areas affected by heavy rainfall and surface water flooding",
+              "impactSw": "Maeneo mengi kuathiriwa na mvua kubwa na mafuriko ya maji ya juu ya ardhi",
+              "actionEn": "Identify safe areas. Relocate those at risk if needed. Cooperate with local leaders.",
+              "actionSw": "Tambua maeneo salama. Wahamishe walio hatarini ikihitajika. Shirikiana na viongozi wa eneo."
+            },
+            {
+              "impactEn": "Travel delays and some roads becoming impassable",
+              "impactSw": "Ucheleweshaji wa safari na baadhi ya barabara kutopitika",
+              "actionEn": "Avoid non-essential travel. Follow designated alternative routes. Allow extra travel time.",
+              "actionSw": "Epuka safari zisizo za lazima. Fuata njia mbadala zilizoelekezwa. Weka muda wa ziada wa safari."
+            },
+            {
+              "impactEn": "Threat to life from frequent lightning strikes",
+              "impactSw": "Hatari ya maisha kutokana na mapigo ya mara kwa mara ya radi",
+              "actionEn": "Stay indoors. Avoid trees, open fields, water bodies and metal objects. Unplug electrical and electronic equipment.",
+              "actionSw": "Kaa ndani. Epuka miti, maeneo ya wazi, sehemu zenye maji na vitu vya chuma. Toa vifaa vya umeme na elektroniki kwenye soketi."
+            },
+            {
+              "impactEn": "Damage to standing crops from waterlogging and runoff",
+              "impactSw": "Uharibifu wa mazao yaliyo shambani kutokana na kujaa kwa maji na mtiririko wa maji",
+              "actionEn": "Open drainage in fields where possible. Harvest mature crops early. Report damage to agricultural extension officers.",
+              "actionSw": "Fungua mitaro ya maji shambani inapowezekana. Vuna mazao yaliyokomaa mapema. Toa taarifa ya uharibifu kwa maafisa ugani wa kilimo."
+            },
+            {
+              "impactEn": "Outbreak of malaria, diarrhoea and waterborne infections from contaminated water",
+              "impactSw": "Mlipuko wa malaria, kuhara na maambukizi yanayoenezwa na maji yaliyochafuka",
+              "actionEn": "Treat or boil drinking water. Avoid contact with floodwater. Observe hand hygiene. Sleep under treated bed nets.",
+              "actionSw": "Tibu au chemsha maji ya kunywa. Epuka kugusa maji ya mafuriko. Zingatia usafi wa mikono. Lala chini ya vyandarua vyenye dawa."
+            },
+            {
+              "impactEn": "Damage to roofs and weak buildings from prolonged rainfall",
+              "impactSw": "Uharibifu wa paa na majengo dhaifu kutokana na mvua za muda mrefu",
+              "actionEn": "Move out of weak or damaged buildings. Secure roofing where possible. Report damage to local authorities.",
+              "actionSw": "Hama kutoka majengo dhaifu au yaliyoharibika. Imarisha paa inapowezekana. Toa taarifa ya uharibifu kwa mamlaka za eneo."
+            },
+            {
+              "impactEn": "Trees falling on roads, power infrastructure and buildings due to saturated soil",
+              "impactSw": "Miti kuanguka barabarani, kwenye miundombinu ya umeme na majengo kutokana na udongo uliojaa maji",
+              "actionEn": "Avoid sheltering under trees. Report fallen trees to local authorities. Keep distance from broken power lines.",
+              "actionSw": "Epuka kujihifadhi chini ya miti. Toa taarifa ya miti iliyoanguka kwa mamlaka za eneo. Weka umbali na nyaya za umeme zilizokatika."
+            },
+            {
+              "impactEn": "Significant disruption to infrastructure, water and electricity supply",
+              "impactSw": "Kuathirika kwa kiasi kikubwa kwa miundombinu, huduma ya maji na umeme",
+              "actionEn": "Stock essential supplies (water, food, medicines). Prepare for loss of electricity and communication.",
+              "actionSw": "Weka akiba ya mahitaji muhimu (maji, chakula, dawa). Jjiandae kukosekana kwa umeme na mawasiliano."
+            },
+            {
+              "impactEn": "Closure of schools in affected areas",
+              "impactSw": "Kufungwa kwa shule katika maeneo yaliyoathirika",
+              "actionEn": "Follow education authority directives. Arrange temporary studies at home.",
+              "actionSw": "Fuata maelekezo ya mamlaka za elimu. Panga masomo ya muda nyumbani."
+            },
+            {
+              "impactEn": "High risk of landslides in hazardous areas",
+              "impactSw": "Hatari kubwa ya maporomoko ya ardhi katika maeneo hatarishi",
+              "actionEn": "Avoid steep slopes. Monitor cracks and soil movements. Relocate when you see warning signs.",
+              "actionSw": "Epuka miteremko mikali. Fuatilia nyufa na mienendo ya udongo. Hama ukiona dalili za hatari."
+            },
+            {
+              "impactEn": "Evacuation of people from hazardous areas may be necessary",
+              "impactSw": "Inaweza kuwa muhimu kuhamisha watu kutoka maeneo hatarishi",
+              "actionEn": "Prepare an evacuation plan and emergency bag. Identify nearby temporary shelters.",
+              "actionSw": "Andaa mpango wa uhamishaji na begi la dharura. Tambua makazi ya muda yaliyo karibu."
+            }
+          ]
+        },
+        "MAJOR_WARNING": {
+          "rows": [
+            {
+              "impactEn": "Severe widespread heavy rainfall affecting whole communities",
+              "impactSw": "Mvua kubwa iliyoenea inayoathiri jamii nzima",
+              "actionEn": "Implement community-wide evacuation. Prioritise those at risk. Use official shelters.",
+              "actionSw": "Tekeleza uhamishaji wa jamii nzima. Wape kipaumbele walio hatarini. Tumia makazi rasmi."
+            },
+            {
+              "impactEn": "Severe loss of visibility making travel extremely dangerous",
+              "impactSw": "Kupungua sana kwa uwezo wa kuona kunakofanya safari kuwa hatari kubwa",
+              "actionEn": "Stay home if possible. Do not travel unless absolutely necessary. Follow official directives.",
+              "actionSw": "Kaa nyumbani ikiwezekana. Usisafiri isipokuwa ni lazima kabisa. Fuata maelekezo rasmi."
+            },
+            {
+              "impactEn": "Loss of life from drowning, lightning strikes and electrocution",
+              "impactSw": "Vifo kutokana na kuzama majini, kupigwa na radi na kupigwa na umeme",
+              "actionEn": "Do not enter fast or deep water. Stay indoors during lightning. Keep distance from broken power lines. Contact emergency services.",
+              "actionSw": "Usivuke maji yenye kasi au kina kirefu. Kaa ndani wakati kuna radi. Weka umbali na nyaya za umeme zilizokatika. Wasiliana na vyombo vya dharura."
+            },
+            {
+              "impactEn": "Major landslides in steep-sided areas due to saturated soil",
+              "impactSw": "Maporomoko makubwa ya ardhi katika maeneo yenye miteremko mikali kutokana na udongo uliojaa maji",
+              "actionEn": "Suspend all activities on steep slopes. Install warning signs. Relocate to safe areas immediately.",
+              "actionSw": "Sitisha shughuli zote kwenye miteremko mikali. Weka alama za onyo. Hama kwenda maeneo salama mara moja."
+            },
+            {
+              "impactEn": "Collapse of buildings and major damage to infrastructure",
+              "impactSw": "Kuanguka kwa majengo na uharibifu mkubwa wa miundombinu",
+              "actionEn": "Move out of weak or affected buildings. Establish restriction zones. Avoid riverbanks and water channels.",
+              "actionSw": "Hama majengo dhaifu au yaliyoathirika. Weka maeneo ya zuio. Epuka kingo za mito na mikondo ya maji."
+            },
+            {
+              "impactEn": "Severe damage to crops, food stores and livestock",
+              "impactSw": "Uharibifu mkubwa wa mazao, akiba ya chakula na mifugo",
+              "actionEn": "Move and protect food reserves and livestock to safe places. Coordinate emergency assistance with district authorities.",
+              "actionSw": "Hamisha na linda akiba ya chakula na mifugo mahali salama. Ratibu msaada wa dharura na mamlaka za wilaya."
+            },
+            {
+              "impactEn": "Severe disease outbreaks (cholera and malaria) from contaminated water",
+              "impactSw": "Mlipuko mkubwa wa magonjwa (kipindupindu na malaria) kutokana na maji yaliyochafuka",
+              "actionEn": "Ensure safe drinking water. Use ORS for diarrhoea. Use bed nets. Seek medical treatment promptly.",
+              "actionSw": "Hakikisha maji salama ya kunywa. Tumia ORS kwa kuhara. Tumia vyandarua. Tafuta matibabu mapema."
+            },
+            {
+              "impactEn": "Long-term loss of essential services and infrastructure",
+              "impactSw": "Upotevu wa muda mrefu wa huduma na miundombinu muhimu",
+              "actionEn": "Prepare for loss of services for several days. Establish community resource centres (water, information, health).",
+              "actionSw": "Jiandae kukosa huduma kwa siku kadhaa. Weka vituo vya rasilimali vya jamii (maji, taarifa, afya)."
+            },
+            {
+              "impactEn": "Large-scale evacuation of people may be required",
+              "impactSw": "Uhamishaji mkubwa wa watu unaweza kuhitajika",
+              "actionEn": "Implement evacuation plan. Register at shelters. Assist those with special needs.",
+              "actionSw": "Tekeleza mpango wa uhamishaji. Jisajili kwenye makazi. Saidia wenye uhitaji maalum."
+            },
+            {
+              "impactEn": "Closure of schools in many areas",
+              "impactSw": "Kufungwa kwa shule katika maeneo mengi",
+              "actionEn": "Provide remote learning options. Ensure safety before reopening.",
+              "actionSw": "Toa chaguo za masomo ya mbali. Hakikisha usalama kabla ya kufungua tena."
+            },
+            {
+              "impactEn": "Severe traffic disruption with major roads becoming impassable",
+              "impactSw": "Kuathirika kwa kiasi kikubwa kwa usafiri na barabara kuu kutopitika",
+              "actionEn": "Stay home if possible. Keep emergency routes clear. Follow official directives.",
+              "actionSw": "Kaa nyumbani ikiwezekana. Ziache wazi njia za dharura. Fuata maelekezo rasmi."
+            }
+          ]
+        }
+      }
+    },
+    "FLOODS": {
+      "id": "floods",
+      "name": "FLOODS",
+      "levels": {
+        "ADVISORY": {
+          "rows": [
+            {
+              "impactEn": "Few homes surrounded by water",
+              "impactSw": "Makazi machache kuzingirwa na maji",
+              "actionEn": "Avoid crossing roads and bridges filled with water",
+              "actionSw": "Epuka kuvuka barabara na madaraja yaliyojaa maji"
+            },
+            {
+              "impactEn": "Minor damage to road and bridge infrastructure",
+              "impactSw": "Uharibifu mdogo wa miundombinu ya barabara na madaraja",
+              "actionEn": "Take precautions for people living in valley and low-lying areas",
+              "actionSw": "Chukua tahadhari kwa watu wanaoishi maeneo ya mabondeni"
+            },
+            {
+              "impactEn": "Transport challenges that may be caused by roads becoming impassable due to floods",
+              "impactSw": "Changamoto za usafiri zinazoweza kusababishwa na barabara kutopitika kutokana na mafuriko",
+              "actionEn": "Special groups including people with disabilities, children and the elderly should be given early warning information and appropriate measures should be taken by the community concerned",
+              "actionSw": "Makundi maalum ikijumuisha watu wenye ulemavu, watoto na wazee wapatiwe taarifa ya tahadhari ya mapema na hatua stahiki zichukuliwe na jamii husika"
+            },
+            {
+              "impactEn": "Disruption of social and economic activities",
+              "impactSw": "Kuathirika kwa shughuli za kijamii na kiuchumi",
+              "actionEn": "Continue to follow weather information provided by the Tanzania Meteorological Authority",
+              "actionSw": "Endelea kufuatilia taarifa za hali ya hewa zinazotolewa na Mamlaka ya Hali ya Hewa Tanzania"
+            },
+            {
+              "impactEn": "Minor damage to wooden bridges",
+              "impactSw": "Uharibifu mdogo wa madaraja ya mbao",
+              "actionEn": "Avoid wooden bridges. Use designated alternative routes. Report any hazards present in the specific area.",
+              "actionSw": "Epuka madaraja ya mbao. Tumia njia mbadala zilizoainishwa. Ripoti hatari iliyopo katika eneo husika."
+            },
+            {
+              "impactEn": "Possibility of disease outbreak and spread in few areas",
+              "impactSw": "Uwezekano wa mlipuko wa magonjwa na kuenea katika maeneo machache",
+              "actionEn": "Treat or boil drinking water. Avoid touching flood water. Observe hand hygiene.",
+              "actionSw": "Tibu au chemsha maji ya kunywa. Epuka kugusa maji ya mafuriko. Zingatia usafi wa mikono."
+            },
+            {
+              "impactEn": "Minor disruption to infrastructure and resources",
+              "impactSw": "Uharibifu mdogo wa miundombinu na rasilimali",
+              "actionEn": "Stock essential supplies. Prepare for short-term loss of electricity and communication.",
+              "actionSw": "Weka akiba ya mahitaji muhimu. Jiandae kukosekana kwa umeme na mawasiliano kwa muda mfupi."
+            },
+            {
+              "impactEn": "Localised evacuation may be necessary",
+              "impactSw": "Uhamishaji mdogo unaweza kuwa muhimu",
+              "actionEn": "Prepare an evacuation plan and emergency bag. Identify nearby temporary shelters.",
+              "actionSw": "Andaa mpango wa uhamishaji na begi la dharura. Tambua makazi ya muda yaliyo karibu."
+            },
+            {
+              "impactEn": "Closure of few schools",
+              "impactSw": "Kufungwa kwa shule chache",
+              "actionEn": "Follow education authority directives. Arrange temporary studies at home.",
+              "actionSw": "Fuata maelekezo ya mamlaka za elimu. Panga masomo ya muda nyumbani."
+            },
+            {
+              "impactEn": "Risk of landslides in few hazardous areas",
+              "impactSw": "Hatari ya maporomoko ya ardhi katika maeneo machache hatarishi",
+              "actionEn": "Avoid steep slopes. Monitor cracks and soil movements. Relocate when you see signs of soil collapse.",
+              "actionSw": "Epuka miteremko mikali. Fuatilia nyufa na mienendo ya udongo. Hama ukiona dalili za kuporomoka kwa udongo."
+            }
+          ]
+        },
+        "WARNING": {
+          "rows": [
+            {
+              "impactEn": "Many areas affected by flooding",
+              "impactSw": "Maeneo mengi kuathiriwa na mafuriko",
+              "actionEn": "Identify safe areas. Relocate those at risk if needed. Cooperate with local leaders.",
+              "actionSw": "Tambua maeneo salama. Wahamishe walio hatarini ikihitajika. Shirikiana na viongozi wa eneo."
+            },
+            {
+              "impactEn": "Travel delays and some roads being closed",
+              "impactSw": "Ucheleweshaji wa safari na baadhi ya barabara kufungwa",
+              "actionEn": "Avoid unnecessary travel. Follow designated alternative routes. Allow extra travel time.",
+              "actionSw": "Epuka safari zisizo za lazima. Fuata njia mbadala zilizoelekezwa. Weka muda wa ziada."
+            },
+            {
+              "impactEn": "Threat to life due to fast-flowing water with deep depth",
+              "impactSw": "Hatari ya maisha kutokana na maji yanayotiririka kwa kasi yenye kina kirefu",
+              "actionEn": "Do not cross fast or deep water. Move to elevated areas. Contact emergency services.",
+              "actionSw": "Usivuke maji yenye kasi au kina kirefu. Nenda maeneo ya juu. Wasiliana na vyombo vya dharura."
+            },
+            {
+              "impactEn": "Damage to wooden bridges",
+              "impactSw": "Uharibifu wa madaraja ya mbao",
+              "actionEn": "Avoid wooden bridges. Use designated alternative routes. Report hazards to authorities.",
+              "actionSw": "Epuka madaraja ya mbao. Tumia njia mbadala zilizoainishwa. Ripoti hatari kwa mamlaka."
+            },
+            {
+              "impactEn": "Possibility of malaria, diarrhoea and viral infections outbreak due to flood water",
+              "impactSw": "Uwezekano wa kuzuka kwa magonjwa ya malaria, kuhara na maambukizi ya virusi kutokana na maji ya mafuriko",
+              "actionEn": "Avoid touching flood water. Observe environmental and hand hygiene. Use bed nets.",
+              "actionSw": "Epuka kugusa maji ya mafuriko. Zingatia usafi wa mazingira na mikono. Tumia vyandarua."
+            },
+            {
+              "impactEn": "Possibility of contamination of wells and underground water",
+              "impactSw": "Uwezekano wa kuchafuliwa kwa visima na maji ya chini ya ardhi",
+              "actionEn": "Treat or boil drinking water. Avoid touching flood water. Observe hand hygiene.",
+              "actionSw": "Tibu au chemsha maji ya kunywa. Epuka kugusa maji ya mafuriko. Zingatia usafi wa mikono."
+            },
+            {
+              "impactEn": "Possibility of loss of harvests and food reserves",
+              "impactSw": "Uwezekano wa kupotea kwa mavuno na akiba ya chakula",
+              "actionEn": "Move and store food reserves in a safe place",
+              "actionSw": "Hamisha na hifadhi akiba ya chakula mahali salama"
+            },
+            {
+              "impactEn": "Significant damage to infrastructure and resources",
+              "impactSw": "Uharibifu mkubwa wa miundombinu na rasilimali",
+              "actionEn": "Stock essential supplies (water, food, medicines). Prepare for loss of electricity and communication.",
+              "actionSw": "Weka akiba ya mahitaji muhimu (maji, chakula, dawa). Jiandae kukosekana kwa umeme na mawasiliano."
+            },
+            {
+              "impactEn": "Necessary to evacuate people from hazardous areas",
+              "impactSw": "Ni muhimu kuhamisha watu kutoka maeneo hatarishi",
+              "actionEn": "Prepare an evacuation plan and emergency bag. Identify nearby temporary shelters.",
+              "actionSw": "Andaa mpango wa uhamishaji na begi la dharura. Tambua makazi ya muda yaliyo karibu."
+            },
+            {
+              "impactEn": "Closure of schools in some affected areas",
+              "impactSw": "Kufungwa kwa shule katika baadhi ya maeneo yaliyoathirika",
+              "actionEn": "Follow education authority directives. Arrange temporary studies at home.",
+              "actionSw": "Fuata maelekezo ya mamlaka za elimu. Panga masomo ya muda nyumbani."
+            },
+            {
+              "impactEn": "Risk of landslides in hazardous areas",
+              "impactSw": "Hatari ya maporomoko ya ardhi katika maeneo hatarishi",
+              "actionEn": "Avoid steep slopes. Monitor cracks and soil movements. Relocate when you see signs.",
+              "actionSw": "Epuka miteremko mikali. Fuatilia nyufa na mienendo ya udongo. Hama ukiona dalili."
+            },
+            {
+              "impactEn": "Possibility of weak buildings collapsing",
+              "impactSw": "Uwezekano wa kuanguka kwa majengo dhaifu",
+              "actionEn": "Move out of weak or affected buildings. Establish water restriction zones. Avoid living near the water shores.",
+              "actionSw": "Hama majengo dhaifu au yaliyoathirika. Weka maeneo ya zuio la maji. Epuka kuishi kando ya kingo za maji."
+            }
+          ]
+        },
+        "MAJOR_WARNING": {
+          "rows": [
+            {
+              "impactEn": "Widespread severe flooding affecting whole communities",
+              "impactSw": "Mafuriko makubwa yaliyoenea yanayoathiri jamii nzima",
+              "actionEn": "Implement community-wide evacuation. Prioritise those at risk. Use official shelters.",
+              "actionSw": "Tekeleza uhamishaji wa jamii nzima. Wape kipaumbele walio hatarini. Tumia makazi rasmi."
+            },
+            {
+              "impactEn": "Severe traffic congestion and main roads becoming impassable",
+              "impactSw": "Msongamano mkubwa wa magari na barabara kuu kutopitika",
+              "actionEn": "Stay home if possible. Keep emergency routes clear. Follow official directives.",
+              "actionSw": "Kaa nyumbani ikiwezekana. Ziache wazi njia za dharura. Fuata maelekezo rasmi."
+            },
+            {
+              "impactEn": "Loss of life due to fast-flowing water with deep depth",
+              "impactSw": "Vifo kutokana na maji yanayotiririka kwa kasi yenye kina kirefu",
+              "actionEn": "Do not cross fast or deep water. Move to elevated areas. Contact emergency services.",
+              "actionSw": "Usivuke maji yenye kasi au kina kirefu. Nenda maeneo ya juu. Wasiliana na vyombo vya dharura."
+            },
+            {
+              "impactEn": "Collapse of large buildings and major infrastructure",
+              "impactSw": "Kuanguka kwa majengo na miundombinu mikubwa",
+              "actionEn": "Move out of weak or affected buildings. Establish restriction zones. Avoid the water shores.",
+              "actionSw": "Hama majengo dhaifu au yaliyoathirika. Weka maeneo ya zuio. Epuka kando ya kingo za maji."
+            },
+            {
+              "impactEn": "Severe outbreak of diseases (cholera and malaria) due to contaminated flood water",
+              "impactSw": "Mlipuko mkubwa wa magonjwa (kipindupindu na malaria) kutokana na maji ya mafuriko yaliyochafuka",
+              "actionEn": "Ensure safe drinking water. Use ORS for diarrhoea. Use bed nets. Seek medical treatment promptly.",
+              "actionSw": "Hakikisha maji salama ya kunywa. Tumia ORS kwa kuhara. Tumia vyandarua. Tafuta matibabu mapema."
+            },
+            {
+              "impactEn": "Long-term loss of essential services and infrastructure",
+              "impactSw": "Upotevu wa muda mrefu wa huduma na miundombinu muhimu",
+              "actionEn": "Prepare for loss of services for several days. Establish community resource centres (water, information, health).",
+              "actionSw": "Jiandae kukosa huduma kwa siku kadhaa. Weka vituo vya rasilimali vya jamii (maji, taarifa, afya)."
+            },
+            {
+              "impactEn": "Large-scale evacuation of people may be required",
+              "impactSw": "Uhamishaji mkubwa wa watu unaweza kuhitajika",
+              "actionEn": "Implement evacuation plan. Register at shelters. Assist those with special needs.",
+              "actionSw": "Tekeleza mpango wa uhamishaji. Jisajili kwenye makazi. Saidia wenye uhitaji maalum."
+            },
+            {
+              "impactEn": "Closure of schools in many areas",
+              "impactSw": "Kufungwa kwa shule katika maeneo mengi",
+              "actionEn": "Provide remote learning options. Ensure safety before reopening.",
+              "actionSw": "Toa chaguo za masomo ya mbali. Hakikisha usalama kabla ya kufungua tena."
+            },
+            {
+              "impactEn": "Landslides in areas with steep slopes",
+              "impactSw": "Maporomoko ya ardhi katika maeneo yenye miteremko mikali",
+              "actionEn": "Suspend activities on steep slopes. Install warning signs. Relocate to safe areas.",
+              "actionSw": "Sitisha shughuli kwenye miteremko mikali. Weka alama za onyo. Hama kwenda maeneo salama."
+            }
+          ]
+        }
+      }
+    },
+    "LANDSLIDE": {
+      "id": "landslide",
+      "name": "LANDSLIDE",
+      "levels": {
+        "ADVISORY": {
+          "rows": [
+            {
+              "impactEn": "Heightened landslide risk in steep slopes and previously affected areas",
+              "impactSw": "Hatari iliyoongezeka ya maporomoko ya ardhi katika miteremko mikali na maeneo yaliyoathirika hapo awali",
+              "actionEn": "Identify safe areas and evacuation routes. Review household emergency plans. Continue to follow weather information from the Tanzania Meteorological Authority.",
+              "actionSw": "Tambua maeneo salama na njia za uhamishaji. Kagua mipango ya dharura ya familia. Endelea kufuatilia taarifa za hali ya hewa zinazotolewa na Mamlaka ya Hali ya Hewa Tanzania."
+            },
+            {
+              "impactEn": "Saturated soil weakening foundations of hillside homes",
+              "impactSw": "Udongo uliojaa maji kudhoofisha misingi ya nyumba zilizo kwenye miteremko",
+              "actionEn": "Inspect foundations for cracks before heavy rain. Clear roof gutters and channel runoff away from buildings. Redirect stormwater away from slopes.",
+              "actionSw": "Kagua misingi kuangalia nyufa kabla ya mvua kubwa. Safisha mifereji ya paa na elekeza maji mbali na majengo. Elekeza maji ya mvua mbali na miteremko."
+            },
+            {
+              "impactEn": "Visible slow ground movement: new cracks on roads, walls and pavements",
+              "impactSw": "Mienendo ya polepole ya ardhi inayoonekana: nyufa mpya kwenye barabara, kuta na vijia",
+              "actionEn": "Mark and report observed cracks to local authorities. Avoid building or planting on visibly cracked ground. Monitor cracks daily for widening.",
+              "actionSw": "Weka alama na toa taarifa ya nyufa unazoziona kwa mamlaka za eneo. Epuka kujenga au kupanda kwenye ardhi yenye nyufa zinazoonekana. Fuatilia nyufa kila siku ili kuona kama zinaongezeka."
+            },
+            {
+              "impactEn": "Difficulty opening or closing doors and windows in hillside homes (early warning sign of slope movement)",
+              "impactSw": "Ugumu wa kufungua au kufunga milango na madirisha katika nyumba zilizo kwenye miteremko (dalili ya mapema ya mienendo ya mteremko)",
+              "actionEn": "If doors or windows start sticking, inspect walls and foundations for new cracks. Consider relocating from the building until checked by local authorities.",
+              "actionSw": "Milango au madirisha yakianza kuwa magumu kufungua au kufunga, kagua kuta na misingi kuangalia nyufa mpya. Fikiria kuhama kutoka jengo hadi mamlaka za eneo zikague."
+            },
+            {
+              "impactEn": "Tilting of trees, fences and utility poles on slopes",
+              "impactSw": "Miti, ua na nguzo za umeme kuinama kwenye miteremko",
+              "actionEn": "Avoid the area beneath leaning trees and poles. Report observations to local authorities. Do not park vehicles or hold gatherings near leaning structures.",
+              "actionSw": "Epuka eneo lililo chini ya miti na nguzo zinazoinama. Toa taarifa kwa mamlaka za eneo. Usiegeshe magari wala kufanya mikusanyiko karibu na miundo inayoinama."
+            },
+            {
+              "impactEn": "New springs or wet patches appearing where there was no water before",
+              "impactSw": "Chemchemi mpya au unyevu kwenye ardhi mahali ambapo hapakuwa na maji hapo awali",
+              "actionEn": "Report new springs or unusual wet patches to local authorities. Do not build or excavate near these areas. The appearance of new water on a slope is a serious warning sign.",
+              "actionSw": "Toa taarifa kwa mamlaka za eneo kuhusu chemchemi mpya au unyevu usio wa kawaida. Usijenge wala kuchimba karibu na maeneo hayo. Kuonekana kwa maji mapya kwenye mteremko ni dalili kubwa ya hatari."
+            },
+            {
+              "impactEn": "Possible blocking of mountain drainage channels and culverts",
+              "impactSw": "Uwezekano wa kuziba kwa mifereji ya maji ya milimani na mitaro ya barabara",
+              "actionEn": "Clear blocked drains, gutters and culverts before heavy rain. Report blocked drainage to local authorities. Do not dump waste in waterways.",
+              "actionSw": "Safisha mitaro, mifereji ya paa na mitaro ya barabara kabla ya mvua kubwa. Toa taarifa kwa mamlaka za eneo kuhusu mifereji iliyoziba. Usitupe taka kwenye mifereji ya maji."
+            },
+            {
+              "impactEn": "Disruption to terraced farms and hillside cultivation",
+              "impactSw": "Kuathirika kwa mashamba ya matuta na kilimo kwenye miteremko",
+              "actionEn": "Strengthen terrace walls and check field drainage. Postpone field operations on saturated slopes. Replant trees and grass to stabilise soil.",
+              "actionSw": "Imarisha kuta za matuta na kagua mifereji ya maji shambani. Ahirisha kazi za shambani kwenye miteremko iliyojaa maji. Panda upya miti na nyasi ili kuimarisha udongo."
+            },
+            {
+              "impactEn": "Possible isolated minor rockfalls on mountain roads",
+              "impactSw": "Uwezekano wa kuanguka kwa mawe madogo katika maeneo machache kwenye barabara za milimani",
+              "actionEn": "Drive with extreme caution on mountain roads. Avoid stopping below cliffs and steep slopes. Report fallen rocks to road authorities.",
+              "actionSw": "Endesha kwa tahadhari kubwa kwenye barabara za milimani. Epuka kusimama chini ya majabali na miteremko mikali. Toa taarifa kwa mamlaka za barabara kuhusu mawe yaliyoanguka."
+            },
+            {
+              "impactEn": "Vulnerable groups in landslide-prone areas at higher risk",
+              "impactSw": "Makundi ya watu walio katika hatari katika maeneo yanayoshambuliwa na maporomoko ya ardhi",
+              "actionEn": "Special groups including people with disabilities, children and the elderly should be given early warning information and appropriate measures should be taken by the community concerned",
+              "actionSw": "Makundi maalum ikijumuisha watu wenye ulemavu, watoto na wazee wapatiwe taarifa ya tahadhari ya mapema na hatua stahiki zichukuliwe na jamii husika"
+            }
+          ]
+        },
+        "WARNING": {
+          "rows": [
+            {
+              "impactEn": "Partial slope failures and small landslides occurring in vulnerable areas",
+              "impactSw": "Kuporomoka kwa sehemu za miteremko na maporomoko madogo ya ardhi kutokea katika maeneo hatarishi",
+              "actionEn": "Identify safe areas and evacuation routes. Relocate at-risk households immediately. • cooperate with local leaders.",
+              "actionSw": "Tambua maeneo salama na njia za uhamishaji. Wahamishe kaya zilizo hatarini mara moja. Shirikiana na viongozi wa eneo."
+            },
+            {
+              "impactEn": "Damage to homes, walls and structures from ground movement",
+              "impactSw": "Uharibifu wa nyumba, kuta na miundo kutokana na mienendo ya ardhi",
+              "actionEn": "Move out of damaged buildings. Mark dangerous structures clearly. Report damage to local authorities.",
+              "actionSw": "Hama kutoka majengo yaliyoharibika. Weka alama wazi kwenye miundo hatarishi. Toa taarifa ya uharibifu kwa mamlaka za eneo."
+            },
+            {
+              "impactEn": "Mountain roads and small bridges blocked by debris (mud, stones and trees)",
+              "impactSw": "Barabara za milimani na madaraja madogo kuzibwa na uchafu (matope, mawe na miti)",
+              "actionEn": "Avoid travel on mountain roads. Use designated alternative routes. Do not attempt to clear debris yourself. Report blockages to road authorities.",
+              "actionSw": "Epuka safari kwenye barabara za milimani. Tumia njia mbadala zilizoelekezwa. Usijaribu kuondoa uchafu mwenyewe. Toa taarifa za vizuizi kwa mamlaka za barabara."
+            },
+            {
+              "impactEn": "Risk of injuries from falling debris and collapsing slopes",
+              "impactSw": "Hatari ya majeraha kutokana na uchafu unaoanguka na miteremko inayoporomoka",
+              "actionEn": "Stay away from steep slopes and cliffs. Do not enter areas marked as dangerous. Report observed slope movement immediately.",
+              "actionSw": "Kaa mbali na miteremko mikali na majabali. Usiingie maeneo yenye alama za hatari. Toa taarifa mara moja kuhusu mienendo ya mteremko unayoiona."
+            },
+            {
+              "impactEn": "Streams becoming suddenly muddy or temporarily stopping flow (sign of upstream blockage)",
+              "impactSw": "Mito kubadilika ghafla kuwa na matope au kusimamisha mtiririko kwa muda (dalili ya kuziba kwa juu)",
+              "actionEn": "If a stream suddenly stops flowing during heavy rain, evacuate downstream areas immediately as a natural dam may have formed. If streams become unusually muddy, alert downstream communities.",
+              "actionSw": "Mto ukisimamisha mtiririko ghafla wakati wa mvua kubwa, hama mara moja kutoka maeneo ya chini kwani huenda bwawa la asili limeundwa. Mto ukibadilika ghafla kuwa na matope kwa kiasi kisicho cha kawaida, watahadharishe wakazi wa maeneo ya chini."
+            },
+            {
+              "impactEn": "Communities being cut off as roads become impassable",
+              "impactSw": "Jamii kutengwa kutokana na barabara kutopitika",
+              "actionEn": "Stock essential supplies (water, food, medicines) for several days. Charge phones and prepare radios. Identify alternative routes on foot if possible.",
+              "actionSw": "Weka akiba ya mahitaji muhimu (maji, chakula, dawa) kwa siku kadhaa. Chaji simu na andaa redio. Tambua njia mbadala za kutembea kwa miguu inapowezekana."
+            },
+            {
+              "impactEn": "Damage to power and communication lines from earth movement and falling trees",
+              "impactSw": "Uharibifu wa nyaya za umeme na mawasiliano kutokana na mienendo ya ardhi na miti kuanguka",
+              "actionEn": "Report fallen power lines to TANESCO. Keep distance from broken lines. Charge mobile devices and prepare radios in advance.",
+              "actionSw": "Toa taarifa kwa TANESCO kuhusu nyaya za umeme zilizoanguka. Weka umbali na nyaya zilizokatika. Chaji vifaa vya simu na andaa redio mapema."
+            },
+            {
+              "impactEn": "Loss of farms, livestock and food crops on hillside areas",
+              "impactSw": "Upotevu wa mashamba, mifugo na mazao ya chakula katika maeneo ya miteremko",
+              "actionEn": "Move livestock and food stores away from slopes. Report agricultural damage to extension officers. Harvest mature crops where it is safe to do so.",
+              "actionSw": "Hamisha mifugo na akiba ya chakula mbali na miteremko. Toa taarifa ya uharibifu wa kilimo kwa maafisa ugani. Vuna mazao yaliyokomaa pale ambapo ni salama kufanya hivyo."
+            },
+            {
+              "impactEn": "Damage to water sources, springs and pipes from ground movement",
+              "impactSw": "Uharibifu wa vyanzo vya maji, chemchemi na mabomba kutokana na mienendo ya ardhi",
+              "actionEn": "Treat or boil drinking water. Identify alternative water sources. Report damaged water pipes to authorities.",
+              "actionSw": "Tibu au chemsha maji ya kunywa. Tambua vyanzo mbadala vya maji. Toa taarifa ya mabomba ya maji yaliyoharibika kwa mamlaka."
+            },
+            {
+              "impactEn": "Unusual sounds (cracking wood, rumbling, knocking rocks) indicating moving debris",
+              "impactSw": "Sauti zisizo za kawaida (miti kupasuka, mvumo, mawe yanayogongana) zinazoonyesha uchafu unaosogea",
+              "actionEn": "If you hear unusual rumbling or cracking, evacuate immediately to the side of the slope (not up or down). Warn neighbours. Contact local authorities.",
+              "actionSw": "Ukisikia mvumo au sauti za kupasuka zisizo za kawaida, hama mara moja kuelekea kando ya mteremko (si juu wala chini). Watahadharishe majirani. Wasiliana na mamlaka za eneo."
+            },
+            {
+              "impactEn": "Possible school closures and disruption of services in affected areas",
+              "impactSw": "Uwezekano wa kufungwa kwa shule na kuvurugika kwa huduma katika maeneo yaliyoathirika",
+              "actionEn": "Follow education authority directives. Arrange temporary studies at home. Identify safe routes for children if school remains open.",
+              "actionSw": "Fuata maelekezo ya mamlaka za elimu. Panga masomo ya muda nyumbani. Tambua njia salama kwa watoto endapo shule itaendelea kufunguliwa."
+            }
+          ]
+        },
+        "MAJOR_WARNING": {
+          "rows": [
+            {
+              "impactEn": "Massive slope failures and channelized debris flows of mud, stones and trees",
+              "impactSw": "Maporomoko makubwa ya miteremko na mtiririko wa matope, mawe na miti kupitia mikondo",
+              "actionEn": "Implement community-wide evacuation immediately. Move to the side of the slope (not up or down). Use official shelters. Do not return until cleared by authorities.",
+              "actionSw": "Tekeleza uhamishaji wa jamii nzima mara moja. Hama kuelekea kando ya mteremko (si juu wala chini). Tumia makazi rasmi. Usirudi mpaka uthibitishwe na mamlaka."
+            },
+            {
+              "impactEn": "Burial of homes, vehicles and people under mud, rocks and debris",
+              "impactSw": "Kufukiwa kwa nyumba, magari na watu chini ya matope, mawe na uchafu",
+              "actionEn": "Contact emergency services immediately for trapped persons. Coordinate rescue efforts with JWTZ and local authorities. Do not enter buried areas without trained rescuers.",
+              "actionSw": "Wasiliana mara moja na vyombo vya dharura kuhusu watu waliokwama. Ratibu juhudi za uokoaji na JWTZ na mamlaka za eneo. Usiingie maeneo yaliyofukiwa bila waokoaji waliofunzwa."
+            },
+            {
+              "impactEn": "Multiple fatalities and people trapped under debris",
+              "impactSw": "Vifo vingi na watu kunaswa chini ya uchafu",
+              "actionEn": "Activate emergency medical services and psychosocial support. Establish triage points for the injured. Coordinate body recovery with district authorities.",
+              "actionSw": "Anzisha huduma za matibabu ya dharura na msaada wa kisaikolojia. Weka vituo vya kukagua majeruhi. Ratibu uokoaji wa miili na mamlaka za wilaya."
+            },
+            {
+              "impactEn": "Major roads and bridges destroyed, cutting off entire communities",
+              "impactSw": "Uharibifu mkubwa wa barabara na madaraja, kutenganisha jamii nzima",
+              "actionEn": "Open alternative routes where possible. Coordinate air support for isolated communities. Clear emergency access routes for rescue teams.",
+              "actionSw": "Fungua njia mbadala inapowezekana. Ratibu usaidizi wa hewani kwa jamii zilizotengwa. Safisha njia za dharura kwa timu za uokoaji."
+            },
+            {
+              "impactEn": "Damage to schools, health facilities and public buildings",
+              "impactSw": "Uharibifu wa shule, vituo vya afya na majengo ya umma",
+              "actionEn": "Establish temporary health and learning centres at safe locations. Coordinate medical evacuation with regional authorities. Ensure continuity of essential services.",
+              "actionSw": "Anzisha vituo vya muda vya afya na masomo katika maeneo salama. Ratibu uhamishaji wa wagonjwa na mamlaka za mkoa. Hakikisha huduma muhimu zinaendelea."
+            },
+            {
+              "impactEn": "Blocking of rivers creating natural dams with downstream flooding risk",
+              "impactSw": "Kuzibwa kwa mito kunakounda mabwawa ya asili na hatari ya mafuriko maeneo ya chini",
+              "actionEn": "Evacuate all downstream communities immediately as natural dams may suddenly fail. Monitor blocked rivers continuously. Coordinate controlled releases with engineers if possible.",
+              "actionSw": "Hama mara moja kwa jamii zote za maeneo ya chini kwani mabwawa ya asili yanaweza kupasuka ghafla. Fuatilia mito iliyozibwa muda wote. Ratibu uachiaji wa maji kwa udhibiti na wahandisi inapowezekana."
+            },
+            {
+              "impactEn": "Long-term displacement of thousands of households",
+              "impactSw": "Uhamishaji wa muda mrefu wa maelfu ya kaya",
+              "actionEn": "Establish official mass shelters. Coordinate long-term resettlement plans with district authorities. Provide food, water and protection for displaced families.",
+              "actionSw": "Anzisha makazi rasmi ya pamoja. Ratibu mipango ya makazi ya kudumu na mamlaka za wilaya. Toa chakula, maji na ulinzi kwa kaya zilizohama."
+            },
+            {
+              "impactEn": "Severe contamination of water sources by mud, debris and lost materials",
+              "impactSw": "Uchafuzi mkubwa wa vyanzo vya maji kutokana na matope, uchafu na vifaa vilivyopotea",
+              "actionEn": "Distribute safe drinking water. Test affected streams and wells before reuse. Use ORS for diarrhoea. Ensure water-treatment supplies reach affected communities.",
+              "actionSw": "Sambaza maji salama ya kunywa. Pima mito na visima vilivyoathirika kabla ya kutumia tena. Tumia ORS kwa kuhara. Hakikisha vifaa vya kutibu maji vinafika kwa jamii zilizoathirika."
+            },
+            {
+              "impactEn": "Widespread loss of agricultural land, livestock and livelihoods",
+              "impactSw": "Upotevu mkubwa wa eneo la kilimo, mifugo na vyanzo vya mapato",
+              "actionEn": "Coordinate emergency food and cash assistance. Develop recovery programmes with agricultural extension services. Provide reconstruction support for affected farms.",
+              "actionSw": "Ratibu msaada wa dharura wa chakula na fedha. Tengeneza programu za urejeshaji na maafisa ugani wa kilimo. Toa msaada wa ujenzi upya kwa mashamba yaliyoathirika."
+            },
+            {
+              "impactEn": "Severe disruption to power and communication networks",
+              "impactSw": "Kuvurugika kwa kiasi kikubwa kwa mitandao ya umeme na mawasiliano",
+              "actionEn": "Use alternative communication (radios, satellite phones). Coordinate utility restoration with TANESCO and telecom operators. Follow official radio broadcasts.",
+              "actionSw": "Tumia mawasiliano mbadala (redio, simu za satelaiti). Ratibu urejeshaji wa huduma na TANESCO na watoa huduma za mawasiliano. Fuatilia matangazo rasmi ya redio."
+            },
+            {
+              "impactEn": "Long-term disruption of livelihoods and social services",
+              "impactSw": "Kuvurugika kwa muda mrefu kwa vyanzo vya mapato na huduma za kijamii",
+              "actionEn": "Develop long-term recovery and reconstruction programmes. Provide reconstruction grants to affected households. Restore essential services in stages.",
+              "actionSw": "Tengeneza programu za muda mrefu za urejeshaji na ujenzi upya. Toa ruzuku za ujenzi upya kwa kaya zilizoathirika. Rejesha huduma muhimu kwa hatua."
+            }
+          ]
+        }
+      }
+    },
+    "STRONG WINDS": {
+      "id": "strong_winds",
+      "name": "STRONG WINDS",
+      "levels": {
+        "ADVISORY": {
+          "rows": [
+            {
+              "impactEn": "Loose objects being blown by wind in few areas",
+              "impactSw": "Vitu vilivyolegea kupeperushwa na upepo katika maeneo machache",
+              "actionEn": "Remove or secure loose items around homes (laundry, garden tools, loose roofing sheets, signs). Bring outdoor furniture indoors.",
+              "actionSw": "Ondoa au funga vitu vinavyoweza kupeperushwa karibu na nyumba (nguo zilizoanikwa, vifaa vya bustani, mabati yaliyolegea, mabango). Ingiza samani za nje ndani."
+            },
+            {
+              "impactEn": "Difficulty walking outdoors, especially for children and the elderly",
+              "impactSw": "Ugumu wa kutembea nje, hasa kwa watoto na wazee",
+              "actionEn": "Special groups including people with disabilities, children and the elderly should be given early warning information and appropriate measures should be taken by the community concerned. Avoid unnecessary outdoor activities.",
+              "actionSw": "Makundi maalum ikijumuisha watu wenye ulemavu, watoto na wazee wapatiwe taarifa ya tahadhari ya mapema na hatua stahiki zichukuliwe na jamii husika. Epuka shughuli zisizo za lazima nje."
+            },
+            {
+              "impactEn": "Difficulty driving large vehicles like lorries and buses on exposed roads",
+              "impactSw": "Ugumu wa kuendesha magari makubwa kama malori na mabasi kwenye barabara zilizo wazi",
+              "actionEn": "Drivers of large vehicles should drive slowly on exposed roads and bridges. Reduce speed when overtaking other vehicles.",
+              "actionSw": "Madereva wa magari makubwa waendeshe taratibu kwenye barabara zilizo wazi na madaraja. Punguza mwendo wakati wa kupita gari jingine."
+            },
+            {
+              "impactEn": "Risk of small branches and weak roofing being blown off in few areas",
+              "impactSw": "Hatari ya matawi madogo na paa dhaifu kupeperushwa katika maeneo machache",
+              "actionEn": "Inspect and repair weak roofs before strong winds. Trim weak branches around homes. Secure loose roofing sheets.",
+              "actionSw": "Kagua na rekebisha paa dhaifu kabla ya upepo mkali. Kata matawi dhaifu karibu na nyumba. Imarisha mabati yaliyolegea."
+            },
+            {
+              "impactEn": "Localised disruption to outdoor activities and small markets",
+              "impactSw": "Kuathirika kwa shughuli za nje na masoko madogo katika maeneo machache",
+              "actionEn": "Postpone non-essential outdoor activities and gatherings. Continue to follow weather information from the Tanzania Meteorological Authority.",
+              "actionSw": "Ahirisha shughuli za nje zisizo za lazima na mikusanyiko. Endelea kufuatilia taarifa za hali ya hewa zinazotolewa na Mamlaka ya Hali ya Hewa Tanzania."
+            },
+            {
+              "impactEn": "Higher waves at sea posing risk to small fishing vessels",
+              "impactSw": "Mawimbi makubwa baharini yanayohatarisha vyombo vidogo vya uvuvi",
+              "actionEn": "Small craft and fishermen should remain at the coast. Coastal communities monitor sea conditions before going out.",
+              "actionSw": "Vyombo vidogo na wavuvi wabaki pwani. Jamii za pwani zifuatilie hali ya bahari kabla ya kwenda baharini."
+            },
+            {
+              "impactEn": "Possibility of dust raised in dry areas reducing visibility",
+              "impactSw": "Uwezekano wa vumbi kuinuka katika maeneo makavu na kupunguza uwezo wa kuona",
+              "actionEn": "Drive slowly with headlights on in dusty conditions. People with respiratory conditions stay indoors.",
+              "actionSw": "Endesha taratibu ukiwasha taa za mbele wakati wa vumbi. Watu wenye matatizo ya kupumua wabaki ndani."
+            },
+            {
+              "impactEn": "Risk of falling small branches damaging vehicles and pedestrians",
+              "impactSw": "Hatari ya matawi madogo kuanguka na kuharibu magari na watembea kwa miguu",
+              "actionEn": "Park vehicles away from trees and weak structures. Report dangerous trees near homes to local authorities.",
+              "actionSw": "Egesha magari mbali na miti na miundo dhaifu. Toa taarifa kwa mamlaka za eneo kuhusu miti hatarishi karibu na nyumba."
+            },
+            {
+              "impactEn": "Localised damage to flowering crops, fruit trees and banana plants",
+              "impactSw": "Uharibifu mdogo wa mazao yanayochanua, miti ya matunda na migomba katika maeneo machache",
+              "actionEn": "Stake young plants and banana stems for support. Harvest mature fruits early. Secure shade nets and seedling structures.",
+              "actionSw": "Imarisha mimea michanga na migomba kwa miti ya kuegemea. Vuna matunda yaliyokomaa mapema. Imarisha nyavu za kivuli na vitalu vya miche."
+            },
+            {
+              "impactEn": "Possibility of brief power outages from power lines being swayed by wind",
+              "impactSw": "Uwezekano wa kukatika kwa muda mfupi kwa umeme kutokana na nyaya kupeperushwa na upepo",
+              "actionEn": "Charge phones and torches in advance. Report sparking or fallen power lines to TANESCO. Keep distance from broken lines.",
+              "actionSw": "Chaji simu na tochi mapema. Toa taarifa kwa TANESCO kuhusu nyaya za umeme zinazotoa cheche au zilizoanguka. Weka umbali na nyaya zilizoanguka."
+            }
+          ]
+        },
+        "WARNING": {
+          "rows": [
+            {
+              "impactEn": "Many areas affected by strong winds and damaging gusts",
+              "impactSw": "Maeneo mengi kuathiriwa na upepo mkali na vishindo vyenye uharibifu",
+              "actionEn": "Stay indoors during peak winds. Identify safe rooms away from windows. Cooperate with local leaders.",
+              "actionSw": "Kaa ndani wakati wa upepo mkali. Tambua vyumba salama mbali na madirisha. Shirikiana na viongozi wa eneo."
+            },
+            {
+              "impactEn": "Significant flying debris causing injuries and damage",
+              "impactSw": "Vitu vingi kupeperushwa hewani na kusababisha majeraha na uharibifu",
+              "actionEn": "Stay away from windows. Do not go outdoors unless necessary. Remove or secure all loose items immediately.",
+              "actionSw": "Kaa mbali na madirisha. Usitoke nje isipokuwa ni lazima. Ondoa au funga vitu vyote vilivyolegea mara moja."
+            },
+            {
+              "impactEn": "Falling trees and large branches blocking roads and damaging power lines",
+              "impactSw": "Miti na matawi makubwa kuanguka na kuziba barabara na kuharibu nyaya za umeme",
+              "actionEn": "Avoid sheltering under trees. Report fallen trees to local authorities. Keep distance from broken power lines.",
+              "actionSw": "Epuka kujihifadhi chini ya miti. Toa taarifa ya miti iliyoanguka kwa mamlaka za eneo. Weka umbali na nyaya za umeme zilizokatika."
+            },
+            {
+              "impactEn": "Significant damage to roofs and weak buildings",
+              "impactSw": "Uharibifu mkubwa wa paa na majengo dhaifu",
+              "actionEn": "Move out of weak or damaged buildings. Relocate to safe rooms or shelters. Report damage to local authorities.",
+              "actionSw": "Hama kutoka majengo dhaifu au yaliyoharibika. Hamia kwenye vyumba salama au makazi ya muda. Toa taarifa ya uharibifu kwa mamlaka za eneo."
+            },
+            {
+              "impactEn": "Travel delays and disruption on roads, rail and at airports",
+              "impactSw": "Ucheleweshaji wa safari na kuvurugika kwenye barabara, reli na viwanja vya ndege",
+              "actionEn": "Avoid non-essential travel. Large vehicles avoid exposed routes. Allow extra travel time. Check with airlines for delays.",
+              "actionSw": "Epuka safari zisizo za lazima. Magari makubwa yaepuke barabara zilizo wazi. Weka muda wa ziada wa safari. Wasiliana na mashirika ya ndege kuhusu ucheleweshaji."
+            },
+            {
+              "impactEn": "Widespread power outages from fallen lines and trees",
+              "impactSw": "Kukatika kwa umeme kwenye maeneo mengi kutokana na nyaya na miti kuanguka",
+              "actionEn": "Stock essential supplies (water, food, medicines, torches). Prepare for loss of electricity and communication. Report fallen power lines to TANESCO.",
+              "actionSw": "Weka akiba ya mahitaji muhimu (maji, chakula, dawa, tochi). Jiandae kukosekana kwa umeme na mawasiliano. Toa taarifa kwa TANESCO kuhusu nyaya za umeme zilizoanguka."
+            },
+            {
+              "impactEn": "Disruption to communication networks (mobile towers and internet)",
+              "impactSw": "Kuvurugika kwa mitandao ya mawasiliano (minara ya simu na intaneti)",
+              "actionEn": "Charge mobile devices and prepare radios in advance. Agree on family meeting points in case of communication loss.",
+              "actionSw": "Chaji vifaa vya simu na andaa redio mapema. Kubaliana na familia kuhusu sehemu za kukutana endapo mawasiliano yatakatika."
+            },
+            {
+              "impactEn": "High waves and dangerous sea conditions for fishermen and coastal residents",
+              "impactSw": "Mawimbi makubwa na hali hatari ya bahari kwa wavuvi na wakazi wa pwani",
+              "actionEn": "Suspend all small craft and fishing operations. Coastal residents move away from shorelines. Report missing vessels immediately.",
+              "actionSw": "Sitisha shughuli zote za vyombo vidogo na uvuvi. Wakazi wa pwani waondoke kando ya bahari. Toa taarifa mara moja kuhusu vyombo vilivyopotea."
+            },
+            {
+              "impactEn": "Significant damage to standing crops, banana plants and fruit trees",
+              "impactSw": "Uharibifu mkubwa wa mazao yaliyo shambani, migomba na miti ya matunda",
+              "actionEn": "Harvest mature crops early where possible. Report damage to agricultural extension officers. Do not enter fields during winds.",
+              "actionSw": "Vuna mazao yaliyokomaa mapema inapowezekana. Toa taarifa ya uharibifu kwa maafisa ugani wa kilimo. Usiingie shambani wakati wa upepo."
+            },
+            {
+              "impactEn": "Dust storms reducing visibility in dry inland areas",
+              "impactSw": "Dhoruba za vumbi zinazopunguza uwezo wa kuona katika maeneo makavu ya bara",
+              "actionEn": "Avoid travel during dust storms. Close windows and doors tightly. People with respiratory conditions wear masks indoors.",
+              "actionSw": "Epuka safari wakati wa dhoruba za vumbi. Funga madirisha na milango vizuri. Watu wenye matatizo ya kupumua wavae barakoa wakiwa ndani."
+            },
+            {
+              "impactEn": "Closure of schools and outdoor markets in affected areas",
+              "impactSw": "Kufungwa kwa shule na masoko ya nje katika maeneo yaliyoathirika",
+              "actionEn": "Follow education authority directives. Arrange temporary studies at home. Markets relocate to sheltered locations.",
+              "actionSw": "Fuata maelekezo ya mamlaka za elimu. Panga masomo ya muda nyumbani. Masoko yahamie sehemu zenye kifuniko."
+            },
+            {
+              "impactEn": "Risk of injuries at construction sites from loose materials and scaffolding",
+              "impactSw": "Hatari ya majeraha kwenye sehemu za ujenzi kutokana na vifaa vilivyolegea na skafodi",
+              "actionEn": "Suspend construction work during strong winds. Secure scaffolding, cranes and loose materials. Cordon off active sites.",
+              "actionSw": "Sitisha shughuli za ujenzi wakati wa upepo mkali. Imarisha skafodi, krani na vifaa vilivyolegea. Weka vizuizi maeneo ya ujenzi yanayoendelea."
+            }
+          ]
+        },
+        "MAJOR_WARNING": {
+          "rows": [
+            {
+              "impactEn": "Severe widespread strong winds affecting whole communities",
+              "impactSw": "Upepo mkali sana ulioenea unaoathiri jamii nzima",
+              "actionEn": "Stay indoors in safe rooms. Do not go outside. Community-wide evacuation from weak structures may be necessary.",
+              "actionSw": "Kaa ndani katika vyumba salama. Usitoke nje. Uhamishaji wa jamii nzima kutoka miundo dhaifu unaweza kuwa muhimu."
+            },
+            {
+              "impactEn": "Loss of life from flying debris, collapsing structures and falling trees",
+              "impactSw": "Vifo kutokana na vitu vinavyopeperushwa, kuporomoka kwa miundo na miti kuanguka",
+              "actionEn": "Take shelter in the strongest part of a sturdy building. Stay away from windows and exterior walls. Contact emergency services for trapped persons.",
+              "actionSw": "Jihifadhi katika sehemu imara zaidi ya jengo madhubuti. Kaa mbali na madirisha na kuta za nje. Wasiliana na vyombo vya dharura kuhusu watu waliokwama."
+            },
+            {
+              "impactEn": "Severe damage and collapse of buildings, especially weak structures and traditional roofs",
+              "impactSw": "Uharibifu mkubwa na kuporomoka kwa majengo, hususani miundo dhaifu na paa za asili",
+              "actionEn": "Evacuate all weak or damaged buildings immediately. Relocate to designated official shelters. Do not return until cleared by authorities.",
+              "actionSw": "Hama mara moja kutoka majengo yote dhaifu au yaliyoharibika. Hamia kwenye makazi rasmi yaliyoteuliwa. Usirudi mpaka uthibitishwe na mamlaka."
+            },
+            {
+              "impactEn": "Major widespread power outages lasting many days",
+              "impactSw": "Kukatika kwa umeme kwa kiasi kikubwa katika maeneo mengi kwa siku nyingi",
+              "actionEn": "Prepare for loss of services for several days. Establish community resource centres (water, information, health). Use generators outdoors only to avoid carbon monoxide poisoning.",
+              "actionSw": "Jiandae kukosa huduma kwa siku kadhaa. Weka vituo vya rasilimali vya jamii (maji, taarifa, afya). Tumia jenereta nje tu ili kuepuka sumu ya gesi ya monoksaidi ya kaboni."
+            },
+            {
+              "impactEn": "Major disruption to all forms of transport (road, rail, air, marine)",
+              "impactSw": "Kuvurugika kwa kiasi kikubwa kwa aina zote za usafiri (barabara, reli, anga, baharini)",
+              "actionEn": "Stay home if possible. Do not travel. Keep emergency routes clear. Follow official directives from transport authorities.",
+              "actionSw": "Kaa nyumbani ikiwezekana. Usisafiri. Ziache wazi njia za dharura. Fuata maelekezo rasmi kutoka mamlaka za usafiri."
+            },
+            {
+              "impactEn": "Severe damage to coastal infrastructure, ports and fishing communities",
+              "impactSw": "Uharibifu mkubwa wa miundombinu ya pwani, bandari na jamii za uvuvi",
+              "actionEn": "All marine activities suspended. Coastal residents evacuate to higher ground. Fishermen at sea seek nearest safe harbour immediately.",
+              "actionSw": "Sitisha shughuli zote za baharini. Wakazi wa pwani wahame kwenda maeneo ya juu. Wavuvi waliopo baharini watafute bandari salama iliyo karibu mara moja."
+            },
+            {
+              "impactEn": "Severe damage to crops, livestock and food stores",
+              "impactSw": "Uharibifu mkubwa wa mazao, mifugo na akiba ya chakula",
+              "actionEn": "Move and protect food reserves in strong storage. Secure livestock in sturdy shelters. Coordinate emergency assistance with district authorities.",
+              "actionSw": "Hamisha na linda akiba ya chakula katika hifadhi imara. Weka mifugo katika mabanda imara. Ratibu msaada wa dharura na mamlaka za wilaya."
+            },
+            {
+              "impactEn": "Major disruption to communication networks affecting emergency response",
+              "impactSw": "Kuvurugika kwa kiasi kikubwa kwa mitandao ya mawasiliano kunakoathiri huduma za dharura",
+              "actionEn": "Use alternative communication (radios, satellite phones). Follow official radio broadcasts. Agree with family on meeting points.",
+              "actionSw": "Tumia mawasiliano mbadala (redio, simu za satelaiti). Fuatilia matangazo rasmi ya redio. Kubaliana na familia kuhusu sehemu za kukutana."
+            },
+            {
+              "impactEn": "Large-scale evacuation of people may be required",
+              "impactSw": "Uhamishaji mkubwa wa watu unaweza kuhitajika",
+              "actionEn": "Implement evacuation plan. Register at official shelters. Assist those with special needs. Carry an emergency bag.",
+              "actionSw": "Tekeleza mpango wa uhamishaji. Jisajili kwenye makazi rasmi. Saidia wenye uhitaji maalum. Chukua begi la dharura."
+            },
+            {
+              "impactEn": "Widespread school and business closures",
+              "impactSw": "Kufungwa kwa shule na biashara katika maeneo mengi",
+              "actionEn": "Provide remote learning options. Keep children at home. Ensure safety before reopening.",
+              "actionSw": "Toa chaguo za masomo ya mbali. Waweke watoto nyumbani. Hakikisha usalama kabla ya kufungua tena."
+            },
+            {
+              "impactEn": "Possibility of fires being fanned by wind and spreading rapidly",
+              "impactSw": "Uwezekano wa moto kuchochewa na upepo na kusambaa kwa kasi",
+              "actionEn": "Avoid using open flames outdoors. Report any fires to authorities immediately. Keep firebreaks around buildings clear.",
+              "actionSw": "Epuka kutumia moto wazi nje. Toa taarifa mara moja kwa mamlaka kuhusu moto wowote. Weka maeneo ya kuzuia moto karibu na majengo wazi."
+            }
+          ]
+        }
+      }
+    },
+    "LARGE WAVES": {
+      "id": "large_waves",
+      "name": "LARGE WAVES",
+      "levels": {
+        "ADVISORY": {
+          "rows": [
+            {
+              "impactEn": "Higher waves on the ocean and lakes posing risk to small craft and canoes",
+              "impactSw": "Mawimbi makubwa zaidi baharini na maziwani yanayohatarisha vyombo vidogo na ngalawa",
+              "actionEn": "Small craft, canoes and fishermen should remain at the shore. Check weather forecasts before going out. Coastal communities monitor sea and lake conditions.",
+              "actionSw": "Vyombo vidogo, ngalawa na wavuvi wabaki ufukweni. Angalia taarifa za hali ya hewa kabla ya kwenda majini. Jamii za pwani zifuatilie hali ya bahari na ziwa."
+            },
+            {
+              "impactEn": "Difficult conditions for night fishing operations",
+              "impactSw": "Hali ngumu kwa shughuli za uvuvi wa usiku",
+              "actionEn": "Avoid night fishing during rough conditions. If going out always wear a life jacket. Carry a phone or signal device for emergencies.",
+              "actionSw": "Epuka uvuvi wa usiku wakati wa hali mbaya. Ukienda majini vaa jaketi la kuokoa maisha kila wakati. Chukua simu au kifaa cha kuashiria dharura."
+            },
+            {
+              "impactEn": "Reduced safety for swimming and beach activities",
+              "impactSw": "Usalama mdogo kwa kuogelea na shughuli za ufukweni",
+              "actionEn": "Avoid swimming during rough conditions. Supervise children near water. Do not leave children unattended at the lakeshore or beach.",
+              "actionSw": "Epuka kuogelea wakati wa hali mbaya ya maji. Wasimamie watoto karibu na maji. Usiwaache watoto bila kusimamiwa kwenye fukwe za ziwa au bahari."
+            },
+            {
+              "impactEn": "Possible disruption to small ferry services and lake transport",
+              "impactSw": "Uwezekano wa kuvurugika kwa huduma za vivuko vidogo na usafiri wa ziwani",
+              "actionEn": "Check ferry schedules before travel. Allow extra time for delays. Follow announcements from ferry operators.",
+              "actionSw": "Angalia ratiba za vivuko kabla ya safari. Weka muda wa ziada kwa ucheleweshaji. Fuata matangazo kutoka kwa wamiliki wa vivuko."
+            },
+            {
+              "impactEn": "Risk of small craft capsizing especially when overloaded",
+              "impactSw": "Hatari ya vyombo vidogo kupinduka hususani vinapojaa mzigo zaidi",
+              "actionEn": "Do not overload boats with passengers or cargo. Ensure life jackets are worn by everyone on board. Check boat condition before departure.",
+              "actionSw": "Usijaze boti mizigo wala abiria zaidi. Hakikisha kila aliye ndani ya chombo amevaa jaketi la kuokoa maisha. Kagua hali ya chombo kabla ya kuanza safari."
+            },
+            {
+              "impactEn": "Wave run-up onto low-lying beaches and shore walkways",
+              "impactSw": "Mawimbi kupanda hadi fukwe za chini na njia za kando ya pwani",
+              "actionEn": "Stay away from low-lying coastal walkways during high waves. Do not stand on rocks or piers during rough sea. Respect lifeguard warnings.",
+              "actionSw": "Kaa mbali na njia za kando ya pwani zilizo chini wakati wa mawimbi makubwa. Usisimame juu ya miamba au gati wakati wa bahari yenye msukosuko. Heshimu maonyo ya walinzi wa pwani."
+            },
+            {
+              "impactEn": "Some erosion of beaches and shoreline",
+              "impactSw": "Mmomonyoko wa baadhi ya fukwe na kingo za pwani",
+              "actionEn": "Report observed erosion to local authorities. Protect beachfront property where possible. Do not remove protective vegetation from beaches.",
+              "actionSw": "Toa taarifa ya mmomonyoko unaouona kwa mamlaka za eneo. Linda mali za pwani inapowezekana. Usiondoe mimea ya kulinda ufukwe."
+            },
+            {
+              "impactEn": "Reduced visibility on the water from spray and swell",
+              "impactSw": "Uwezo mdogo wa kuona juu ya maji kutokana na manyunyu na mawimbi",
+              "actionEn": "Reduce speed when navigating. Use marine lights and signals. Stay close to other boats for mutual support.",
+              "actionSw": "Punguza mwendo wakati wa kuendesha chombo. Tumia taa na ishara za baharini. Kaa karibu na vyombo vingine kwa msaada wa pamoja."
+            },
+            {
+              "impactEn": "Vulnerable groups (children, the elderly, inexperienced swimmers) at higher risk near water",
+              "impactSw": "Makundi yaliyo katika hatari (watoto, wazee, waogeleaji wasio na uzoefu) wapo katika hatari kubwa karibu na maji",
+              "actionEn": "Special groups including people with disabilities, children and the elderly should be given early warning information and appropriate measures should be taken by the community concerned",
+              "actionSw": "Makundi maalum ikijumuisha watu wenye ulemavu, watoto na wazee wapatiwe taarifa ya tahadhari ya mapema na hatua stahiki zichukuliwe na jamii husika"
+            },
+            {
+              "impactEn": "Possible damage to fishing nets, traps and small fishing gear",
+              "impactSw": "Uwezekano wa kuharibika kwa nyavu za uvuvi, mitego na vifaa vidogo vya uvuvi",
+              "actionEn": "Bring fishing nets and gear inland during rough conditions. Secure stored equipment above expected wave reach. Report damage to Beach Management Units (BMU).",
+              "actionSw": "Leta nyavu na vifaa vya uvuvi nchi kavu wakati wa hali mbaya. Imarisha vifaa vilivyohifadhiwa juu ya kufikiwa na mawimbi. Toa taarifa ya uharibifu kwa Vikundi vya Usimamizi wa Pwani (BMU)."
+            }
+          ]
+        },
+        "WARNING": {
+          "rows": [
+            {
+              "impactEn": "Many fishermen and small craft at serious risk of capsizing",
+              "impactSw": "Wavuvi wengi na vyombo vidogo katika hatari kubwa ya kupinduka",
+              "actionEn": "Suspend all small craft and night fishing operations. Ensure everyone on board wears a life jacket. Cooperate with Beach Management Units (BMU) and local leaders.",
+              "actionSw": "Sitisha shughuli zote za vyombo vidogo na uvuvi wa usiku. Hakikisha kila aliye ndani ya chombo amevaa jaketi la kuokoa maisha. Shirikiana na Vikundi vya Usimamizi wa Pwani (BMU) na viongozi wa eneo."
+            },
+            {
+              "impactEn": "Threat to life from drowning, especially during night fishing",
+              "impactSw": "Hatari ya maisha kutokana na kuzama, hususani wakati wa uvuvi wa usiku",
+              "actionEn": "Do not go out on the water. If already at sea or on the lake, return to the nearest safe shore immediately. Report missing fishermen to local authorities and BMU.",
+              "actionSw": "Usitoke majini. Ukiwa tayari baharini au ziwani, rudi kwenye ufukwe salama ulio karibu mara moja. Toa taarifa ya wavuvi waliopotea kwa mamlaka za eneo na BMU."
+            },
+            {
+              "impactEn": "Significant disruption to ferry services and marine transport",
+              "impactSw": "Kuvurugika kwa kiasi kikubwa kwa huduma za vivuko na usafiri wa baharini",
+              "actionEn": "Avoid non-essential travel by ferry. Follow announcements from ferry operators and TASAC. Consider alternative road routes where possible.",
+              "actionSw": "Epuka safari zisizo za lazima kwa vivuko. Fuata matangazo kutoka kwa wamiliki wa vivuko na TASAC. Fikiria njia mbadala za barabara inapowezekana."
+            },
+            {
+              "impactEn": "Damage to small jetties, piers and beach structures",
+              "impactSw": "Uharibifu wa magati madogo, vituo vya mashua na miundo ya ufukweni",
+              "actionEn": "Move boats to higher ground or sheltered moorings. Secure beach equipment and infrastructure. Report damage to port authorities.",
+              "actionSw": "Hamisha boti kwenye maeneo ya juu au sehemu za hifadhi. Imarisha vifaa na miundombinu ya ufukweni. Toa taarifa ya uharibifu kwa mamlaka za bandari."
+            },
+            {
+              "impactEn": "Significant beach and coastal erosion",
+              "impactSw": "Mmomonyoko mkubwa wa fukwe na pwani",
+              "actionEn": "Stay away from cliff edges and unstable beaches. Report observed erosion to local authorities. Do not build close to the changing shoreline.",
+              "actionSw": "Kaa mbali na kando ya majabali na fukwe zisizo imara. Toa taarifa ya mmomonyoko unaouona kwa mamlaka za eneo. Usijenge karibu na kingo za pwani zinazobadilika."
+            },
+            {
+              "impactEn": "Wave overtopping of seawalls and flooding of low-lying coastal roads",
+              "impactSw": "Mawimbi kupita juu ya kuta za kuzuia maji na kuathiri barabara za chini za pwani",
+              "actionEn": "Avoid coastal roads during high waves and high tide. Do not drive through water-covered roads. Relocate from low-lying coastal homes.",
+              "actionSw": "Epuka barabara za pwani wakati wa mawimbi makubwa na maji ya juu. Usiendeshe gari kwenye barabara zilizofunikwa na maji. Hama kutoka nyumba za chini za pwani."
+            },
+            {
+              "impactEn": "Damage to coastal hotels, tourism infrastructure and beach businesses",
+              "impactSw": "Uharibifu wa hoteli za pwani, miundombinu ya utalii na biashara za ufukweni",
+              "actionEn": "Move tourists and guests away from the shoreline. Secure outdoor furniture and equipment. Coordinate with tourism authorities for guest safety.",
+              "actionSw": "Wahamishe watalii na wageni mbali na ukingo wa pwani. Imarisha samani na vifaa vya nje. Shirikiana na mamlaka za utalii kwa usalama wa wageni."
+            },
+            {
+              "impactEn": "Loss of fishing nets, traps and equipment",
+              "impactSw": "Upotevu wa nyavu, mitego na vifaa vya uvuvi",
+              "actionEn": "Bring fishing nets and gear well above the expected wave reach. Do not attempt to recover nets during dangerous conditions. Report losses to Beach Management Units (BMU).",
+              "actionSw": "Leta nyavu na vifaa vya uvuvi mbali juu ya kufikiwa na mawimbi. Usijaribu kuokoa nyavu wakati wa hali ya hatari. Toa taarifa ya upotevu kwa Vikundi vya Usimamizi wa Pwani (BMU)."
+            },
+            {
+              "impactEn": "Possible flooding of low-lying coastal and lakeshore communities",
+              "impactSw": "Uwezekano wa mafuriko katika jamii za chini za pwani na kando ya ziwa",
+              "actionEn": "Identify safe higher-ground areas. Relocate at-risk households if needed. Cooperate with local leaders and disaster committees.",
+              "actionSw": "Tambua maeneo salama ya juu. Wahamishe kaya zilizo hatarini ikihitajika. Shirikiana na viongozi wa eneo na kamati za maafa."
+            },
+            {
+              "impactEn": "Possible damage to lakeside settlements from rising water",
+              "impactSw": "Uwezekano wa uharibifu wa makazi ya kando ya ziwa kutokana na maji yanayopanda",
+              "actionEn": "Move belongings to higher floors. Charge phones and prepare radios. Identify evacuation routes to higher ground.",
+              "actionSw": "Hamisha vitu kwenye sakafu za juu. Chaji simu na andaa redio. Tambua njia za uhamishaji kwenda maeneo ya juu."
+            },
+            {
+              "impactEn": "Closure of schools in coastal and lakeshore areas",
+              "impactSw": "Kufungwa kwa shule katika maeneo ya pwani na kando ya ziwa",
+              "actionEn": "Follow education authority directives. Arrange temporary studies at home. Identify safe routes for children if school remains open.",
+              "actionSw": "Fuata maelekezo ya mamlaka za elimu. Panga masomo ya muda nyumbani. Tambua njia salama kwa watoto endapo shule itaendelea kufunguliwa."
+            }
+          ]
+        },
+        "MAJOR_WARNING": {
+          "rows": [
+            {
+              "impactEn": "Severe widespread risk to life from drowning and capsizing of vessels",
+              "impactSw": "Hatari kubwa iliyoenea ya maisha kutokana na kuzama na vyombo kupinduka",
+              "actionEn": "Suspend all marine activities (fishing, transport, tourism) immediately. Do not enter the water for any reason. Coordinate emergency response with marine authorities.",
+              "actionSw": "Sitisha shughuli zote za baharini na ziwani (uvuvi, usafiri, utalii) mara moja. Usiingie majini kwa sababu yoyote. Ratibu huduma za dharura na mamlaka za baharini."
+            },
+            {
+              "impactEn": "Major loss of life expected in fishing communities without immediate action",
+              "impactSw": "Vifo vingi vinavyotegemewa katika jamii za uvuvi pasipo hatua za haraka",
+              "actionEn": "Recall all fishermen at sea or on the lake immediately. Coordinate rescue with Marine Police, KMKM and JWTZ Marine. Broadcast urgent warnings via radio and BMUs.",
+              "actionSw": "Warejeshe wavuvi wote walio baharini au ziwani mara moja. Ratibu uokoaji na Polisi wa Baharini, KMKM na kitengo cha baharini cha Jeshi la Wananchi wa Tanzania (JWTZ). Tangaza maonyo ya dharura kupitia redio na BMU."
+            },
+            {
+              "impactEn": "Storm surge inundating coastal communities (Indian Ocean coast)",
+              "impactSw": "Mafuriko ya bahari yanayofunika jamii za pwani (pwani ya Bahari ya Hindi)",
+              "actionEn": "Evacuate all low-lying coastal communities immediately to higher ground. Do not return until cleared by authorities. Coordinate emergency shelters in higher areas.",
+              "actionSw": "Hamisha mara moja jamii zote za chini za pwani kwenda maeneo ya juu. Usirudi mpaka uthibitishwe na mamlaka. Ratibu makazi ya dharura katika maeneo ya juu."
+            },
+            {
+              "impactEn": "Major damage to ports, harbours and ferry terminals",
+              "impactSw": "Uharibifu mkubwa wa bandari, gati na vituo vya vivuko",
+              "actionEn": "Suspend all port operations. Secure vessels in safe harbours where possible. Coordinate with Tanzania Ports Authority for damage assessment and recovery.",
+              "actionSw": "Sitisha shughuli zote za bandari. Imarisha vyombo katika bandari salama inapowezekana. Shirikiana na Mamlaka ya Bandari Tanzania kwa tathmini ya uharibifu na urejeshaji."
+            },
+            {
+              "impactEn": "Severe coastal erosion and loss of land",
+              "impactSw": "Mmomonyoko mkubwa wa pwani na upotevu wa ardhi",
+              "actionEn": "Evacuate properties at the cliff edge or eroding shoreline. Do not return to undermined buildings. Coordinate long-term coastal protection with engineers.",
+              "actionSw": "Hama mali zilizo kando ya majabali au kingo za pwani zinazomomonyoka. Usirudi katika majengo yaliyodhoofishwa misingi. Ratibu ulinzi wa muda mrefu wa pwani na wahandisi."
+            },
+            {
+              "impactEn": "Saltwater contamination of coastal wells, springs and farmland",
+              "impactSw": "Uchafuzi wa maji ya chumvi katika visima, chemchemi na mashamba ya pwani",
+              "actionEn": "Distribute safe drinking water. Test wells and springs before reuse. Flush salt-affected farmland with fresh water where possible.",
+              "actionSw": "Sambaza maji salama ya kunywa. Pima visima na chemchemi kabla ya kutumia tena. Safisha mashamba yaliyoathiriwa na chumvi kwa maji safi inapowezekana."
+            },
+            {
+              "impactEn": "Major damage to lakeside settlements and flooding of shoreline communities",
+              "impactSw": "Uharibifu mkubwa wa makazi ya kando ya ziwa na mafuriko ya jamii za kingo",
+              "actionEn": "Implement community-wide evacuation from lakeshore areas. Use official shelters on higher ground. Assist those with special needs.",
+              "actionSw": "Tekeleza uhamishaji wa jamii nzima kutoka maeneo ya kando ya ziwa. Tumia makazi rasmi katika maeneo ya juu. Saidia wenye uhitaji maalum."
+            },
+            {
+              "impactEn": "Severe damage to mangroves, coral reefs and coastal ecosystems",
+              "impactSw": "Uharibifu mkubwa wa mikoko, miamba ya matumbawe na mazingira ya pwani",
+              "actionEn": "Avoid disturbing damaged ecosystems. Report to environmental authorities for assessment. Coordinate restoration efforts with conservation agencies.",
+              "actionSw": "Epuka kusumbua mazingira yaliyoharibika. Toa taarifa kwa mamlaka za mazingira kwa tathmini. Ratibu juhudi za urejeshaji na mashirika ya hifadhi."
+            },
+            {
+              "impactEn": "Long-term economic disruption to fishing and tourism livelihoods",
+              "impactSw": "Kuvurugika kwa muda mrefu kwa vyanzo vya mapato vya uvuvi na utalii",
+              "actionEn": "Coordinate emergency cash and food assistance for affected households. Develop recovery programmes with district authorities. Provide grants to replace fishing gear and small businesses.",
+              "actionSw": "Ratibu msaada wa dharura wa fedha na chakula kwa kaya zilizoathirika. Tengeneza programu za urejeshaji na mamlaka za wilaya. Toa ruzuku za kubadilisha vifaa vya uvuvi na biashara ndogo."
+            },
+            {
+              "impactEn": "Mass evacuation of coastal and lakeshore populations may be required",
+              "impactSw": "Uhamishaji mkubwa wa wakazi wa pwani na kando ya ziwa unaweza kuhitajika",
+              "actionEn": "Implement evacuation plan. Register at official shelters. Provide food, water and protection for displaced families. Assist those with special needs.",
+              "actionSw": "Tekeleza mpango wa uhamishaji. Jisajili kwenye makazi rasmi. Toa chakula, maji na ulinzi kwa kaya zilizohama. Saidia wenye uhitaji maalum."
+            },
+            {
+              "impactEn": "Severe disruption to coastal infrastructure (roads, power, communication)",
+              "impactSw": "Kuvurugika kwa kiasi kikubwa kwa miundombinu ya pwani (barabara, umeme, mawasiliano)",
+              "actionEn": "Use alternative communication (radios, satellite phones). Coordinate utility restoration with TANESCO and telecom operators. Clear emergency access routes.",
+              "actionSw": "Tumia mawasiliano mbadala (redio, simu za satelaiti). Ratibu urejeshaji wa huduma na TANESCO na watoa huduma za mawasiliano. Safisha njia za dharura."
+            }
+          ]
+        }
+      }
+    },
+    "WILDFIRE": {
+      "id": "wildfire",
+      "name": "WILDFIRE",
+      "levels": {
+        "ADVISORY": {
+          "rows": [
+            {
+              "impactEn": "Dry conditions and high fire risk in grasslands, savanna and forest areas",
+              "impactSw": "Hali ya ukame na hatari kubwa ya moto katika maeneo ya nyasi, savana na misitu",
+              "actionEn": "Avoid open burning and lighting fires outdoors. Report any unattended fires to local authorities. Continue to follow weather and fire information from the Tanzania Meteorological Authority.",
+              "actionSw": "Epuka kuchoma kwa wazi na kuwasha moto nje. Toa taarifa kwa mamlaka za eneo kuhusu moto wowote ambao haujasimamiwa. Endelea kufuatilia taarifa za hali ya hewa na moto zinazotolewa na Mamlaka ya Hali ya Hewa Tanzania."
+            },
+            {
+              "impactEn": "Possibility of small fires igniting from cooking, cigarettes or unattended charcoal kilns",
+              "impactSw": "Uwezekano wa moto mdogo kuwaka kutokana na kupika, sigara au matanuru ya mkaa yasiyosimamiwa",
+              "actionEn": "Extinguish cooking fires fully before leaving the area. Do not throw cigarettes on dry vegetation. Supervise charcoal kilns at all times. Create firebreaks around charcoal-making sites.",
+              "actionSw": "Zima moto wa kupikia kabisa kabla ya kuondoka eneo. Usitupe sigara kwenye uoto mkavu. Simamia matanuru ya mkaa kila wakati. Tengeneza vizuizi vya moto kuzunguka maeneo ya kutengeneza mkaa."
+            },
+            {
+              "impactEn": "Smoke from local fires affecting nearby air quality",
+              "impactSw": "Moshi kutoka kwa moto wa eneo kuathiri ubora wa hewa karibu",
+              "actionEn": "Close doors and windows during heavy smoke. People with asthma or breathing problems stay indoors. Use a damp cloth or N95 mask if going outside is necessary.",
+              "actionSw": "Funga milango na madirisha wakati wa moshi mzito. Watu wenye pumu au matatizo ya kupumua wabaki ndani. Tumia kitambaa kibichi au barakoa ya N95 ikiwa ni lazima kutoka nje."
+            },
+            {
+              "impactEn": "Localised damage to vegetation, pastures and small farms from uncontrolled burning",
+              "impactSw": "Uharibifu mdogo wa uoto, malisho na mashamba madogo katika maeneo machache kutokana na kuchoma bila kudhibitiwa",
+              "actionEn": "Create firebreaks around farms, homes and grain stores. Clear dry grass from around buildings. Report damaged farms to agricultural extension officers.",
+              "actionSw": "Tengeneza vizuizi vya moto kuzunguka mashamba, nyumba na ghala za nafaka. Safisha nyasi kavu kuzunguka majengo. Toa taarifa kwa maafisa ugani wa kilimo kuhusu mashamba yaliyoharibika."
+            },
+            {
+              "impactEn": "Possible minor disruption to roads from smoke reducing visibility",
+              "impactSw": "Uwezekano wa kuvurugika kidogo kwa shughuli za barabarani kutokana na moshi kupunguza uwezo wa kuona",
+              "actionEn": "Drive slowly with headlights on in smoky conditions. Avoid stopping on smoky roads. Report dangerous smoke conditions to road authorities.",
+              "actionSw": "Endesha taratibu ukiwasha taa za mbele wakati wa moshi. Epuka kusimama kwenye barabara zenye moshi. Toa taarifa kwa mamlaka za barabara kuhusu hali hatari ya moshi."
+            },
+            {
+              "impactEn": "Risk to grazing livestock from smoke and small burns",
+              "impactSw": "Hatari kwa mifugo inayolisha kutokana na moshi na majeraha madogo ya moto",
+              "actionEn": "Move livestock away from areas with active fires. Provide clean water and shade. Report injured animals to livestock extension officers.",
+              "actionSw": "Hamisha mifugo mbali na maeneo yenye moto unaowaka. Toa maji safi na kivuli. Toa taarifa kwa maafisa ugani wa mifugo kuhusu wanyama waliojeruhiwa."
+            },
+            {
+              "impactEn": "Vulnerable groups (children, the elderly, those with asthma) at higher risk from smoke",
+              "impactSw": "Makundi yaliyo katika hatari (watoto, wazee, wenye pumu) wapo katika hatari kubwa kutokana na moshi",
+              "actionEn": "Special groups including people with disabilities, children and the elderly should be given early warning information and appropriate measures should be taken by the community concerned",
+              "actionSw": "Makundi maalum ikijumuisha watu wenye ulemavu, watoto na wazee wapatiwe taarifa ya tahadhari ya mapema na hatua stahiki zichukuliwe na jamii husika"
+            },
+            {
+              "impactEn": "Risk from honey-gathering fires and beekeeping operations near forests",
+              "impactSw": "Hatari kutokana na moto wa kuvua asali na shughuli za ufugaji nyuki karibu na misitu",
+              "actionEn": "Honey gatherers should fully extinguish smoke devices before leaving. Avoid lighting fires near forest reserves. Coordinate beekeeping with forest authorities (TFS).",
+              "actionSw": "Wavua asali wazime kabisa vifaa vya moshi kabla ya kuondoka. Epuka kuwasha moto karibu na hifadhi za misitu. Ratibu ufugaji nyuki na mamlaka za misitu (Wakala wa Misitu Tanzania - TFS)."
+            },
+            {
+              "impactEn": "Risk to porters, rangers and outdoor workers in protected areas",
+              "impactSw": "Hatari kwa wabeba mizigo, walinzi wa hifadhi na wafanyakazi wa nje katika maeneo ya hifadhi",
+              "actionEn": "Workers in fire-prone areas should carry water and basic firefighting tools. Report any fires to TANAPA or TFS immediately. Do not light fires in protected areas.",
+              "actionSw": "Wafanyakazi wa maeneo yenye hatari ya moto wabebe maji na vifaa vya msingi vya kuzima moto. Toa taarifa mara moja kwa Mamlaka ya Hifadhi za Taifa Tanzania (TANAPA) au Wakala wa Misitu Tanzania (TFS) kuhusu moto wowote. Usiwashe moto katika maeneo ya hifadhi."
+            },
+            {
+              "impactEn": "Increased workload for local fire response units and forest officers",
+              "impactSw": "Kuongezeka kwa kazi kwa vikosi vya zima moto vya eneo na maafisa wa misitu",
+              "actionEn": "Inspect firefighting tools and equipment. Pre-position water sources and equipment near high-risk areas. Coordinate with district authorities and TFS.",
+              "actionSw": "Kagua vifaa vya kuzima moto. Weka maji na vifaa karibu na maeneo yenye hatari kubwa. Ratibu na mamlaka za wilaya na Wakala wa Misitu Tanzania (TFS)."
+            }
+          ]
+        },
+        "WARNING": {
+          "rows": [
+            {
+              "impactEn": "Widespread fires in dry vegetation and forest areas",
+              "impactSw": "Moto kuenea katika maeneo mengi yenye uoto mkavu na misitu",
+              "actionEn": "Identify safe areas and evacuation routes. Relocate at-risk households to safe locations. Cooperate with local leaders and disaster committees.",
+              "actionSw": "Tambua maeneo salama na njia za uhamishaji. Wahamishe kaya zilizo hatarini kwenda maeneo salama. Shirikiana na viongozi wa eneo na kamati za maafa."
+            },
+            {
+              "impactEn": "Threat to homes, farms and structures near fire fronts",
+              "impactSw": "Hatari kwa nyumba, mashamba na miundo iliyokaribu na moto",
+              "actionEn": "Move valuables and documents away from threatened areas. Clear dry vegetation around buildings to create firebreaks. Have water and basic firefighting tools ready.",
+              "actionSw": "Hamisha vitu vya thamani na nyaraka mbali na maeneo yaliyo hatarini. Safisha uoto mkavu kuzunguka majengo ili kutengeneza vizuizi vya moto. Weka maji na vifaa vya msingi vya kuzima moto tayari."
+            },
+            {
+              "impactEn": "Significant smoke and poor air quality affecting many communities",
+              "impactSw": "Moshi mwingi na ubora mbaya wa hewa kuathiri jamii nyingi",
+              "actionEn": "Stay indoors with doors and windows closed. Use N95 masks if going outdoors is necessary. People with respiratory or heart conditions seek medical advice. Close school playgrounds in heavy smoke.",
+              "actionSw": "Kaa ndani na milango na madirisha vifungwe. Tumia barakoa ya N95 ikiwa ni lazima kwenda nje. Watu wenye matatizo ya kupumua au moyo watafute ushauri wa kitabibu. Funga viwanja vya michezo vya shule wakati wa moshi mzito."
+            },
+            {
+              "impactEn": "Damage to crops, banana plantations and standing harvests",
+              "impactSw": "Uharibifu wa mazao, mashamba ya migomba na mavuno yaliyo shambani",
+              "actionEn": "Harvest mature crops where it is safe to do so. Create firebreaks around farms. Report damage to agricultural extension officers. Move stored grain to safer locations.",
+              "actionSw": "Vuna mazao yaliyokomaa pale ambapo ni salama kufanya hivyo. Tengeneza vizuizi vya moto kuzunguka mashamba. Toa taarifa ya uharibifu kwa maafisa ugani wa kilimo. Hamisha nafaka iliyohifadhiwa kwenda maeneo salama zaidi."
+            },
+            {
+              "impactEn": "Power outages from fires affecting power lines and poles",
+              "impactSw": "Kukatika kwa umeme kutokana na moto kuathiri nyaya na nguzo za umeme",
+              "actionEn": "Stock essential supplies (water, food, medicines, torches). Charge phones and prepare radios. Report fallen or damaged power lines to TANESCO immediately. Keep distance from broken lines.",
+              "actionSw": "Weka akiba ya mahitaji muhimu (maji, chakula, dawa, tochi). Chaji simu na andaa redio. Toa taarifa mara moja kwa TANESCO kuhusu nyaya za umeme zilizoanguka au kuharibika. Weka umbali na nyaya zilizokatika."
+            },
+            {
+              "impactEn": "Closure of roads and disruption to travel from smoke and active fires",
+              "impactSw": "Kufungwa kwa barabara na kuvurugika kwa safari kutokana na moshi na moto unaoendelea",
+              "actionEn": "Avoid non-essential travel near fire areas. Use designated alternative routes. Do not drive through burning vegetation or heavy smoke. Follow traffic announcements.",
+              "actionSw": "Epuka safari zisizo za lazima karibu na maeneo ya moto. Tumia njia mbadala zilizoelekezwa. Usiendeshe gari katika uoto unaowaka au moshi mzito. Fuata matangazo ya trafiki."
+            },
+            {
+              "impactEn": "Loss of livestock and displacement of wildlife from protected areas",
+              "impactSw": "Upotevu wa mifugo na kuhama kwa wanyamapori kutoka maeneo ya hifadhi",
+              "actionEn": "Move livestock to safe pastures away from fire fronts. Report missing livestock to local authorities. Ro not approach displaced wildlife. Report wildlife near homes to TANAPA or TAWA.",
+              "actionSw": "Hamisha mifugo kwenye malisho salama mbali na moto. Toa taarifa ya mifugo iliyopotea kwa mamlaka za eneo. Usikaribie wanyamapori waliohama. Toa taarifa kwa TANAPA au Mamlaka ya Usimamizi wa Wanyamapori Tanzania (TAWA) kuhusu wanyamapori karibu na nyumba."
+            },
+            {
+              "impactEn": "Risk to firefighters, rangers and volunteer responders",
+              "impactSw": "Hatari kwa wazima moto, walinzi wa hifadhi na wajitolea wa kukabiliana na moto",
+              "actionEn": "Provide firefighters with personal protective equipment (PPE), water and rest periods. Ro not send untrained civilians to fight fires. Roordinate response with TFS, TANAPA and JWTZ.",
+              "actionSw": "Wapatie wazima moto vifaa vya kujikinga (PPE), maji na muda wa kupumzika. Usitume raia wasio na mafunzo kwenda kuzima moto. Ratibu juhudi na Wakala wa Misitu Tanzania (TFS), TANAPA na Jeshi la Wananchi wa Tanzania (JWTZ)."
+            },
+            {
+              "impactEn": "Disruption to tourism operations on Mount Kilimanjaro and in national parks",
+              "impactSw": "Kuvurugika kwa shughuli za utalii katika Mlima Kilimanjaro na hifadhi za taifa",
+              "actionEn": "Suspend climbing and safari operations in affected areas. Rvacuate tourists from threatened camps and routes. Coordinate guest safety with TANAPA and tour operators.",
+              "actionSw": "Sitisha shughuli za kupanda mlima na utalii katika maeneo yaliyoathirika. Wahamishe watalii kutoka kambi na njia zilizo hatarini. Ratibu usalama wa wageni na TANAPA na waendeshaji wa utalii."
+            },
+            {
+              "impactEn": "Damage to communication infrastructure (mobile towers near forests)",
+              "impactSw": "Uharibifu wa miundombinu ya mawasiliano (minara ya simu karibu na misitu)",
+              "actionEn": "Charge mobile devices and prepare radios in advance. Agree on family meeting points in case of communication loss. Identify alternative communication channels.",
+              "actionSw": "Chaji vifaa vya simu na andaa redio mapema. Kubaliana na familia kuhusu sehemu za kukutana endapo mawasiliano yatakatika. Tambua njia mbadala za mawasiliano."
+            },
+            {
+              "impactEn": "Possible school closures in heavy smoke areas",
+              "impactSw": "Uwezekano wa kufungwa kwa shule katika maeneo yenye moshi mzito",
+              "actionEn": "Follow education authority directives. Arrange temporary studies at home. Keep children indoors away from smoke. Ensure schools have N95 masks and clean-air rooms.",
+              "actionSw": "Fuata maelekezo ya mamlaka za elimu. Panga masomo ya muda nyumbani. Waweke watoto ndani mbali na moshi. Hakikisha shule zina barakoa za N95 na vyumba vyenye hewa safi."
+            }
+          ]
+        },
+        "MAJOR_WARNING": {
+          "rows": [
+            {
+              "impactEn": "Severe widespread fires threatening residential areas, forests and protected areas",
+              "impactSw": "Moto mkubwa ulioenea unaohatarisha maeneo ya makazi, misitu na hifadhi",
+              "actionEn": "Implement community-wide evacuation immediately. Move to designated official shelters in safe areas. Do not attempt to save property at the cost of life.",
+              "actionSw": "Tekeleza uhamishaji wa jamii nzima mara moja. Hamia kwenye makazi rasmi yaliyoteuliwa katika maeneo salama. Usijaribu kuokoa mali kwa gharama ya maisha."
+            },
+            {
+              "impactEn": "Loss of life expected from fire entrapment, smoke inhalation and burns",
+              "impactSw": "Vifo vinavyotegemewa kutokana na kunaswa katika moto, kuvuta moshi na majeraha ya kuchomeka",
+              "actionEn": "Activate emergency medical services (burn care, oxygen support). Establish triage points for injured persons. Coordinate medical evacuation with regional hospitals.",
+              "actionSw": "Anzisha huduma za matibabu ya dharura (matibabu ya kuchomeka, msaada wa hewa ya oksijeni). Weka vituo vya kukagua majeruhi. Ratibu uhamishaji wa wagonjwa na hospitali za mkoa."
+            },
+            {
+              "impactEn": "Mass evacuation of communities in high-risk zones",
+              "impactSw": "Uhamishaji mkubwa wa jamii katika maeneo yenye hatari kubwa",
+              "actionEn": "Implement evacuation plan. Register at official shelters. Provide food, water and protection for displaced families. Assist those with special needs.",
+              "actionSw": "Tekeleza mpango wa uhamishaji. Jisajili kwenye makazi rasmi. Toa chakula, maji na ulinzi kwa kaya zilizohama. Saidia wenye uhitaji maalum."
+            },
+            {
+              "impactEn": "Major loss of crops, farms, livestock and food stores",
+              "impactSw": "Upotevu mkubwa wa mazao, mashamba, mifugo na akiba ya chakula",
+              "actionEn": "Coordinate emergency food and cash assistance with district authorities. Develop recovery programmes with agricultural extension officers. Provide seeds and inputs for replanting.",
+              "actionSw": "Ratibu msaada wa dharura wa chakula na fedha na mamlaka za wilaya. Tengeneza programu za urejeshaji na maafisa ugani wa kilimo. Toa mbegu na pembejeo kwa upandaji upya."
+            },
+            {
+              "impactEn": "Severe air pollution affecting whole regions including distant towns",
+              "impactSw": "Uchafuzi mkubwa wa hewa unaoathiri mikoa mizima ikijumuisha miji ya mbali",
+              "actionEn": "Issue public health warnings via radio and TV. Distribute N95 masks to vulnerable groups. Suspend outdoor activities and sports. Activate clean-air centres at health facilities.",
+              "actionSw": "Toa maonyo ya afya ya umma kupitia redio na televisheni. Sambaza barakoa za N95 kwa makundi yaliyo hatarini. Sitisha shughuli za nje na michezo. Anzisha vituo vya hewa safi katika vituo vya afya."
+            },
+            {
+              "impactEn": "Major destruction of forest reserves, protected areas and biodiversity",
+              "impactSw": "Uharibifu mkubwa wa hifadhi za misitu, maeneo ya hifadhi na bioanuwai",
+              "actionEn": "Coordinate national response with TANAPA, TFS, TAWA and the Ministry of Natural Resources. Protect critical habitats and water catchments. Plan post-fire restoration with conservation agencies.",
+              "actionSw": "Ratibu juhudi za kitaifa na TANAPA, Wakala wa Misitu Tanzania (TFS), TAWA na Wizara ya Maliasili na Utalii. Linda maeneo muhimu ya makazi ya wanyama na vyanzo vya maji. Panga urejeshaji baada ya moto na mashirika ya hifadhi."
+            },
+            {
+              "impactEn": "Long-term economic disruption to tourism (Kilimanjaro, national parks)",
+              "impactSw": "Kuvurugika kwa muda mrefu kwa uchumi wa utalii (Kilimanjaro, hifadhi za taifa)",
+              "actionEn": "Suspend all tourism operations until cleared by authorities. Coordinate refunds and rebooking with tour operators. Develop recovery programmes with the tourism ministry.",
+              "actionSw": "Sitisha shughuli zote za utalii mpaka uthibitishwe na mamlaka. Ratibu marejesho ya fedha na upangaji upya na waendeshaji wa utalii. Tengeneza programu za urejeshaji na wizara ya utalii."
+            },
+            {
+              "impactEn": "Major damage to power and communication networks",
+              "impactSw": "Uharibifu mkubwa wa mitandao ya umeme na mawasiliano",
+              "actionEn": "Use alternative communication (radios, satellite phones). Coordinate utility restoration with TANESCO and telecom operators. Follow official radio broadcasts.",
+              "actionSw": "Tumia mawasiliano mbadala (redio, simu za satelaiti). Ratibu urejeshaji wa huduma na TANESCO na watoa huduma za mawasiliano. Fuatilia matangazo rasmi ya redio."
+            },
+            {
+              "impactEn": "Health emergencies: respiratory crises, cardiovascular events and burn casualties",
+              "impactSw": "Dharura za kiafya: matatizo ya kupumua, magonjwa ya moyo na waathirika wa kuchomeka",
+              "actionEn": "Activate hospital emergency departments and burn units. Deploy mobile health units to evacuation centres. Provide psychosocial support for survivors and families.",
+              "actionSw": "Anzisha vitengo vya dharura vya hospitali na vitengo vya majeraha ya moto. Tuma vitengo vya afya vinavyotembea kwenye vituo vya uhamishaji. Toa msaada wa kisaikolojia kwa walionusurika na familia."
+            },
+            {
+              "impactEn": "Long-term environmental damage and delayed forest regeneration",
+              "impactSw": "Uharibifu wa muda mrefu wa mazingira na kuchelewa kwa urejeshaji wa misitu",
+              "actionEn": "Plan reforestation programmes after fires are fully extinguished. Protect burned areas from grazing and farming during regeneration. Engage NEMC and conservation agencies for monitoring.",
+              "actionSw": "Panga programu za upandaji upya wa miti baada ya moto kuzimwa kabisa. Linda maeneo yaliyoungua dhidi ya malisho na kilimo wakati wa urejeshaji. Shirikisha Baraza la Taifa la Hifadhi na Usimamizi wa Mazingira (NEMC) na mashirika ya hifadhi kwa ufuatiliaji."
+            },
+            {
+              "impactEn": "National emergency response required: military deployment and aerial firefighting",
+              "impactSw": "Hatua za dharura za kitaifa zinahitajika: kupelekwa kwa jeshi na uzimaji wa moto kwa ndege",
+              "actionEn": "Mobilise JWTZ for firefighting and rescue operations. Deploy aerial firefighting where available. Coordinate national resources through the Disaster Management Department in the Prime Minister’s Office.",
+              "actionSw": "Hamasisha Jeshi la Wananchi wa Tanzania (JWTZ) kwa uzimaji wa moto na uokoaji. Tumia ndege za kuzima moto inapowezekana. Ratibu rasilimali za kitaifa kupitia Idara ya Maafa katika Ofisi ya Waziri Mkuu."
+            }
+          ]
+        }
+      }
+    },
+    "DROUGHT": {
+      "id": "drought",
+      "name": "DROUGHT",
+      "levels": {
+        "ADVISORY": {
+          "rows": [
+            {
+              "impactEn": "Below-normal rainfall and early signs of dry conditions in semi-arid areas",
+              "impactSw": "Mvua chini ya kawaida na dalili za awali za hali ya ukame katika maeneo ya nusu kame",
+              "actionEn": "Continue to follow seasonal rainfall outlooks from the Tanzania Meteorological Authority. Conserve water at household and community level. Review household drought preparedness plans.",
+              "actionSw": "Endelea kufuatilia utabiri wa msimu wa mvua kutoka Mamlaka ya Hali ya Hewa Tanzania. Tunza maji katika ngazi ya kaya na jamii. Kagua mipango ya kujiandaa na ukame ya kaya."
+            },
+            {
+              "impactEn": "Falling soil moisture affecting germination of newly planted crops",
+              "impactSw": "Kupungua kwa unyevu wa udongo kunakoathiri kuota kwa mazao yaliyopandwa karibuni",
+              "actionEn": "Plant drought-tolerant varieties (sorghum, millet, cassava). Use mulch to retain soil moisture. Consult agricultural extension officers on best planting practices.",
+              "actionSw": "Panda mbegu zinazostahimili ukame (mtama, uwele, muhogo). Tumia matandazo kuhifadhi unyevu wa udongo. Shauriana na maafisa ugani wa kilimo kuhusu mbinu bora za kupanda."
+            },
+            {
+              "impactEn": "Some pasture loss in semi-arid grazing areas",
+              "impactSw": "Upotevu wa baadhi ya malisho katika maeneo ya nusu kame ya ufugaji",
+              "actionEn": "Identify reserve grazing areas. Reduce livestock numbers through early sales. Supplement feed with crop residues and stored fodder.",
+              "actionSw": "Tambua maeneo ya akiba ya malisho. Punguza idadi ya mifugo kwa kuuza mapema. Ongezea chakula kwa mabaki ya mazao na malisho yaliyohifadhiwa."
+            },
+            {
+              "impactEn": "Reduced flow in rivers and small streams",
+              "impactSw": "Kupungua kwa mtiririko wa mito na vijito vidogo",
+              "actionEn": "Use water sparingly for domestic and farm needs. Report drying water sources to local authorities. Protect remaining water sources from contamination.",
+              "actionSw": "Tumia maji kwa uangalifu kwa matumizi ya nyumbani na shambani. Toa taarifa kwa mamlaka za eneo kuhusu vyanzo vya maji vinavyokauka. Linda vyanzo vya maji vilivyobaki dhidi ya uchafuzi."
+            },
+            {
+              "impactEn": "Possible decline in water levels in small dams and ponds",
+              "impactSw": "Uwezekano wa kupungua kwa kiwango cha maji katika mabwawa madogo na madimbwi",
+              "actionEn": "Monitor dam levels and prepare for water rationing if needed. Restore boreholes and wells. Harvest rainwater from rooftops and gutters where possible.",
+              "actionSw": "Fuatilia kiwango cha maji ya mabwawa na jiandae kugawa maji ikihitajika. Rekebisha visima virefu na visima vya kawaida. Vuna maji ya mvua kutoka kwenye paa na mifereji inapowezekana."
+            },
+            {
+              "impactEn": "Increased water demand for irrigation and livestock",
+              "impactSw": "Kuongezeka kwa mahitaji ya maji kwa umwagiliaji na mifugo",
+              "actionEn": "Use efficient irrigation methods (drip irrigation, mulching). Avoid wasteful water use. Coordinate water sharing between farmers and pastoralists. Report water disputes to local leaders.",
+              "actionSw": "Tumia mbinu bora za umwagiliaji (umwagiliaji wa matone, matandazo). Epuka matumizi mabaya ya maji. Ratibu ugawaji wa maji kati ya wakulima na wafugaji. Toa taarifa kwa viongozi wa eneo kuhusu migogoro ya maji."
+            },
+            {
+              "impactEn": "Reduced quality of available water (muddier and more contaminated)",
+              "impactSw": "Kupungua kwa ubora wa maji yanayopatikana (yenye matope zaidi na yaliyochafuka zaidi)",
+              "actionEn": "Boil or treat drinking water. Cover stored water to prevent contamination. Report waterborne disease cases to the nearest health facility.",
+              "actionSw": "Chemsha au tibu maji ya kunywa. Funika maji yaliyohifadhiwa kuzuia uchafuzi. Toa taarifa kwa kituo cha afya kilicho karibu kuhusu visa vya magonjwa yanayotokana na maji."
+            },
+            {
+              "impactEn": "Vulnerable groups (children, elderly, pregnant women) at higher risk from heat and water shortage",
+              "impactSw": "Makundi yaliyo hatarini (watoto, wazee, wajawazito) wapo katika hatari kubwa kutokana na joto na uhaba wa maji",
+              "actionEn": "Special groups including people with disabilities, children and the elderly should be given early warning information and appropriate measures should be taken by the community concerned",
+              "actionSw": "Makundi maalum ikijumuisha watu wenye ulemavu, watoto na wazee wapatiwe taarifa ya tahadhari ya mapema na hatua stahiki zichukuliwe na jamii husika"
+            },
+            {
+              "impactEn": "Possible early signs of livestock weight loss and weakening",
+              "impactSw": "Uwezekano wa dalili za awali za mifugo kupungua uzito na kudhoofika",
+              "actionEn": "Provide supplementary feed and clean water. Vaccinate livestock against drought-related diseases. Consult livestock extension officers. Consider early sale of weaker animals.",
+              "actionSw": "Toa malisho ya ziada na maji safi. Chanja mifugo dhidi ya magonjwa yanayohusiana na ukame. Shauriana na maafisa ugani wa mifugo. Fikiria kuuza wanyama dhaifu mapema."
+            },
+            {
+              "impactEn": "Increased pressure on shared water sources (boreholes and wells)",
+              "impactSw": "Kuongezeka kwa shinikizo kwenye vyanzo vya maji yanayotumiwa kwa pamoja (visima virefu na visima)",
+              "actionEn": "Coordinate water-use schedules with neighbours and the community. Protect wells and boreholes from over-use. Report breakdowns to water authorities for repair.",
+              "actionSw": "Ratibu ratiba za matumizi ya maji na majirani na jamii. Linda visima na visima virefu dhidi ya matumizi mabaya. Toa taarifa kwa mamlaka za maji kuhusu uharibifu kwa ajili ya matengenezo."
+            }
+          ]
+        },
+        "WARNING": {
+          "rows": [
+            {
+              "impactEn": "Significant rainfall deficit affecting many regions",
+              "impactSw": "Upungufu mkubwa wa mvua unaoathiri mikoa mingi",
+              "actionEn": "Activate district drought response plans. Coordinate with regional disaster committees. Broadcast water and food saving advice through radio and community meetings.",
+              "actionSw": "Anzisha mipango ya wilaya ya kukabiliana na ukame. Ratibu na kamati za maafa za mkoa. Tangaza ushauri wa kuokoa maji na chakula kupitia redio na mikutano ya jamii."
+            },
+            {
+              "impactEn": "Widespread crop stress and reduced harvests in affected areas",
+              "impactSw": "Mazao kuathirika kwa kiasi kikubwa na mavuno kupungua katika maeneo yaliyoathirika",
+              "actionEn": "Coordinate distribution of drought-tolerant seeds. Provide technical advice on managing remaining crops. Assess household food stocks and prepare food relief.",
+              "actionSw": "Ratibu ugawaji wa mbegu zinazostahimili ukame. Toa ushauri wa kitaalamu kuhusu kusimamia mazao yaliyobaki. Tathmini akiba ya chakula ya kaya na jiandae kwa msaada wa chakula."
+            },
+            {
+              "impactEn": "Significant water scarcity for households and livestock",
+              "impactSw": "Uhaba mkubwa wa maji kwa kaya na mifugo",
+              "actionEn": "Begin water trucking to most affected villages. Prioritise water for drinking and household use. Ration water at boreholes and s ‘hared sources.",
+              "actionSw": "Anzisha kusafirisha maji kwa malori kwenda vijiji vilivyoathirika zaidi. Weka kipaumbele maji kwa ajili ya kunywa na matumizi ya nyumbani. Gawa maji kwa ratiba kwenye visima virefu na vyanzo vya pamoja."
+            },
+            {
+              "impactEn": "Significant pasture loss requiring livestock movement to find grazing",
+              "impactSw": "Upotevu mkubwa wa malisho unaohitaji uhamishaji wa mifugo kutafuta malisho",
+              "actionEn": "Coordinate inter-district livestock movement permits. Designate emergency grazing corridors. Provide supplementary feed and minerals where possible.",
+              "actionSw": "Ratibu vibali vya kuhamisha mifugo kati ya wilaya. Weka njia maalum za malisho ya dharura. Toa malisho ya ziada na madini inapowezekana."
+            },
+            {
+              "impactEn": "Significant decline in water levels in dams, reservoirs and rivers",
+              "impactSw": "Kupungua kwa kiasi kikubwa kwa kiwango cha maji katika mabwawa, hifadhi za maji na mito",
+              "actionEn": "Implement strict water-use restrictions for non-essential purposes. Prioritise water for human consumption. Coordinate with the Ministry of Water.",
+              "actionSw": "Tekeleza vizuizi vikali vya matumizi ya maji kwa matumizi yasiyo ya lazima. Weka kipaumbele maji kwa matumizi ya binadamu. Ratibu na Wizara ya Maji."
+            },
+            {
+              "impactEn": "Possible reduction in hydropower generation and power supply",
+              "impactSw": "Uwezekano wa kupungua kwa uzalishaji wa umeme wa maji na ugavi wa umeme",
+              "actionEn": "Plan for power rationing schedules. Reduce non-essential electricity use. Consider alternative energy sources (solar, generators). Follow announcements from TANESCO.",
+              "actionSw": "Panga ratiba za mgawo wa umeme. Punguza matumizi ya umeme yasiyo ya lazima. Fikiria vyanzo mbadala vya nishati (jua, jenereta). Fuata matangazo kutoka TANESCO."
+            },
+            {
+              "impactEn": "Rising food prices in affected markets",
+              "impactSw": "Kupanda kwa bei za vyakula katika masoko yaliyoathirika",
+              "actionEn": "Monitor market prices and report unusual rises to authorities. Protect vulnerable households from price shocks. Coordinate emergency food assistance with the Ministry of Agriculture.",
+              "actionSw": "Fuatilia bei za masoko na toa taarifa kwa mamlaka kuhusu kupanda kusiko kwa kawaida. Linda kaya zilizo hatarini dhidi ya mshtuko wa bei. Ratibu msaada wa dharura wa chakula na Wizara ya Kilimo."
+            },
+            {
+              "impactEn": "Migration of pastoralists in search of water and pasture",
+              "impactSw": "Uhamiaji wa wafugaji wakitafuta maji na malisho",
+              "actionEn": "Coordinate with neighbouring districts on movement permits. Designate safe transit routes. Provide water points along migration routes. Mediate disputes between farmers and pastoralists.",
+              "actionSw": "Ratibu na wilaya jirani kuhusu vibali vya uhamiaji. Weka njia salama za kupita. Weka vituo vya maji kandokando ya njia za uhamiaji. Patanisha migogoro kati ya wakulima na wafugaji."
+            },
+            {
+              "impactEn": "Increased risk of livestock disease and weakness",
+              "impactSw": "Hatari iliyoongezeka ya magonjwa na udhaifu wa mifugo",
+              "actionEn": "Coordinate veterinary services for emergency vaccinations. Encourage early sale of weak animals before further loss. Deploy mobile veterinary teams to affected areas.",
+              "actionSw": "Ratibu huduma za mifugo kwa chanjo za dharura. Himiza kuuza wanyama dhaifu mapema kabla ya hasara zaidi. Tuma timu za madaktari wa mifugo zinazotembea kwenye maeneo yaliyoathirika."
+            },
+            {
+              "impactEn": "Increased waterborne illness from contaminated water sources",
+              "impactSw": "Kuongezeka kwa magonjwa yanayotokana na vyanzo vya maji yaliyochafuka",
+              "actionEn": "Treat all drinking water (boiling, chlorine tablets). Use ORS for diarrhoea. Report disease outbreaks to nearest health facility. Distribute water-treatment supplies to affected villages.",
+              "actionSw": "Tibu maji yote ya kunywa (kuchemsha, vidonge vya klorini). Tumia ORS kwa kuhara. Toa taarifa kwa kituo cha afya kilicho karibu kuhusu milipuko ya magonjwa. Sambaza vifaa vya kutibu maji kwa vijiji vilivyoathirika."
+            },
+            {
+              "impactEn": "School attendance dropping as children fetch water from far away",
+              "impactSw": "Mahudhurio ya shule kupungua kwani watoto wanaenda kuteka maji mbali",
+              "actionEn": "Coordinate with education authorities to reduce school disruption. Provide water at schools where possible. Prioritise water access for households with school-going children.",
+              "actionSw": "Ratibu na mamlaka za elimu ili kupunguza kuvurugika kwa shule. Toa maji shuleni inapowezekana. Weka kipaumbele cha kupata maji kwa kaya zenye watoto wanaoenda shule."
+            }
+          ]
+        },
+        "MAJOR_WARNING": {
+          "rows": [
+            {
+              "impactEn": "Severe widespread drought affecting whole regions",
+              "impactSw": "Ukame mkubwa ulioenea unaoathiri mikoa mizima",
+              "actionEn": "Declare drought emergency through district authorities. Coordinate national response through the Disaster Management Department in the Prime Minister’s Office. Mobilise resources from regional and national levels.",
+              "actionSw": "Tangaza dharura ya ukame kupitia mamlaka za wilaya. Ratibu juhudi za kitaifa kupitia Idara ya Maafa katika Ofisi ya Waziri Mkuu. Hamasisha rasilimali kutoka ngazi za mkoa na taifa."
+            },
+            {
+              "impactEn": "Major crop failure and food insecurity (IPC Phase 3 Crisis or higher)",
+              "impactSw": "Kushindwa kwa mazao kwa kiasi kikubwa na ukosefu wa usalama wa chakula (IPC Awamu ya 3 ya Mgogoro au zaidi)",
+              "actionEn": "Activate national food relief operations through the National Food Security Division of the Ministry of Agriculture. Distribute emergency food rations. Coordinate with WFP, TRCS and partner agencies.",
+              "actionSw": "Anzisha shughuli za kitaifa za msaada wa chakula kupitia Idara ya Kitaifa ya Usalama wa Chakula ya Wizara ya Kilimo. Sambaza chakula cha dharura. Ratibu na WFP, Shirika la Msalaba Mwekundu Tanzania (TRCS) na mashirika washirika."
+            },
+            {
+              "impactEn": "Mass livestock death and pastoralist livelihood collapse",
+              "impactSw": "Vifo vingi vya mifugo na kuporomoka kwa maisha ya wafugaji",
+              "actionEn": "Activate emergency destocking programmes (purchase of weak animals at fair prices). Deliver emergency feed and water to remaining livestock. Provide cash transfers to affected pastoralist households.",
+              "actionSw": "Anzisha programu za dharura za kupunguza mifugo (kununua wanyama dhaifu kwa bei nzuri). Peleka malisho na maji ya dharura kwa mifugo iliyobaki. Toa misaada ya fedha kwa kaya za wafugaji walioathirika."
+            },
+            {
+              "impactEn": "Severe water shortage for drinking and household use",
+              "impactSw": "Uhaba mkubwa wa maji kwa kunywa na matumizi ya nyumbani",
+              "actionEn": "Implement emergency water trucking to all affected villages. Drill emergency boreholes. Restore broken-down water systems. Prioritise water for health facilities and schools.",
+              "actionSw": "Tekeleza usafirishaji wa dharura wa maji kwa malori kwenda vijiji vyote vilivyoathirika. Chimba visima virefu vya dharura. Rekebisha mifumo ya maji iliyoharibika. Weka kipaumbele maji kwa vituo vya afya na shule."
+            },
+            {
+              "impactEn": "Major reduction in hydropower and rolling power outages",
+              "impactSw": "Kupungua kwa kiasi kikubwa kwa umeme wa maji na mgawo wa umeme",
+              "actionEn": "Implement national power rationing programme. Activate alternative power sources (gas, diesel, solar). Prioritise hospitals, water supply and essential services. Follow TANESCO announcements.",
+              "actionSw": "Tekeleza programu ya kitaifa ya mgawo wa umeme. Tumia vyanzo mbadala vya umeme (gesi, mafuta, jua). Weka kipaumbele kwa hospitali, ugavi wa maji na huduma muhimu. Fuata matangazo ya TANESCO."
+            },
+            {
+              "impactEn": "Widespread food price inflation and market disruption",
+              "impactSw": "Kupanda kwa bei za vyakula kwa kiasi kikubwa na kuvurugika kwa masoko",
+              "actionEn": "Activate strategic food reserves. Coordinate emergency food imports if needed. Protect vulnerable households through cash transfers and subsidies. Monitor and prevent hoarding.",
+              "actionSw": "Tumia akiba za chakula za kimkakati. Ratibu uagizaji wa chakula wa dharura ikihitajika. Linda kaya zilizo hatarini kupitia misaada ya fedha na ruzuku. Fuatilia na zuia uhifadhi wa kificho."
+            },
+            {
+              "impactEn": "Risk of malnutrition, especially in children under five years",
+              "impactSw": "Hatari ya utapiamlo, hususani kwa watoto chini ya miaka mitano",
+              "actionEn": "Activate emergency nutrition screening at health facilities. Distribute therapeutic food (RUTF) for severely malnourished children. Deploy mobile health teams. Provide supplementary feeding at schools.",
+              "actionSw": "Anzisha uchunguzi wa dharura wa lishe katika vituo vya afya. Sambaza chakula cha matibabu (RUTF) kwa watoto wenye utapiamlo mkali. Tuma timu za afya zinazotembea. Toa chakula cha ziada shuleni."
+            },
+            {
+              "impactEn": "Mass migration of people in search of water and food",
+              "impactSw": "Uhamiaji mkubwa wa watu wakitafuta maji na chakula",
+              "actionEn": "Establish official reception areas with water, food and health services. Coordinate with the Ministry of Home Affairs for movement registration. Provide protection for women, children and elderly migrants.",
+              "actionSw": "Anzisha maeneo rasmi ya kupokea wahamiaji yenye maji, chakula na huduma za afya. Ratibu na Wizara ya Mambo ya Ndani kwa usajili wa uhamiaji. Toa ulinzi kwa wanawake, watoto na wahamiaji wazee."
+            },
+            {
+              "impactEn": "Long-term economic damage to the agricultural sector",
+              "impactSw": "Uharibifu wa muda mrefu wa kiuchumi katika sekta ya kilimo",
+              "actionEn": "Develop long-term recovery and reconstruction programmes. Provide reconstruction grants to affected households. Restore irrigation systems and rainwater harvesting infrastructure.",
+              "actionSw": "Tengeneza programu za muda mrefu za urejeshaji na ujenzi upya. Toa ruzuku za ujenzi upya kwa kaya zilizoathirika. Rekebisha mifumo ya umwagiliaji na miundombinu ya kuvuna maji ya mvua."
+            },
+            {
+              "impactEn": "Risk of human-wildlife conflict from migration into protected areas",
+              "impactSw": "Hatari ya migogoro kati ya watu na wanyamapori kutokana na uhamiaji kuingia maeneo ya hifadhi",
+              "actionEn": "Coordinate with TANAPA and TAWA on managing illegal grazing in parks. Designate buffer-zone grazing areas where appropriate. Mediate human-wildlife conflict cases.",
+              "actionSw": "Ratibu na TANAPA na TAWA kuhusu usimamizi wa malisho haramu katika hifadhi. Weka maeneo ya malisho ya kanda kuzunguka hifadhi inapofaa. Patanisha kesi za migogoro kati ya watu na wanyamapori."
+            },
+            {
+              "impactEn": "National emergency response required: food relief, water trucking, livestock support",
+              "impactSw": "Hatua za dharura za kitaifa zinahitajika: msaada wa chakula, kusafirisha maji na kusaidia mifugo",
+              "actionEn": "Coordinate national resources through the Disaster Management Department in the Prime Minister’s Office. Engage international partners (UN, WFP, IFRC). Deploy specialised teams for nutrition, water and veterinary support.",
+              "actionSw": "Ratibu rasilimali za kitaifa kupitia Idara ya Maafa katika Ofisi ya Waziri Mkuu. Shirikisha washirika wa kimataifa (UN, WFP, IFRC). Tuma timu maalum za lishe, maji na huduma za mifugo."
+            }
+          ]
+        }
+      }
+    },
+    "EARTHQUAKE AND TSUNAMI": {
+      "id": "earthquake_and_tsunami",
+      "name": "EARTHQUAKE AND TSUNAMI",
+      "levels": {
+        "ADVISORY": {
+          "rows": [
+            {
+              "impactEn": "Reports of minor tremors in known fault zones (East African Rift System)",
+              "impactSw": "Taarifa za mitetemeko midogo katika kanda za mipasuko (Bonde la Ufa la Afrika Mashariki)",
+              "actionEn": "Continue to follow earthquake and tsunami information from the Tanzania Meteorological Authority and the Geological Survey of Tanzania. Review household and workplace preparedness plans. Identify safe spots indoors (under sturdy desk, away from windows).",
+              "actionSw": "Endelea kufuatilia taarifa za tetemeko la ardhi na tsunami kutoka Mamlaka ya Hali ya Hewa Tanzania na Wakala wa Jiolojia Tanzania (GST). Kagua mipango ya kujiandaa nyumbani na sehemu za kazi. Tambua sehemu salama ndani ya jengo (chini ya meza imara, mbali na madirisha)."
+            },
+            {
+              "impactEn": "Distant tsunami threat following a large earthquake elsewhere in the Indian Ocean (several hours of warning time)",
+              "impactSw": "Hatari ya tsunami ya mbali kufuatia tetemeko kubwa mahali pengine katika Bahari ya Hindi (saa kadhaa za muda wa onyo)",
+              "actionEn": "Follow tsunami bulletins from the Indian Ocean Tsunami Warning and Mitigation System (IOTWMS). Coastal communities prepare to evacuate to higher ground. Do not go to the beach to watch the sea.",
+              "actionSw": "Fuatilia matangazo ya tsunami kutoka Mfumo wa Onyo na Kupunguza Athari za Tsunami katika Bahari ya Hindi (IOTWMS). Jamii za pwani zijiandae kuhama kwenda maeneo ya juu. Usiende ufukweni kuangalia bahari."
+            },
+            {
+              "impactEn": "Need to review household and workplace earthquake preparedness (Drop, Cover and Hold On)",
+              "impactSw": "Haja ya kukagua mipango ya kujiandaa kwa tetemeko nyumbani na sehemu za kazi (Anguka, Jificha na Shikilia)",
+              "actionEn": "Practise Drop, Cover and Hold On drills with family and at workplace. Secure heavy furniture and shelves to walls. Prepare an emergency kit (water, food, torch, radio, first aid).",
+              "actionSw": "Fanya mazoezi ya kuanguka, kujificha na kushikilia pamoja na familia na sehemu za kazi. Imarisha samani nzito na rafu kwenye kuta. andaa kifurushi cha dharura (maji, chakula, tochi, redio, huduma ya kwanza)."
+            },
+            {
+              "impactEn": "Possible minor cracks appearing in older buildings from minor tremors",
+              "impactSw": "Uwezekano wa nyufa ndogo kuonekana katika majengo ya zamani kutokana na mitetemeko midogo",
+              "actionEn": "Inspect homes and buildings for new cracks. Report unsafe structures to local authorities. Do not occupy buildings with serious cracks until inspected by a qualified engineer.",
+              "actionSw": "Kagua nyumba na majengo kuangalia nyufa mpya. Toa taarifa kwa mamlaka za eneo kuhusu miundo isiyo salama. Usikae katika majengo yenye nyufa kubwa mpaka yakaguliwe na mhandisi mwenye sifa."
+            },
+            {
+              "impactEn": "Need for public risk communication and dispelling of rumours about earthquake predictions",
+              "impactSw": "Haja ya mawasiliano ya hatari kwa umma na kuondoa uvumi kuhusu utabiri wa tetemeko",
+              "actionEn": "Broadcast official information through radio, TV and community meetings. Respond to questions from the public. Counter false rumours about predictions and false alarms.",
+              "actionSw": "Tangaza taarifa rasmi kupitia redio, televisheni na mikutano ya jamii. Jibu maswali ya umma. Pinga uvumi wa uongo kuhusu utabiri na taarifa za uongo."
+            },
+            {
+              "impactEn": "Vulnerable groups need preparedness support and clear evacuation plans",
+              "impactSw": "Makundi yaliyo hatarini yanahitaji msaada wa kujiandaa na mipango wazi ya uhamishaji",
+              "actionEn": "Special groups including people with disabilities, children and the elderly should be given early warning information and appropriate measures should be taken by the community concerned",
+              "actionSw": "Makundi maalum ikijumuisha watu wenye ulemavu, watoto na wazee wapatiwe taarifa ya tahadhari ya mapema na hatua stahiki zichukuliwe na jamii husika"
+            },
+            {
+              "impactEn": "Risk of unsafe self-construction in seismic zones (no reinforcement, weak materials)",
+              "impactSw": "Hatari ya ujenzi binafsi usio salama katika maeneo ya tetemeko (bila kuimarishwa, vifaa dhaifu)",
+              "actionEn": "Use earthquake-resistant construction techniques (reinforced concrete, tied roofs, wall bracing). Consult qualified engineers for building plans in seismic zones. Follow national building codes.",
+              "actionSw": "Tumia mbinu za ujenzi zinazostahimili tetemeko (zege iliyoimarishwa, paa zilizofungwa, kuimarisha kuta). Shauriana na wahandisi wenye sifa kuhusu ramani za ujenzi katika maeneo ya tetemeko. Fuata kanuni za kitaifa za ujenzi."
+            },
+            {
+              "impactEn": "Schools and clinics need to conduct earthquake drills",
+              "impactSw": "Shule na vituo vya afya zinahitaji kufanya mazoezi ya tetemeko",
+              "actionEn": "Schedule regular earthquake drills at schools and health facilities. Identify safe assembly points outside buildings. Train staff on first aid and emergency procedures.",
+              "actionSw": "Panga mazoezi ya kawaida ya tetemeko shuleni na vituo vya afya. Tambua sehemu salama za kukusanyika nje ya majengo. Toa mafunzo kwa wafanyakazi kuhusu huduma ya kwanza na taratibu za dharura."
+            },
+            {
+              "impactEn": "Coastal communities need tsunami-awareness refresher and evacuation route review",
+              "impactSw": "Jamii za pwani zinahitaji kukumbushwa kuhusu tsunami na kukagua njia za uhamishaji",
+              "actionEn": "Mark and inform tsunami evacuation routes to higher ground. Teach the natural warning signs (long, strong shaking near the coast. Sudden sea drawback). Designate vertical-evacuation buildings if higher ground is far.",
+              "actionSw": "Weka alama na taarifu njia za uhamishaji wa tsunami kwenda maeneo ya juu. Fundisha ishara za asili za onyo (mtikisiko mrefu na mkali karibu na pwani. Bahari kurudi nyuma ghafla). Teua majengo ya uhamishaji wa juu endapo maeneo ya juu yapo mbali."
+            },
+            {
+              "impactEn": "Disaster management committees need to test communication channels and response plans",
+              "impactSw": "Kamati za usimamizi wa maafa zinahitaji kupima njia za mawasiliano na mipango ya kukabiliana",
+              "actionEn": "Test radio and telephone communication chains regularly. Review earthquake and tsunami response plans at district and ward level. Ensure all committee members understand their roles.",
+              "actionSw": "Pima njia za mawasiliano za redio na simu mara kwa mara. Kagua mipango ya kukabiliana na tetemeko na tsunami katika ngazi za wilaya na kata. Hakikisha wajumbe wote wa kamati wanaelewa majukumu yao."
+            }
+          ]
+        },
+        "WARNING": {
+          "rows": [
+            {
+              "impactEn": "Moderate earthquake (Magnitude 5–5.9) felt across affected regions",
+              "impactSw": "Tetemeko la wastani (Kipimo cha 5–5.9) limesikika katika mikoa iliyoathirika",
+              "actionEn": "Drop, Cover and Hold On during shaking. If outdoors, move to open spaces away from buildings, trees and power lines. If driving, stop in a safe place and stay inside the vehicle.",
+              "actionSw": "Anguka, Jificha na Shikilia wakati wa mtikisiko. Ukiwa nje, hamia maeneo ya wazi mbali na majengo, miti na nyaya za umeme. Ukiwa unaendesha, simama mahali salama na ubaki ndani ya gari."
+            },
+            {
+              "impactEn": "Aftershocks expected for hours, days or weeks following the main shock",
+              "impactSw": "Mitetemeko ya kufuatilia inatarajiwa kwa masaa, siku au wiki baada ya tetemeko kuu",
+              "actionEn": "Be ready to take cover again at any time. Do not enter damaged buildings. Move out of weakened structures and remain outdoors or in inspected safe shelters.",
+              "actionSw": "Jiandae kujihifadhi tena wakati wowote. Usiingie majengo yaliyoharibika. Hama kutoka miundo iliyodhoofika na ubaki nje au katika makazi salama yaliyokaguliwa."
+            },
+            {
+              "impactEn": "Damage to weak structures, mud walls and unreinforced masonry",
+              "impactSw": "Uharibifu wa miundo dhaifu, kuta za udongo na ujenzi wa matofali usioimarishwa",
+              "actionEn": "Move out of damaged buildings to open ground or official shelters. Mark dangerous structures clearly. Report damage to local authorities for inspection.",
+              "actionSw": "Hama kutoka majengo yaliyoharibika kwenda maeneo ya wazi au makazi rasmi. Weka alama wazi kwenye miundo hatarishi. Toa taarifa ya uharibifu kwa mamlaka za eneo kwa ajili ya ukaguzi."
+            },
+            {
+              "impactEn": "Tsunami warning issued — coastal communities evacuate to higher ground immediately",
+              "impactSw": "Onyo la tsunami limetolewa — jamii za pwani zihame mara moja kwenda maeneo ya juu",
+              "actionEn": "Move at least 30 metres above sea level or 3 km inland. Do not return until officially cleared (multiple wave trains may follow the first). Take only essential items. Do not stop to watch the sea.",
+              "actionSw": "Hamia angalau mita 30 juu ya kiwango cha bahari au kilomita 3 ndani ya nchi kavu. Usirudi mpaka uthibitishwe rasmi (mawimbi mengi yanaweza kufuatana baada ya la kwanza). Chukua vitu vya muhimu tu. Usisimame kuangalia bahari."
+            },
+            {
+              "impactEn": "Risk of injuries from falling objects, broken glass and debris during shaking",
+              "impactSw": "Hatari ya majeraha kutokana na vitu vinavyoanguka, vioo vilivyovunjika na mabaki wakati wa mtikisiko",
+              "actionEn": "Activate first aid response at health facilities. Coordinate with TRCS for psychosocial support. Clear emergency access routes to hospitals.",
+              "actionSw": "Anzisha huduma za kwanza katika vituo vya afya. Ratibu na Shirika la Msalaba Mwekundu Tanzania (TRCS) kwa msaada wa kisaikolojia. Safisha njia za dharura kwenda hospitalini."
+            },
+            {
+              "impactEn": "Disruption to power, water and communications networks",
+              "impactSw": "Kuvurugika kwa mitandao ya umeme, maji na mawasiliano",
+              "actionEn": "Stock essential supplies (water, food, medicines, torches). Charge phones and prepare radios. Report damaged power lines to TANESCO. Conserve mobile-phone battery.",
+              "actionSw": "Weka akiba ya mahitaji muhimu (maji, chakula, dawa, tochi). Chaji simu na andaa redio. Toa taarifa kwa TANESCO kuhusu nyaya za umeme zilizoharibika. Hifadhi betri ya simu."
+            },
+            {
+              "impactEn": "Damage to infrastructure (roads, bridges, ports and airports)",
+              "impactSw": "Uharibifu wa miundombinu (barabara, madaraja, bandari na viwanja vya ndege)",
+              "actionEn": "Avoid travel until damage is assessed. Use alternative routes where available. Coordinate with TANROADS, the Tanzania Ports Authority (TPA) and TASAC on route status.",
+              "actionSw": "Epuka safari mpaka uharibifu utathminiwe. Tumia njia mbadala zinapopatikana. Ratibu na TANROADS, Mamlaka ya Bandari Tanzania (TPA) na TASAC kuhusu hali ya njia."
+            },
+            {
+              "impactEn": "Risk of secondary fires from broken gas pipes and electrical lines",
+              "impactSw": "Hatari ya moto wa pili kutokana na mabomba ya gesi na nyaya za umeme zilizovunjika",
+              "actionEn": "Turn off gas, electricity and water supply at the main switch if safe to do so. Do not light matches or candles until you confirm there is no gas leak. Report fires to the nearest fire brigade.",
+              "actionSw": "Zima ugavi wa gesi, umeme na maji kwenye kitufe kikuu ikiwa ni salama kufanya hivyo. Usiwashe kibiriti au mishumaa mpaka uthibitishe hakuna gesi inayovuja. Toa taarifa ya moto kwa kikosi cha zima moto kilicho karibu."
+            },
+            {
+              "impactEn": "Risk of landslides triggered by shaking on hillsides and unstable slopes",
+              "impactSw": "Hatari ya maporomoko ya ardhi yanayosababishwa na mtikisiko kwenye miteremko na maeneo yasiyo imara",
+              "actionEn": "Move away from steep slopes and cliff edges. Report observed cracks or slope movement to local authorities. Coordinate with district authorities for hillside safety inspections.",
+              "actionSw": "Hama mbali na miteremko mikali na kando ya majabali. Toa taarifa kwa mamlaka za eneo kuhusu nyufa au mienendo ya mteremko unayoiona. Ratibu na mamlaka za wilaya kwa ukaguzi wa usalama wa miteremko."
+            },
+            {
+              "impactEn": "School and workplace closures in affected areas",
+              "impactSw": "Kufungwa kwa shule na sehemu za kazi katika maeneo yaliyoathirika",
+              "actionEn": "Follow education authority directives. Do not return to damaged buildings until cleared by inspectors. Arrange temporary studies and work elsewhere.",
+              "actionSw": "Fuata maelekezo ya mamlaka za elimu. Usirudi katika majengo yaliyoharibika mpaka yathibitishwe na wakaguzi. Panga masomo na kazi ya muda mahali pengine."
+            },
+            {
+              "impactEn": "Possible water contamination from broken pipes and damaged sources",
+              "impactSw": "Uwezekano wa uchafuzi wa maji kutokana na mabomba yaliyovunjika na vyanzo vilivyoharibika",
+              "actionEn": "Boil or treat all drinking water. Use stored water from emergency kits. Report broken water mains to the water authority. Do not use tap water until cleared.",
+              "actionSw": "Chemsha au tibu maji yote ya kunywa. Tumia maji yaliyohifadhiwa kwenye kifurushi cha dharura. Toa taarifa ya mabomba makuu yaliyovunjika kwa mamlaka ya maji. Usitumie maji ya bomba mpaka yathibitishwe."
+            }
+          ]
+        },
+        "MAJOR_WARNING": {
+          "rows": [
+            {
+              "impactEn": "Major earthquake (Magnitude 6 or higher) causing widespread damage and casualties",
+              "impactSw": "Tetemeko kubwa (Kipimo cha 6 au zaidi) linalosababisha uharibifu mkubwa na waathirika wengi",
+              "actionEn": "Activate national emergency response through the Disaster Management Department in the Prime Minister’s Office. Mobilise JWTZ for search and rescue. Coordinate with regional and international partners (UN, IFRC, TRCS).",
+              "actionSw": "Anzisha hatua za dharura za kitaifa kupitia Idara ya Maafa katika Ofisi ya Waziri Mkuu. Hamasisha Jeshi la Wananchi wa Tanzania (JWTZ) kwa utafutaji na uokoaji. Ratibu na washirika wa mkoa na kimataifa (UN, IFRC, TRCS)."
+            },
+            {
+              "impactEn": "Major tsunami waves striking the Indian Ocean coast — life-threatening inundation",
+              "impactSw": "Mawimbi makubwa ya tsunami yanayopiga pwani ya Bahari ya Hindi — mafuriko hatari kwa maisha",
+              "actionEn": "Activate full coastal evacuation immediately. Coordinate with KMKM, the Tanzania Ports Authority (TPA) and JWTZ Marine for rescue operations. Broadcast urgent warnings via all media. Do not return to the coast until officially cleared.",
+              "actionSw": "Anzisha uhamishaji kamili wa pwani mara moja. Ratibu na KMKM, Mamlaka ya Bandari Tanzania (TPA) na kitengo cha baharini cha JWTZ kwa shughuli za uokoaji. Tangaza maonyo ya dharura kupitia vyombo vyote vya habari. Usirudi pwani mpaka uthibitishwe rasmi."
+            },
+            {
+              "impactEn": "Widespread building collapse with people trapped under rubble",
+              "impactSw": "Kuporomoka kwa majengo kwa kiasi kikubwa na watu kunaswa chini ya mabaki",
+              "actionEn": "Deploy specialised Urban Search and Rescue (USAR) teams with sniffer dogs and listening equipment. Coordinate JWTZ engineering corps and the Fire and Rescue Force. Do not enter collapsed buildings without trained rescuers.",
+              "actionSw": "Tuma timu maalum za Utafutaji na Uokoaji Mijini (USAR) zenye mbwa wenye uwezo wa kunusa na vifaa vya kusikiliza. Ratibu kikosi cha uhandisi cha JWTZ na Jeshi la Zima Moto na Uokoaji. Usiingie katika majengo yaliyoporomoka bila waokoaji waliofunzwa."
+            },
+            {
+              "impactEn": "Multiple fatalities and injuries requiring mass medical response",
+              "impactSw": "Vifo vingi na majeruhi vinavyohitaji huduma ya matibabu ya jamii kubwa",
+              "actionEn": "Activate hospital mass-casualty plans. Establish triage points near affected areas. Deploy mobile health teams. Provide psychosocial support for survivors and families.",
+              "actionSw": "Anzisha mipango ya hospitali ya majeruhi wengi. Weka vituo vya kukagua majeruhi karibu na maeneo yaliyoathirika. Tuma timu za afya zinazotembea. Toa msaada wa kisaikolojia kwa walionusurika na familia."
+            },
+            {
+              "impactEn": "Major damage to schools, hospitals and government buildings",
+              "impactSw": "Uharibifu mkubwa wa shule, hospitali na majengo ya serikali",
+              "actionEn": "Conduct rapid structural assessments by qualified engineers. Establish temporary health and learning centres. Relocate essential government services to safe locations.",
+              "actionSw": "Fanya tathmini za haraka za miundo na wahandisi wenye sifa. Anzisha vituo vya muda vya afya na masomo. Hamishia huduma muhimu za serikali kwenye maeneo salama."
+            },
+            {
+              "impactEn": "Major damage to lifelines (water, power, gas and communications) for days or weeks",
+              "impactSw": "Uharibifu mkubwa wa huduma muhimu (maji, umeme, gesi na mawasiliano) kwa siku au wiki",
+              "actionEn": "Use alternative communication (radios, satellite phones). Coordinate utility restoration with TANESCO and telecom operators. Provide emergency water trucking to affected communities. Prioritise lifelines for hospitals.",
+              "actionSw": "Tumia mawasiliano mbadala (redio, simu za satelaiti). Ratibu urejeshaji wa huduma na TANESCO na watoa huduma za mawasiliano. Sambaza maji kwa malori ya dharura kwa jamii zilizoathirika. Weka kipaumbele kwa huduma muhimu kwa hospitali."
+            },
+            {
+              "impactEn": "Risk of disease outbreak in displaced populations and damaged sanitation systems",
+              "impactSw": "Hatari ya milipuko ya magonjwa katika makundi yaliyohamishwa na mifumo ya usafi iliyoharibika",
+              "actionEn": "Provide clean water and sanitation in shelters. Vaccinate displaced populations against cholera and other waterborne diseases. Deploy mobile health units. Conduct surveillance for disease outbreaks.",
+              "actionSw": "Toa maji safi na usafi katika makazi. Chanja makundi yaliyohamishwa dhidi ya kipindupindu na magonjwa mengine yanayotokana na maji. Tuma vitengo vya afya vinavyotembea. Fanya ufuatiliaji wa milipuko ya magonjwa."
+            },
+            {
+              "impactEn": "Long-term displacement of thousands of households",
+              "impactSw": "Uhamishaji wa muda mrefu wa maelfu ya kaya",
+              "actionEn": "Establish official mass shelters. Coordinate long-term resettlement plans with district authorities. Provide food, water and protection for displaced families. Assist those with special needs.",
+              "actionSw": "Anzisha makazi rasmi ya pamoja. Ratibu mipango ya makazi ya kudumu na mamlaka za wilaya. Toa chakula, maji na ulinzi kwa kaya zilizohama. Saidia wenye uhitaji maalum."
+            },
+            {
+              "impactEn": "Major economic damage to affected regions",
+              "impactSw": "Uharibifu mkubwa wa kiuchumi kwa mikoa iliyoathirika",
+              "actionEn": "Coordinate emergency cash and food assistance. Develop recovery and reconstruction programmes with district authorities. Provide reconstruction grants for damaged homes and businesses. Engage development partners.",
+              "actionSw": "Ratibu msaada wa dharura wa fedha na chakula. Tengeneza programu za urejeshaji na ujenzi upya na mamlaka za wilaya. Toa ruzuku za ujenzi upya kwa nyumba na biashara zilizoharibika. Shirikisha washirika wa maendeleo."
+            },
+            {
+              "impactEn": "Risk of strong aftershocks for weeks causing further building collapse",
+              "impactSw": "Hatari ya mitetemeko mikubwa ya kufuatilia kwa wiki kadhaa inayoweza kusababisha kuporomoka zaidi kwa majengo",
+              "actionEn": "Do not re-enter damaged buildings until cleared by structural engineers. Mark and cordon off unsafe structures. Coordinate continuous seismic monitoring with the Geological Survey of Tanzania (GST).",
+              "actionSw": "Usiingie tena katika majengo yaliyoharibika mpaka yathibitishwe na wahandisi wa miundo. Weka alama na vizuizi karibu na miundo isiyo salama. Ratibu ufuatiliaji unaoendelea wa mitetemeko na Wakala wa Jiolojia Tanzania (GST)."
+            },
+            {
+              "impactEn": "National emergency response required: search and rescue, military deployment, international assistance",
+              "impactSw": "Hatua za dharura za kitaifa zinahitajika: utafutaji na uokoaji, kupelekwa kwa jeshi, msaada wa kimataifa",
+              "actionEn": "Coordinate national resources through the Disaster Management Department in the Prime Minister’s Office. Engage international partners (UN, IFRC, INSARAG). Deploy specialised teams for medical, structural and humanitarian support.",
+              "actionSw": "Ratibu rasilimali za kitaifa kupitia Idara ya Maafa katika Ofisi ya Waziri Mkuu. Shirikisha washirika wa kimataifa (UN, IFRC, INSARAG). Tuma timu maalum za matibabu, miundo na huduma za kibinadamu."
+            }
+          ]
+        }
+      }
+    },
+    "PUBLIC HEALTH": {
+      "id": "public_health",
+      "name": "PUBLIC HEALTH",
+      "levels": {
+        "ADVISORY": {
+          "rows": [
+            {
+              "impactEn": "Reports of unusual disease cases or unusual patterns of illness in humans (Category 1: zoonotic and other infectious diseases)",
+              "impactSw": "Taarifa za visa visivyo vya kawaida vya magonjwa au mienendo isiyo ya kawaida ya magonjwa kwa binadamu (Kategoria ya 1: magonjwa ya kuambukizwa na yanayotokana na wanyama)",
+              "actionEn": "Strengthen surveillance through Integrated Disease Surveillance and Response (IDSR). CHWs and HCWs report signals via electronic Event-Based Surveillance (e-EBS). Rapid Response Teams verify reports within 24 hours.",
+              "actionSw": "Imarisha ufuatiliaji kupitia Mfumo wa Ufuatiliaji na Kukabiliana na Magonjwa (IDSR). CHW na HCW watoe taarifa kupitia Mfumo wa Kielektroniki wa Ufuatiliaji wa Matukio (e-EBS). Timu za Kukabiliana na Dharura zithibitishe taarifa ndani ya saa 24."
+            },
+            {
+              "impactEn": "Outbreak of priority disease in a neighbouring country (Uganda, Kenya, Burundi, Rwanda, DRC, Zambia, Malawi or Mozambique)",
+              "impactSw": "Mlipuko wa ugonjwa wa kipaumbele katika nchi jirani (Uganda, Kenya, Burundi, Rwanda, DRC, Zambia, Malawi au Msumbiji)",
+              "actionEn": "Enhance screening at points of entry (Mutukula, Namanga, Tunduma, Kasumulu, Kabanga, Sirari, Horohoro, Holili and others). Coordinate with cross-border teams. Activate the Public Health Emergency Operation Centre (PHEOC) for monitoring.",
+              "actionSw": "Imarisha uchunguzi katika maeneo ya kuingia nchini (Mutukula, Namanga, Tunduma, Kasumulu, Kabanga, Sirari, Horohoro, Holili na mengineyo). Ratibu na timu za mipakani. Anzisha Kituo cha Operesheni za Dharura za Afya ya Umma (PHEOC) kwa ufuatiliaji."
+            },
+            {
+              "impactEn": "Reports of unusual animal deaths or disease in livestock or wildlife (potential zoonotic risk)",
+              "impactSw": "Taarifa za vifo visivyo vya kawaida vya wanyama au magonjwa katika mifugo au wanyamapori (uwezekano wa hatari ya kuambukizwa kwa binadamu)",
+              "actionEn": "District Veterinary Officers (DVOs) investigate reports. Coordinate with Tanzania Veterinary Laboratory Agency (TVLA) for sample testing. Share findings with Ministry of Health through One Health Section in the Prime Minister’s Office.",
+              "actionSw": "Maafisa Mifugo wa Wilaya (DVOs) wachunguze taarifa. Ratibu na Wakala wa Maabara ya Mifugo Tanzania (TVLA) kwa kupima sampuli. Shiriki matokeo na Wizara ya Afya kupitia Idara ya Afya Moja katika Ofisi ya Waziri Mkuu."
+            },
+            {
+              "impactEn": "Seasonal conditions favourable for disease transmission (rains favouring cholera, malaria, mosquito-borne disease or Rift Valley fever)",
+              "impactSw": "Hali ya msimu inayofaa kwa kuenea kwa magonjwa (mvua zinazofaa kwa kipindupindu, malaria, magonjwa yanayoenezwa na mbu au homa ya Bonde la Ufa)",
+              "actionEn": "Strengthen water and sanitation services. Promote indoor residual spraying and bednets. Coordinate with TMA for seasonal forecasts. Pre-position medicines and vaccines through MSD.",
+              "actionSw": "Imarisha huduma za maji na usafi. Hamasisha unyunyiziaji wa dawa ndani ya nyumba na vyandarua. Ratibu na Mamlaka ya Hali ya Hewa Tanzania (TMA) kwa utabiri wa msimu. Weka tayari dawa na chanjo kupitia Bohari Kuu ya Dawa (MSD)."
+            },
+            {
+              "impactEn": "Increasing antimicrobial resistance (AMR) signals in human or animal infections (Category 2: AMR)",
+              "impactSw": "Kuongezeka kwa dalili za usugu wa dawa (AMR) katika maambukizi ya binadamu au wanyama (Kategoria ya 2: AMR)",
+              "actionEn": "Strengthen Antimicrobial Stewardship Programmes (ASP) at hospitals. Enforce prescription-only access to antibiotics. Coordinate with the Multi-Sectoral Coordinating Committee under the National Action Plan for AMR (NAP-AMR 2.0, 2023–2028). Train prescribers on rational use.",
+              "actionSw": "Imarisha Programu za Usimamizi wa Dawa za Kuua Viini (ASP) katika hospitali. Tekeleza kanuni ya dawa kutolewa tu kwa cheti cha daktari. Ratibu na Kamati ya Uratibu wa Kisekta Mbalimbali chini ya Mpango wa Kitaifa wa AMR (NAP-AMR 2.0, 2023–2028). Toa mafunzo kwa watoaji wa dawa kuhusu matumizi sahihi."
+            },
+            {
+              "impactEn": "Reports of food safety risks (aflatoxin in maize and groundnuts, food contamination, foodborne illness clusters) (Category 4: food safety)",
+              "impactSw": "Taarifa za hatari za usalama wa chakula (aflatoxin katika mahindi na karanga, uchafuzi wa chakula, makundi ya magonjwa yanayotokana na chakula) (Kategoria ya 4: usalama wa chakula)",
+              "actionEn": "Coordinate food testing through TBS, TMDA and Government Chemist Laboratory Authority (GCLA). Strengthen post-harvest handling for cereals and groundnuts. Advise on safe drying and storage. Investigate suspected food poisoning clusters.",
+              "actionSw": "Ratibu upimaji wa chakula kupitia TBS, TMDA na Wakala wa Maabara ya Mkemia Mkuu wa Serikali (GCLA). Imarisha mbinu za baada ya mavuno kwa nafaka na karanga. Shauri kuhusu kukausha na kuhifadhi salama. Chunguza makundi yanayodhaniwa kuwa ya sumu ya chakula."
+            },
+            {
+              "impactEn": "Environmental and chemical health risks (water contamination, air pollution, occupational exposure) (Category 5: environmental health)",
+              "impactSw": "Hatari za afya za mazingira na kemikali (uchafuzi wa maji, uchafuzi wa hewa, kuathirika kazini) (Kategoria ya 5: afya ya mazingira)",
+              "actionEn": "Coordinate with NEMC, OSHA and the Government Chemist Laboratory Authority (GCLA). Test water sources, air and chemical exposures. Advise on protective equipment for workers. Investigate environmental complaints.",
+              "actionSw": "Ratibu na Baraza la Taifa la Hifadhi na Usimamizi wa Mazingira (NEMC), Wakala wa Usalama na Afya Kazini (OSHA) na Wakala wa Maabara ya Mkemia Mkuu wa Serikali (GCLA). Pima vyanzo vya maji, hewa na kemikali. Shauri kuhusu vifaa vya kujikinga kwa wafanyakazi. Chunguza malalamiko ya mazingira."
+            },
+            {
+              "impactEn": "Climate-related health risks (heat-illness during dry seasons, expansion of mosquito range to higher altitudes) (Category 6: climate change health threats)",
+              "impactSw": "Hatari za afya zinazohusiana na tabianchi (magonjwa ya joto wakati wa msimu wa ukame, kuenea kwa mbu kwenda maeneo ya juu) (Kategoria ya 6: vitisho vya afya kutokana na mabadiliko ya tabianchi)",
+              "actionEn": "Coordinate with TMA on heat-wave forecasts. Provide heat-safety advice for outdoor workers, schools and elderly people. Strengthen vector control in newly affected areas. Monitor climate-sensitive disease patterns.",
+              "actionSw": "Ratibu na Mamlaka ya Hali ya Hewa Tanzania (TMA) kuhusu utabiri wa mawimbi ya joto. Toa ushauri wa usalama wa joto kwa wafanyakazi wa nje, shule na wazee. Imarisha udhibiti wa wadudu katika maeneo yaliyoathirika kwa mara ya kwanza. Fuatilia mienendo ya magonjwa yanayoathirika na hali ya hewa."
+            },
+            {
+              "impactEn": "Vulnerable groups (children under five, the elderly, pregnant women, people with chronic illness or disabilities) at higher risk",
+              "impactSw": "Makundi yaliyo hatarini (watoto chini ya miaka mitano, wazee, wajawazito, wenye magonjwa sugu au ulemavu) wapo katika hatari kubwa",
+              "actionEn": "Special groups including people with disabilities, children and the elderly should be given early warning information and appropriate measures should be taken by the community concerned",
+              "actionSw": "Makundi maalum ikijumuisha watu wenye ulemavu, watoto na wazee wapatiwe taarifa ya tahadhari ya mapema na hatua stahiki zichukuliwe na jamii husika"
+            },
+            {
+              "impactEn": "Need for community awareness on disease prevention, food safety and reporting of suspect cases",
+              "impactSw": "Haja ya kuelimisha jamii kuhusu kuzuia magonjwa, usalama wa chakula na kutoa taarifa za visa vyenye dalili",
+              "actionEn": "Conduct risk communication through radio, mosques, churches, markets and community meetings. Distribute information cards. Train community influencers and religious leaders.",
+              "actionSw": "Fanya mawasiliano ya hatari kupitia redio, misikitini, makanisani, masokoni na mikutano ya jamii. Sambaza kadi za taarifa. Toa mafunzo kwa viongozi wa jamii na viongozi wa dini."
+            },
+            {
+              "impactEn": "Need for pre-positioning of medical supplies, PPE, laboratory reagents and vaccines",
+              "impactSw": "Haja ya kuweka tayari vifaa vya matibabu, vifaa vya kujikinga (PPE), kemikali za maabara na chanjo",
+              "actionEn": "Stock essential medicines, vaccines and personal protective equipment at health facilities. Coordinate logistics with the Medical Stores Department (MSD). Ensure cold chain for vaccines is maintained.",
+              "actionSw": "Weka akiba ya dawa muhimu, chanjo na vifaa vya kujikinga binafsi katika vituo vya afya. Ratibu usafirishaji na Bohari Kuu ya Dawa (MSD). Hakikisha mfumo wa baridi wa chanjo unaendelea."
+            },
+            {
+              "impactEn": "Need for multi-sectoral coordination under the One Health approach",
+              "impactSw": "Haja ya uratibu wa kisekta mbalimbali chini ya mkabala wa Afya Moja (One Health)",
+              "actionEn": "Activate One Health Section coordination meetings (PMO). Engage Ministry of Health, Ministry of Livestock and Fisheries, Ministry of Natural Resources and Tourism, Vice President’s Office (Environment), Ministry of Agriculture and PO-RALG. Align with the National One Health Strategic Plan 2022–2027.",
+              "actionSw": "Anzisha mikutano ya uratibu ya Idara ya Afya Moja (Ofisi ya Waziri Mkuu). Shirikisha Wizara ya Afya, Wizara ya Mifugo na Uvuvi, Wizara ya Maliasili na Utalii, Ofisi ya Makamu wa Rais (Mazingira), Wizara ya Kilimo na Ofisi ya Rais TAMISEMI (PO-RALG). Endana na Mpango wa Kitaifa wa Afya Moja 2022–2027."
+            }
+          ]
+        },
+        "WARNING": {
+          "rows": [
+            {
+              "impactEn": "Confirmed cases of priority disease in one or more districts (Category 1: cholera, Marburg, Ebola, Rift Valley fever, anthrax, rabies, brucellosis or sleeping sickness)",
+              "impactSw": "Visa vilivyothibitishwa vya ugonjwa wa kipaumbele katika wilaya moja au zaidi (Kategoria ya 1: kipindupindu, Marburg, Ebola, homa ya Bonde la Ufa, kimeta, kichaa cha mbwa, brucellosis au ugonjwa wa malale)",
+              "actionEn": "Activate national outbreak response through the Ministry of Health and One Health Section (PMO). Deploy Rapid Response Teams. Declare outbreak under International Health Regulations (IHR) 2005 if applicable.",
+              "actionSw": "Anzisha hatua za kitaifa za kukabiliana na mlipuko kupitia Wizara ya Afya na Idara ya Afya Moja (Ofisi ya Waziri Mkuu). Tuma Timu za Kukabiliana na Dharura. Tangaza mlipuko chini ya Kanuni za Kimataifa za Afya (IHR) 2005 ikiwa inafaa."
+            },
+            {
+              "impactEn": "Healthcare workers at high risk of infection from confirmed cases",
+              "impactSw": "Wahudumu wa afya wapo katika hatari kubwa ya kuambukizwa kutoka kwa visa vilivyothibitishwa",
+              "actionEn": "Provide PPE (gloves, masks, gowns, goggles). Train healthcare workers on infection prevention and control (IPC). Set up dedicated triage and isolation units. Vaccinate at-risk workers where vaccines exist.",
+              "actionSw": "Toa vifaa vya kujikinga (mitandio, barakoa, mavazi, miwani). Toa mafunzo kwa wahudumu wa afya kuhusu kuzuia na kudhibiti maambukizi (IPC). Weka vituo maalum vya uchunguzi na kutenganisha. Chanja wahudumu walio hatarini ambapo chanjo zipo."
+            },
+            {
+              "impactEn": "Need for contact tracing of all confirmed and probable cases",
+              "impactSw": "Haja ya kufuatilia waliokutana na wagonjwa kwa visa vyote vilivyothibitishwa na vinavyodhaniwa",
+              "actionEn": "Deploy trained contact tracing teams. Identify and follow up contacts daily for the disease incubation period. Isolate symptomatic contacts. Coordinate with PO-RALG for community engagement.",
+              "actionSw": "Tuma timu zilizofunzwa za kufuatilia waliokutana. Tambua na fuatilia waliokutana kila siku kwa kipindi cha kuatamia cha ugonjwa. Tenga waliokutana wenye dalili. Ratibu na Ofisi ya Rais TAMISEMI (PO-RALG) kwa ushirikiano wa jamii."
+            },
+            {
+              "impactEn": "Hospital outbreak of multidrug-resistant infections (Category 2: AMR)",
+              "impactSw": "Mlipuko wa hospitalini wa maambukizi yasiyotibika kwa dawa nyingi (Kategoria ya 2: AMR)",
+              "actionEn": "Activate hospital Infection Prevention and Control (IPC) committee. Conduct microbiological investigation through reference laboratories. Isolate affected patients. Report to the Multi-Sectoral Coordinating Committee for AMR. Review prescribing practices.",
+              "actionSw": "Anzisha kamati ya kuzuia na kudhibiti maambukizi (IPC) ya hospitali. Fanya uchunguzi wa kimaabara kupitia maabara za rufaa. Tenga wagonjwa walioathirika. Toa taarifa kwa Kamati ya Uratibu wa Kisekta Mbalimbali wa AMR. Kagua mbinu za kuandika dawa."
+            },
+            {
+              "impactEn": "Confirmed food safety incident or foodborne illness outbreak (Category 4: e.g. aflatoxin poisoning, contaminated water, mass food poisoning)",
+              "impactSw": "Tukio lililothibitishwa la usalama wa chakula au mlipuko wa ugonjwa unaotokana na chakula (Kategoria ya 4: mfano sumu ya aflatoxin, maji yaliyochafuka, sumu ya chakula kwa watu wengi)",
+              "actionEn": "Trace contaminated food source through TBS, TMDA and GCLA. Recall affected products from markets. Treat affected patients. Coordinate with the Ministry of Agriculture and Ministry of Livestock and Fisheries for source control.",
+              "actionSw": "Fuatilia chanzo cha chakula kilichochafuka kupitia TBS, TMDA na Wakala wa Maabara ya Mkemia Mkuu wa Serikali (GCLA). Ondoa bidhaa zilizoathirika kutoka masokoni. Tibu wagonjwa walioathirika. Ratibu na Wizara ya Kilimo na Wizara ya Mifugo na Uvuvi kwa udhibiti wa chanzo."
+            },
+            {
+              "impactEn": "Environmental or chemical exposure event (Category 5: e.g. industrial spill, mining-area contamination, mass pesticide exposure)",
+              "impactSw": "Tukio la kuathirika na mazingira au kemikali (Kategoria ya 5: mfano kumwagika kwa kiwanda, uchafuzi wa eneo la migodi, kuathirika kwa madawa ya wadudu kwa watu wengi)",
+              "actionEn": "Coordinate response with NEMC, OSHA, GCLA and the relevant industry. Evacuate affected areas if needed. Provide medical care to exposed persons. Conduct decontamination. Investigate the cause and enforce regulations.",
+              "actionSw": "Ratibu juhudi na NEMC, OSHA, Wakala wa Maabara ya Mkemia Mkuu wa Serikali (GCLA) na sekta husika. Hamisha maeneo yaliyoathirika ikihitajika. Toa huduma za matibabu kwa walioathirika. Fanya usafishaji. Chunguza chanzo na tekeleza kanuni."
+            },
+            {
+              "impactEn": "Cross-border transmission risk requiring screening and movement restrictions",
+              "impactSw": "Hatari ya kuenea mipakani inayohitaji uchunguzi na vizuizi vya safari",
+              "actionEn": "Strengthen screening at points of entry. Coordinate cross-border meetings with Uganda, Kenya, Burundi, Rwanda and other neighbours. Restrict non-essential travel from affected districts. Report to WHO under IHR.",
+              "actionSw": "Imarisha uchunguzi katika maeneo ya kuingia nchini. Ratibu mikutano ya mipakani na Uganda, Kenya, Burundi, Rwanda na nchi nyingine jirani. Punguza safari zisizo za lazima kutoka wilaya zilizoathirika. Toa taarifa kwa WHO chini ya IHR."
+            },
+            {
+              "impactEn": "Confirmed link to animals or environment requiring animal-side intervention (livestock vaccination, culling, environmental control)",
+              "impactSw": "Uhusiano uliothibitishwa na wanyama au mazingira unaohitaji hatua za upande wa wanyama (chanjo ya mifugo, kuua wanyama walioambukizwa, udhibiti wa mazingira)",
+              "actionEn": "Coordinate with the Ministry of Livestock and Fisheries, TVLA and the Tanzania Wildlife Research Institute (TAWIRI). Implement animal vaccination campaigns. Restrict movement of livestock and animal products. Engage TANAPA and TAWA for wildlife coordination.",
+              "actionSw": "Ratibu na Wizara ya Mifugo na Uvuvi, Wakala wa Maabara ya Mifugo Tanzania (TVLA) na Taasisi ya Utafiti wa Wanyamapori Tanzania (TAWIRI). Tekeleza kampeni za chanjo za mifugo. Punguza uhamishaji wa mifugo na bidhaa za mifugo. Shirikisha TANAPA na TAWA kwa uratibu wa wanyamapori."
+            },
+            {
+              "impactEn": "Need for treatment units, isolation facilities and surge capacity at designated hospitals",
+              "impactSw": "Haja ya vitengo vya matibabu, vituo vya kutenganisha na uwezo wa ziada katika hospitali zilizoteuliwa",
+              "actionEn": "Establish or upgrade isolation units at designated hospitals. Provide medical supplies, oxygen and supportive care. Deploy mobile health teams. Transfer severe cases to referral facilities.",
+              "actionSw": "Anzisha au boresha vitengo vya kutenganisha katika hospitali zilizoteuliwa. Toa vifaa vya matibabu, hewa ya oksijeni na huduma za matibabu ya kuokoa maisha. Tuma timu za afya zinazotembea. Hamisha visa vikali kwenda hospitali za rufaa."
+            },
+            {
+              "impactEn": "Misinformation, rumours and stigma spreading in affected communities",
+              "impactSw": "Habari za uongo, uvumi na unyanyapaa vinavyoenea katika jamii zilizoathirika",
+              "actionEn": "Activate national Risk Communication and Community Engagement (RCCE) teams. Counter rumours through trusted leaders, radio and social media. Distribute information cards. Engage religious leaders, traditional healers and youth groups.",
+              "actionSw": "Anzisha timu za kitaifa za Mawasiliano ya Hatari na Ushirikiano wa Jamii (RCCE). Pinga uvumi kupitia viongozi wanaoaminika, redio na mitandao ya kijamii. Sambaza kadi za taarifa. Shirikisha viongozi wa dini, waganga wa jadi na vikundi vya vijana."
+            },
+            {
+              "impactEn": "Need for safe and dignified burials for haemorrhagic fevers and other high-risk diseases",
+              "impactSw": "Haja ya mazishi salama na yenye heshima kwa magonjwa ya kuvuja damu na magonjwa mengine yenye hatari kubwa",
+              "actionEn": "Implement safe and dignified burial procedures by trained teams. Provide PPE for burial teams. Engage religious and traditional leaders on alternatives that respect culture and reduce risk.",
+              "actionSw": "Tekeleza taratibu za mazishi salama na yenye heshima na timu zilizofunzwa. Toa vifaa vya kujikinga kwa timu za mazishi. Shirikisha viongozi wa dini na wa jadi kuhusu njia mbadala zinazoheshimu utamaduni na kupunguza hatari."
+            },
+            {
+              "impactEn": "Need for rapid laboratory confirmation and biosafety controls (Category 3: biosafety and biosecurity)",
+              "impactSw": "Haja ya uthibitisho wa haraka wa maabara na udhibiti wa usalama wa kibaiolojia (Kategoria ya 3: usalama wa kibaiolojia na kibiosekuriti)",
+              "actionEn": "Coordinate sample transport to NIMR, MUHAS or designated reference laboratories. Activate mobile laboratory if available. Ensure biosafety and biosecurity standards are followed. Share results within 24–48 hours.",
+              "actionSw": "Ratibu usafirishaji wa sampuli kwenda Taasisi ya Utafiti wa Tiba Tanzania (NIMR), MUHAS au maabara za rufaa zilizoteuliwa. Anzisha maabara inayotembea ikiwa inapatikana. Hakikisha viwango vya usalama wa kibaiolojia na kibiosekuriti vinafuatwa. Shiriki matokeo ndani ya saa 24–48."
+            }
+          ]
+        },
+        "MAJOR_WARNING": {
+          "rows": [
+            {
+              "impactEn": "Widespread transmission of high-consequence disease across multiple regions or districts",
+              "impactSw": "Kuenea kwa ugonjwa wa hatari kubwa katika mikoa au wilaya nyingi",
+              "actionEn": "Declare a public health emergency under the Disaster Management Act No. 6 of 2022. Activate the National Disaster Management Council (TADMAC). Coordinate national response through the PMO Disaster Management Department.",
+              "actionSw": "Tangaza dharura ya afya ya umma chini ya Sheria ya Usimamizi wa Maafa Na. 6 ya 2022. Anzisha Baraza la Kitaifa la Usimamizi wa Maafa (TADMAC). Ratibu juhudi za kitaifa kupitia Idara ya Maafa ya Ofisi ya Waziri Mkuu."
+            },
+            {
+              "impactEn": "High case fatality rate or rapid disease spread (e.g. similar to Marburg Kagera 2023, with case fatality rate of 66.7 per cent)",
+              "impactSw": "Kiwango kikubwa cha vifo au kuenea kwa kasi kwa ugonjwa (mfano kama Marburg Kagera mwaka 2023, kiwango cha vifo asilimia 66.7)",
+              "actionEn": "Maximise patient survival through early case detection, supportive care and use of treatment protocols. Coordinate with WHO for technical support and treatment options. • deploy specialist medical teams.",
+              "actionSw": "Ongeza nafasi ya kunusurika kwa wagonjwa kupitia kugundua mapema, huduma za matibabu na kutumia miongozo ya matibabu. Ratibu na WHO kwa msaada wa kitaalamu na chaguzi za matibabu. Tuma timu maalum za matibabu."
+            },
+            {
+              "impactEn": "Healthcare system overwhelmed by large numbers of cases",
+              "impactSw": "Mfumo wa afya unalemewa na idadi kubwa ya wagonjwa",
+              "actionEn": "Activate hospital surge plans. Convert facilities to dedicated treatment units. Deploy military medical teams (JWTZ Medical Corps). Request international medical support through WHO and partners.",
+              "actionSw": "Anzisha mipango ya kuongeza uwezo wa hospitali. Geuza vituo kuwa vitengo maalum vya matibabu. Tuma timu za matibabu za jeshi (Kitengo cha Matibabu cha JWTZ). Omba msaada wa matibabu wa kimataifa kupitia WHO na washirika."
+            },
+            {
+              "impactEn": "Mass casualty event (Category 7: large-scale road traffic accident, building collapse, fire, marine accident or industrial disaster requiring trauma care)",
+              "impactSw": "Tukio la majeruhi wengi (Kategoria ya 7: ajali kubwa ya barabarani, kuporomoka kwa jengo, moto, ajali ya majini au maafa ya viwandani yanayohitaji huduma za majeraha)",
+              "actionEn": "Activate hospital mass-casualty plans and triage protocols. Coordinate with the Fire and Rescue Force, JWTZ Medical Corps and TRCS. Establish forward triage and emergency transport. Provide blood products and surgical capacity.",
+              "actionSw": "Anzisha mipango ya hospitali ya majeruhi wengi na taratibu za uchunguzi. Ratibu na Jeshi la Zima Moto na Uokoaji, Kitengo cha Matibabu cha JWTZ na Shirika la Msalaba Mwekundu Tanzania (TRCS). Weka vituo vya uchunguzi vya mbele na usafirishaji wa dharura. Toa damu na uwezo wa upasuaji."
+            },
+            {
+              "impactEn": "Multiple deaths requiring mass casualty management and dignified burial",
+              "impactSw": "Vifo vingi vinavyohitaji usimamizi wa majeruhi wengi na mazishi yenye heshima",
+              "actionEn": "Coordinate safe and dignified burial protocols nationally. Provide psychosocial support to bereaved families and frontline workers. Activate Tanzania Red Cross Society (TRCS) and faith-based organisations.",
+              "actionSw": "Ratibu kanuni za mazishi salama na yenye heshima kitaifa. Toa msaada wa kisaikolojia kwa familia zilizofiwa na wafanyakazi wa mstari wa mbele. Anzisha Shirika la Msalaba Mwekundu Tanzania (TRCS) na mashirika ya kidini."
+            },
+            {
+              "impactEn": "International notification required under International Health Regulations (IHR) 2005",
+              "impactSw": "Taarifa ya kimataifa inahitajika chini ya Kanuni za Kimataifa za Afya (IHR) 2005",
+              "actionEn": "The Ministry of Health IHR National Focal Point notifies WHO within 24 hours of the public health event. Share daily situation reports. Coordinate with the East African Community (EAC), SADC and Africa CDC.",
+              "actionSw": "Kituo Kikuu cha Kitaifa cha IHR cha Wizara ya Afya kitoe taarifa kwa WHO ndani ya saa 24 baada ya tukio la afya ya umma. Shiriki ripoti za kila siku za hali. Ratibu na Jumuiya ya Afrika Mashariki (EAC), SADC na Africa CDC."
+            },
+            {
+              "impactEn": "Severe nutrition emergency (Category 7: child malnutrition crisis, IPC Phase 3 Crisis or higher in affected districts)",
+              "impactSw": "Dharura kubwa ya lishe (Kategoria ya 7: mgogoro wa utapiamlo wa watoto, IPC Awamu ya 3 ya Mgogoro au zaidi katika wilaya zilizoathirika)",
+              "actionEn": "Activate emergency nutrition screening at health facilities. Distribute therapeutic food (RUTF) to severely malnourished children. Deploy mobile health teams. Provide supplementary feeding at schools and health centres. Coordinate with UNICEF, WFP and TRCS.",
+              "actionSw": "Anzisha uchunguzi wa dharura wa lishe katika vituo vya afya. Sambaza chakula cha matibabu (RUTF) kwa watoto wenye utapiamlo mkali. Tuma timu za afya zinazotembea. Toa chakula cha ziada shuleni na katika vituo vya afya. Ratibu na UNICEF, WFP na Shirika la Msalaba Mwekundu Tanzania (TRCS)."
+            },
+            {
+              "impactEn": "Maternal and child health emergency (Category 7: surge in maternal mortality, neonatal deaths or pregnancy complications during emergencies)",
+              "impactSw": "Dharura ya afya ya mama na mtoto (Kategoria ya 7: kuongezeka kwa vifo vya wajawazito, vifo vya watoto wachanga au matatizo ya ujauzito wakati wa dharura)",
+              "actionEn": "Maintain emergency obstetric and newborn care (EmONC) at health facilities. Deploy mobile maternal health teams. Ensure safe deliveries and referral pathways. Protect cold-chain access for vaccines and oxytocin. Coordinate with Reproductive and Child Health (RCH) services.",
+              "actionSw": "Endeleza huduma za dharura za uzazi na mtoto mchanga (EmONC) katika vituo vya afya. Tuma timu za afya ya mama zinazotembea. Hakikisha uzazi salama na njia za rufaa. Linda upatikanaji wa mfumo wa baridi kwa chanjo na oxytocin. Ratibu na huduma za Afya ya Uzazi na Mtoto (RCH)."
+            },
+            {
+              "impactEn": "Mental health and psychosocial crisis affecting survivors, bereaved families and frontline workers (Category 7: post-emergency mental health emergency)",
+              "impactSw": "Mgogoro wa afya ya akili na kisaikolojia unaowaathiri walionusurika, familia zilizofiwa na wafanyakazi wa mstari wa mbele (Kategoria ya 7: dharura ya afya ya akili baada ya dharura)",
+              "actionEn": "Activate Mental Health and Psychosocial Support (MHPSS) services. Deploy trained counsellors to affected areas. Engage TRCS, faith-based and community organisations. Provide ongoing care for healthcare workers. Ensure access to medication for chronic mental illness.",
+              "actionSw": "Anzisha huduma za Afya ya Akili na Msaada wa Kisaikolojia (MHPSS). Tuma washauri waliofunzwa kwenye maeneo yaliyoathirika. Shirikisha Shirika la Msalaba Mwekundu Tanzania (TRCS), mashirika ya kidini na ya jamii. Toa huduma za muda mrefu kwa wahudumu wa afya. Hakikisha upatikanaji wa dawa kwa magonjwa sugu ya akili."
+            },
+            {
+              "impactEn": "Major disruption to schools, businesses, transport and essential health services",
+              "impactSw": "Kuvurugika kwa kiasi kikubwa kwa shule, biashara, usafiri na huduma muhimu za afya",
+              "actionEn": "Coordinate continuity of essential services with PO-RALG and ministries. Ensure water, food and electricity to affected communities. Protect supply chains for medicines and vaccines through MSD. Maintain immunisation, HIV, TB and chronic-disease services.",
+              "actionSw": "Ratibu kuendelea kwa huduma muhimu na Ofisi ya Rais TAMISEMI (PMO-RALG) na wizara. Hakikisha maji, chakula na umeme kwa jamii zilizoathirika. Linda mifumo ya ugavi wa dawa na chanjo kupitia Bohari Kuu ya Dawa (MSD). Endeleza huduma za chanjo, VVU, TB na magonjwa sugu."
+            },
+            {
+              "impactEn": "Long-term recovery and rebuilding of health system and affected livelihoods",
+              "impactSw": "Urejeshaji wa muda mrefu na ujenzi upya wa mfumo wa afya na maisha yaliyoathirika",
+              "actionEn": "Develop recovery and reconstruction programmes. Strengthen IDSR, e-EBS and laboratory systems for future events. Provide livelihood support to affected families. Document lessons learned for the One Health Strategic Plan and NAP-AMR review.",
+              "actionSw": "Tengeneza programu za urejeshaji na ujenzi upya. Imarisha IDSR, e-EBS na mifumo ya maabara kwa matukio ya baadaye. Toa msaada wa kimaisha kwa familia zilizoathirika. Nakili masomo yaliyojifunzwa kwa ajili ya kukagua Mpango wa Kitaifa wa Afya Moja na NAP-AMR."
+            },
+            {
+              "impactEn": "National emergency response required: One Health coordination, military deployment, international assistance",
+              "impactSw": "Hatua za dharura za kitaifa zinahitajika: uratibu wa Afya Moja, kupelekwa kwa jeshi, msaada wa kimataifa",
+              "actionEn": "Coordinate national resources through the PMO Disaster Management Department and One Health Section. Engage international partners (WHO, FAO, OIE, Africa CDC, UNICEF, IFRC and UN). Deploy specialised teams for clinical care, laboratory, infection prevention, food safety, environmental and risk communication.",
+              "actionSw": "Ratibu rasilimali za kitaifa kupitia Idara ya Maafa ya Ofisi ya Waziri Mkuu na Idara ya Afya Moja. Shirikisha washirika wa kimataifa (WHO, FAO, OIE, Africa CDC, UNICEF, IFRC na UN). Tuma timu maalum za huduma za matibabu, maabara, kuzuia maambukizi, usalama wa chakula, mazingira na mawasiliano ya hatari."
+            }
+          ]
+        }
+      }
+    }
+  }
+}

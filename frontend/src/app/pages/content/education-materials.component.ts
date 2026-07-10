@@ -45,6 +45,7 @@ const TYPES = [
       <dmis-stat-card [value]="countBy('children')" label="For Children" icon="fa-child" color="#3b82f6" />
       <dmis-stat-card [value]="countBy('adults')" label="For Adults" icon="fa-users" color="#10b981" />
       <dmis-stat-card [value]="countBy('disabilities')" label="For Persons with Disabilities" icon="fa-wheelchair" color="#a855f7" />
+      <dmis-stat-card [value]="languageReady()" label="Bilingual Ready" icon="fa-language" color="#2563eb" />
     </div>
 
     <div class="filter-bar">
@@ -58,6 +59,11 @@ const TYPES = [
         <option value="">All Audiences</option>
         @for (a of audiences; track a.key) { <option [value]="a.key">{{ a.label }}</option> }
       </select>
+      <select [value]="langF()" (change)="langF.set($any($event.target).value)">
+        <option value="">All Languages</option>
+        <option value="ready">Bilingual ready</option>
+        <option value="missing">Needs Kiswahili</option>
+      </select>
     </div>
 
     <div class="panel-row" style="animation-delay:.3s;">
@@ -66,14 +72,18 @@ const TYPES = [
           @if (filtered().length) {
             <div style="overflow-x:auto;">
               <table class="r-table">
-                <thead><tr><th>Hazard</th><th>Audience</th><th>Type</th><th>Title</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Hazard</th><th>Audience</th><th>Type</th><th>Title</th><th>Language</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                   @for (m of filtered(); track m.id) {
                     <tr class="data-row">
                       <td><span class="r-badge" style="background:rgba(0,51,102,0.08);color:#003366;">{{ m.hazard }}</span></td>
                       <td style="font-size:0.8rem;color:var(--text-mid);">{{ audienceLabel(m.audience) }}</td>
                       <td style="font-size:0.8rem;color:var(--text-mid);">{{ typeLabel(m.materialType) }}</td>
-                      <td><div class="r-title">{{ m.title }}</div></td>
+                      <td>
+                        <div class="r-title">{{ m.title }}</div>
+                        @if (m.titleSw) { <div class="r-subtitle">SW: {{ m.titleSw }}</div> }
+                      </td>
+                      <td><span class="r-badge" [class.badge-approved]="isLanguageReady(m)" [class.badge-pending]="!isLanguageReady(m)">{{ isLanguageReady(m) ? 'EN + SW' : 'Needs SW' }}</span></td>
                       <td><span class="r-badge {{ m.isActive ? 'badge-approved' : 'badge-rejected' }}">{{ m.isActive ? 'Live' : 'Hidden' }}</span></td>
                       <td>
                         <div class="ctx-wrap">
@@ -168,7 +178,7 @@ export class EducationMaterialsComponent {
   audiences = AUDIENCES;
   types = TYPES;
   items = signal<Material[]>([]);
-  search = signal(''); hazardF = signal(''); audienceF = signal('');
+  search = signal(''); hazardF = signal(''); audienceF = signal(''); langF = signal('');
   openMenu = signal<number | null>(null);
   editorOpen = signal(false);
   editId = signal<number | null>(null);
@@ -191,12 +201,23 @@ export class EducationMaterialsComponent {
     const q = this.search().toLowerCase();
     const hz = this.hazardF();
     const au = this.audienceF();
-    return this.items().filter(m => (!q || (m.title + ' ' + m.hazard).toLowerCase().includes(q))
-      && (!hz || m.hazard === hz) && (!au || m.audience === au));
+    const lang = this.langF();
+    return this.items().filter(m => (!q || [m.title, m.titleSw, m.body, m.bodySw, m.hazard]
+      .some(v => (v ?? '').toLowerCase().includes(q)))
+      && (!hz || m.hazard === hz) && (!au || m.audience === au)
+      && (!lang || (lang === 'ready' ? this.isLanguageReady(m) : !this.isLanguageReady(m))));
   });
 
   countBy(audience: string): number {
     return this.items().filter(m => m.audience === audience || m.audience === 'all').length;
+  }
+
+  languageReady(): number {
+    return this.items().filter(m => this.isLanguageReady(m)).length;
+  }
+
+  isLanguageReady(m: Material): boolean {
+    return !!m.title?.trim() && !!m.body?.trim() && !!m.titleSw?.trim() && !!m.bodySw?.trim();
   }
 
   audienceLabel(key: string): string { return AUDIENCES.find(a => a.key === key)?.label ?? key; }

@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import tz.go.pmo.dmis.common.security.Authz;
 
 /** Risk Frameworks API over the existing {@code disaster_risk_frameworks} table (shared Postgres). */
 @RestController
@@ -31,14 +30,14 @@ public class FrameworkController {
 
     @GetMapping
     @Operation(summary = "Framework registry page + statistics + doughnut datasets")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('content_management.view')")
     public Map<String, Object> index(@RequestParam(defaultValue = "1") int page) {
         return frameworkService.index(page);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Full framework (view modal / edit form)")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('content_management.view')")
     public Map<String, Object> show(@PathVariable Long id) {
         return frameworkService.show(id);
     }
@@ -46,14 +45,14 @@ public class FrameworkController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create a framework (draft relaxes requireds; status defaults Active)")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
+    @PreAuthorize("hasAuthority('content_management.manage')")
     public Map<String, Object> store(@Valid @ModelAttribute FrameworkWriteRequest request) {
         return frameworkService.store(request);
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Update a framework (new attachment replaces the old)")
-    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
+    @PreAuthorize("hasAuthority('content_management.manage')")
     public Map<String, Object> update(@PathVariable Long id, @Valid @ModelAttribute FrameworkWriteRequest request) {
         return frameworkService.update(id, request);
     }
@@ -61,7 +60,7 @@ public class FrameworkController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a framework and its attachment")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('prevention_and_mitigation.manage')")
+    @PreAuthorize("hasAuthority('content_management.manage')")
     public void destroy(@PathVariable Long id) {
         frameworkService.destroy(id);
     }

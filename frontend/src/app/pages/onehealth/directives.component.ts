@@ -36,7 +36,7 @@ interface IndexResponse {
     .ctx-wrap { position: relative; display: inline-block; }
     .ctx-trigger { width: 28px; height: 28px; border: none; background: transparent; border-radius: 8px; color: var(--text-light); cursor: pointer; }
     .ctx-trigger:hover { background: rgba(0,0,0,0.05); color: var(--text-dark); }
-    .ctx-menu { display: none; position: absolute; right: 0; top: 100%; z-index: 50; min-width: 170px; background: #fff; border-radius: 12px; border: 1px solid var(--border, #e5e9f0); box-shadow: 0 12px 36px rgba(0,0,0,0.12); padding: 4px; }
+    /* Positioning owned by global dmis-v2 .ctx-menu (fixed + AppComponent edge flip) */
     .ctx-menu.open { display: block; }
     .ctx-item { display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; padding: 0.45rem 0.75rem; border: none; background: none; font-size: 0.78rem; font-family: inherit; color: var(--text-mid); border-radius: 8px; cursor: pointer; text-decoration: none; }
     .ctx-item:hover { background: rgba(8,145,178,0.06); color: var(--text-dark); }

@@ -18,6 +18,8 @@ import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.common.security.SecurityUtils;
+import tz.go.pmo.dmis.notification.NotificationService;
 
 /**
  * Donor / partner SUPPORT pledges. The partner portal's funding side: a donor sees ONLY the prevention /
@@ -32,16 +34,19 @@ public class SupportPledgeController {
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
     private final CurrentUserResolver currentUser;
+    private final NotificationService notifications;
 
-    public SupportPledgeController(JdbcTemplate jdbc, JurisdictionScope jurisdiction, CurrentUserResolver currentUser) {
+    public SupportPledgeController(JdbcTemplate jdbc, JurisdictionScope jurisdiction,
+                                   CurrentUserResolver currentUser, NotificationService notifications) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
         this.currentUser = currentUser;
+        this.notifications = notifications;
     }
 
     /** The discovery feed donors see: measures + trainings needing support (from anywhere — donors help any area). */
     @GetMapping("/needs")
-    @PreAuthorize("hasAuthority('resource_allocation.view')")
+    @PreAuthorize("hasAnyAuthority('resource_allocation.view','stakeholder_portal.donate')")
     public Map<String, Object> needs() {
         List<Map<String, Object>> measures = jdbc.queryForList("""
                 select m.id, m.title, m.priority, m.budget, m.additional_support_required,
@@ -74,7 +79,7 @@ public class SupportPledgeController {
 
     /** A donor pledges its OWN contribution toward a measure or training. Staff may pledge on a partner's behalf. */
     @PostMapping("/pledges")
-    @PreAuthorize("hasAuthority('resource_allocation.request')")
+    @PreAuthorize("hasAnyAuthority('resource_allocation.request','stakeholder_portal.donate')")
     @Transactional
     public Map<String, Object> pledge(@RequestBody Map<String, Object> b) {
         String type = req(b, "target_type");
@@ -92,6 +97,9 @@ public class SupportPledgeController {
         // The donor pledges as ITS OWN stakeholder; staff (no stakeholder link) must name the partner.
         Long stakeholderId = jurisdiction.currentStakeholderId();
         if (stakeholderId == null) {
+            if (!SecurityUtils.hasAuthority("resource_allocation.request")) {
+                throw new BusinessRuleException("Your account is not linked to a partner organisation yet.");
+            }
             stakeholderId = lng(b.get("stakeholder_id"));
             if (stakeholderId == null) {
                 throw new BusinessRuleException("Choose the donating partner organisation.");
@@ -116,7 +124,7 @@ public class SupportPledgeController {
 
     /** Pledges: a donor sees ONLY its own; PMO staff see all (the review queue). */
     @GetMapping("/pledges")
-    @PreAuthorize("hasAuthority('resource_allocation.view')")
+    @PreAuthorize("hasAnyAuthority('resource_allocation.view','stakeholder_portal.donate')")
     public Map<String, Object> pledges() {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
@@ -144,7 +152,11 @@ public class SupportPledgeController {
     @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @Transactional
     public Map<String, Object> accept(@PathVariable long id, @RequestBody(required = false) Map<String, Object> b) {
-        Map<String, Object> p = one("select target_type, mitigation_measure_id, training_plan_id, status from public.support_pledges where id = ?", id);
+        Map<String, Object> p = one("""
+                select target_type, mitigation_measure_id, training_plan_id, status, stakeholder_id,
+                       amount, currency, pledged_by
+                  from public.support_pledges where id = ?
+                """, id);
         if (p == null) {
             throw new ResourceNotFoundException("Pledge not found.");
         }
@@ -158,6 +170,7 @@ public class SupportPledgeController {
         } else if ("training".equals(p.get("target_type")) && p.get("training_plan_id") != null) {
             jdbc.update("update public.training_plans set source_of_fund = coalesce(nullif(source_of_fund,''), 'Stakeholder pledge'), updated_at = now() where id = ?", lng(p.get("training_plan_id")));
         }
+        notifyPledgeOutcome(id, p, true, b == null ? null : str(b.get("note")));
         return Map.of("success", true, "message", "Pledge accepted — the item is now funded.");
     }
 
@@ -165,11 +178,49 @@ public class SupportPledgeController {
     @PreAuthorize("hasAuthority('resource_allocation.approve')")
     @Transactional
     public Map<String, Object> decline(@PathVariable long id, @RequestBody(required = false) Map<String, Object> b) {
+        Map<String, Object> p = one("""
+                select target_type, mitigation_measure_id, training_plan_id, status, stakeholder_id,
+                       amount, currency, pledged_by
+                  from public.support_pledges where id = ? and status = 'pledged'
+                """, id);
         if (jdbc.update("update public.support_pledges set status='declined', reviewed_by=?, reviewed_at=now(), review_note=?, updated_at=now() where id=? and status='pledged'",
                 me(), b == null ? null : str(b.get("note")), id) == 0) {
             throw new BusinessRuleException("Only a pending pledge can be declined.");
         }
+        if (p != null) {
+            notifyPledgeOutcome(id, p, false, b == null ? null : str(b.get("note")));
+        }
         return Map.of("success", true, "message", "Pledge declined.");
+    }
+
+    /** F27 — tell the pledging partner (and linked stakeholder accounts) the review outcome. */
+    private void notifyPledgeOutcome(long pledgeId, Map<String, Object> p, boolean accepted, String note) {
+        try {
+            String outcome = accepted ? "accepted" : "declined";
+            String title = accepted ? "Support pledge accepted" : "Support pledge declined";
+            String msg = "Your support pledge #" + pledgeId + " was " + outcome + " by PMO."
+                    + (note == null || note.isBlank() ? "" : " Note: " + note.trim());
+            NotificationService.Notice n = NotificationService.Notice.inApp(
+                    "support_pledge_" + outcome, title, msg,
+                    "/m/stakeholder-portal/support-needs", "support_pledge", pledgeId,
+                    accepted ? "info" : "warning");
+            java.util.Set<Long> recipients = new java.util.LinkedHashSet<>();
+            if (p.get("pledged_by") instanceof Number pb) {
+                recipients.add(pb.longValue());
+            }
+            if (p.get("stakeholder_id") instanceof Number sid) {
+                for (Long uid : jdbc.queryForList(
+                        "select id from public.users where stakeholder_id = ? and id is not null",
+                        Long.class, sid.longValue())) {
+                    recipients.add(uid);
+                }
+            }
+            if (!recipients.isEmpty()) {
+                notifications.notifyUsers(recipients, n);
+            }
+        } catch (Exception ignored) {
+            // Non-fatal: pledge state already committed; do not fail the review on notify issues.
+        }
     }
 
     // ── helpers ──

@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 
@@ -46,15 +46,25 @@ const isEoccBulletin = (p: Product): boolean =>
 @Component({
   selector: 'page-generated-bulletins',
   standalone: true,
-  imports: [PageHeaderComponent, StatCardComponent, DatePipe],
+  imports: [PageHeaderComponent, StatCardComponent, DatePipe, RouterLink],
   template: `
     <dmis-page-header title="EOCC Bulletin" icon="fa-file-pdf"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Early Warning Systems', url:'/m/preparedness/early-warnings'}, {label:'EOCC Bulletin'}]">
-      <label class="up-btn" [class.busy]="uploading()">
-        <i class="fas" [class.fa-upload]="!uploading()" [class.fa-spinner]="uploading()" [class.fa-spin]="uploading()"></i>
-        {{ uploading() ? 'Uploading…' : 'Upload PDF' }}
-        <input type="file" accept="application/pdf,.pdf" hidden [disabled]="uploading()" (change)="upload($any($event.target).files)">
-      </label>
+      <div style="display:flex;gap:0.45rem;flex-wrap:wrap;align-items:center">
+        <a class="up-btn" routerLink="/m/preparedness/early-warnings/consolidated" style="text-decoration:none"
+           title="Impact map with evacuation centre route estimates">
+          <i class="fas fa-route"></i> EW · EC routes
+        </a>
+        <a class="up-btn" routerLink="/m/preparedness/evacuation-centers" style="text-decoration:none;background:#059669"
+           title="Registered evacuation centres">
+          <i class="fas fa-house-user"></i> Centres
+        </a>
+        <label class="up-btn" [class.busy]="uploading()">
+          <i class="fas" [class.fa-upload]="!uploading()" [class.fa-spinner]="uploading()" [class.fa-spin]="uploading()"></i>
+          {{ uploading() ? 'Uploading…' : 'Upload PDF' }}
+          <input type="file" accept="application/pdf,.pdf" hidden [disabled]="uploading()" (change)="upload($any($event.target).files)">
+        </label>
+      </div>
     </dmis-page-header>
     @if (uploadError()) { <div class="up-error"><i class="fas fa-triangle-exclamation"></i> {{ uploadError() }}</div> }
 

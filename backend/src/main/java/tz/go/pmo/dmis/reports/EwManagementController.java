@@ -150,12 +150,20 @@ public class EwManagementController {
                 "        or lower(coalesce(p.coverage_location,'')) like lower('%'||coalesce(?,'~')||'%') ) " +
                 "union all " +
                 "select 'training' as kind, t.training_title as name, null, t.status, " +
-                "       t.training_start_date as starts, t.training_end_date as ends, t.venue as area " +
+                "       t.training_start_date as starts, t.training_end_date as ends, " +
+                "       coalesce(t.venue, t.geographical_scope::text) as area " +
                 "from public.training_plans t " +
                 "where t.training_start_date is not null and t.training_end_date is not null " +
-                "  and t.training_start_date <= ?::date and t.training_end_date >= ?::date",
+                "  and t.training_start_date <= ?::date and t.training_end_date >= ?::date " +
+                // F67: same area-match idea as anticipatory plans (venue or geographical_scope tokens).
+                // National / unscoped trainings (blank venue+scope) are excluded so a Mtwara warning
+                // does not claim a Dar es Salaam workshop as preparedness for that area.
+                "  and ( lower(coalesce(t.venue,'')) like lower('%'||coalesce(?,'~')||'%') " +
+                "        or lower(coalesce(t.geographical_scope::text,'')) like lower('%'||coalesce(?,'~')||'%') " +
+                "        or lower(coalesce(t.organization_name,'')) like lower('%'||coalesce(?,'~')||'%') )",
                 w.get("validity_end"), w.get("validity_start"), w.get("area"), w.get("area"),
-                w.get("validity_end"), w.get("validity_start"));
+                w.get("validity_end"), w.get("validity_start"),
+                w.get("area"), w.get("area"), w.get("area"));
             w.put("preparedness", prep);
             if (!prep.isEmpty()) prepW.add(w.get("warning_id"));
         }
@@ -210,8 +218,16 @@ public class EwManagementController {
             drr.put("disasters_ew_linked", ewLinked == null ? 0 : ewLinked);
             drr.put("ew_coverage_pct", (totalEvents != null && totalEvents > 0)
                 ? Math.round((ewLinked == null ? 0 : ewLinked) * 1000.0 / totalEvents) / 10.0 : 0.0);
+            // F69 honesty: low % is usually missing disaster_event_links, not proof EW failed.
+            drr.put("coverage_basis", "manual_disaster_event_links");
+            drr.put("note", "ew_coverage_pct is the share of validated/archived repository cards "
+                    + "manually linked to an early_warning. A low figure usually means links are "
+                    + "still pending curation (use repository card → link suggestions ranked by "
+                    + "area/hazard), not that early warning failed.");
         } catch (Exception e) {
             drr.put("disasters_total", 0); drr.put("disasters_ew_linked", 0); drr.put("ew_coverage_pct", 0.0);
+            drr.put("coverage_basis", "manual_disaster_event_links");
+            drr.put("note", "DRR coverage unavailable for this query window.");
         }
 
         // ── headline summary (per DISTINCT warning — not per district/area row) ──

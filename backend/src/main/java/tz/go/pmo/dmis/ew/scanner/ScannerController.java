@@ -229,7 +229,9 @@ public class ScannerController {
         jdbc.update("update public.scanner_detections set status='dispatched', dispatched_as='incident', "
             + "dispatched_ref=?, incident_id=? where id=?", "INC-" + incidentId, incidentId, id);
         String area = district != null && !district.isBlank() ? district : (region != null ? region : "national");
-        notifications.notifyAllUsers(Notice.inApp("scanner_incident",
+        // F72: do not flood every account — EOCC + national oversight only.
+        notifications.notifyRoles(java.util.List.of("EOCC", "Director", "Asst. Director", "Super Admin"),
+            Notice.inApp("scanner_incident",
             "New incident from Disaster Scanner",
             str(d.get("title")) + " — " + area + " (" + originLevel + ", awaiting focal-point review).",
             "/m/response/incidents", "incident", incidentId, severity.toLowerCase(Locale.ROOT)));

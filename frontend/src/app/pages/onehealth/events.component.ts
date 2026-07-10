@@ -131,7 +131,7 @@ interface FormData {
     .ctx-wrap { position: relative; display: inline-block; }
     .ctx-trigger { width: 28px; height: 28px; border: none; background: transparent; border-radius: 8px; color: var(--text-light); cursor: pointer; transition: all 0.15s; }
     .ctx-trigger:hover { background: rgba(0,0,0,0.05); color: var(--text-dark); }
-    .ctx-menu { display: none; position: absolute; right: 0; top: 100%; z-index: 50; min-width: 200px; background: #fff; border-radius: 12px; border: 1px solid var(--border, #e5e9f0); box-shadow: 0 12px 36px rgba(0,0,0,0.12); padding: 4px; }
+    /* Positioning owned by global dmis-v2 .ctx-menu (fixed + AppComponent edge flip) */
     .ctx-menu.open { display: block; }
     .ctx-menu-header { display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.75rem; margin-bottom: 2px; border-bottom: 1px solid rgba(0,0,0,0.05); }
     .ctx-menu-label { font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }

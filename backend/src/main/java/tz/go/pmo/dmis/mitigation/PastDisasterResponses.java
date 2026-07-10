@@ -20,7 +20,17 @@ public final class PastDisasterResponses {
     }
 
     public record Row(Long id, String eventName, String eventDate, String locationDescription,
-                      String hazardName, String reportDocumentPath) {
+                      String hazardName, String reportDocumentPath,
+                      /** F73 — optional Sendai repository cards already linked (or name-matched). */
+                      List<RepositoryPointer> repositoryPointers) {
+        public Row(Long id, String eventName, String eventDate, String locationDescription,
+                   String hazardName, String reportDocumentPath) {
+            this(id, eventName, eventDate, locationDescription, hazardName, reportDocumentPath, List.of());
+        }
+    }
+
+    /** Pointer into Disaster Repository loss cards (descriptive, not a second registry). */
+    public record RepositoryPointer(Long eventId, String eventCode, String name, String relation) {
     }
 
     /** The index filter + form selects use the full hazard list ordered by name. */

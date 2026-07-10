@@ -434,60 +434,60 @@
         <h5 style="font-weight:800;color:var(--text-primary);margin-bottom:1rem;"><i class="fas fa-flag me-2" style="color:#ef4444;"></i>{{ L.t('lbl_report_hazard') }}</h5>
         <div style="display:grid;gap:0.8rem;">
           <select [value]="rType()" (change)="rType.set($any($event.target).value)" class="form-control">
-            <option value="">Select hazard type…</option>
+            <option value="">{{ L.t('lbl_select_hazard_type') }}</option>
             @for (h of hazardCards(); track h.name) { <option [value]="h.name">{{ cardName(h) }}</option> }
           </select>
-          <textarea rows="3" class="form-control" placeholder="Describe what you are seeing…" [value]="rDesc()" (input)="rDesc.set($any($event.target).value)"></textarea>
+          <textarea rows="3" class="form-control" [placeholder]="L.t('lbl_describe_what_you_are_seeing')" [value]="rDesc()" (input)="rDesc.set($any($event.target).value)"></textarea>
           <!-- Region → District: routes the report to THAT district's officers. Strongly encouraged. -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
             <select [value]="rRegionId()" (change)="onRegionChange($any($event.target).value)" class="form-control" aria-label="Region">
-              <option value="">{{ L.lang() === 'sw' ? 'Chagua mkoa…' : 'Select region…' }}</option>
+              <option value="">{{ L.t('pp_select_region') }}</option>
               @for (r of regions(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
             </select>
             <select [value]="rDistrictId()" (change)="rDistrictId.set($any($event.target).value)" class="form-control" aria-label="District" [disabled]="!rRegionId()">
-              <option value="">{{ L.lang() === 'sw' ? 'Chagua wilaya…' : 'Select district…' }}</option>
+              <option value="">{{ L.t('pp_select_district') }}</option>
               @for (d of districts(); track d.id) { <option [value]="d.id">{{ d.name }}</option> }
             </select>
           </div>
-          <input class="form-control" placeholder="Location (street / village / landmark)" [value]="rLocation()" (input)="rLocation.set($any($event.target).value)">
+          <input class="form-control" [placeholder]="L.t('lbl_location_detail')" [value]="rLocation()" (input)="rLocation.set($any($event.target).value)">
           <select [value]="rUrgency()" (change)="rUrgency.set($any($event.target).value)" class="form-control">
-            <option value="Low">Low urgency</option><option value="Medium">Medium urgency</option><option value="High">High urgency</option>
+            <option value="Low">{{ L.t('lbl_low_urgency') }}</option><option value="Medium">{{ L.t('lbl_medium_urgency') }}</option><option value="High">{{ L.t('lbl_high_urgency') }}</option>
           </select>
           <select [value]="rReportedBy()" (change)="rReportedBy.set($any($event.target).value)" class="form-control" aria-label="Reported by">
-            <option value="public">Reporting as a member of the public</option>
-            <option value="institution">Institution</option>
-            <option value="sector">Sector / MDA</option>
-            <option value="ministry">Ministry</option>
-            <option value="region">Region (RAS)</option>
+            <option value="public">{{ L.t('lbl_reporting_public') }}</option>
+            <option value="institution">{{ L.t('lbl_reporting_institution') }}</option>
+            <option value="sector">{{ L.t('lbl_reporting_sector') }}</option>
+            <option value="ministry">{{ L.t('lbl_reporting_ministry') }}</option>
+            <option value="region">{{ L.t('lbl_reporting_region') }}</option>
           </select>
           @if (rReportedBy() !== 'public') {
-            <input class="form-control" placeholder="Institution / sector / ministry / region name" [value]="rOrg()" (input)="rOrg.set($any($event.target).value)">
+            <input class="form-control" [placeholder]="L.t('lbl_reporter_org_name')" [value]="rOrg()" (input)="rOrg.set($any($event.target).value)">
             <div style="font-size:0.9rem;color:#1e3a5f;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.5rem 0.7rem;">
-              <i class="fas fa-bolt" style="color:#2563eb;"></i> Official reports go <b>straight to the EOCC</b> for action — they skip the district/region verification a public report goes through.
+              <i class="fas fa-bolt" style="color:#2563eb;"></i> {{ L.t('lbl_official_report_hint') }}
             </div>
           }
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
-            <input class="form-control" placeholder="Your name (optional)" [value]="rName()" (input)="rName.set($any($event.target).value)">
-            <input class="form-control" type="tel" placeholder="Phone (optional)" [value]="rPhone()" (input)="rPhone.set($any($event.target).value)">
-            <input class="form-control" type="email" placeholder="Email (optional)" [value]="rEmail()" (input)="rEmail.set($any($event.target).value)">
+            <input class="form-control" [placeholder]="L.t('lbl_your_name_optional')" [value]="rName()" (input)="rName.set($any($event.target).value)">
+            <input class="form-control" type="tel" [placeholder]="L.t('lbl_phone_optional')" [value]="rPhone()" (input)="rPhone.set($any($event.target).value)">
+            <input class="form-control" type="email" [placeholder]="L.t('lbl_email_optional')" [value]="rEmail()" (input)="rEmail.set($any($event.target).value)">
           </div>
           @if (reportError()) { <div style="color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.5rem 0.7rem;font-size:0.9rem;">{{ reportError() }}</div> }
           <button class="btn-gold" style="justify-content:center;" [disabled]="!rType() || !rDesc().trim() || reportSaving()" (click)="submitReport()">
             <i class="fas" [class.fa-paper-plane]="!reportSaving()" [class.fa-spinner]="reportSaving()" [class.fa-spin]="reportSaving()"></i>
-            {{ reportSaving() ? 'Submitting…' : 'Submit Report' }}
+            {{ reportSaving() ? L.t('lbl_submitting') : L.t('lbl_submit_report') }}
           </button>
         </div>
       } @else {
         <div style="text-align:center;padding:1.5rem 0.5rem;">
           <i class="fas fa-check-circle" style="font-size:3rem;color:#4ade80;"></i>
-          <h5 style="font-weight:800;color:var(--text-primary);margin:1rem 0 0.4rem;">Report received</h5>
-          <p style="color:var(--text-secondary);margin-bottom:0.4rem;">Your reference code:</p>
+          <h5 style="font-weight:800;color:var(--text-primary);margin:1rem 0 0.4rem;">{{ L.t('lbl_report_received') }}</h5>
+          <p style="color:var(--text-secondary);margin-bottom:0.4rem;">{{ L.t('lbl_reference_code') }}</p>
           <div style="font-weight:800;font-size:1.2rem;color:#60a5fa;letter-spacing:1px;">{{ reportDone() }}</div>
           <div style="display:flex;gap:0.6rem;justify-content:center;flex-wrap:wrap;margin-top:1.2rem;">
             <a class="btn-gold" [routerLink]="['/track-report']" [queryParams]="{ code: reportDone() }" (click)="reportOpen.set(false)">
               <i class="fas fa-magnifying-glass-location"></i> {{ L.t('lbl_track_report') }}
             </a>
-            <button class="btn-outline-gold" (click)="closeReport()">Close</button>
+            <button class="btn-outline-gold" (click)="closeReport()">{{ L.t('pp_close') }}</button>
           </div>
         </div>
       }
