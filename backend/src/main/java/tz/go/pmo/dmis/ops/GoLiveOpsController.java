@@ -48,6 +48,22 @@ public class GoLiveOpsController {
     @Value("${spring.mail.username:}")
     private String mailUser;
 
+    /** Ops residual accept flags — explicit cutover sign-off, never silent green. */
+    @Value("${dmis.go-live.accept-sms-deferred:false}")
+    private boolean acceptSmsDeferred;
+
+    @Value("${dmis.go-live.accept-email-deferred:false}")
+    private boolean acceptEmailDeferred;
+
+    @Value("${dmis.go-live.accept-sparse-phones:false}")
+    private boolean acceptSparsePhones;
+
+    @Value("${dmis.go-live.accept-pdf-sidecar:false}")
+    private boolean acceptPdfSidecar;
+
+    @Value("${dmis.go-live.accept-storage-partial:false}")
+    private boolean acceptStoragePartial;
+
     public GoLiveOpsController(JdbcTemplate jdbc, Environment env,
                                IfmisCommitmentExportService ifmisExport,
                                GeoAliasService geoAliases,
@@ -61,15 +77,15 @@ public class GoLiveOpsController {
 
     /**
      * Authenticated readiness board for cutover (GL-01…GL-06 flags + residual honesty).
-     * Does not certify production by itself — ops still run the GO-LIVE-RUNBOOK.
+     * Does not invent NIDA/LATRA/NAPA/IFMIS live status. Careful certificate only when
+     * prod profile + JWT + Flyway + seats + (SMS live or accepted) + (email live or accepted).
      */
     @GetMapping("/go-live-readiness")
     @PreAuthorize("hasAnyAuthority('roles_and_permissions.view','user_management.view','roles_and_permissions.manage') "
             + "or hasAuthority('early_warning.view')")
     public Map<String, Object> readiness() {
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("document", "space02.md + docs/GO-LIVE-RUNBOOK.md");
-        out.put("honestCertificate", false);
+        out.put("document", "docs/space02-go-live-assessment.md + docs/GO-LIVE-RUNBOOK.md");
         out.put("note",
                 "Flags indicate configuration presence and platform state. "
                         + "They do not claim NIDA/LATRA/NAPA/IFMIS live integration or AI product.");
@@ -78,8 +94,9 @@ public class GoLiveOpsController {
         boolean localProfile = profiles.stream().anyMatch(p -> "local".equalsIgnoreCase(p));
         out.put("activeProfiles", profiles);
         out.put("localProfileActive", localProfile);
+        boolean prodProfileOk = !localProfile && !profiles.isEmpty();
         out.put("gl01_prodProfile", Map.of(
-                "ok", !localProfile && !profiles.isEmpty(),
+                "ok", prodProfileOk,
                 "detail", localProfile
                         ? "local profile is active — must not face public production edge"
                         : "non-local profiles: " + profiles));
@@ -96,21 +113,33 @@ public class GoLiveOpsController {
                         ? "local profile may use bundled secret — replace for prod"
                         : (jwtOk ? "JWT secret present and length ≥ 32" : "Set DMIS_AUTH_JWT_SECRET (≥32 bytes) for prod")));
 
+        boolean mgovConfigured = notBlank(mgovApiKey);
+        boolean mgovGateOk = mgovConfigured || acceptSmsDeferred;
         out.put("gl02_mgov", Map.of(
-                "apiKeyConfigured", notBlank(mgovApiKey),
+                "apiKeyConfigured", mgovConfigured,
                 "dlrSecretConfigured", notBlank(dlrSecret),
-                "ok", notBlank(mgovApiKey),
-                "detail", notBlank(mgovApiKey)
+                "acceptedDeferred", acceptSmsDeferred,
+                "ok", mgovGateOk,
+                "detail", mgovConfigured
                         ? (notBlank(dlrSecret)
                         ? "M-Gov key + DLR secret present — still register DLR URL with carrier"
                         : "M-Gov key present; DLR secret empty (webhook disabled/open depending on profile)")
-                        : "MGOV_API_KEY not set — SMS code ready, ops keys required"));
+                        : (acceptSmsDeferred
+                        ? "SMS deferred accepted by ops (DMIS_GO_LIVE_ACCEPT_SMS_DEFERRED=true)"
+                        : "MGOV_API_KEY not set — set keys or accept SMS deferred")));
 
+        boolean smtpConfigured = notBlank(mailHost);
+        boolean smtpGateOk = smtpConfigured || acceptEmailDeferred;
         out.put("gl03_smtp", Map.of(
-                "hostConfigured", notBlank(mailHost),
+                "hostConfigured", smtpConfigured,
                 "usernameConfigured", notBlank(mailUser),
-                "ok", notBlank(mailHost),
-                "detail", notBlank(mailHost) ? "SMTP host set" : "SMTP host empty — email ops-dependent"));
+                "acceptedDeferred", acceptEmailDeferred,
+                "ok", smtpGateOk,
+                "detail", smtpConfigured
+                        ? "SMTP host set"
+                        : (acceptEmailDeferred
+                        ? "Email deferred accepted by ops (DMIS_GO_LIVE_ACCEPT_EMAIL_DEFERRED=true)"
+                        : "SMTP host empty — set host or accept email deferred")));
 
         Map<String, Object> db = new LinkedHashMap<>();
         // Flyway history lives in default-schema `platform` (see application.yml), not public.
@@ -120,11 +149,32 @@ public class GoLiveOpsController {
                     rs -> rs.next() ? rs.getString(1) : null);
             Long flywayMax = parseVersion(ver);
             db.put("flywayMaxVersion", ver);
-            db.put("ok", flywayMax != null && flywayMax >= 195);
+            db.put("ok", flywayMax != null && flywayMax >= 196);
             db.put("detail", "Flyway max version " + ver + " (platform.flyway_schema_history)");
         } catch (DataAccessException e) {
             db.put("ok", false);
             db.put("detail", "flyway_schema_history unreadable: " + e.getMessage());
+        }
+        // Demo-account hygiene (V196): accounts that still look like baseline demo without force-change
+        try {
+            Long demoOpen = jdbc.queryForObject("""
+                    select count(*) from public.users
+                    where coalesce(must_change_password, false) = false
+                      and (
+                        email ilike '%@example.com'
+                        or email ilike '%@example.dev'
+                        or email ilike '%@test.com'
+                      )
+                    """, Long.class);
+            db.put("demoAccountsWithoutForceChange", demoOpen == null ? 0 : demoOpen);
+            db.put("demoHygieneOk", demoOpen != null && demoOpen == 0);
+            if (demoOpen != null && demoOpen > 0) {
+                db.put("detail", db.get("detail") + "; " + demoOpen
+                        + " demo-like user(s) still without must_change_password");
+            }
+        } catch (DataAccessException e) {
+            db.put("demoHygieneOk", false);
+            db.put("demoAccountsWithoutForceChange", -1);
         }
         out.put("gl04_database", db);
 
@@ -150,6 +200,15 @@ public class GoLiveOpsController {
                     "detail", "integration_endpoints not available yet — apply Flyway V187+"));
         }
 
+        Map<String, Object> residualAccept = new LinkedHashMap<>();
+        residualAccept.put("smsDeferred", acceptSmsDeferred);
+        residualAccept.put("emailDeferred", acceptEmailDeferred);
+        residualAccept.put("sparsePhones", acceptSparsePhones);
+        residualAccept.put("pdfSidecar", acceptPdfSidecar);
+        residualAccept.put("storagePartial", acceptStoragePartial);
+        residualAccept.put("note", "Set DMIS_GO_LIVE_ACCEPT_* only after written residual sign-off");
+        out.put("residualAccept", residualAccept);
+
         List<String> blockers = new ArrayList<>();
         if (localProfile) {
             blockers.add("GL-01: local profile active");
@@ -157,11 +216,11 @@ public class GoLiveOpsController {
         if (!localProfile && !jwtOk) {
             blockers.add("GL-01: JWT secret missing or weak");
         }
-        if (!notBlank(mgovApiKey)) {
-            blockers.add("GL-02: M-Gov API key not configured (accept if SMS deferred)");
+        if (!mgovGateOk) {
+            blockers.add("GL-02: M-Gov API key not configured (set keys or DMIS_GO_LIVE_ACCEPT_SMS_DEFERRED=true)");
         }
-        if (!notBlank(mailHost)) {
-            blockers.add("GL-03: SMTP host not configured (accept if email deferred)");
+        if (!smtpGateOk) {
+            blockers.add("GL-03: SMTP host not configured (set host or DMIS_GO_LIVE_ACCEPT_EMAIL_DEFERRED=true)");
         }
         out.put("blockersOrAccept", blockers);
         out.put("deferredProduct", List.of(
@@ -238,14 +297,36 @@ public class GoLiveOpsController {
             out.put("gl06_staffingSeats", seats);
         }
 
+        boolean seatsOk = Boolean.TRUE.equals(seats.get("ok"));
+        boolean flywayOkFlag = flywayOk(db);
+        long dasWithPhone = num(seats, "dasWithPhone");
+        long dasTotal = num(seats, "dasTotal");
+        boolean phonesSparse = dasTotal > 0 && dasWithPhone * 2 < dasTotal; // <50% coverage
+        boolean phonesGateOk = !phonesSparse || acceptSparsePhones;
+        boolean demoHygieneOk = !(db.get("demoHygieneOk") instanceof Boolean b) || b;
+
+        // Careful certificate: prod edge + secrets + seats + channel live-or-accepted.
+        // Never claims NIDA/LATRA/NAPA/live IFMIS or AI.
+        boolean carefulCert = prodProfileOk && jwtOk && flywayOkFlag && seatsOk
+                && mgovGateOk && smtpGateOk && phonesGateOk && demoHygieneOk;
+        out.put("honestCertificate", carefulCert);
+        out.put("honestCertificateMeaning", carefulCert
+                ? "Careful cutover gates satisfied (prod profile, JWT, Flyway, seats, SMS/email live or accepted). "
+                + "Does NOT certify NIDA/LATRA/NAPA/live IFMIS or AI."
+                : "Careful certificate withheld — clear blockersOrAccept and residualAccept flags");
+
         // space02 issue register — every §7 item captured with live disposition
         out.put("space02IssueRegister", buildSpace02Register(
-                localProfile, jwtOk, notBlank(mgovApiKey), notBlank(mailHost),
-                flywayOk(db), integrity, seats, liveIntegrations));
+                localProfile, jwtOk, mgovConfigured, acceptSmsDeferred,
+                smtpConfigured, acceptEmailDeferred,
+                flywayOkFlag, integrity, seats, liveIntegrations,
+                acceptStoragePartial, acceptSparsePhones, acceptPdfSidecar,
+                carefulCert, phonesSparse));
 
         out.put("smokeScript", "dmis-platform/scripts/go-live-smoke.sh");
         out.put("personaJwtScript", "dmis-platform/scripts/go-live-persona-jwt.sh");
         out.put("cutoverVerifyScript", "dmis-platform/scripts/cutover-verify-all.sh");
+        out.put("residualResolveScript", "dmis-platform/scripts/resolve-cutover-residuals.sh");
         return out;
     }
 
@@ -253,12 +334,19 @@ public class GoLiveOpsController {
     private static List<Map<String, Object>> buildSpace02Register(
             boolean localProfile,
             boolean jwtOk,
-            boolean mgovOk,
-            boolean smtpOk,
+            boolean mgovConfigured,
+            boolean acceptSms,
+            boolean smtpConfigured,
+            boolean acceptEmail,
             boolean flywayOk,
             Map<String, Object> integrity,
             Map<String, Object> seats,
-            long liveIntegrations) {
+            long liveIntegrations,
+            boolean acceptStorage,
+            boolean acceptPhones,
+            boolean acceptPdf,
+            boolean carefulCert,
+            boolean phonesSparse) {
         List<Map<String, Object>> reg = new ArrayList<>();
         boolean integClean = num(integrity, "orphan_allocations") == 0
                 && num(integrity, "orphan_stock_movements") == 0
@@ -277,25 +365,35 @@ public class GoLiveOpsController {
                 localProfile ? "OPEN_AT_CUTOVER" : (jwtOk ? "READY" : "OPEN_AT_CUTOVER"),
                 localProfile ? "local profile active — must use prod on public edge" : "non-local profile"));
         reg.add(issue("GL-02", "OPS", "M-Gov keys + DLR",
-                mgovOk ? "READY_KEYS" : "ACCEPT_OR_CONFIGURE",
-                mgovOk ? "API key present" : "SMS deferred until keys + carrier DLR"));
+                mgovConfigured ? "READY_KEYS" : (acceptSms ? "ACCEPTED_DEFERRED" : "ACCEPT_OR_CONFIGURE"),
+                mgovConfigured ? "API key present"
+                        : (acceptSms ? "SMS deferred accepted (ops sign-off)" : "Set keys or DMIS_GO_LIVE_ACCEPT_SMS_DEFERRED")));
         reg.add(issue("GL-03", "OPS", "SMTP credentials",
-                smtpOk ? "READY_HOST" : "ACCEPT_OR_CONFIGURE",
-                smtpOk ? "SMTP host set" : "Email deferred until SMTP"));
+                smtpConfigured ? "READY_HOST" : (acceptEmail ? "ACCEPTED_DEFERRED" : "ACCEPT_OR_CONFIGURE"),
+                smtpConfigured ? "SMTP host set"
+                        : (acceptEmail ? "Email deferred accepted (ops sign-off)" : "Set host or DMIS_GO_LIVE_ACCEPT_EMAIL_DEFERRED")));
         reg.add(issue("GL-04", "OPS", "Clean prod DB / Flyway",
                 flywayOk ? "PLATFORM_OK" : "OPEN",
-                flywayOk ? "Flyway ≥194; clean DB is cutover process" : "Flyway below expected"));
+                flywayOk ? "Flyway ≥196; demo must_change_password hygiene applied" : "Flyway below expected"));
         reg.add(issue("GL-05", "OPS", "Role walkthrough (JWT personas)",
                 "PLATFORM_PROVED", "scripts/go-live-persona-jwt.sh dual-proved; re-run on prod accounts"));
         reg.add(issue("GL-06", "OPS", "Staffing seats DAS/RAS",
                 seatsOk ? "LIVE_OK" : "OPEN",
                 seatsOk ? "Every district/region has seat (phones may be sparse)" : "Seat gaps remain"));
         reg.add(issue("GL-07", "RESIDUAL", "Restricted storage row-jurisdiction",
-                "CLOSED_PARTIAL", "F96 filter: auth + AreaGuard on assessments/mapped media; free-form orphans fail-closed for non-SA"));
+                acceptStorage ? "ACCEPTED_PARTIAL" : "CLOSED_PARTIAL",
+                "F96: AreaGuard on assessments/mapped media; orphans fail-closed for non-SA"
+                        + (acceptStorage ? " (ops accepted residual)" : "")));
         reg.add(issue("GL-08", "RESIDUAL", "Sparse officer phones",
-                "ACCEPT", "Data residual — SMS notify weak where phone blank"));
+                !phonesSparse ? "LIVE_OK" : (acceptPhones ? "ACCEPTED" : "ACCEPT"),
+                phonesSparse
+                        ? ("Sparse phones DAS " + num(seats, "dasWithPhone") + "/" + num(seats, "dasTotal")
+                        + (acceptPhones ? " — accepted" : " — set DMIS_GO_LIVE_ACCEPT_SPARSE_PHONES or fill phones"))
+                        : "Phone coverage acceptable"));
         reg.add(issue("GL-09", "RESIDUAL", "PDF sidecar HA",
-                "ACCEPT", "Optional :8600; national warning SoR is Spring warnings"));
+                acceptPdf ? "ACCEPTED" : "ACCEPT",
+                "Optional :8600; national warning SoR is Spring warnings"
+                        + (acceptPdf ? " (ops accepted)" : "")));
         reg.add(issue("GL-10", "RESIDUAL", "Self-JWT is SoR (not Keycloak live SSO)",
                 "DOCUMENTED", "Self-issued HS256 JWT; Keycloak realm JSON is not live SSO"));
 
@@ -357,9 +455,10 @@ public class GoLiveOpsController {
         summary.put("id", "SUMMARY");
         summary.put("tag", "BOARD");
         summary.put("concern", "space02 register summary");
-        summary.put("status", openCode == 0 ? "PLATFORM_READY_OPS_GATES" : "HAS_OPEN_CODE");
+        summary.put("status", carefulCert ? "CAREFUL_CUTOVER_READY"
+                : (openCode == 0 ? "PLATFORM_READY_OPS_GATES" : "HAS_OPEN_CODE"));
         summary.put("detail", "openCode=" + openCode + " opsGates=" + opsOpen
-                + " (honestCertificate remains false until ops sign-off)");
+                + " carefulCertificate=" + carefulCert);
         reg.add(0, summary);
         return reg;
     }

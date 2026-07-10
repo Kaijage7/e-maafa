@@ -231,6 +231,8 @@ Optional: one controlled SMS + email to known internal address, then confirm `sm
 | POLY-01 | Soft event links — integrity views + orphan cleanup (V194–V195) | | |
 | DEF-INT | NIDA/LATRA/NAPA/live IFMIS not claimed | | |
 
+**Residual accept env (after this table is signed):** set matching `DMIS_GO_LIVE_ACCEPT_*=true` on the host, restart API, re-check `GET /v1/ops/go-live-readiness`. Script: `scripts/resolve-cutover-residuals.sh`.
+
 **Certificate language:** “Careful production cutover completed against space02 scorecard; external national systems not integrated unless separately dual-proved.”
 
 ---

@@ -475,7 +475,7 @@ e-MAAFA/DMIS is a **working, interlinked modular disaster operations platform** 
 | Live smoke | 17/17 APIs 200; unauth 401 |
 | Controllers | ~86 across 17 packages |
 | Public tables | ~148 |
-| Flyway lineage | through **V195** (V190–V191 integrity; V192–V193 genuine public-source history; **V194–V195 pre-deploy space02 closeout** — poly-link integrity, UI-test exclude, issue register on readiness board) |
+| Flyway lineage | through **V196** (V190–V191 integrity; V192–V193 genuine public-source history; **V194–V196 pre-deploy + residual accept flags space02 closeout** — poly-link integrity, UI-test exclude, issue register on readiness board) |
 | Platform vs cutover | **Platform code/data integrity for space02 is dual-proved (next-level pre-deploy).** Prod certificate remains **open** until ops secrets, clean DB, role walkthrough, residual sign-off |
 | Next review | After prod cutover or first external adapter |
 
