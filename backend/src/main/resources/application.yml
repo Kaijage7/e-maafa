@@ -100,6 +100,8 @@ dmis:
   security:
     # Keycloak realm roles live under this JWT claim path.
     roles-claim-path: realm_access.roles
+    # Emergency only: allow non-local start with open demo accounts (default refuse).
+    allow-demo-accounts-in-prod: ${DMIS_ALLOW_DEMO_ACCOUNTS_IN_PROD:false}
   # Self-issued bearer token (login mints, resource server validates — see JwtSecurityConfig).
   auth:
     jwt:
@@ -142,3 +144,7 @@ dmis:
     accept-sparse-phones: ${DMIS_GO_LIVE_ACCEPT_SPARSE_PHONES:false}
     accept-pdf-sidecar: ${DMIS_GO_LIVE_ACCEPT_PDF_SIDECAR:false}
     accept-storage-partial: ${DMIS_GO_LIVE_ACCEPT_STORAGE_PARTIAL:false}
+  # Exercise inject scheduler — off by default (enable only for deliberate drill windows).
+  scenario-injects:
+    enabled: ${DMIS_SCENARIO_INJECTS_ENABLED:false}
+    poll-ms: ${DMIS_SCENARIO_INJECTS_POLL_MS:60000}

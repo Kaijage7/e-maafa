@@ -145,7 +145,7 @@ public class WarehouseService {
     private Map<Long, String> nameMap(String table) {
         Map<Long, String> map = new HashMap<>();
         try {
-            jdbc.query("select id, name from public." + table,
+            jdbc.query("select id, name from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table),
                     rs -> { map.put(rs.getLong("id"), rs.getString("name")); });
         } catch (Exception ignored) {
             // reference table absent locally — names fall back to null

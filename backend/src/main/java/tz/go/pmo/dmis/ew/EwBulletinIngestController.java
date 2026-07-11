@@ -300,8 +300,9 @@ public class EwBulletinIngestController {
     /** Advance a table's id sequence to max(id) so a generated-id insert won't collide with seeded rows. */
     private void healSeq(String table) {
         try {
-            jdbc.execute("select setval(pg_get_serial_sequence('public." + table + "','id'), " +
-                "greatest((select coalesce(max(id),0) from public." + table + "),1))");
+            String safe = tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicTable(table);
+            jdbc.execute("select setval(pg_get_serial_sequence('public." + safe + "','id'), " +
+                "greatest((select coalesce(max(id),0) from public." + safe + "),1))");
         } catch (Exception ignored) { }
     }
 

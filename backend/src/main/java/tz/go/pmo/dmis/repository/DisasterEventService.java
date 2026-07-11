@@ -501,7 +501,7 @@ public class DisasterEventService {
         if (table == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown entity type " + entityType);
         }
-        Long exists = jdbc.queryForObject("select count(*) from " + table + " where id=?", Long.class, entityId);
+        Long exists = jdbc.queryForObject("select count(*) from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where id=?", Long.class, entityId);
         if (exists == null || exists == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, entityType + " " + entityId + " not found");
         }

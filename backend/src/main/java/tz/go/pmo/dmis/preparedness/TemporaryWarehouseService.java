@@ -177,7 +177,7 @@ public class TemporaryWarehouseService {
     private Map<Long, String> nameMap(String table) {
         Map<Long, String> map = new HashMap<>();
         try {
-            jdbc.query("select id, name from public." + table,
+            jdbc.query("select id, name from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table),
                     rs -> { map.put(rs.getLong("id"), rs.getString("name")); });
         } catch (Exception ignored) {
             // table may not exist locally yet — names fall back to "-"

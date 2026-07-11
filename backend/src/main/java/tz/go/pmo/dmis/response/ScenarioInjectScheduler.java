@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,8 @@ import tz.go.pmo.dmis.common.security.CurrentUserResolver;
  * F79: fire due scenario injects even when nobody has the Command Post board open.
  * Board GET still fires due injects for the open activation (immediate UX); this covers
  * the gap when the exercise director walks away.
+ * <p>Default {@code dmis.scenario-injects.enabled=false} so country prod does not run
+ * exercise inject polling unless ops explicitly enable it for a drill window.
  */
 @Component
 @RequiredArgsConstructor
@@ -24,9 +27,15 @@ public class ScenarioInjectScheduler {
     private final ActivationService activations;
     private final CurrentUserResolver users;
 
+    @Value("${dmis.scenario-injects.enabled:false}")
+    private boolean enabled;
+
     @Scheduled(fixedDelayString = "${dmis.scenario-injects.poll-ms:60000}")
     @Transactional
     public void fireDueInjects() {
+        if (!enabled) {
+            return;
+        }
         List<Map<String, Object>> due = jdbc.queryForList("""
                 select ai.id, ai.activation_id, ai.title
                 from public.activation_injects ai

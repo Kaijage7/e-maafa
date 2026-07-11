@@ -102,7 +102,7 @@ public class WarehouseController {
         if (id == null) {
             return null;
         }
-        List<String> names = jdbc.queryForList("select name from public." + table + " where id = ?",
+        List<String> names = jdbc.queryForList("select name from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where id = ?",
                 String.class, id);
         return names.isEmpty() ? null : names.get(0);
     }

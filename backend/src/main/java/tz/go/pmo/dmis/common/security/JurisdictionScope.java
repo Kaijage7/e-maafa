@@ -335,7 +335,7 @@ public class JurisdictionScope {
             return null;
         }
         try {
-            return jdbc.queryForObject("select name from public." + table + " where id = ?", String.class, id);
+            return jdbc.queryForObject("select name from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where id = ?", String.class, id);
         } catch (EmptyResultDataAccessException unknownArea) {
             return null;
         }

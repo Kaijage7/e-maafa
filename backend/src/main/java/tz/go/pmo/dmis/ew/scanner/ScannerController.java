@@ -474,8 +474,9 @@ public class ScannerController {
     }
     private void healSeq(String table) {
         try {
-            jdbc.execute("select setval(pg_get_serial_sequence('public." + table + "','id'), "
-                + "greatest((select coalesce(max(id),0) from public." + table + "),1))");
+            String safe = tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicTable(table);
+            jdbc.execute("select setval(pg_get_serial_sequence('public." + safe + "','id'), "
+                + "greatest((select coalesce(max(id),0) from public." + safe + "),1))");
         } catch (Exception ignored) { }
     }
     private static String str(Object o) { return o == null ? null : String.valueOf(o); }

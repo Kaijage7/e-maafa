@@ -1485,7 +1485,7 @@ public class MonitoringEvaluationService {
     }
 
     private String nameOf(String table, Long id) {
-        return value("select name from public." + table + " where id = ?", id);
+        return value("select name from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where id = ?", id);
     }
 
     private String value(String sql, Object... args) {

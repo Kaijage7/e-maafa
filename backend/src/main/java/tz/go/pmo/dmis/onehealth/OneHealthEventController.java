@@ -712,7 +712,7 @@ public class OneHealthEventController {
     }
 
     private boolean exists(String table, long id) {
-        Long c = jdbc.queryForObject("select count(*) from public." + table + " where id = ?", Long.class, id);
+        Long c = jdbc.queryForObject("select count(*) from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where id = ?", Long.class, id);
         return c != null && c > 0;
     }
 

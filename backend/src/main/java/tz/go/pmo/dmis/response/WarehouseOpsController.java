@@ -648,7 +648,7 @@ public class WarehouseOpsController {
     /** Display name of a store for notification/journal text. */
     private String storeName(String type, long id) {
         String table = "zonal".equals(type) ? "public.warehouses" : "public.temporary_warehouses";
-        List<String> n = jdbc.queryForList("select name from " + table + " where id = ?", String.class, id);
+        List<String> n = jdbc.queryForList("select name from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where id = ?", String.class, id);
         return n.isEmpty() ? ("#" + id) : n.get(0);
     }
 

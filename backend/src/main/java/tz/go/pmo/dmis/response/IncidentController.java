@@ -1124,7 +1124,7 @@ public class IncidentController {
     }
 
     private long count(String table, long id) {
-        Long c = jdbc.queryForObject("select count(*) from public." + table + " where id = ?", Long.class, id);
+        Long c = jdbc.queryForObject("select count(*) from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where id = ?", Long.class, id);
         return c == null ? 0 : c;
     }
 
@@ -1212,7 +1212,7 @@ public class IncidentController {
         if (id == null) {
             return null;
         }
-        List<String> names = jdbc.queryForList("select name from public." + table + " where id = ?", String.class, id);
+        List<String> names = jdbc.queryForList("select name from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where id = ?", String.class, id);
         return names.isEmpty() ? null : names.get(0);
     }
 

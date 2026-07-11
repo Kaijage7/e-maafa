@@ -719,7 +719,7 @@ public class IncidentWorkflowService {
         if (id == null) {
             return null;
         }
-        List<String> names = jdbc.queryForList("select name from public." + table + " where id = ?", String.class, id);
+        List<String> names = jdbc.queryForList("select name from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where id = ?", String.class, id);
         return names.isEmpty() ? null : names.get(0);
     }
 
@@ -731,7 +731,7 @@ public class IncidentWorkflowService {
                 "select u.id from public.users u "
                 + "join public.model_has_roles mhr on mhr.model_id = u.id "
                 + "join public.roles r on r.id = mhr.role_id "
-                + "where r.name = ? and u." + areaColumn + " = ?",
+                + "where r.name = ? and u." + tz.go.pmo.dmis.common.sql.SafeIdentifiers.userAreaColumn(areaColumn) + " = ?",
                 Long.class, role, areaId);
     }
 

@@ -343,7 +343,7 @@ public class LocationController {
      */
     private void heal(String table) {
         jdbc.queryForList("select setval(pg_get_serial_sequence('public." + table + "','id'), m)"
-                + " from (select max(id) m from public." + table + ") s where m is not null");
+                + " from (select max(id) m from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + ") s where m is not null");
     }
 
     private void ensureRegionalSeats(long regionId) {

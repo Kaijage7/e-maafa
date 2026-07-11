@@ -433,7 +433,7 @@ public class ExerciseScenarioController {
 
     private Long lookupId(String table, String name) {
         List<Long> ids = jdbc.queryForList(
-                "select id from " + table + " where lower(name) = lower(?) limit 1",
+                "select id from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where lower(name) = lower(?) limit 1",
                 Long.class, name);
         return ids.isEmpty() ? null : ids.get(0);
     }

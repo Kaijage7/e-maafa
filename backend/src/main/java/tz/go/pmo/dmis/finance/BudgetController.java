@@ -572,7 +572,7 @@ public class BudgetController {
         if (id == null) {
             return false;
         }
-        Long n = jdbc.queryForObject("select count(*) from public." + table + " where id = ?", Long.class, id);
+        Long n = jdbc.queryForObject("select count(*) from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table) + " where id = ?", Long.class, id);
         return n != null && n > 0;
     }
 

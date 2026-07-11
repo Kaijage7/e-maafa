@@ -135,11 +135,16 @@ public class HazardService {
 
     /** Existence check tolerant of the dependent table not existing on a standalone local database. */
     private boolean hasRows(String table, String where, Object param) {
-        Boolean tableExists = jdbc.queryForObject("select to_regclass('public." + table + "') is not null", Boolean.class);
+        String safe = tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicTable(table);
+        // where must be a fixed developer literal with ? placeholders only (never user input).
+        if (where == null || !where.contains("?") || where.contains(";") || where.toLowerCase().contains("drop ")) {
+            return false;
+        }
+        Boolean tableExists = jdbc.queryForObject("select to_regclass('public." + safe + "') is not null", Boolean.class);
         if (!Boolean.TRUE.equals(tableExists)) {
             return false;
         }
-        Boolean exists = jdbc.queryForObject("select exists(select 1 from public." + table + " where " + where + ")",
+        Boolean exists = jdbc.queryForObject("select exists(select 1 from public." + safe + " where " + where + ")",
                 Boolean.class, param);
         return Boolean.TRUE.equals(exists);
     }
