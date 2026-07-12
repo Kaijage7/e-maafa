@@ -16,6 +16,8 @@ import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import tz.go.pmo.dmis.entity.Warehouse;
+import tz.go.pmo.dmis.repository.WarehouseRepository;
 
 /**
  * Reads the existing inventory_items (joining resources + warehouses) for the Emergency Supplies index,

@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,8 +17,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.dto.request.WarehouseWriteRequest;
+import tz.go.pmo.dmis.dto.response.WarehouseResponse;
+import tz.go.pmo.dmis.service.WarehouseService;
 
-/** API for the Warehouses screen, over the existing table (read + create). */
+/** API for the Warehouses screen. Paths unchanged from the legacy package layout. */
 @RestController
 @RequestMapping("/v1/warehouses")
 @Tag(name = "Preparedness", description = "Warehouses")
@@ -49,10 +52,6 @@ public class WarehouseController {
     @Operation(summary = "Create a new warehouse")
     @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
     public Map<String, Object> create(@RequestBody WarehouseWriteRequest request) {
-        // Bind the new warehouse to the caller's area: a region/district officer cannot create a
-        // warehouse in another area by supplying region/district in the body. The service resolves the
-        // area from the free-text region/district names, so we override those names with the caller's own
-        // area before delegating; NATIONAL tier keeps the body-supplied area (it may place anywhere).
         return warehouseService.create(bindToCallerArea(request));
     }
 
@@ -72,12 +71,6 @@ public class WarehouseController {
         return warehouseService.update(id, bindToCallerArea(request));
     }
 
-    /**
-     * For a region/district officer, force the request's region/district names to the caller's own area so
-     * the warehouse is stamped with their jurisdiction (the body-supplied area is ignored). NATIONAL and
-     * non-area roles keep whatever the body sent. Out-of-area placement is therefore impossible for a
-     * sub-national officer regardless of the payload.
-     */
     private WarehouseWriteRequest bindToCallerArea(WarehouseWriteRequest req) {
         JurisdictionScope.Tier tier = jurisdiction.currentTier();
         if (tier != JurisdictionScope.Tier.REGION && tier != JurisdictionScope.Tier.DISTRICT) {
@@ -88,7 +81,6 @@ public class WarehouseController {
         String districtName = tier == JurisdictionScope.Tier.DISTRICT
                 ? nameOf("districts", area.get("district_id"))
                 : null;
-        // A district officer's region is the parent of their district; resolve it when not set directly.
         if (regionName == null && area.get("district_id") != null) {
             regionName = parentRegionName(area.get("district_id"));
         }

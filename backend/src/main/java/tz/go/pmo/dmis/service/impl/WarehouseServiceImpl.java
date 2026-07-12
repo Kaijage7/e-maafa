@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.service.impl;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -12,24 +12,26 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import tz.go.pmo.dmis.common.security.AreaLookup;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.dto.request.WarehouseWriteRequest;
+import tz.go.pmo.dmis.dto.response.WarehouseResponse;
+import tz.go.pmo.dmis.entity.Warehouse;
+import tz.go.pmo.dmis.repository.WarehouseRepository;
+import tz.go.pmo.dmis.service.WarehouseService;
 
 /**
- * Reads the existing warehouses table and shapes it for the Warehouses index screen, reproducing
- * the warehouse registry rows + the four statistics. Also creates new warehouses (write via JdbcTemplate
- * so the read entity stays immutable). The registry is jurisdiction-scoped: a region/district officer
- * sees their own area plus shared (null-area) warehouses; the national tier sees all. Stock units per
- * warehouse aggregate the inventory_items ledger with the same predicate warehouse-ops uses
- * (warehouse_id = w.id and temporary_warehouse_id is null) so both screens report identical numbers.
+ * Warehouse registry: jurisdiction-scoped reads, JDBC writes (entity stays immutable).
+ * Stock units match warehouse-ops ledger predicate.
  */
 @Service
 @RequiredArgsConstructor
-public class WarehouseService {
+public class WarehouseServiceImpl implements WarehouseService {
 
     private final WarehouseRepository warehouses;
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
     private final AreaLookup areaLookup;
 
+    @Override
     @Transactional(readOnly = true)
     public WarehouseResponse index() {
         JurisdictionScope.AreaFilter f = jurisdiction.sharedOrOwnFilter();
@@ -47,7 +49,7 @@ public class WarehouseService {
                 new WarehouseResponse.Stats(total, operational, underMaintenance, totalCapacity));
     }
 
-    /** Creates a new warehouse (Warehouses → New Warehouse). */
+    @Override
     @Transactional
     public Map<String, Object> create(WarehouseWriteRequest req) {
         if (req.name() == null || req.name().isBlank() || req.zone() == null || req.zone().isBlank()) {
@@ -68,7 +70,7 @@ public class WarehouseService {
         return Map.of("id", id, "message", "Warehouse created");
     }
 
-    /** Single warehouse (for the edit form to pre-fill). */
+    @Override
     @Transactional(readOnly = true)
     public Map<String, Object> show(long id) {
         var rows = jdbc.queryForList("""
@@ -88,7 +90,7 @@ public class WarehouseService {
         return rows.get(0);
     }
 
-    /** Updates an existing warehouse (Warehouses → Edit). */
+    @Override
     @Transactional
     public Map<String, Object> update(long id, WarehouseWriteRequest req) {
         if (req.name() == null || req.name().isBlank() || req.zone() == null || req.zone().isBlank()) {
@@ -127,10 +129,6 @@ public class WarehouseService {
                 w.getDistrictId() == null ? null : districts.get(w.getDistrictId()));
     }
 
-    /**
-     * Total units currently held per permanent warehouse — same ledger predicate as the
-     * warehouse-ops stock dashboard (temporary-warehouse lines excluded) so both screens agree.
-     */
     private Map<Long, Long> stockUnitsByWarehouse() {
         Map<Long, Long> units = new HashMap<>();
         jdbc.query("""

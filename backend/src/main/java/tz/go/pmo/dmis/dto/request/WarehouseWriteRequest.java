@@ -1,6 +1,6 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.dto.request;
 
-/** Payload for creating a warehouse, mirroring admin/warehouses/create-v2. */
+/** Payload for creating or updating a warehouse. */
 public record WarehouseWriteRequest(
         String name,
         String zone,
