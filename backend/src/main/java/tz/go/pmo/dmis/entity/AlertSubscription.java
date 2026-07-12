@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,7 +10,10 @@ import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/** Read-only view of the existing {@code alert_subscriptions} table (Preparedness). */
+/**
+ * JPA mapping of {@code public.alert_subscriptions} (Preparedness — citizen alert subscribers).
+ * Read model is immutable; writes go through the service layer via JDBC for JSON columns.
+ */
 @Getter
 @Entity
 @Immutable

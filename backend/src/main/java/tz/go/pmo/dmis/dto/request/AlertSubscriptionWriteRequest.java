@@ -1,8 +1,8 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.dto.request;
 
 import java.util.List;
 
-/** Payload for creating an alert subscriber. */
+/** Payload for creating or updating an alert subscriber. */
 public record AlertSubscriptionWriteRequest(
         String fullName,
         String subscriberLocation,

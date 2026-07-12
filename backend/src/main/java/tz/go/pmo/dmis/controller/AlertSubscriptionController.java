@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,9 +14,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.dto.request.AlertSubscriptionWriteRequest;
+import tz.go.pmo.dmis.dto.response.AlertSubscriptionResponse;
+import tz.go.pmo.dmis.service.AlertSubscriptionService;
 
-/** API for the Alert Subscriptions screen, over the existing table (read + create). */
+/**
+ * API for the Alert Subscriptions screen. Paths unchanged from the legacy package layout.
+ */
 @RestController
 @RequestMapping("/v1/alert-subscriptions")
 @RequiredArgsConstructor

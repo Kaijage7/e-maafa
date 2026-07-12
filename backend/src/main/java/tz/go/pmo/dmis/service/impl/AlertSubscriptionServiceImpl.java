@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,11 +11,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.dto.request.AlertSubscriptionWriteRequest;
+import tz.go.pmo.dmis.dto.response.AlertSubscriptionResponse;
+import tz.go.pmo.dmis.entity.AlertSubscription;
+import tz.go.pmo.dmis.repository.AlertSubscriptionRepository;
+import tz.go.pmo.dmis.service.AlertSubscriptionService;
 
-/** Reads + creates alert_subscriptions for the index screen (json channels/hazards). */
+/** Service implementation for alert_subscriptions (json channels/hazards). */
 @Service
 @RequiredArgsConstructor
-public class AlertSubscriptionService {
+public class AlertSubscriptionServiceImpl implements AlertSubscriptionService {
 
     private static final DateTimeFormatter D_MON_Y = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
@@ -23,7 +28,7 @@ public class AlertSubscriptionService {
     private final ObjectMapper objectMapper;
     private final JdbcTemplate jdbc;
 
-    /** Creates a new alert subscriber (auto subscription_id SUB-YYYY-NNNN, json channels/hazards/languages). */
+    @Override
     @Transactional
     public Map<String, Object> create(AlertSubscriptionWriteRequest req) {
         if (req.fullName() == null || req.fullName().isBlank()) {
@@ -49,7 +54,7 @@ public class AlertSubscriptionService {
         return Map.of("subscriptionId", id, "message", "Subscriber created");
     }
 
-    /** One subscriber's fields for the edit form. */
+    @Override
     @Transactional(readOnly = true)
     public Map<String, Object> detail(long id) {
         AlertSubscription s = repo.findById(id).orElseThrow(
@@ -69,7 +74,7 @@ public class AlertSubscriptionService {
         return m;
     }
 
-    /** Updates an existing subscriber (the SUB- code is immutable). */
+    @Override
     @Transactional
     public Map<String, Object> update(long id, AlertSubscriptionWriteRequest req) {
         if (req.fullName() == null || req.fullName().isBlank()) {
@@ -92,18 +97,7 @@ public class AlertSubscriptionService {
         return Map.of("id", id, "message", "Subscriber updated");
     }
 
-    private String jsonArray(List<String> list) {
-        try {
-            return objectMapper.writeValueAsString(list == null ? List.of() : list);
-        } catch (Exception e) {
-            return "[]";
-        }
-    }
-
-    private static String blank(String v) {
-        return (v == null || v.isBlank()) ? null : v.trim();
-    }
-
+    @Override
     @Transactional(readOnly = true)
     public AlertSubscriptionResponse index() {
         List<AlertSubscription> all = repo.findAllByOrderBySubscribedAtDesc();
@@ -119,6 +113,18 @@ public class AlertSubscriptionService {
         long sms = all.stream().filter(s -> hasChannel(s, "SMS")).count();
         long email = all.stream().filter(s -> hasChannel(s, "Email")).count();
         return new AlertSubscriptionResponse(rows, new AlertSubscriptionResponse.Stats(total, active, sms, email));
+    }
+
+    private String jsonArray(List<String> list) {
+        try {
+            return objectMapper.writeValueAsString(list == null ? List.of() : list);
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    private static String blank(String v) {
+        return (v == null || v.isBlank()) ? null : v.trim();
     }
 
     private boolean hasChannel(AlertSubscription s, String channel) {

@@ -144,14 +144,21 @@ The tree still contains legacy feature packages (`response/`, `ew/`, `mitigation
 
 Suggested migration order:
 
-1. Settings / catalogue (small, JPA-friendly)  
-2. Public reports / portal admin  
-3. Mitigation master data (hazards, measures)  
-4. Preparedness registries  
-5. Response (keep SQL query ports behind `service.impl` where needed)  
-6. Early Warning  
-7. Integration clients into `integration/*`  
-8. Delete empty legacy feature packages  
+1. ~~**Alert subscriptions (Preparedness)**~~ — **DONE** (`controller` / `service` / `service.impl` / `repository` / `entity` / `dto`). Paths unchanged: `/v1/alert-subscriptions`.  
+2. Settings / catalogue (small, JPA-friendly)  
+3. Public reports / portal admin  
+4. Mitigation master data (hazards, measures)  
+5. Other preparedness registries (warehouses, evacuation centres, …)  
+6. Response (keep SQL query ports behind `service.impl` where needed)  
+7. Early Warning  
+8. Integration clients into `integration/*`  
+9. Delete empty legacy feature packages  
+
+### Migration log
+
+| Module | Status | API paths | Verified |
+|--------|--------|-----------|----------|
+| Alert subscriptions | Done | `GET/POST /v1/alert-subscriptions`, `GET/PUT /{id}` | Index, detail, create, update, 400/401/403/404, proxy via :4200, jar package layout |
 
 ---
 
