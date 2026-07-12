@@ -191,12 +191,68 @@ interface GisPayload {
     .eo-foot .lbl {
       font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8;
     }
-    .eo-foot a {
-      color: #0f766e; font-weight: 700; text-decoration: none; font-size: 0.74rem;
+    .eo-foot button.tool {
+      color: #0f766e; font-weight: 700; font-size: 0.74rem; font-family: inherit; cursor: pointer;
       border: 1px solid #99f6e4; background: #f0fdfa; border-radius: 8px; padding: 5px 10px;
     }
-    .eo-foot a:hover { background: #ccfbf1; }
+    .eo-foot button.tool:hover { background: #ccfbf1; }
+    .eo-foot button.tool.on { background: #0f766e; color: #fff; border-color: #0f766e; }
     .eo-foot .note { font-size: 0.68rem; color: #94a3b8; margin-left: auto; }
+    /* In-system EO viewer — never navigates away */
+    .eo-modal-bg {
+      position: fixed; inset: 0; z-index: 4000; background: rgba(15,23,42,0.72);
+      display: flex; align-items: stretch; justify-content: center; padding: 12px;
+    }
+    .eo-modal {
+      width: min(1200px, 100%); background: #0f172a; border-radius: 14px; overflow: hidden;
+      display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+      max-height: calc(100vh - 24px);
+    }
+    .eo-modal-head {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      padding: 12px 16px; background: #1e293b; color: #f8fafc; border-bottom: 1px solid #334155;
+    }
+    .eo-modal-head b { font-size: 0.95rem; }
+    .eo-modal-head .sub { font-size: 0.72rem; color: #94a3b8; font-weight: 600; }
+    .eo-modal-head .x {
+      margin-left: auto; border: none; background: #334155; color: #fff; border-radius: 8px;
+      width: 36px; height: 36px; font-size: 1.2rem; cursor: pointer; line-height: 1;
+    }
+    .eo-modal-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; background: #1e293b; }
+    .eo-modal-tabs button {
+      border: 1px solid #475569; background: #0f172a; color: #cbd5e1; border-radius: 8px;
+      padding: 6px 12px; font: inherit; font-size: 0.74rem; font-weight: 700; cursor: pointer;
+    }
+    .eo-modal-tabs button.on { background: #0f766e; border-color: #0f766e; color: #fff; }
+    .eo-modal-body { flex: 1; min-height: 0; background: #020617; position: relative; overflow: hidden; }
+    .eo-modal-body img.full { width: 100%; height: 100%; object-fit: contain; display: block; min-height: 420px; }
+    .eo-swipe-wrap { position: relative; width: 100%; height: min(70vh, 640px); background: #020617; overflow: hidden; user-select: none; }
+    .eo-swipe-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .eo-swipe-wrap .after { clip-path: inset(0 0 0 var(--reveal, 50%)); }
+    .eo-swipe-wrap .handle {
+      position: absolute; top: 0; bottom: 0; width: 3px; background: #f8fafc;
+      left: var(--reveal, 50%); transform: translateX(-50%); pointer-events: none;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+    }
+    .eo-swipe-wrap .handle::after {
+      content: '⟷'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      background: #0f766e; color: #fff; width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800;
+    }
+    .eo-swipe-wrap .lab {
+      position: absolute; top: 12px; z-index: 2; background: rgba(15,23,42,0.75); color: #fff;
+      font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 6px;
+    }
+    .eo-swipe-wrap .lab.a { left: 12px; }
+    .eo-swipe-wrap .lab.b { right: 12px; }
+    .eo-swipe-range {
+      position: absolute; left: 0; right: 0; bottom: 16px; width: 70%; margin: 0 auto; display: block;
+      z-index: 3; accent-color: #0f766e;
+    }
+    .eo-modal-foot {
+      padding: 8px 14px; background: #1e293b; color: #94a3b8; font-size: 0.72rem;
+      border-top: 1px solid #334155;
+    }
   `],
   template: `
     <dmis-page-header title="Risk Mapping & GIS" icon="fa-map-marked-alt"
@@ -291,18 +347,59 @@ interface GisPayload {
       </div>
 
       <div class="eo-foot">
-        <span class="lbl">Sentinel &amp; tools</span>
-        @for (l of sentinelLinksList(); track l.key) {
-          <a [href]="l.url" target="_blank" rel="noopener noreferrer">{{ l.title }}</a>
-        }
-        @for (l of externalLinks(); track l.key) {
-          @if (l.key === 'worldview_compare') {
-            <a [href]="l.url" target="_blank" rel="noopener noreferrer" [title]="l.note">Worldview swipe</a>
-          }
-        }
-        <span class="note">NASA GIBS snapshots · human review only</span>
+        <span class="lbl">Sentinel &amp; tools (in-system)</span>
+        <button type="button" class="tool" [class.on]="viewerMode()==='s2a'" (click)="openEoViewer('s2a')">Sentinel-2 · A</button>
+        <button type="button" class="tool" [class.on]="viewerMode()==='s2b'" (click)="openEoViewer('s2b')">Sentinel-2 · B</button>
+        <button type="button" class="tool" [class.on]="viewerMode()==='swipe'" (click)="openEoViewer('swipe')">Worldview swipe</button>
+        <span class="note">Opens inside e-MAAFA · NASA GIBS high-detail · human review only</span>
       </div>
     </div>
+
+    @if (viewerOpen()) {
+      <div class="eo-modal-bg" (click)="closeEoViewer()">
+        <div class="eo-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" [attr.aria-label]="viewerTitle()">
+          <div class="eo-modal-head">
+            <div>
+              <b><i class="fas fa-satellite" style="margin-right:6px;color:#5eead4"></i>{{ viewerTitle() }}</b>
+              <div class="sub">{{ currentAoi().label }} · stay in e-MAAFA · {{ eoProductLabel() }}</div>
+            </div>
+            <button type="button" class="x" (click)="closeEoViewer()" aria-label="Close">×</button>
+          </div>
+          <div class="eo-modal-tabs">
+            <button type="button" [class.on]="viewerMode()==='s2a'" (click)="openEoViewer('s2a')">Detail · date A ({{ eoDateA() }})</button>
+            <button type="button" [class.on]="viewerMode()==='s2b'" (click)="openEoViewer('s2b')">Detail · date B ({{ eoDateB() }})</button>
+            <button type="button" [class.on]="viewerMode()==='swipe'" (click)="openEoViewer('swipe')">A / B swipe</button>
+          </div>
+          <div class="eo-modal-body">
+            @if (viewerMode() === 'swipe') {
+              <div class="eo-swipe-wrap" [style.--reveal.%]="swipeReveal()">
+                <span class="lab a">A · {{ eoDateA() }}</span>
+                <span class="lab b">B · {{ eoDateB() }}</span>
+                @if (viewerShotA()) {
+                  <img [src]="viewerShotA()!" alt="Before A" draggable="false">
+                }
+                @if (viewerShotB()) {
+                  <img class="after" [src]="viewerShotB()!" alt="After B" draggable="false">
+                }
+                <div class="handle"></div>
+                <input class="eo-swipe-range" type="range" min="0" max="100" [value]="swipeReveal()"
+                  (input)="swipeReveal.set(+$any($event.target).value)">
+              </div>
+            } @else {
+              @if (viewerSingle()) {
+                <img class="full" [src]="viewerSingle()!" [alt]="viewerTitle()" (error)="viewerSingle.set(null)">
+              } @else {
+                <div style="color:#94a3b8;padding:48px;text-align:center;">No snapshot for this date — try another day or product type.</div>
+              }
+            }
+          </div>
+          <div class="eo-modal-foot">
+            In-system NASA GIBS / Worldview Snapshots for {{ currentAoi().label }}
+            (higher-detail true colour when available). External Copernicus login is not required to review dates here.
+          </div>
+        </div>
+      </div>
+    }
 
     <div class="panel" style="animation-delay:.25s;">
       <div class="panel-head">
@@ -394,6 +491,13 @@ export class GisMapComponent implements AfterViewInit, OnDestroy {
   shotB = signal<string | null>(null);
   /** Frame lock: Tanzania | East Africa | map-selected region (clamped to Africa). */
   aoiMode = signal<'tz' | 'eaf' | 'region'>('tz');
+  /** In-app EO tool viewer (Sentinel A/B · Worldview swipe) — no navigation away. */
+  viewerOpen = signal(false);
+  viewerMode = signal<'s2a' | 's2b' | 'swipe' | null>(null);
+  viewerSingle = signal<string | null>(null);
+  viewerShotA = signal<string | null>(null);
+  viewerShotB = signal<string | null>(null);
+  swipeReveal = signal(50);
 
   toggles: { key: string; label: string; color: string; icon: string; count: number | null }[] = [
     { key: 'infra', label: 'Infrastructure', color: '#003366', icon: 'fa-building', count: 0 },
@@ -530,6 +634,56 @@ export class GisMapComponent implements AfterViewInit, OnDestroy {
 
   sentinelLinksList() {
     return sentinelLinks(this.currentAoi(), this.eoDateA(), this.eoDateB());
+  }
+
+  eoProductLabel(): string {
+    return eoProductById(this.eoProduct()).label;
+  }
+
+  viewerTitle(): string {
+    switch (this.viewerMode()) {
+      case 's2a': return 'Detail view · date A (in-system)';
+      case 's2b': return 'Detail view · date B (in-system)';
+      case 'swipe': return 'Before / after swipe (in-system)';
+      default: return 'EO tools';
+    }
+  }
+
+  /**
+   * Open Sentinel A/B or Worldview swipe inside e-MAAFA using high-res NASA snapshots
+   * for the selected AOI and dates — operator never leaves the system.
+   */
+  openEoViewer(mode: 's2a' | 's2b' | 'swipe'): void {
+    const aoi = this.currentAoi();
+    // Prefer higher-detail VIIRS when the archive allows; else current exposure product.
+    const detail = this.detailProductFor(this.eoDateA());
+    const detailB = this.detailProductFor(this.eoDateB());
+    const w = 1280;
+    const h = 800;
+    this.viewerShotA.set(snapshotUrl(aoi, detail, this.eoDateA(), w, h));
+    this.viewerShotB.set(snapshotUrl(aoi, detailB, this.eoDateB(), w, h));
+    if (mode === 's2a') {
+      this.viewerSingle.set(this.viewerShotA());
+    } else if (mode === 's2b') {
+      this.viewerSingle.set(this.viewerShotB());
+    } else {
+      this.viewerSingle.set(null);
+      this.swipeReveal.set(50);
+    }
+    this.viewerMode.set(mode);
+    this.viewerOpen.set(true);
+  }
+
+  closeEoViewer(): void {
+    this.viewerOpen.set(false);
+    this.viewerMode.set(null);
+  }
+
+  /** Higher-detail product for the date when archive allows (VIIRS from 2018). */
+  private detailProductFor(date: string) {
+    const hi = eoProductById('viirs_hi');
+    if (date >= hi.archiveStart) return hi;
+    return eoProductById(this.eoProduct());
   }
 
   showEoSlot(slot: 'A' | 'B'): void {

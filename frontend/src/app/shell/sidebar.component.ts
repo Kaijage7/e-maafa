@@ -1,15 +1,36 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
-import { moduleBySlug } from '../core/modules';
+import { ModuleItem, moduleBySlug } from '../core/modules';
 import { hasRequiredPermission, routePermission } from '../core/access';
 import { qrcodegen } from '../shared/qrcodegen';
 
-/** Exact reproduction of components/dmis/sidebar.blade.php (module mode: back-to-hub + current module). */
+/**
+ * Module sidebar: items grouped into collapsible process categories
+ * (Command → Alerts → Incidents → Resources → Coordination) so a long
+ * Response list is not one flat wall of links.
+ */
 @Component({
   selector: 'app-sidebar',
   standalone: true,
   imports: [RouterLink],
+  styles: [`
+    .sb-group { border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .sb-group-head {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 0.45rem 0.85rem 0.35rem; background: transparent; border: none;
+      color: rgba(255,255,255,0.55); font-size: 0.68rem; font-weight: 800;
+      letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; text-align: left;
+    }
+    .sb-group-head:hover { color: rgba(255,255,255,0.85); }
+    .sb-group-head .cnt {
+      margin-left: auto; background: rgba(255,255,255,0.12); color: #fff;
+      border-radius: 999px; font-size: 0.65rem; padding: 0 6px; font-weight: 800;
+    }
+    .sb-group-head .ch { font-size: 0.65rem; opacity: 0.6; transition: transform .15s; }
+    .sb-group.open .sb-group-head .ch { transform: rotate(180deg); }
+    .sb-group-body { padding-bottom: 0.25rem; }
+  `],
   template: `
     <div class="sidebar" id="sidebar">
       <div class="sidebar-scroll">
@@ -27,17 +48,30 @@ import { qrcodegen } from '../shared/qrcodegen';
               <div class="sb-section-icon" [style.color]="m.color"><i class="fas {{ m.icon }}"></i></div>
               <div class="sb-section-text">
                 <div class="sb-section-name">{{ m.name }}</div>
-                <div class="sb-section-count">{{ items().length }} items · full list</div>
+                <div class="sb-section-count">{{ items().length }} screens · by process step</div>
               </div>
             </div>
             <div class="sb-items">
-              @for (item of items(); track item.path) {
-                <a [routerLink]="linkFor(m.slug, item.path)" class="sb-link"
-                   [class.active]="item.path === activeItem()"
-                   [attr.title]="item.name + ' — ' + item.description">
-                  <i class="fas {{ item.icon }} sb-link-icon"></i>
-                  <span class="sb-link-text">{{ item.name }}</span>
-                </a>
+              @for (g of groups(); track g.name) {
+                <div class="sb-group" [class.open]="isOpen(g.name)">
+                  <button type="button" class="sb-group-head" (click)="toggle(g.name)">
+                    {{ g.name }}
+                    <span class="cnt">{{ g.items.length }}</span>
+                    <i class="fas fa-chevron-down ch"></i>
+                  </button>
+                  @if (isOpen(g.name)) {
+                    <div class="sb-group-body">
+                      @for (item of g.items; track item.path) {
+                        <a [routerLink]="linkFor(m.slug, item.path)" class="sb-link"
+                           [class.active]="item.path === activeItem()"
+                           [attr.title]="item.name + ' — ' + item.description">
+                          <i class="fas {{ item.icon }} sb-link-icon"></i>
+                          <span class="sb-link-text">{{ item.name }}</span>
+                        </a>
+                      }
+                    </div>
+                  }
+                </div>
               }
             </div>
           </div>
@@ -68,9 +102,9 @@ export class SidebarComponent {
   currentModule = input<string | null>(null);
   activeItem = input<string | null>(null);
   module = computed(() => moduleBySlug(this.currentModule() ?? ''));
+  /** Which process groups are expanded (first open by default). */
+  private openGroups = signal<Set<string>>(new Set());
 
-  /** Small "scan to register" QR at the foot of the sidebar — encodes the register page on the current
-   *  origin (so it auto-targets localhost / LAN / live domain), rendered in-system via the vendored encoder. */
   qr = (() => {
     const origin = (typeof window !== 'undefined' && window.location) ? window.location.origin : 'http://localhost:4200';
     const q = qrcodegen.QrCode.encodeText(origin + '/register-partner', qrcodegen.QrCode.Ecc.MEDIUM);
@@ -84,22 +118,47 @@ export class SidebarComponent {
     return { n, dark, vb: `-3 -3 ${n + 6} ${n + 6}` };
   })();
 
-  /** Sidebar items the user may open — an item is shown only if its route permission is granted (same map
-   * as the backend ModuleGuardFilter and the route guard). So component visibility is configured purely in
-   * User Management → Roles & Permissions, never hardcoded per user/role. Unmapped items always show. */
   items = computed(() => {
     const m = this.module();
-    if (!m) {
-      return [];
-    }
+    if (!m) return [];
     return m.items.filter(item => {
       const perm = routePermission(this.linkFor(m.slug, item.path).join('/'));
       return hasRequiredPermission(p => this.auth.hasPermission(p), perm);
     });
   });
 
-  /** Build a routerLink segment array, splitting nested item paths (e.g. 'early-warnings/mow') into
-   * real segments so RouterLink doesn't percent-encode the slash. */
+  groups = computed(() => {
+    const list = this.items();
+    const map = new Map<string, ModuleItem[]>();
+    for (const item of list) {
+      const g = item.group || 'Screens';
+      if (!map.has(g)) map.set(g, []);
+      map.get(g)!.push(item);
+    }
+    return [...map.entries()].map(([name, items]) => ({ name, items }));
+  });
+
+  isOpen(name: string): boolean {
+    const groups = this.groups();
+    const s = this.openGroups();
+    if (s.size === 0) {
+      if (!groups.length) return true;
+      if (name === groups[0].name) return true;
+      const active = this.activeItem();
+      return groups.some(g => g.name === name && g.items.some(i => i.path === active));
+    }
+    return s.has(name);
+  }
+
+  toggle(name: string): void {
+    this.openGroups.update(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
   linkFor(slug: string, path: string): any[] {
     return ['/m', slug, ...(path ?? '').split('/')];
   }

@@ -356,7 +356,10 @@ export class TopbarComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Open a notification: mark it read and follow its deep link. */
+  /**
+   * Open a notification: mark it read and follow its deep link into the right
+   * process screen (EW → Issued Alerts, generic response → Dashboard).
+   */
   open(n: any): void {
     if (!n.is_read) {
       this.http.post(`/api/v1/notifications/${n.id}/read`, {}).subscribe({ next: () => { }, error: () => { } });
@@ -364,7 +367,41 @@ export class TopbarComponent implements OnInit, OnDestroy {
       this.unread.update(v => Math.max(0, v - 1));
     }
     this.bellOpen.set(false);
-    if (n.link) { this.router.navigateByUrl(n.link); }
+    const raw = String(n.link || n.url || '').trim();
+    const path = this.resolveNotifLink(raw, n);
+    if (path) {
+      this.router.navigateByUrl(path);
+    }
+  }
+
+  /** Map stored notification links onto stable Angular routes. */
+  private resolveNotifLink(link: string, n: any): string {
+    const type = String(n.type || n.entity_type || n.category || '').toLowerCase();
+    if (!link || link === '/' || link === '/m/response') {
+      if (type.includes('early_warning') || type.includes('warning') || type.includes('bulletin')) {
+        return '/m/response/issued-alerts';
+      }
+      if (type.includes('incident') || type.includes('public_hazard') || type.includes('phr')) {
+        return '/m/response/incidents';
+      }
+      if (type.includes('allocat') || type.includes('resource')) {
+        return '/m/response/resource-approvals';
+      }
+      return '/m/response/dashboard';
+    }
+    // Normalise legacy / absolute paths
+    if (link.startsWith('http')) {
+      try {
+        const u = new URL(link);
+        return u.pathname + u.search;
+      } catch { /* fall through */ }
+    }
+    if (link.includes('early-warning') || link.includes('issued-alert')) {
+      return '/m/response/issued-alerts';
+    }
+    if (link.startsWith('/m/')) return link;
+    if (link.startsWith('/')) return link;
+    return '/m/response/dashboard';
   }
 
   markAllRead(): void {

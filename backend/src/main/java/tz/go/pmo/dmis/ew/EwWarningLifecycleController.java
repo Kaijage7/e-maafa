@@ -308,7 +308,7 @@ public class EwWarningLifecycleController {
                 notifications.notifyAreaCoordinators(affectedAreas,
                         tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
                                 "early_warning_published", "Early warning for your area", pubMessage,
-                                "/m/response", "early_warning", id, "warning"));
+                                "/m/response/issued-alerts", "early_warning", id, "warning"));
             } catch (Exception ignored) { }
             try {
                 // National ops still get every published warning (command picture).

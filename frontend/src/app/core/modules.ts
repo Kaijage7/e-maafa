@@ -9,6 +9,8 @@ export interface ModuleItem {
   icon: string;
   description: string;
   legacyRoute: string;
+  /** Optional sidebar dropdown group (e.g. "Operations", "Resources"). */
+  group?: string;
 }
 
 export interface Module {
@@ -26,14 +28,14 @@ export const MODULES: Module[] = [
     slug: 'prevention-mitigation', name: 'Prevention & Mitigation', icon: 'fa-shield-alt', color: '#0d6efd',
     description: 'Risk frameworks, hazard management and mitigation measures',
     items: [
-      { name: 'Dashboard', path: 'dashboard', icon: 'fa-tachometer-alt', description: 'Prevention & mitigation overview', legacyRoute: 'mitigation.index' },
-      { name: 'Hazard Management', path: 'hazards', icon: 'fa-fire', description: 'Manage hazard types and records', legacyRoute: 'admin.hazards.index' },
-      { name: 'Mitigation Measures', path: 'measures', icon: 'fa-shield-virus', description: 'Risk mitigation strategies and measures', legacyRoute: 'mitigation.measures.index' },
-      { name: 'Risk Assessments', path: 'risk-assessments', icon: 'fa-search-location', description: 'Hazard risk assessments — likelihood/impact scoring, approval & publishing', legacyRoute: 'admin.risk-assessments.index' },
-      { name: 'Strategic Infrastructure', path: 'infrastructure', icon: 'fa-building', description: 'Critical infrastructure inventory and resilience status', legacyRoute: 'admin.infrastructure-items.index' },
-      { name: 'Disaster Repository', path: 'past-disasters', icon: 'fa-history', description: 'Historical disaster records', legacyRoute: 'admin.past-disasters.index' },
-      { name: 'Risk Mapping', path: 'risk-mapping', icon: 'fa-map-marked-alt', description: 'Risk assessment and GIS mapping', legacyRoute: 'admin.gis.map' },
-      { name: 'INFORM Risk Index', path: 'risk-index', icon: 'fa-layer-group', description: 'INFORM subnational risk index — hazard, vulnerability & coping by council', legacyRoute: '' },
+      { name: 'Dashboard', path: 'dashboard', icon: 'fa-tachometer-alt', description: 'Prevention & mitigation overview', legacyRoute: 'mitigation.index', group: '1. Overview' },
+      { name: 'Hazard Management', path: 'hazards', icon: 'fa-fire', description: 'Manage hazard types and records', legacyRoute: 'admin.hazards.index', group: '2. Hazards & risk' },
+      { name: 'Risk Assessments', path: 'risk-assessments', icon: 'fa-search-location', description: 'Hazard risk assessments — likelihood/impact scoring, approval & publishing', legacyRoute: 'admin.risk-assessments.index', group: '2. Hazards & risk' },
+      { name: 'Risk Mapping', path: 'risk-mapping', icon: 'fa-map-marked-alt', description: 'Risk assessment and GIS mapping', legacyRoute: 'admin.gis.map', group: '2. Hazards & risk' },
+      { name: 'INFORM Risk Index', path: 'risk-index', icon: 'fa-layer-group', description: 'INFORM subnational risk index — hazard, vulnerability & coping by council', legacyRoute: '', group: '2. Hazards & risk' },
+      { name: 'Mitigation Measures', path: 'measures', icon: 'fa-shield-virus', description: 'Risk mitigation strategies and measures', legacyRoute: 'mitigation.measures.index', group: '3. Measures by institution' },
+      { name: 'Strategic Infrastructure', path: 'infrastructure', icon: 'fa-building', description: 'Critical infrastructure inventory and resilience status', legacyRoute: 'admin.infrastructure-items.index', group: '3. Measures by institution' },
+      { name: 'Disaster Repository', path: 'past-disasters', icon: 'fa-history', description: 'Historical disaster records', legacyRoute: 'admin.past-disasters.index', group: '4. History' },
     ],
   },
   {
@@ -55,24 +57,24 @@ export const MODULES: Module[] = [
     slug: 'response', name: 'Response', icon: 'fa-bolt', color: '#dc3545',
     description: 'EOCC command center, incident management and coordination',
     items: [
-      { name: 'Dashboard', path: 'dashboard', icon: 'fa-tachometer-alt', description: 'Response overview dashboard', legacyRoute: 'response.dashboard' },
-      { name: 'EOCC Command Center', path: 'eocc', icon: 'fa-terminal', description: 'Emergency Operations Command Center', legacyRoute: 'response.eocc.dashboard' },
-      { name: 'Executive Watch', path: 'executive-watch', icon: 'fa-binoculars', description: 'National situation picture for PM / PS / Directors / President', legacyRoute: 'response.executive.index' },
-      { name: 'Command Post', path: 'coordination', icon: 'fa-tower-broadcast', description: 'DRF coordination — anticipatory, live & simulation; posture ladder', legacyRoute: 'response.coordination.index' },
-      { name: 'Disaster Declarations', path: 'declarations', icon: 'fa-file-contract', description: 'Disaster Area (s.32) & State of Emergency (s.33) declarations', legacyRoute: 'response.declarations.index' },
-      { name: 'Issued Alerts', path: 'issued-alerts', icon: 'fa-bell', description: 'Read-only government warnings and bulletins issued for action', legacyRoute: 'stakeholders.warnings.index' },
-      { name: 'Active Incidents', path: 'incidents', icon: 'fa-exclamation-triangle', description: 'Manage and track active incidents', legacyRoute: 'admin.incidents.index' },
-      { name: 'Damage Assessments', path: 'assessments', icon: 'fa-clipboard-check', description: 'File and verify per-incident damage & needs assessments', legacyRoute: 'response.assessment.index' },
-      { name: 'DLNA & Recovery Plans', path: 'dlna', icon: 'fa-file-lines', description: 'NDRF Annex 1 sector-keyed DLNA and Annex 2 recovery implementation plans', legacyRoute: 'ndrf.annex (new — no Laravel counterpart)' },
-      { name: 'Public Reports', path: 'public-reports', icon: 'fa-flag', description: 'Citizen-submitted hazard reports', legacyRoute: 'admin.public-hazard-reports.index' },
-      { name: 'Resource Approvals', path: 'resource-approvals', icon: 'fa-truck', description: 'Deploy and track resources', legacyRoute: 'admin.resource-approvals.index' },
-      { name: 'Resource Dispatch', path: 'resource-dispatch', icon: 'fa-shipping-fast', description: 'Dispatch resources from sources', legacyRoute: 'admin.resource-dispatch.index' },
-      { name: 'Dispatch Approvals', path: 'dispatch-approvals', icon: 'fa-clipboard-check', description: 'Approve/reject dispatch requests', legacyRoute: 'admin.resource-dispatch.pending-approvals' },
-      { name: 'Procurement Requests', path: 'procurement', icon: 'fa-shopping-cart', description: 'Manage procurement', legacyRoute: 'admin.resource-dispatch.procurement-requests' },
-      { name: 'Warehouse Operations', path: 'warehouse-ops', icon: 'fa-warehouse', description: 'Stock intake, removals, transfers and stock taking', legacyRoute: 'admin.inventory-items.index' },
-      { name: 'Stakeholder Donations', path: 'donations', icon: 'fa-hand-holding-heart', description: 'Manage stakeholder donations', legacyRoute: 'admin.resource-dispatch.stakeholder-donations' },
-      { name: 'Task Assignment', path: 'tasks', icon: 'fa-tasks', description: 'Assign and monitor response tasks', legacyRoute: 'response.tasks.index' },
-      { name: 'Alert Dissemination', path: 'communication', icon: 'fa-comments', description: 'Multi-channel alert distribution', legacyRoute: 'response.communication.index' },
+      { name: 'Dashboard', path: 'dashboard', icon: 'fa-tachometer-alt', description: 'Response overview dashboard', legacyRoute: 'response.dashboard', group: '1. Command' },
+      { name: 'EOCC Command Center', path: 'eocc', icon: 'fa-terminal', description: 'Emergency Operations Command Center', legacyRoute: 'response.eocc.dashboard', group: '1. Command' },
+      { name: 'Executive Watch', path: 'executive-watch', icon: 'fa-binoculars', description: 'National situation picture for PM / PS / Directors / President', legacyRoute: 'response.executive.index', group: '1. Command' },
+      { name: 'Command Post', path: 'coordination', icon: 'fa-tower-broadcast', description: 'DRF coordination — anticipatory, live & simulation; posture ladder', legacyRoute: 'response.coordination.index', group: '1. Command' },
+      { name: 'Disaster Declarations', path: 'declarations', icon: 'fa-file-contract', description: 'Disaster Area (s.32) & State of Emergency (s.33) declarations', legacyRoute: 'response.declarations.index', group: '1. Command' },
+      { name: 'Issued Alerts', path: 'issued-alerts', icon: 'fa-bell', description: 'Read-only government warnings and bulletins issued for action', legacyRoute: 'stakeholders.warnings.index', group: '2. Alerts & intake' },
+      { name: 'Public Reports', path: 'public-reports', icon: 'fa-flag', description: 'Citizen-submitted hazard reports', legacyRoute: 'admin.public-hazard-reports.index', group: '2. Alerts & intake' },
+      { name: 'Active Incidents', path: 'incidents', icon: 'fa-exclamation-triangle', description: 'Manage and track active incidents', legacyRoute: 'admin.incidents.index', group: '3. Incidents & assessment' },
+      { name: 'Damage Assessments', path: 'assessments', icon: 'fa-clipboard-check', description: 'File and verify per-incident damage & needs assessments', legacyRoute: 'response.assessment.index', group: '3. Incidents & assessment' },
+      { name: 'DLNA & Recovery Plans', path: 'dlna', icon: 'fa-file-lines', description: 'NDRF Annex 1 sector-keyed DLNA and Annex 2 recovery implementation plans', legacyRoute: 'ndrf.annex (new — no Laravel counterpart)', group: '3. Incidents & assessment' },
+      { name: 'Resource Approvals', path: 'resource-approvals', icon: 'fa-truck', description: 'Deploy and track resources', legacyRoute: 'admin.resource-approvals.index', group: '4. Resources & logistics' },
+      { name: 'Resource Dispatch', path: 'resource-dispatch', icon: 'fa-shipping-fast', description: 'Dispatch resources from sources', legacyRoute: 'admin.resource-dispatch.index', group: '4. Resources & logistics' },
+      { name: 'Dispatch Approvals', path: 'dispatch-approvals', icon: 'fa-clipboard-check', description: 'Approve/reject dispatch requests', legacyRoute: 'admin.resource-dispatch.pending-approvals', group: '4. Resources & logistics' },
+      { name: 'Procurement Requests', path: 'procurement', icon: 'fa-shopping-cart', description: 'Manage procurement', legacyRoute: 'admin.resource-dispatch.procurement-requests', group: '4. Resources & logistics' },
+      { name: 'Warehouse Operations', path: 'warehouse-ops', icon: 'fa-warehouse', description: 'Stock intake, removals, transfers and stock taking', legacyRoute: 'admin.inventory-items.index', group: '4. Resources & logistics' },
+      { name: 'Stakeholder Donations', path: 'donations', icon: 'fa-hand-holding-heart', description: 'Manage stakeholder donations', legacyRoute: 'admin.resource-dispatch.stakeholder-donations', group: '4. Resources & logistics' },
+      { name: 'Task Assignment', path: 'tasks', icon: 'fa-tasks', description: 'Assign and monitor response tasks', legacyRoute: 'response.tasks.index', group: '5. Coordination' },
+      { name: 'Alert Dissemination', path: 'communication', icon: 'fa-comments', description: 'Multi-channel alert distribution', legacyRoute: 'response.communication.index', group: '5. Coordination' },
     ],
   },
   {

@@ -1,6 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
@@ -42,12 +42,57 @@ const STATUS_BADGE: Record<string, string> = {
   selector: 'page-repository-events',
   standalone: true,
   imports: [DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+  styles: [`
+    .flow-note {
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 14px;
+      font-size: 0.8rem; color: #1e3a5f; margin-bottom: 12px; line-height: 1.45;
+    }
+    .flow-note b { color: #1d4ed8; }
+    .yr-block {
+      border: 1px solid #e2e8f0; border-radius: 12px; margin: 10px 12px; overflow: hidden; background: #fff;
+    }
+    .yr-block > summary {
+      list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+      padding: 12px 14px; background: #f8fafc; font-weight: 800; font-size: 0.88rem; color: #0f172a;
+      user-select: none;
+    }
+    .yr-block > summary::-webkit-details-marker { display: none; }
+    .yr-block[open] > summary { border-bottom: 1px solid #eef2f7; }
+    .yr-title { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+    .yr-title i { color: #0d6efd; }
+    .yr-meta { font-size: 0.72rem; font-weight: 700; color: #64748b; }
+    .yr-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+    .yr-pill {
+      font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 999px;
+      background: #e2e8f0; color: #334155;
+    }
+    .yr-pill.open { background: #ffedd5; color: #c2410c; }
+    .yr-pill.ok { background: #d1fae5; color: #047857; }
+    .yr-pill.arch { background: #f1f5f9; color: #64748b; }
+    .yr-pill.dead { background: #fee2e2; color: #b91c1c; }
+    .yr-block .chev { color: #94a3b8; font-size: 0.75rem; transition: transform .15s; }
+    .yr-block[open] .chev { transform: rotate(180deg); }
+    .haz-sub { margin: 8px 10px; border: 1px solid #f1f5f9; border-radius: 8px; overflow: hidden; }
+    .haz-sub > summary {
+      list-style: none; cursor: pointer; padding: 8px 10px; font-size: 0.78rem; font-weight: 800;
+      color: #475569; background: #fafbfc; display: flex; gap: 8px; align-items: center;
+    }
+    .haz-sub > summary::-webkit-details-marker { display: none; }
+  `],
   template: `
     <dmis-page-header title="Disaster Repository — Loss Database" icon="fa-database"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Reports & Analytics'}, {label:'Disaster Repository'}]">
       <button class="btn-add" type="button" style="background:#64748b;margin-right:0.4rem;" (click)="exportCsv()"><i class="fas fa-download"></i> Export CSV</button>
       <button class="btn-add" type="button" (click)="drawerOpen.set(true)"><i class="fas fa-plus"></i> Register Event</button>
     </dmis-page-header>
+
+    <div class="flow-note">
+      <b>Loss-database flow:</b>
+      Register or create card from a resolved incident →
+      open the card · enter district effects · link warnings / assessments / costs →
+      <b>Validate</b> so figures feed Sendai analytics · Archive when closed.
+      Cards below are grouped so you open a year (or region / hazard) — not one wall of {{ events().length }} rows.
+    </div>
 
     <div class="stats-row">
       <dmis-stat-card [value]="stats()['total'] ?? 0" label="Event Cards" icon="fa-database" color="#0d6efd" />
@@ -116,9 +161,16 @@ const STATUS_BADGE: Record<string, string> = {
     }
 
     <div class="panel-row">
-      <dmis-panel title="Disaster Event Cards" icon="fa-layer-group" [badge]="events().length + ' shown'">
-        <!-- Registry filters -->
-        <div class="panel-body" style="display:flex;gap:0.6rem;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+      <dmis-panel title="Disaster Event Cards — organised blocks" icon="fa-layer-group"
+        [badge]="events().length + ' cards · ' + eventGroups().length + ' blocks'">
+        <div class="panel-body" style="display:flex;gap:0.6rem;flex-wrap:wrap;border-bottom:1px solid var(--border);align-items:center;">
+          <label style="font-size:0.72rem;font-weight:800;color:#64748b;text-transform:uppercase;">Group by</label>
+          <select class="form-select" style="max-width:160px;" [value]="groupBy()" (change)="groupBy.set($any($event.target).value)">
+            <option value="year">Year</option>
+            <option value="region">Region</option>
+            <option value="hazard">Hazard type</option>
+            <option value="status">Status</option>
+          </select>
           <select class="form-select" style="max-width:200px;" [value]="fHazard()" (change)="fHazard.set($any($event.target).value); reload()">
             <option value="">All hazards</option>
             @for (h of hazardTypes(); track h) { <option [value]="h">{{ h }}</option> }
@@ -132,39 +184,96 @@ const STATUS_BADGE: Record<string, string> = {
             <option value="Open">Open</option><option value="Validated">Validated</option><option value="Archived">Archived</option>
           </select>
         </div>
-        <div class="panel-body" style="padding:0;">
-          <table class="r-table">
-            <thead><tr>
-              <th>Event</th><th>Hazard</th><th>Period</th><th>Region</th>
-              <th style="text-align:right;">Deaths</th><th style="text-align:right;">Affected</th>
-              <th style="text-align:right;">Loss (TZS)</th><th>Links</th><th>Status</th><th></th>
-            </tr></thead>
-            <tbody>
-              @for (e of events(); track e.id) {
-                <tr class="data-row">
-                  <td><div class="r-title">{{ e.name }}</div><div class="r-subtitle">{{ e.eventCode }}</div></td>
-                  <td style="font-size:0.82rem;">{{ e.hazardType || '—' }}</td>
-                  <td style="font-size:0.8rem;color:var(--text-mid);">{{ e.startedOn }}{{ e.endedOn ? ' — ' + e.endedOn : '' }}</td>
-                  <td style="font-size:0.82rem;">{{ e.primaryRegion || '—' }}</td>
-                  <td style="text-align:right;font-weight:700;color:#dc2626;">{{ e.deaths | number }}</td>
-                  <td style="text-align:right;">{{ e.affected | number }}</td>
-                  <td style="text-align:right;">{{ e.lossTzs | number:'1.0-0' }}
-                    @if (e.costUsedTzs > 0) {
-                      <div class="r-subtitle" style="white-space:nowrap;" title="Response cost used — recorded + computed from linked incidents">
-                        cost used {{ e.costUsedTzs | number:'1.0-0' }}</div>
-                    }
-                  </td>
-                  <td><span class="r-badge" style="background:rgba(13,110,253,0.1);color:#0d6efd;">{{ e.linkCount }}</span></td>
-                  <td><span class="r-badge {{ statusBadge(e.status) }}">{{ e.status }}</span></td>
-                  <td><button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.8rem;" (click)="open(e.id)">Open card</button></td>
-                </tr>
-              } @empty {
-                <tr><td colspan="10" style="text-align:center;color:var(--text-light);padding:2rem;">
-                  No event cards match — register the first card for this filter.
-                </td></tr>
-              }
-            </tbody>
-          </table>
+        <div class="panel-body" style="padding:8px 0 14px;">
+          @if (eventGroups().length) {
+            @for (g of eventGroups(); track g.key) {
+              <details class="yr-block" [open]="shouldOpenGroup(g, $index)">
+                <summary>
+                  <span class="yr-title"><i class="fas fa-folder-open"></i> {{ g.label }}</span>
+                  <span class="yr-meta">{{ g.items.length }} event{{ g.items.length === 1 ? '' : 's' }}</span>
+                  <span class="yr-pills">
+                    @if (g.openN) { <span class="yr-pill open">{{ g.openN }} open</span> }
+                    @if (g.validatedN) { <span class="yr-pill ok">{{ g.validatedN }} validated</span> }
+                    @if (g.archivedN) { <span class="yr-pill arch">{{ g.archivedN }} archived</span> }
+                    @if (g.deaths) { <span class="yr-pill dead">{{ g.deaths | number }} deaths</span> }
+                    @if (g.affected) { <span class="yr-pill">{{ g.affected | number }} affected</span> }
+                  </span>
+                  <i class="fas fa-chevron-down chev"></i>
+                </summary>
+
+                @if (groupBy() === 'year') {
+                  @for (hz of hazardBuckets(g.items); track hz.name) {
+                    <details class="haz-sub" [open]="hz.items.length <= 4">
+                      <summary>
+                        <i class="fas fa-fire" style="color:#ea580c;opacity:0.8;"></i>
+                        {{ hz.name }}
+                        <span class="yr-pill">{{ hz.items.length }}</span>
+                      </summary>
+                      <table class="r-table">
+                        <thead><tr>
+                          <th>Event</th><th>Period</th><th>Region</th>
+                          <th style="text-align:right;">Deaths</th><th style="text-align:right;">Affected</th>
+                          <th style="text-align:right;">Loss (TZS)</th><th>Links</th><th>Status</th><th></th>
+                        </tr></thead>
+                        <tbody>
+                          @for (e of hz.items; track e.id) {
+                            <tr class="data-row">
+                              <td><div class="r-title">{{ e.name }}</div><div class="r-subtitle">{{ e.eventCode }}</div></td>
+                              <td style="font-size:0.8rem;color:var(--text-mid);">{{ e.startedOn }}{{ e.endedOn ? ' — ' + e.endedOn : '' }}</td>
+                              <td style="font-size:0.82rem;">{{ e.primaryRegion || '—' }}</td>
+                              <td style="text-align:right;font-weight:700;color:#dc2626;">{{ e.deaths | number }}</td>
+                              <td style="text-align:right;">{{ e.affected | number }}</td>
+                              <td style="text-align:right;">{{ e.lossTzs | number:'1.0-0' }}
+                                @if (e.costUsedTzs > 0) {
+                                  <div class="r-subtitle" style="white-space:nowrap;" title="Response cost used">
+                                    cost used {{ e.costUsedTzs | number:'1.0-0' }}</div>
+                                }
+                              </td>
+                              <td><span class="r-badge" style="background:rgba(13,110,253,0.1);color:#0d6efd;">{{ e.linkCount }}</span></td>
+                              <td><span class="r-badge {{ statusBadge(e.status) }}">{{ e.status }}</span></td>
+                              <td><button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.8rem;" (click)="open(e.id)">Open card</button></td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </details>
+                  }
+                } @else {
+                  <table class="r-table">
+                    <thead><tr>
+                      <th>Event</th><th>Hazard</th><th>Period</th><th>Region</th>
+                      <th style="text-align:right;">Deaths</th><th style="text-align:right;">Affected</th>
+                      <th style="text-align:right;">Loss (TZS)</th><th>Links</th><th>Status</th><th></th>
+                    </tr></thead>
+                    <tbody>
+                      @for (e of g.items; track e.id) {
+                        <tr class="data-row">
+                          <td><div class="r-title">{{ e.name }}</div><div class="r-subtitle">{{ e.eventCode }}</div></td>
+                          <td style="font-size:0.82rem;">{{ e.hazardType || '—' }}</td>
+                          <td style="font-size:0.8rem;color:var(--text-mid);">{{ e.startedOn }}{{ e.endedOn ? ' — ' + e.endedOn : '' }}</td>
+                          <td style="font-size:0.82rem;">{{ e.primaryRegion || '—' }}</td>
+                          <td style="text-align:right;font-weight:700;color:#dc2626;">{{ e.deaths | number }}</td>
+                          <td style="text-align:right;">{{ e.affected | number }}</td>
+                          <td style="text-align:right;">{{ e.lossTzs | number:'1.0-0' }}
+                            @if (e.costUsedTzs > 0) {
+                              <div class="r-subtitle" style="white-space:nowrap;">cost used {{ e.costUsedTzs | number:'1.0-0' }}</div>
+                            }
+                          </td>
+                          <td><span class="r-badge" style="background:rgba(13,110,253,0.1);color:#0d6efd;">{{ e.linkCount }}</span></td>
+                          <td><span class="r-badge {{ statusBadge(e.status) }}">{{ e.status }}</span></td>
+                          <td><button class="btn-add" style="padding:0.3rem 0.8rem;font-size:0.8rem;" (click)="open(e.id)">Open card</button></td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </details>
+            }
+          } @else {
+            <div style="text-align:center;color:var(--text-light);padding:2rem;">
+              No event cards match — register the first card for this filter.
+            </div>
+          }
         </div>
       </dmis-panel>
     </div>
@@ -246,6 +355,8 @@ export class RepositoryEventsComponent {
   linkingIncident = signal<string | null>(null);
 
   fHazard = signal(''); fYear = signal(''); fStatus = signal('');
+  /** Dropdown organisation: year (default) · region · hazard · status */
+  groupBy = signal<'year' | 'region' | 'hazard' | 'status'>('year');
   fName = signal(''); fHazardId = signal(''); fStart = signal(''); fEnd = signal('');
   fRegion = signal(''); fScope = signal('District'); fDesc = signal(''); fSource = signal('');
   fGovResponse = signal('');
@@ -296,6 +407,75 @@ export class RepositoryEventsComponent {
 
   statusBadge(s: string): string { return STATUS_BADGE[s] ?? 'badge-pending'; }
   open(id: number): void { this.router.navigate(['/m/reports-analytics/repository', id]); }
+
+  /**
+   * Group cards into collapsible blocks (year / region / hazard / status)
+   * so the registry is browsable instead of one 86-row dump.
+   */
+  eventGroups(): {
+    key: string; label: string; items: EventRow[];
+    openN: number; validatedN: number; archivedN: number; deaths: number; affected: number;
+  }[] {
+    const mode = this.groupBy();
+    const map = new Map<string, EventRow[]>();
+    for (const e of this.events()) {
+      let key = 'Other';
+      if (mode === 'year') {
+        key = (e.startedOn || '').slice(0, 4) || 'Unknown year';
+      } else if (mode === 'region') {
+        key = (e.primaryRegion || '').trim() || 'Region not set';
+      } else if (mode === 'hazard') {
+        key = (e.hazardType || '').trim() || 'Hazard not classified';
+      } else {
+        key = e.status || 'Unknown status';
+      }
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    }
+    const rows = [...map.entries()].map(([key, items]) => {
+      const prefix = mode === 'year' ? 'Year ' : mode === 'region' ? 'Region · ' : mode === 'hazard' ? 'Hazard · ' : 'Status · ';
+      return {
+        key,
+        label: mode === 'year' ? `${prefix}${key}` : `${prefix}${key}`,
+        items: items.slice().sort((a, b) => String(b.startedOn).localeCompare(String(a.startedOn))),
+        openN: items.filter(i => i.status === 'Open').length,
+        validatedN: items.filter(i => i.status === 'Validated').length,
+        archivedN: items.filter(i => i.status === 'Archived' || String(i.status) === 'Closed').length,
+        deaths: items.reduce((s, i) => s + (Number(i.deaths) || 0), 0),
+        affected: items.reduce((s, i) => s + (Number(i.affected) || 0), 0),
+      };
+    });
+    if (mode === 'year') {
+      rows.sort((a, b) => b.key.localeCompare(a.key));
+    } else {
+      rows.sort((a, b) => a.label.localeCompare(b.label));
+    }
+    return rows;
+  }
+
+  /** Inside a year block: sub-dropdowns by hazard type. */
+  hazardBuckets(items: EventRow[]): { name: string; items: EventRow[] }[] {
+    const map = new Map<string, EventRow[]>();
+    for (const e of items) {
+      const k = (e.hazardType || '').trim() || 'Unclassified hazard';
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(e);
+    }
+    return [...map.entries()]
+      .map(([name, list]) => ({
+        name,
+        items: list.slice().sort((a, b) => String(b.startedOn).localeCompare(String(a.startedOn))),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** Open current year (or first block) + any block with Open cards; keep older years collapsed. */
+  shouldOpenGroup(g: { key: string; openN: number; items: EventRow[] }, index: number): boolean {
+    if (this.groupBy() === 'year') {
+      return g.key === String(this.currentYear) || g.openN > 0 || index === 0;
+    }
+    return index === 0 || g.openN > 0;
+  }
 
   createFromIncident(i: IncidentWorkItem): void {
     this.creatingFromIncident.set(i.id);

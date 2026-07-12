@@ -433,6 +433,7 @@ public class DashboardController {
         }
         // Issued (published) bulletins with hazard/area labels for the dashboard alerts strip.
         // Scope is applied via EXISTS on warning_hazards; outer join is only for display labels.
+        // Compact area labels for the UI (counts + region list) — never dump 30+ district names inline.
         String sql = """
                 select w.id, w.warning_code, w.status, coalesce(w.updated_at, w.created_at) as issued_at,
                        (select wh.warning_level from public.warning_hazards wh
@@ -444,14 +445,20 @@ public class DashboardController {
                           from public.warning_hazards wh
                           left join public.hazards h on h.id = wh.hazard_id
                          where wh.warning_id = w.id and wh.deleted_at is null) as hazard_names,
+                       (select count(distinct wh.region_id)
+                          from public.warning_hazards wh
+                         where wh.warning_id = w.id and wh.deleted_at is null and wh.region_id is not null) as region_count,
+                       (select count(distinct wh.district_id)
+                          from public.warning_hazards wh
+                         where wh.warning_id = w.id and wh.deleted_at is null and wh.district_id is not null) as district_count,
                        (select string_agg(distinct r.name, ', ')
                           from public.warning_hazards wh
                           left join public.regions r on r.id = wh.region_id
-                         where wh.warning_id = w.id and wh.deleted_at is null) as region_names,
+                         where wh.warning_id = w.id and wh.deleted_at is null and r.name is not null) as region_names,
                        (select string_agg(distinct d.name, ', ')
                           from public.warning_hazards wh
                           left join public.districts d on d.id = wh.district_id
-                         where wh.warning_id = w.id and wh.deleted_at is null and wh.district_id is not null) as district_names
+                         where wh.warning_id = w.id and wh.deleted_at is null and d.name is not null) as district_names_all
                 from public.warnings w
                 where lower(coalesce(w.status,'')) = 'published'
                 """ + area + """
@@ -459,7 +466,31 @@ public class DashboardController {
                 limit 12
                 """;
         try {
-            return jdbc.queryForList(sql, p.toArray());
+            List<Map<String, Object>> rows = jdbc.queryForList(sql, p.toArray());
+            for (Map<String, Object> row : rows) {
+                long rc = row.get("region_count") instanceof Number n ? n.longValue() : 0L;
+                long dc = row.get("district_count") instanceof Number n ? n.longValue() : 0L;
+                String regions = row.get("region_names") == null ? "" : String.valueOf(row.get("region_names"));
+                String districtsAll = row.get("district_names_all") == null ? "" : String.valueOf(row.get("district_names_all"));
+                StringBuilder summary = new StringBuilder();
+                if (!regions.isBlank()) {
+                    summary.append(regions);
+                    if (rc > 1) summary.append(" (").append(rc).append(" regions)");
+                } else if (rc > 0) {
+                    summary.append(rc).append(rc == 1 ? " region" : " regions");
+                }
+                if (dc > 0) {
+                    if (!summary.isEmpty()) summary.append(" · ");
+                    summary.append(dc).append(dc == 1 ? " district" : " districts");
+                }
+                if (summary.isEmpty()) summary.append("Area coverage on file");
+                row.put("area_summary", summary.toString());
+                // Expandable full list only when small; otherwise UI shows counts under regions.
+                row.put("district_names", dc > 0 && dc <= 4 ? districtsAll : null);
+                row.put("district_names_full", districtsAll.isBlank() ? null : districtsAll);
+                row.remove("district_names_all");
+            }
+            return rows;
         } catch (Exception e) {
             // Keep dashboard up; surface the cause in logs so empty strips are diagnosable.
             org.slf4j.LoggerFactory.getLogger(DashboardController.class)

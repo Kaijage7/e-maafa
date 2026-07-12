@@ -37,20 +37,56 @@ interface IndexResponse {
     .priority-medium { background: rgba(245,158,11,0.12); color: #d97706; }
     .priority-low { background: rgba(16,185,129,0.12); color: #059669; }
     .alert-container { position: fixed; top: calc(var(--topbar-h) + 12px); right: 12px; z-index: 9999; width: 320px; }
+    .flow-note {
+      background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 14px;
+      font-size: 0.8rem; color: #0c4a6e; margin-bottom: 12px; line-height: 1.45;
+    }
+    .flow-note b { color: #075985; }
+    .inst-block {
+      border: 1px solid #e2e8f0; border-radius: 12px; margin: 10px 12px; overflow: hidden; background: #fff;
+    }
+    .inst-block > summary {
+      list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+      padding: 12px 14px; background: #f8fafc; font-weight: 800; font-size: 0.88rem; color: #0f172a;
+      user-select: none;
+    }
+    .inst-block > summary::-webkit-details-marker { display: none; }
+    .inst-block[open] > summary { border-bottom: 1px solid #eef2f7; }
+    .inst-block .inst-name { display: flex; align-items: center; gap: 8px; min-width: 180px; }
+    .inst-block .inst-name i { color: #0f766e; }
+    .inst-meta { font-size: 0.72rem; font-weight: 700; color: #64748b; }
+    .inst-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+    .inst-pill {
+      font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 999px;
+      background: #e2e8f0; color: #334155;
+    }
+    .inst-pill.ok { background: #d1fae5; color: #047857; }
+    .inst-pill.run { background: #dbeafe; color: #1d4ed8; }
+    .inst-pill.wait { background: #f1f5f9; color: #64748b; }
+    .inst-pill.hi { background: #fee2e2; color: #b91c1c; }
+    .inst-block .chev { color: #94a3b8; font-size: 0.75rem; }
+    .inst-block[open] .chev { transform: rotate(180deg); }
   `],
   template: `
     <dmis-page-header title="Mitigation Measures" icon="fa-shield-virus"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Mitigation Measures'}]">
-      <!-- Source create page (500s) deliberately FIXED: links to the working SRS create page. -->
       @if (canManage()) {
         <a class="btn-add" routerLink="/m/prevention-mitigation/measures/create"><i class="fas fa-plus"></i> Add New Measure</a>
       }
     </dmis-page-header>
 
+    <div class="flow-note">
+      <b>DRR measures flow:</b>
+      Institution registers a measure → status moves Not started → Ongoing → Completed ·
+      Priority (high/medium/low) steers funding and partner support ·
+      Linked hazard shows which risk the project addresses ·
+      Open an institution block below to work its measures (not one flat dump of every project).
+    </div>
+
     <div class="stats-row">
       <dmis-stat-card [value]="stats().total" label="Total Measures" icon="fa-list" color="#003366" />
+      <dmis-stat-card [value]="institutionGroups().length" label="Institutions" icon="fa-building" color="#0f766e" />
       <dmis-stat-card [value]="stats().ongoing" label="Ongoing" icon="fa-spinner" color="#2563eb" />
-      <dmis-stat-card [value]="stats().notStarted" label="Not Started" icon="fa-clock" color="#6b7280" />
       <dmis-stat-card [value]="stats().completed" label="Completed" icon="fa-check-double" color="#059669" />
     </div>
 
@@ -78,7 +114,8 @@ interface IndexResponse {
     <div class="filter-bar">
       <div class="search-box">
         <i class="fas fa-search"></i>
-        <input type="text" placeholder="Search measures..." [value]="search()" (input)="search.set($any($event.target).value)">
+        <input type="text" placeholder="Search project, hazard, or institution…"
+          [value]="search()" (input)="search.set($any($event.target).value)">
       </div>
       <select [value]="filterStatus()" (change)="filterStatus.set($any($event.target).value)">
         <option value="">All Statuses</option>
@@ -87,56 +124,88 @@ interface IndexResponse {
         <option value="Completed">Completed</option>
         <option value="Design">Design</option>
       </select>
+      <select [value]="filterInst()" (change)="filterInst.set($any($event.target).value)">
+        <option value="">All institutions</option>
+        @for (g of institutionGroups(); track g.name) {
+          <option [value]="g.name">{{ g.name }} ({{ g.items.length }})</option>
+        }
+      </select>
     </div>
 
     <div class="panel-row full" style="animation-delay:.30s;">
-      <dmis-panel title="Measures Registry" icon="fa-database" [badge]="pagination().total + ' total'">
-        <div class="panel-body" style="padding:0;">
-          @if (measures().length) {
-            <div style="overflow-x:auto;">
-              <table class="r-table">
-                <thead><tr><th>Project/Programme</th><th>Hazard</th><th>Status</th><th>Priority</th><th>Period</th><th>Actions</th></tr></thead>
-                <tbody>
-                  @for (m of measures(); track m.id) {
-                    <tr class="measure-row" [style.display]="rowVisible(m) ? '' : 'none'">
-                      <td>
-                        <div class="r-title">{{ limit(m.projectProgrammeName, 45) }}</div>
-                        <div class="r-subtitle">{{ m.implementingInstitution || '' }}</div>
-                      </td>
-                      <td style="color:var(--text-mid);">{{ limit(m.hazardRiskAddressed, 25) || '-' }}</td>
-                      <td><span class="r-badge {{ statusClass(m.projectStatus) }}">{{ m.projectStatus || '-' }}</span></td>
-                      <td>
-                        @if (m.priority) {
-                          <span class="r-badge priority-{{ m.priority }}">{{ ucfirst(m.priority) }}</span>
-                        } @else { <span style="color:var(--text-light);">-</span> }
-                      </td>
-                      <td style="color:var(--text-mid);">
-                        @if (m.periodStart) {
-                          {{ m.periodStart }} - {{ m.periodEnd || 'Ongoing' }}
-                        } @else { - }
-                      </td>
-                      <td>
-                        <div class="ctx-wrap">
-                          <button class="ctx-trigger" type="button" (click)="toggleMenu(m.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
-                          <div class="ctx-menu" [class.open]="openMenu() === m.id">
-                            <button class="ctx-item" (click)="viewMeasure(m.id)"><i class="fas fa-eye"></i> View</button>
-                            @if (canManage()) {
-                              <a class="ctx-item success" [routerLink]="['/m/prevention-mitigation/measures', m.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
-                              <div class="ctx-divider"></div>
-                              <button class="ctx-item danger" (click)="askDelete(m)"><i class="fas fa-trash"></i> Delete</button>
-                            }
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+      <dmis-panel title="Measures Registry — by implementing institution" icon="fa-building"
+        [badge]="visibleCount() + ' shown · ' + institutionGroups().length + ' institutions'">
+        <div class="panel-body" style="padding:8px 0 12px;">
+          @if (institutionGroups().length) {
+            @for (g of institutionGroups(); track g.name) {
+              @if (!filterInst() || filterInst() === g.name) {
+                <details class="inst-block" [open]="institutionGroups().length <= 3 || filterInst() === g.name">
+                  <summary>
+                    <span class="inst-name"><i class="fas fa-building"></i> {{ g.name }}</span>
+                    <span class="inst-meta">{{ g.items.length }} measure{{ g.items.length === 1 ? '' : 's' }}</span>
+                    <span class="inst-pills">
+                      @if (g.ongoing) { <span class="inst-pill run">{{ g.ongoing }} ongoing</span> }
+                      @if (g.completed) { <span class="inst-pill ok">{{ g.completed }} done</span> }
+                      @if (g.notStarted) { <span class="inst-pill wait">{{ g.notStarted }} not started</span> }
+                      @if (g.highPriority) { <span class="inst-pill hi">{{ g.highPriority }} high priority</span> }
+                    </span>
+                    <i class="fas fa-chevron-down chev"></i>
+                  </summary>
+                  <div style="overflow-x:auto;">
+                    <table class="r-table">
+                      <thead>
+                        <tr>
+                          <th>Project / programme</th>
+                          <th>Hazard addressed</th>
+                          <th>Status</th>
+                          <th>Priority</th>
+                          <th>Period</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (m of g.items; track m.id) {
+                          <tr class="measure-row">
+                            <td>
+                              <div class="r-title">{{ limit(m.projectProgrammeName, 50) }}</div>
+                            </td>
+                            <td style="color:var(--text-mid);">{{ limit(m.hazardRiskAddressed, 28) || '—' }}</td>
+                            <td><span class="r-badge {{ statusClass(m.projectStatus) }}">{{ m.projectStatus || '—' }}</span></td>
+                            <td>
+                              @if (m.priority) {
+                                <span class="r-badge priority-{{ m.priority }}">{{ ucfirst(m.priority) }}</span>
+                              } @else { <span style="color:var(--text-light);">—</span> }
+                            </td>
+                            <td style="color:var(--text-mid);">
+                              @if (m.periodStart) {
+                                {{ m.periodStart }} – {{ m.periodEnd || 'Ongoing' }}
+                              } @else { — }
+                            </td>
+                            <td>
+                              <div class="ctx-wrap">
+                                <button class="ctx-trigger" type="button" (click)="toggleMenu(m.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
+                                <div class="ctx-menu" [class.open]="openMenu() === m.id">
+                                  <button class="ctx-item" (click)="viewMeasure(m.id)"><i class="fas fa-eye"></i> View</button>
+                                  @if (canManage()) {
+                                    <a class="ctx-item success" [routerLink]="['/m/prevention-mitigation/measures', m.id, 'edit']"><i class="fas fa-edit"></i> Edit</a>
+                                    <div class="ctx-divider"></div>
+                                    <button class="ctx-item danger" (click)="askDelete(m)"><i class="fas fa-trash"></i> Delete</button>
+                                  }
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              }
+            }
           } @else {
             <div class="empty-state">
               <i class="fas fa-shield-virus"></i>
-              No mitigation measures registered yet.<br>
+              No mitigation measures match the current filters.<br>
               @if (canManage()) {
                 <a class="btn-add" routerLink="/m/prevention-mitigation/measures/create" style="margin-top:0.6rem;display:inline-flex;"><i class="fas fa-plus"></i> Add First Measure</a>
               }
@@ -146,7 +215,7 @@ interface IndexResponse {
 
         @if (pagination().lastPage > 1) {
           <div class="pagination-wrap">
-            <span>Showing {{ pagination().firstItem }} to {{ pagination().lastItem }} of {{ pagination().total }}</span>
+            <span>Showing page {{ pagination().currentPage }} of {{ pagination().lastPage }} ({{ pagination().total }} total)</span>
             <div class="page-links">
               @if (pagination().currentPage === 1) {
                 <span style="opacity:0.4;">&laquo;</span>
@@ -236,6 +305,7 @@ export class MeasuresComponent implements AfterViewInit, OnDestroy {
   byPriority = signal<{ priority: string; total: number }[]>([]);
   search = signal('');
   filterStatus = signal('');
+  filterInst = signal('');
   openMenu = signal<number | null>(null);
   viewOpen = signal(false);
   detail = signal<any | null>(null);
@@ -317,10 +387,43 @@ export class MeasuresComponent implements AfterViewInit, OnDestroy {
 
   rowVisible(m: MeasureRow): boolean {
     const q = this.search().toLowerCase();
-    const text = ((m.projectProgrammeName ?? '') + ' ' + (m.hazardRiskAddressed ?? '') + ' ' + (m.projectStatus ?? '')).toLowerCase();
+    const text = ((m.projectProgrammeName ?? '') + ' ' + (m.hazardRiskAddressed ?? '') + ' '
+      + (m.projectStatus ?? '') + ' ' + (m.implementingInstitution ?? '')).toLowerCase();
     const matchSearch = !q || text.includes(q);
     const matchStatus = !this.filterStatus() || m.projectStatus === this.filterStatus();
-    return matchSearch && matchStatus;
+    const matchInst = !this.filterInst() || (m.implementingInstitution || 'Unassigned institution') === this.filterInst();
+    return matchSearch && matchStatus && matchInst;
+  }
+
+  /**
+   * Group visible measures under implementing institution so a ministry with 12 projects
+   * is one expandable block — not twelve loose rows mixed with other agencies.
+   */
+  institutionGroups(): {
+    name: string; items: MeasureRow[];
+    ongoing: number; completed: number; notStarted: number; highPriority: number;
+  }[] {
+    const map = new Map<string, MeasureRow[]>();
+    for (const m of this.measures()) {
+      if (!this.rowVisible(m)) continue;
+      const key = (m.implementingInstitution || '').trim() || 'Unassigned institution';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(m);
+    }
+    return [...map.entries()]
+      .map(([name, items]) => ({
+        name,
+        items,
+        ongoing: items.filter(i => i.projectStatus === 'Ongoing').length,
+        completed: items.filter(i => i.projectStatus === 'Completed').length,
+        notStarted: items.filter(i => i.projectStatus === 'Not started' || i.projectStatus === 'Design').length,
+        highPriority: items.filter(i => String(i.priority || '').toLowerCase() === 'high').length,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  visibleCount(): number {
+    return this.institutionGroups().reduce((s, g) => s + g.items.length, 0);
   }
 
   viewMeasure(id: number): void {

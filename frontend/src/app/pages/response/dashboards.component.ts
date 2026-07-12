@@ -8,19 +8,18 @@ import { addMapNav, addTanzaniaDarkBase, addTanzaniaGisBase, applyDmisMapJurisdi
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 
-declare const L: any;     // Leaflet, loaded on demand through the governed Tanzania map helper
-declare const Swal: any;  // SweetAlert2
+declare const L: any;
+declare const Swal: any;
 
-/** Severity palette from the enhanced EOCC board (merged board spec). */
 const SEVERITY_COLORS: Record<string, string> = {
   Critical: '#ff5252', Major: '#fb8c00', Moderate: '#43a047', Minor: '#2196f3',
 };
-const POLL_MS = 30_000; // verbatim source cadence
+const POLL_MS = 30_000;
 
 /**
- * Response overview dashboard — port of response/dashboard.blade.php:
- * stat cards, critical alerts, 24h incident feed (drives the map markers),
- * type bars and regional rollups, refreshed on the source's 30s poll.
+ * Response overview dashboard — stats, collapsible process blocks (EW alerts,
+ * needs action, submitted), recent feed + map. Lists stay available but open
+ * folded by category so Super Admin is not a wall of raw rows.
  */
 @Component({
   selector: 'page-response-dashboard',
@@ -38,8 +37,6 @@ const POLL_MS = 30_000; // verbatim source cadence
     .bar-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 8px; align-items: center; font-size: 0.78rem; padding: 3px 0; }
     .bar { height: 10px; border-radius: 5px; background: #dc3545; min-width: 2px; }
     .crit { background: #fee2e2; border-left: 3px solid #dc2626; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 0.8rem; }
-    .ew-alert { background: #fff7ed; border-left: 3px solid #ea580c; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 0.8rem; }
-    .ew-alert .lvl { font-weight:700; color:#9a3412; font-size:0.72rem; text-transform:uppercase; }
     .pill { font-size: 0.75rem; color: #16a34a; font-weight: 700; }
     .queue-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
     .queue-item { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:8px 0; border-bottom:1px dashed #e3e6ed; font-size:0.8rem; }
@@ -47,7 +44,50 @@ const POLL_MS = 30_000; // verbatim source cadence
     .queue-item a { font-weight:700; color:#0d6efd; text-decoration:none; }
     .queue-meta { color:#64748b; font-size:0.74rem; margin-top:2px; }
     .wf-chip { border-radius:8px; background:#fff7ed; color:#9a3412; font-size:0.72rem; padding:2px 7px; font-weight:700; white-space:nowrap; }
-    @media (max-width: 900px) { .queue-grid, .split { grid-template-columns:1fr; } .stat-strip { grid-template-columns: repeat(2, 1fr); } }
+    .block { background:#fff; border:1px solid #e3e6ed; border-radius:12px; margin-bottom:12px; overflow:hidden; }
+    .block > summary {
+      list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px;
+      padding:12px 14px; font-weight:800; font-size:0.9rem; color:#0f172a; background:#f8fafc;
+      border-bottom:1px solid transparent; user-select:none;
+    }
+    .block > summary::-webkit-details-marker { display:none; }
+    .block[open] > summary { border-bottom-color:#eef2f7; }
+    .block > summary .ico { color:#0f766e; width:1.1rem; text-align:center; }
+    .block > summary .badge {
+      margin-left:auto; background:#0f172a; color:#fff; border-radius:999px;
+      font-size:0.72rem; font-weight:800; padding:2px 9px; min-width:1.5rem; text-align:center;
+    }
+    .block > summary .chev { color:#94a3b8; font-size:0.75rem; transition:transform .15s; }
+    .block[open] > summary .chev { transform:rotate(180deg); }
+    .block .body { padding:4px 14px 12px; }
+    .ew-row {
+      display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:start;
+      padding:10px 0; border-bottom:1px dashed #eef2f7; font-size:0.82rem;
+    }
+    .ew-row:last-child { border-bottom:none; }
+    .ew-lvl {
+      font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:.03em;
+      padding:3px 7px; border-radius:6px; background:#ffedd5; color:#9a3412; white-space:nowrap;
+    }
+    .ew-lvl.major { background:#fee2e2; color:#b91c1c; }
+    .ew-lvl.advisory { background:#e0f2fe; color:#0369a1; }
+    .ew-code { font-weight:800; color:#0f172a; }
+    .ew-haz { color:#334155; }
+    .ew-area { color:#64748b; font-size:0.74rem; margin-top:3px; }
+    .ew-when { color:#94a3b8; font-size:0.72rem; white-space:nowrap; }
+    .subcat { margin:8px 0 4px; }
+    .subcat > summary {
+      list-style:none; cursor:pointer; font-size:0.78rem; font-weight:800; color:#475569;
+      padding:6px 8px; border-radius:8px; background:#f1f5f9; display:flex; gap:8px; align-items:center;
+    }
+    .subcat > summary::-webkit-details-marker { display:none; }
+    .subcat .body { padding:4px 4px 4px 8px; }
+    .hint { font-size:0.74rem; color:#94a3b8; padding:8px 0 2px; }
+    .more-link { font-size:0.78rem; font-weight:700; color:#0d6efd; text-decoration:none; display:inline-block; margin-top:8px; }
+    @media (max-width: 900px) {
+      .queue-grid, .split { grid-template-columns:1fr; }
+      .stat-strip { grid-template-columns: repeat(2, 1fr); }
+    }
   `],
   template: `
     <dmis-page-header title="Response Dashboard" icon="fa-tachometer-alt"
@@ -64,47 +104,101 @@ const POLL_MS = 30_000; // verbatim source cadence
       <div class="stat"><b>{{ d().statistics?.assessments_pending ?? 0 }}</b><span>Assessments Pending</span></div>
     </div>
 
-    <dmis-panel title="Issued Early-Warning Alerts (Your Area)" icon="fa-bell"
-      [badge]="(d().area_early_warnings?.length ?? 0) + ''">
-      @for (w of d().area_early_warnings ?? []; track w.id) {
-        <div class="ew-alert">
-          <span class="lvl">{{ w.warning_level || 'Warning' }}</span>
-          <b style="margin-left:6px">{{ w.warning_code }}</b>
-          — {{ w.hazard_names || 'Hazard' }}
-          <div class="queue-meta">{{ w.district_names || w.region_names || 'Area' }} · {{ when(w.issued_at) }} · {{ w.status }}</div>
+    <!-- Process blocks: closed by default so opening the dashboard is not a wall of rows -->
+    <details class="block" [open]="(d().area_early_warnings?.length ?? 0) > 0 && (d().area_early_warnings?.length ?? 0) <= 5">
+      <summary>
+        <i class="fas fa-bell ico"></i> Issued Early-Warning Alerts
+        <span class="badge">{{ d().area_early_warnings?.length ?? 0 }}</span>
+        <i class="fas fa-chevron-down chev"></i>
+      </summary>
+      <div class="body">
+        <div class="hint">Your area · published only · open a row group for full lists ·
+          <a class="more-link" routerLink="/m/response/issued-alerts">Issued Alerts page</a>
         </div>
-      } @empty {
-        <div style="font-size:0.8rem;color:#94a3b8;padding:10px 0">
-          No published early-warning alerts currently cover your jurisdiction.
-        </div>
-      }
-    </dmis-panel>
+        @for (g of ewGroups(); track g.key) {
+          <details class="subcat" [open]="g.key === 'major'">
+            <summary>
+              <span>{{ g.label }}</span>
+              <span class="badge" style="background:#64748b">{{ g.items.length }}</span>
+            </summary>
+            <div class="body">
+              @for (w of g.items; track w.id) {
+                <div class="ew-row">
+                  <span class="ew-lvl" [class.major]="isMajor(w.warning_level)" [class.advisory]="isAdvisory(w.warning_level)">
+                    {{ w.warning_level || 'Warning' }}
+                  </span>
+                  <div>
+                    <span class="ew-code">{{ w.warning_code }}</span>
+                    <span class="ew-haz"> — {{ w.hazard_names || 'Hazard' }}</span>
+                    <div class="ew-area">{{ w.area_summary || compactArea(w) }}</div>
+                    @if (w.district_names_full && (w.district_count ?? 0) > 4) {
+                      <details class="subcat" style="margin-top:4px">
+                        <summary style="font-size:0.72rem;font-weight:700">Districts ({{ w.district_count }})</summary>
+                        <div class="body" style="font-size:0.74rem;color:#64748b">{{ w.district_names_full }}</div>
+                      </details>
+                    }
+                  </div>
+                  <span class="ew-when">{{ when(w.issued_at) }}</span>
+                </div>
+              }
+            </div>
+          </details>
+        } @empty {
+          <div style="font-size:0.8rem;color:#94a3b8;padding:10px 0">No published early-warning alerts currently cover your jurisdiction.</div>
+        }
+      </div>
+    </details>
 
     <div class="queue-grid">
-      <dmis-panel title="Needs Your Action" icon="fa-person-circle-exclamation" [badge]="(d().needs_action?.length ?? 0) + ''">
-        @for (i of d().needs_action ?? []; track i.id) {
-          <div class="queue-item">
-            <span class="sev" [style.background]="color(i.severity_level)">{{ i.severity_level }}</span>
-            <div>
-              <a [routerLink]="['/m/response/incidents', i.id]">{{ i.title }}</a>
-              <div class="queue-meta">{{ i.hazard_name }} · {{ area(i) }} · {{ when(i.reported_at) }}</div>
+      <details class="block" open>
+        <summary>
+          <i class="fas fa-person-circle-exclamation ico" style="color:#c2410c"></i> Needs Your Action
+          <span class="badge">{{ d().needs_action?.length ?? 0 }}</span>
+          <i class="fas fa-chevron-down chev"></i>
+        </summary>
+        <div class="body">
+          @for (i of (d().needs_action ?? []).slice(0, showMoreNeeds() ? 99 : 5); track i.id) {
+            <div class="queue-item">
+              <span class="sev" [style.background]="color(i.severity_level)">{{ i.severity_level }}</span>
+              <div>
+                <a [routerLink]="['/m/response/incidents', i.id]">{{ i.title }}</a>
+                <div class="queue-meta">{{ i.hazard_name }} · {{ area(i) }} · {{ when(i.reported_at) }}</div>
+              </div>
+              <span class="wf-chip">{{ i.workflow_status_label }}</span>
             </div>
-            <span class="wf-chip">{{ i.workflow_status_label }}</span>
-          </div>
-        } @empty { <div style="font-size:0.8rem;color:#94a3b8;padding:10px 0">No incidents are currently waiting at your workflow stage.</div> }
-      </dmis-panel>
-      <dmis-panel title="Submitted By Me" icon="fa-paper-plane" [badge]="(d().submitted_by_me?.length ?? 0) + ''">
-        @for (i of d().submitted_by_me ?? []; track i.id) {
-          <div class="queue-item">
-            <span class="sev" [style.background]="color(i.severity_level)">{{ i.severity_level }}</span>
-            <div>
-              <a [routerLink]="['/m/response/incidents', i.id]">{{ i.title }}</a>
-              <div class="queue-meta">{{ i.status }} · {{ area(i) }} · {{ when(i.submitted_at ?? i.reported_at) }}</div>
+          } @empty { <div style="font-size:0.8rem;color:#94a3b8;padding:10px 0">No incidents waiting at your workflow stage.</div> }
+          @if ((d().needs_action?.length ?? 0) > 5) {
+            <a class="more-link" href="javascript:void(0)" (click)="showMoreNeeds.set(!showMoreNeeds())">
+              {{ showMoreNeeds() ? 'Show less' : ('Show all ' + d().needs_action.length) }}
+            </a>
+          }
+        </div>
+      </details>
+
+      <details class="block">
+        <summary>
+          <i class="fas fa-paper-plane ico" style="color:#2563eb"></i> Submitted By Me
+          <span class="badge">{{ d().submitted_by_me?.length ?? 0 }}</span>
+          <i class="fas fa-chevron-down chev"></i>
+        </summary>
+        <div class="body">
+          @for (i of (d().submitted_by_me ?? []).slice(0, showMoreMine() ? 99 : 5); track i.id) {
+            <div class="queue-item">
+              <span class="sev" [style.background]="color(i.severity_level)">{{ i.severity_level }}</span>
+              <div>
+                <a [routerLink]="['/m/response/incidents', i.id]">{{ i.title }}</a>
+                <div class="queue-meta">{{ i.status }} · {{ area(i) }} · {{ when(i.submitted_at ?? i.reported_at) }}</div>
+              </div>
+              <span class="wf-chip">{{ i.workflow_status_label }}</span>
             </div>
-            <span class="wf-chip">{{ i.workflow_status_label }}</span>
-          </div>
-        } @empty { <div style="font-size:0.8rem;color:#94a3b8;padding:10px 0">No submitted incidents are attached to your login yet.</div> }
-      </dmis-panel>
+          } @empty { <div style="font-size:0.8rem;color:#94a3b8;padding:10px 0">No submitted incidents on this login yet.</div> }
+          @if ((d().submitted_by_me?.length ?? 0) > 5) {
+            <a class="more-link" href="javascript:void(0)" (click)="showMoreMine.set(!showMoreMine())">
+              {{ showMoreMine() ? 'Show less' : ('Show all ' + d().submitted_by_me.length) }}
+            </a>
+          }
+        </div>
+      </details>
     </div>
 
     <dmis-panel title="Recent Incidents (24h)" icon="fa-clock-rotate-left">
@@ -148,6 +242,8 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
   readonly d = signal<any>({});
   readonly clock = signal('');
   readonly live = signal(true);
+  readonly showMoreNeeds = signal(false);
+  readonly showMoreMine = signal(false);
   private timers: any[] = [];
   private map: any;
   private markers: any[] = [];
@@ -169,11 +265,40 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
         this.d.set(d);
         ensureLeaflet().then(() => this.renderMap(d.recent_incidents ?? []));
       },
-      error: () => this.live.set(false),   // poll failed — flag stale, keep last-good data on screen
+      error: () => this.live.set(false),
     });
   }
 
-  /** Standard Tanzania map; markers cleared and redrawn every poll (enhanced-board behavior). */
+  /** Group EW alerts by severity band for dropdown blocks. */
+  ewGroups(): { key: string; label: string; items: any[] }[] {
+    const rows = this.d().area_early_warnings ?? [];
+    const buckets: Record<string, any[]> = { major: [], warning: [], advisory: [] };
+    for (const w of rows) {
+      const s = String(w.warning_level || '').toLowerCase();
+      if (s.includes('major') || s.includes('emergency')) buckets['major'].push(w);
+      else if (s.includes('advis') || s.includes('watch')) buckets['advisory'].push(w);
+      else buckets['warning'].push(w);
+    }
+    return [
+      { key: 'major', label: 'Major / Emergency', items: buckets['major'] },
+      { key: 'warning', label: 'Warning', items: buckets['warning'] },
+      { key: 'advisory', label: 'Advisory / Watch', items: buckets['advisory'] },
+    ].filter(g => g.items.length > 0);
+  }
+
+  isMajor(level: string): boolean {
+    const s = String(level || '').toLowerCase();
+    return s.includes('major') || s.includes('emergency');
+  }
+  isAdvisory(level: string): boolean {
+    const s = String(level || '').toLowerCase();
+    return s.includes('advis') || s.includes('watch');
+  }
+
+  compactArea(w: any): string {
+    return w?.district_names || w?.region_names || 'Area coverage on file';
+  }
+
   private renderMap(incidents: any[]): void {
     if (!this.map) {
       const el = document.getElementById('resp-map');
@@ -182,12 +307,12 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
       addMapNav(this.map, { home: [-6.369028, 34.888822, 6] });
     }
     this.markers.forEach(m => m.remove());
-	    this.markers = incidents.filter(i => i.latitude && i.longitude).map(i =>
-	      L.circleMarker([i.latitude, i.longitude], {
-	        radius: 9, color: '#fff', weight: 2, fillColor: this.color(i.severity_level), fillOpacity: 0.9,
-	      }).addTo(this.map).bindTooltip(
-	        `<b>${escapeHtml(i.title)}</b><br>${escapeHtml(i.severity_level)} · ${escapeHtml(i.status)}`,
-	      ));
+    this.markers = incidents.filter(i => i.latitude && i.longitude).map(i =>
+      L.circleMarker([i.latitude, i.longitude], {
+        radius: 9, color: '#fff', weight: 2, fillColor: this.color(i.severity_level), fillOpacity: 0.9,
+      }).addTo(this.map).bindTooltip(
+        `<b>${escapeHtml(i.title)}</b><br>${escapeHtml(i.severity_level)} · ${escapeHtml(i.status)}`,
+      ));
   }
 
   color(severity: string): string {
@@ -209,20 +334,11 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
   }
 
   when(value: unknown): string {
-    if (!value) {
-      return '-';
-    }
+    if (!value) return '-';
     return String(value).substring(0, 16).replace('T', ' ');
   }
 }
 
-/**
- * THE EOCC live board (merged) — dark command view: metric tiles, the
- * live severity map, severity/status rollups, today's alert dispatch stats
- * (fed by the R9 stream), the 24h feed, and quick actions including
- * "Activate Emergency Protocol" (dead in the source, wired to R11's
- * response_activations here). Full payload refresh every 30 seconds.
- */
 @Component({
   selector: 'page-eocc-board',
   standalone: true,
