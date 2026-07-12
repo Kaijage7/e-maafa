@@ -149,7 +149,7 @@ public class GoLiveOpsController {
                     rs -> rs.next() ? rs.getString(1) : null);
             Long flywayMax = parseVersion(ver);
             db.put("flywayMaxVersion", ver);
-            db.put("ok", flywayMax != null && flywayMax >= 196);
+            db.put("ok", flywayMax != null && flywayMax >= 197);
             db.put("detail", "Flyway max version " + ver + " (platform.flyway_schema_history)");
         } catch (DataAccessException e) {
             db.put("ok", false);

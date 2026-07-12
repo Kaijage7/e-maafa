@@ -316,6 +316,271 @@ public class MonitoringEvaluationEntryService {
         return Map.of("saved", saved, "failed", errors.size(), "errors", errors);
     }
 
+    // ── Organization ↔ indicator assignment ─────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> organizationIndicators(Long agencyId, Long stakeholderId) {
+        if ((agencyId == null) == (stakeholderId == null)) {
+            throw bad("Provide exactly one of agencyId or stakeholderId.");
+        }
+        assertOrgVisible(agencyId, stakeholderId);
+        List<Map<String, Object>> assigned;
+        if (agencyId != null) {
+            assigned = rows("""
+                    select o.id as "assignmentId", o.indicator_id as "indicatorId", o.auto_capture as "autoCapture",
+                           o.active, o.notes, o.created_at as "assignedAt",
+                           i.code, i.name, i.domain, i.level, i.unit, i.source_module as "sourceModule",
+                           i.value_type as "valueType", i.target_value as "targetValue"
+                    from public.me_organization_indicators o
+                    join public.me_indicator_catalog i on i.id = o.indicator_id
+                    where o.active = true and o.agency_id = ?
+                    order by i.sort_order, i.code
+                    """, agencyId);
+        } else {
+            assigned = rows("""
+                    select o.id as "assignmentId", o.indicator_id as "indicatorId", o.auto_capture as "autoCapture",
+                           o.active, o.notes, o.created_at as "assignedAt",
+                           i.code, i.name, i.domain, i.level, i.unit, i.source_module as "sourceModule",
+                           i.value_type as "valueType", i.target_value as "targetValue"
+                    from public.me_organization_indicators o
+                    join public.me_indicator_catalog i on i.id = o.indicator_id
+                    where o.active = true and o.stakeholder_id = ?
+                    order by i.sort_order, i.code
+                    """, stakeholderId);
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("agencyId", agencyId);
+        out.put("stakeholderId", stakeholderId);
+        out.put("assigned", assigned);
+        out.put("canManage", SecurityUtils.hasAuthority("monitoring_evaluation.manage"));
+        if (agencyId != null) {
+            out.put("organization", oneOptional(
+                    "select id, name, acronym, institution_class as \"institutionClass\" from public.agencies where id = ?",
+                    agencyId));
+        } else {
+            out.put("organization", oneOptional(
+                    "select id, name, type, organization from public.stakeholders where id = ?",
+                    stakeholderId));
+        }
+        return out;
+    }
+
+    /**
+     * Assign a catalogue indicator to an organization. Optionally seeds a draft value for the
+     * current period from an automated source_module link (in-platform tables only).
+     */
+    @Transactional
+    public Map<String, Object> assignIndicatorToOrganization(Map<String, Object> req) {
+        if (!SecurityUtils.hasAuthority("monitoring_evaluation.manage")
+                && !SecurityUtils.hasAuthority("monitoring_evaluation.enter")) {
+            throw new AccessDeniedException("Cannot assign M&E indicators.");
+        }
+        Long agencyId = longOrNull(req.get("agencyId"));
+        Long stakeholderId = longOrNull(req.get("stakeholderId"));
+        if ((agencyId == null) == (stakeholderId == null)) {
+            throw bad("Provide exactly one of agencyId or stakeholderId.");
+        }
+        assertOrgVisible(agencyId, stakeholderId);
+        Map<String, Object> indicator = indicator(req);
+        long indicatorId = ((Number) indicator.get("id")).longValue();
+        boolean autoCapture = boolOrDefault(req.get("autoCapture"), true);
+        Long uid = currentUser.actingUserId();
+
+        // Reactivate soft-removed assignment if present
+        Long existing = agencyId != null
+                ? jdbc.query("select id from public.me_organization_indicators where agency_id = ? and indicator_id = ?",
+                rs -> rs.next() ? rs.getLong(1) : null, agencyId, indicatorId)
+                : jdbc.query("select id from public.me_organization_indicators where stakeholder_id = ? and indicator_id = ?",
+                rs -> rs.next() ? rs.getLong(1) : null, stakeholderId, indicatorId);
+        Long assignmentId;
+        if (existing != null) {
+            jdbc.update("""
+                    update public.me_organization_indicators
+                       set active = true, auto_capture = ?, notes = ?, assigned_by = ?, updated_at = now()
+                     where id = ?
+                    """, autoCapture, str(req.get("notes")), uid, existing);
+            assignmentId = existing;
+        } else {
+            assignmentId = jdbc.queryForObject("""
+                    insert into public.me_organization_indicators(
+                        agency_id, stakeholder_id, indicator_id, auto_capture, active, assigned_by, notes, created_at, updated_at)
+                    values (?,?,?,?,true,?,?, now(), now()) returning id
+                    """, Long.class, agencyId, stakeholderId, indicatorId, autoCapture, uid, str(req.get("notes")));
+        }
+
+        Map<String, Object> captured = Map.of();
+        if (autoCapture) {
+            captured = autoCaptureValue(indicator, agencyId, stakeholderId, cleanPeriod(str(req.get("period"))));
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("assignmentId", assignmentId);
+        out.put("indicatorId", indicatorId);
+        out.put("autoCapture", autoCapture);
+        out.put("capturedValue", captured);
+        out.put("message", "Indicator assigned to organization"
+                + (captured.isEmpty() ? "" : "; value auto-linked from " + captured.getOrDefault("dataSource", "source")));
+        return out;
+    }
+
+    /** Soft-delete: remove indicator from organization reporting set (values retained for audit). */
+    @Transactional
+    public Map<String, Object> removeIndicatorFromOrganization(long assignmentId) {
+        if (!SecurityUtils.hasAuthority("monitoring_evaluation.manage")
+                && !SecurityUtils.hasAuthority("monitoring_evaluation.enter")) {
+            throw new AccessDeniedException("Cannot remove M&E indicator assignments.");
+        }
+        Map<String, Object> row = oneOptional(
+                "select id, agency_id as \"agencyId\", stakeholder_id as \"stakeholderId\", indicator_id as \"indicatorId\" "
+                        + "from public.me_organization_indicators where id = ? and active",
+                assignmentId);
+        if (row == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Assignment not found");
+        }
+        assertOrgVisible(longOrNull(row.get("agencyId")), longOrNull(row.get("stakeholderId")));
+        jdbc.update("update public.me_organization_indicators set active = false, updated_at = now() where id = ?",
+                assignmentId);
+        return Map.of("message", "Indicator removed from organization", "assignmentId", assignmentId,
+                "note", "Historical me_indicator_values rows are kept for audit.");
+    }
+
+    /**
+     * Re-run auto-capture for all auto_capture assignments of an organization (current period).
+     */
+    @Transactional
+    public Map<String, Object> captureOrganizationValues(Long agencyId, Long stakeholderId, String period) {
+        if ((agencyId == null) == (stakeholderId == null)) {
+            throw bad("Provide exactly one of agencyId or stakeholderId.");
+        }
+        assertOrgVisible(agencyId, stakeholderId);
+        String p = cleanPeriod(period);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> assigned =
+                (List<Map<String, Object>>) organizationIndicators(agencyId, stakeholderId).get("assigned");
+        int captured = 0;
+        int skipped = 0;
+        List<Map<String, Object>> details = new ArrayList<>();
+        for (Map<String, Object> a : assigned) {
+            if (!Boolean.TRUE.equals(a.get("autoCapture"))) {
+                skipped++;
+                continue;
+            }
+            Map<String, Object> ind = one("select * from public.me_indicator_catalog where id = ?", a.get("indicatorId"));
+            Map<String, Object> val = autoCaptureValue(ind, agencyId, stakeholderId, p);
+            if (val.isEmpty()) {
+                skipped++;
+            } else {
+                captured++;
+                details.add(val);
+            }
+        }
+        return Map.of("period", p, "captured", captured, "skipped", skipped, "values", details);
+    }
+
+    /**
+     * Pull a numeric value from live operational tables when source_module is known.
+     * Returns empty map when no honest automation exists (manual entry still required).
+     */
+    private Map<String, Object> autoCaptureValue(Map<String, Object> indicator, Long agencyId, Long stakeholderId,
+                                                 String period) {
+        String source = coalesce(str(indicator.get("source_module")), str(indicator.get("sourceModule")));
+        if (source == null || source.isBlank()) {
+            return Map.of();
+        }
+        String src = source.trim().toLowerCase(Locale.ROOT);
+        Double numeric = null;
+        String dataSource = null;
+        try {
+            // National/operational rollups only — agencies lack region_id in current schema.
+            // Values are drafted for review; never presented as external official stats.
+            if (src.contains("budget") || src.contains("finance") || src.contains("ndmf")) {
+                try {
+                    numeric = jdbc.query(
+                            "select coalesce(sum(amount),0)::float from public.budget_commitments "
+                                    + "where lower(coalesce(status,'')) in ('committed','disbursed')",
+                            rs -> rs.next() ? rs.getDouble(1) : null);
+                    dataSource = "auto:budget_commitments.sum_committed_disbursed";
+                } catch (DataAccessException e2) {
+                    numeric = null;
+                }
+            } else if (src.contains("incident")) {
+                numeric = jdbc.query(
+                        "select count(*)::float from public.incidents where coalesce(is_simulation,false)=false",
+                        rs -> rs.next() ? rs.getDouble(1) : null);
+                dataSource = "auto:incidents.non_simulation_count";
+            } else if (src.contains("warehouse") || src.contains("stock") || src.contains("inventory")) {
+                numeric = jdbc.query(
+                        "select coalesce(sum(quantity),0)::float from public.inventory_items",
+                        rs -> rs.next() ? rs.getDouble(1) : null);
+                dataSource = "auto:inventory_items.sum_quantity";
+            } else if (src.contains("training")) {
+                numeric = jdbc.query(
+                        "select count(*)::float from public.training_plans where coalesce(status,'') not in ('Cancelled')",
+                        rs -> rs.next() ? rs.getDouble(1) : null);
+                dataSource = "auto:training_plans.count";
+            } else if (src.contains("warning") || src.contains("early_warning") || src.contains("ew")) {
+                numeric = jdbc.query(
+                        "select count(*)::float from public.warnings where coalesce(status,'') not in ('Cancelled','Draft')",
+                        rs -> rs.next() ? rs.getDouble(1) : null);
+                dataSource = "auto:warnings.count";
+            } else if (src.contains("evacuation") || src.contains("shelter")) {
+                numeric = jdbc.query(
+                        "select count(*)::float from public.evacuation_centers where coalesce(status,'') ilike '%active%'",
+                        rs -> rs.next() ? rs.getDouble(1) : null);
+                dataSource = "auto:evacuation_centers.active";
+            }
+        } catch (DataAccessException e) {
+            return Map.of();
+        }
+        if (numeric == null) {
+            return Map.of();
+        }
+        Map<String, Object> req = new LinkedHashMap<>();
+        req.put("indicatorId", indicator.get("id"));
+        req.put("period", period);
+        req.put("areaLevel", agencyId != null ? "agency" : "stakeholder");
+        req.put("agencyId", agencyId);
+        req.put("stakeholderId", stakeholderId);
+        req.put("value", numeric);
+        req.put("numericValue", numeric);
+        req.put("status", "draft");
+        req.put("dataSource", dataSource);
+        req.put("notes", "Auto-captured from operational tables (" + dataSource + "). Review before submit.");
+        try {
+            return saveValue(req);
+        } catch (Exception e) {
+            return Map.of("error", e.getMessage() == null ? "capture_failed" : e.getMessage(),
+                    "numericValue", numeric, "dataSource", dataSource);
+        }
+    }
+
+    private void assertOrgVisible(Long agencyId, Long stakeholderId) {
+        // Manage may see all; enter limited to own agency/stakeholder when bound
+        if (SecurityUtils.hasAuthority("monitoring_evaluation.manage")) {
+            return;
+        }
+        // Area/agency officers: if they have agency on user, enforce match
+        // Soft: allow enter for any target the value path would allow
+        try {
+            if (agencyId != null) {
+                assertTargetAllowed("agency", null, null, null, agencyId, null);
+            } else {
+                assertTargetAllowed("stakeholder", null, null, null, null, stakeholderId);
+            }
+        } catch (AccessDeniedException e) {
+            throw e;
+        } catch (Exception e) {
+            // if assertTargetAllowed is strict, bubble
+            if (e instanceof ResponseStatusException rse) {
+                throw rse;
+            }
+        }
+    }
+
+    private Map<String, Object> oneOptional(String sql, Object... args) {
+        List<Map<String, Object>> list = rows(sql, args);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
     private List<Map<String, Object>> values(String level, String period, List<Map<String, Object>> indicators) {
         if (indicators.isEmpty()) {
             return List.of();
@@ -1275,21 +1540,21 @@ public class MonitoringEvaluationEntryService {
 
     private Long existingValueId(long indicatorId, String period, String level, Long regionId, Long districtId,
                                  Long councilId, Long agencyId, Long stakeholderId, Long incidentId, Long warningId) {
+        // IS NOT DISTINCT FROM handles SQL NULL equality (JDBC "?" IS NULL is type-ambiguous).
         List<Long> ids = jdbc.queryForList("""
                 select id
                 from public.me_indicator_values
                 where indicator_id = ? and period_label = ? and area_level = ?
-                  and ((region_id = ?) or (region_id is null and ? is null))
-                  and ((district_id = ?) or (district_id is null and ? is null))
-                  and ((council_id = ?) or (council_id is null and ? is null))
-                  and ((agency_id = ?) or (agency_id is null and ? is null))
-                  and ((stakeholder_id = ?) or (stakeholder_id is null and ? is null))
-                  and ((incident_id = ?) or (incident_id is null and ? is null))
-                  and ((warning_id = ?) or (warning_id is null and ? is null))
+                  and region_id is not distinct from ?
+                  and district_id is not distinct from ?
+                  and council_id is not distinct from ?
+                  and agency_id is not distinct from ?
+                  and stakeholder_id is not distinct from ?
+                  and incident_id is not distinct from ?
+                  and warning_id is not distinct from ?
                 limit 1
                 """, Long.class, indicatorId, period, level,
-                regionId, regionId, districtId, districtId, councilId, councilId, agencyId, agencyId,
-                stakeholderId, stakeholderId, incidentId, incidentId, warningId, warningId);
+                regionId, districtId, councilId, agencyId, stakeholderId, incidentId, warningId);
         return ids.isEmpty() ? null : ids.get(0);
     }
 

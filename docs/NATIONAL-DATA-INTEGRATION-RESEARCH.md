@@ -362,7 +362,39 @@ Each phase ends with: adapter dual-proof + `integration_messages` audit + status
 
 ---
 
-## 11. Suggested next engineering ticket (if approved)
+## 11. Delivered platform hooks (this repo)
+
+### M&E organization indicators (V197+)
+
+| API | Purpose |
+|-----|---------|
+| `GET /v1/monitoring-evaluation/organizations/indicators?agencyId=` | List indicators assigned to org |
+| `POST /v1/monitoring-evaluation/organizations/indicators` | Assign indicator (`autoCapture` optional) |
+| `DELETE /v1/monitoring-evaluation/organizations/indicators/{id}` | Soft-remove assignment (values kept) |
+| `POST /v1/monitoring-evaluation/organizations/capture` | Re-run auto-capture for period |
+
+Auto-capture only from **in-platform** tables when `source_module` matches (budget, incidents, inventory, warnings, trainings, EC). Draft status — operator reviews before submit. **No external NBS/NIDA pull invented.**
+
+Workbench UI: **M&E Data Workbench → Organization indicators**.
+
+### Hazard area exposure context (careful)
+
+| API | Purpose |
+|-----|---------|
+| `GET /v1/ops/hazard-area-context?areaName=&lat=&lng=` | Coordinates + **external** context links |
+
+Returns honesty note + links to:
+
+- OpenStreetMap  
+- Google Maps / Street View (**external** browser tab; Google ToS)  
+- EO Browser (Sentinel open data — **not** DMIS AI)  
+- Leaflet tile URL hints for OSM / Esri World Imagery  
+
+**Does not** classify damage or run satellite AI. PMO impact-support remains the analytical layer.
+
+UI: **PMO DMD Consolidated → Justification → Load context links** for selected district.
+
+## 12. Suggested next engineering ticket (if approved)
 
 **P1 only:** extend `ew_agency_submissions` (or child table) for `values[]` metrics; validate area list; surface mm/stage in impact-support district panel; dual-prove with synthetic TMA multi-district rainfall (colour + values) — **still no claim of live TMA national API**.
 

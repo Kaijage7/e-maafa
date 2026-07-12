@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -90,5 +91,43 @@ public class MonitoringEvaluationController {
     @PreAuthorize("hasAnyAuthority('monitoring_evaluation.enter','monitoring_evaluation.manage')")
     public Map<String, Object> saveBatch(@RequestBody Map<String, Object> req) {
         return entryService.saveBatch(req);
+    }
+
+    @GetMapping("/organizations/indicators")
+    @Operation(summary = "List indicators assigned to an agency or stakeholder")
+    @PreAuthorize("hasAuthority('monitoring_evaluation.view')")
+    public Map<String, Object> organizationIndicators(@RequestParam(required = false) Long agencyId,
+                                                      @RequestParam(required = false) Long stakeholderId) {
+        return entryService.organizationIndicators(agencyId, stakeholderId);
+    }
+
+    @PostMapping("/organizations/indicators")
+    @Operation(summary = "Assign catalogue indicator to organization (optional auto-capture of value)")
+    @PreAuthorize("hasAnyAuthority('monitoring_evaluation.enter','monitoring_evaluation.manage')")
+    public Map<String, Object> assignOrganizationIndicator(@RequestBody Map<String, Object> req) {
+        return entryService.assignIndicatorToOrganization(req);
+    }
+
+    @DeleteMapping("/organizations/indicators/{assignmentId}")
+    @Operation(summary = "Remove indicator from organization (soft; values kept)")
+    @PreAuthorize("hasAnyAuthority('monitoring_evaluation.enter','monitoring_evaluation.manage')")
+    public Map<String, Object> removeOrganizationIndicator(@PathVariable long assignmentId) {
+        return entryService.removeIndicatorFromOrganization(assignmentId);
+    }
+
+    @PostMapping("/organizations/capture")
+    @Operation(summary = "Auto-capture linked values for all auto_capture assignments of an organization")
+    @PreAuthorize("hasAnyAuthority('monitoring_evaluation.enter','monitoring_evaluation.manage')")
+    public Map<String, Object> captureOrganization(@RequestBody Map<String, Object> req) {
+        Long agencyId = req.get("agencyId") instanceof Number n ? n.longValue() : null;
+        Long stakeholderId = req.get("stakeholderId") instanceof Number n ? n.longValue() : null;
+        if (agencyId == null && req.get("agencyId") != null) {
+            try { agencyId = Long.parseLong(String.valueOf(req.get("agencyId"))); } catch (Exception ignored) { }
+        }
+        if (stakeholderId == null && req.get("stakeholderId") != null) {
+            try { stakeholderId = Long.parseLong(String.valueOf(req.get("stakeholderId"))); } catch (Exception ignored) { }
+        }
+        String period = req.get("period") == null ? null : String.valueOf(req.get("period"));
+        return entryService.captureOrganizationValues(agencyId, stakeholderId, period);
     }
 }

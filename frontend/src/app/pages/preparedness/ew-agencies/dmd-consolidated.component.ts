@@ -244,6 +244,27 @@ declare const L: any;
                   <ul style="margin:0;padding-left:16px">
                     @for (reason of (sel.reasons || []).slice(0, 6); track $index) { <li>{{ reason }}</li> }
                   </ul>
+                  <div style="margin-top:8px;padding-top:6px;border-top:1px dashed #e2e8f0">
+                    <div style="font-size:0.7rem;font-weight:800;color:#64748b;margin-bottom:4px">Exposure context (external links)</div>
+                    <div style="font-size:0.68rem;color:#94a3b8;margin-bottom:6px">No satellite AI in DMIS — opens OSM / aerial / Street View for human review.</div>
+                    <button type="button" class="mini-btn" style="border:1px solid #a7f3d0;background:#ecfdf5;color:#065f46"
+                      (click)="loadAreaContext(sel.district); $event.stopPropagation()">
+                      <i class="fas fa-globe"></i> Load context links
+                    </button>
+                    @if (areaContext(); as ctx) {
+                      <ul style="margin:6px 0 0;padding-left:14px;font-size:0.72rem">
+                        @for (l of (ctx['contextLinks'] || []); track l['key']) {
+                          <li style="margin-bottom:3px">
+                            <a [href]="l['url']" target="_blank" rel="noopener noreferrer">{{ l['title'] }}</a>
+                            <span style="color:#94a3b8"> — {{ l['note'] }}</span>
+                          </li>
+                        }
+                      </ul>
+                      @if (ctx['centroidWarning']) {
+                        <div style="font-size:0.68rem;color:#b45309;margin-top:4px">{{ ctx['centroidWarning'] }}</div>
+                      }
+                    }
+                  </div>
                   @if (sel.suggestedDirectives?.length) {
                     <button type="button" class="mini-btn" style="margin-top:6px;border:1px solid #c4b5fd;background:#ede7f6;color:#4527a0"
                       (click)="applyDirectives(sel)">Insert model directives</button>
@@ -459,6 +480,7 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
     { key: 'overall', label: 'Overall', hint: 'Full INFORM only — no single-hazard boost' },
   ]);
   selectedDistrict = signal<string | null>(null);
+  areaContext = signal<Record<string, any> | null>(null);
   private supportByName = signal<Record<string, any>>({});
 
   // Action Guide Book statement assist
@@ -696,6 +718,25 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
     if (!lines.length) return;
     this.setDirectives(lines.join('\n'));
     this.pushMsg.set({ msg: 'Model directives set for Day ' + this.activeDay() + ' — edit before publishing.', err: false });
+  }
+
+  /** External basemap / Street View links for exposure context — no satellite AI. */
+  loadAreaContext(district: string): void {
+    if (!district) return;
+    this.areaContext.set(null);
+    const ctr = this.districtCentre(district);
+    const params: Record<string, string> = { areaName: district };
+    if (ctr) {
+      params['lat'] = String(ctr.lat);
+      params['lng'] = String(ctr.lng);
+    }
+    this.http.get<Record<string, any>>('/api/v1/ops/hazard-area-context', { params }).subscribe({
+      next: res => this.areaContext.set(res),
+      error: () => this.pushMsg.set({
+        msg: 'Could not load exposure context links.',
+        err: true,
+      }),
+    });
   }
 
   /** Areas currently painted at the selected statement colour (or all painted / entity tiers). */

@@ -241,10 +241,65 @@ interface WorkbenchResponse {
                 </label>
                 <label>Unit <input [(ngModel)]="newIndicator['unit']" placeholder="Unit"></label>
                 <label>Frequency <input [(ngModel)]="newIndicator['frequency']" placeholder="quarterly"></label>
+                <label class="wide">Source module (auto-capture)
+                  <input [(ngModel)]="newIndicator['sourceModule']" placeholder="incidents | inventory | warnings | trainings">
+                </label>
               </div>
               <button class="btn-primary" type="button" (click)="createIndicator()" [disabled]="!newIndicator['code'] || !newIndicator['name'] || !newIndicator['domain']">
                 <i class="fas fa-plus"></i> Add indicator
               </button>
+            </div>
+          </dmis-panel>
+
+          <dmis-panel title="Organization indicators" icon="fa-building">
+            <div class="panel-body catalogue">
+              <div class="hint-line" style="margin-bottom:8px">
+                Assign catalogue indicators to an agency/partner. Values can auto-draft from
+                operational tables when <code>source_module</code> is set (review before submit).
+              </div>
+              <div class="form-grid">
+                <label>Target organization
+                  <select [(ngModel)]="orgTargetKey" (change)="loadOrgIndicators()">
+                    <option value="">— select —</option>
+                    @for (t of orgTargets(); track t['key']) {
+                      <option [value]="t['key']">{{ t['label'] }}</option>
+                    }
+                  </select>
+                </label>
+                <label>Indicator to assign
+                  <select [(ngModel)]="assignIndicatorId">
+                    <option value="">— select —</option>
+                    @for (i of indicators(); track i['id']) {
+                      <option [value]="i['id']">{{ i['code'] }} — {{ i['name'] }}</option>
+                    }
+                  </select>
+                </label>
+              </div>
+              <div class="me-actions" style="margin-top:8px">
+                <button class="btn-primary" type="button" (click)="assignIndicator()"
+                  [disabled]="!orgTargetKey || !assignIndicatorId"><i class="fas fa-plus"></i> Assign</button>
+                <button class="btn-sm" type="button" (click)="captureOrgValues()"
+                  [disabled]="!orgTargetKey"><i class="fas fa-link"></i> Auto-capture values</button>
+              </div>
+              @if (orgAssigned().length) {
+                <div class="table-wrap" style="max-height:220px;margin-top:10px">
+                  <table>
+                    <thead><tr><th>Code</th><th>Name</th><th>Auto</th><th></th></tr></thead>
+                    <tbody>
+                      @for (a of orgAssigned(); track a['assignmentId']) {
+                        <tr>
+                          <td>{{ a['code'] }}</td>
+                          <td>{{ a['name'] }}</td>
+                          <td>{{ a['autoCapture'] ? 'yes' : 'no' }}</td>
+                          <td><button class="btn-sm" type="button" (click)="removeAssignment(a['assignmentId'])"><i class="fas fa-trash"></i></button></td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else if (orgTargetKey) {
+                <div class="empty" style="padding:12px">No indicators assigned to this organization yet.</div>
+              }
             </div>
           </dmis-panel>
         }
@@ -272,6 +327,9 @@ export class MonitoringEvaluationWorkbenchComponent {
   search = '';
   institutionClass = '';
   pasteText = '';
+  orgTargetKey = '';
+  assignIndicatorId = '';
+  orgAssigned = signal<Row[]>([]);
   newIndicator: Row = {
     code: '',
     name: '',
@@ -280,6 +338,7 @@ export class MonitoringEvaluationWorkbenchComponent {
     valueType: 'number',
     unit: '',
     frequency: 'quarterly',
+    sourceModule: '',
   };
 
   constructor() {
@@ -335,6 +394,69 @@ export class MonitoringEvaluationWorkbenchComponent {
   canManage(): boolean { return !!this.workbench()?.canManage; }
   canEnter(): boolean { return !!this.workbench()?.canEnter; }
   importanceNote(): string { return this.workbench()?.importanceNote || ''; }
+
+  orgTargets(): Row[] {
+    return this.targets().filter(t => t['areaLevel'] === 'agency' || t['areaLevel'] === 'stakeholder'
+      || t['agencyId'] || t['stakeholderId']);
+  }
+
+  loadOrgIndicators(): void {
+    const t = this.targets().find(x => x['key'] === this.orgTargetKey);
+    if (!t) { this.orgAssigned.set([]); return; }
+    const params: Row = {};
+    if (t['agencyId']) params['agencyId'] = t['agencyId'];
+    if (t['stakeholderId']) params['stakeholderId'] = t['stakeholderId'];
+    if (!params['agencyId'] && !params['stakeholderId']) { this.orgAssigned.set([]); return; }
+    this.http.get<Row>('/api/v1/monitoring-evaluation/organizations/indicators', { params }).subscribe({
+      next: res => this.orgAssigned.set((res['assigned'] as Row[]) || []),
+      error: () => this.orgAssigned.set([]),
+    });
+  }
+
+  assignIndicator(): void {
+    const t = this.targets().find(x => x['key'] === this.orgTargetKey);
+    if (!t || !this.assignIndicatorId) return;
+    const body: Row = {
+      indicatorId: Number(this.assignIndicatorId),
+      autoCapture: true,
+      period: this.period,
+    };
+    if (t['agencyId']) body['agencyId'] = t['agencyId'];
+    if (t['stakeholderId']) body['stakeholderId'] = t['stakeholderId'];
+    this.http.post<Row>('/api/v1/monitoring-evaluation/organizations/indicators', body).subscribe({
+      next: res => {
+        this.message.set(String(res['message'] || 'Assigned'));
+        this.loadOrgIndicators();
+        this.load();
+      },
+      error: err => this.error.set(err?.error?.detail || err?.error?.message || 'Assign failed'),
+    });
+  }
+
+  removeAssignment(assignmentId: number): void {
+    this.http.delete<Row>(`/api/v1/monitoring-evaluation/organizations/indicators/${assignmentId}`).subscribe({
+      next: res => {
+        this.message.set(String(res['message'] || 'Removed'));
+        this.loadOrgIndicators();
+      },
+      error: err => this.error.set(err?.error?.detail || err?.error?.message || 'Remove failed'),
+    });
+  }
+
+  captureOrgValues(): void {
+    const t = this.targets().find(x => x['key'] === this.orgTargetKey);
+    if (!t) return;
+    const body: Row = { period: this.period };
+    if (t['agencyId']) body['agencyId'] = t['agencyId'];
+    if (t['stakeholderId']) body['stakeholderId'] = t['stakeholderId'];
+    this.http.post<Row>('/api/v1/monitoring-evaluation/organizations/capture', body).subscribe({
+      next: res => {
+        this.message.set(`Auto-captured ${res['captured'] || 0} value(s); skipped ${res['skipped'] || 0}. Review drafts before submit.`);
+        this.load();
+      },
+      error: err => this.error.set(err?.error?.detail || err?.error?.message || 'Capture failed'),
+    });
+  }
 
   levelLabel(value: any): string {
     const key = String(value || '');
@@ -438,7 +560,7 @@ export class MonitoringEvaluationWorkbenchComponent {
     this.http.post<Row>('/api/v1/monitoring-evaluation/indicators', this.newIndicator).subscribe({
       next: () => {
         this.message.set('M&E indicator added.');
-        this.newIndicator = { code: '', name: '', domain: '', level: this.level, valueType: 'number', unit: '', frequency: 'quarterly' };
+        this.newIndicator = { code: '', name: '', domain: '', level: this.level, valueType: 'number', unit: '', frequency: 'quarterly', sourceModule: '' };
         this.load();
       },
       error: err => this.error.set(err?.error?.message || 'Unable to add M&E indicator.'),
