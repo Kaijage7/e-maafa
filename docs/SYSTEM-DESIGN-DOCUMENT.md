@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Document title | e-MAAFA — System Design Document |
-| Version | 1.1 (honest refresh) |
-| Date | 2026-07-10 |
+| Version | 1.2 (eGA layered backend structure adopted) |
+| Date | 2026-07-12 |
 | Status | Living draft — **not** a production certificate |
 | Owner | PMO-DMD (Prime Minister's Office — Disaster Management Department) |
 | Audience | Backend & frontend engineers; PMO ICT; architecture reviewers; auditors; technical stakeholders |
@@ -34,12 +34,12 @@ e-MAAFA is the Tanzania Prime Minister's Office (PMO) Disaster Management Inform
 8. **Disaster Repository** — the Sendai/DesInventar national disaster-loss database and analytics.
 9. **Settings, Identity & Notifications** — user/role/permission management, location hierarchy, resource catalogue, translations, approval-workflow configuration, login, the notification backbone and stakeholder administration.
 
-**Architecture style.** e-MAAFA is a **modular monolith**: one Spring Boot 3.3.4 service on Java 21 hosts every bounded context, modules collaborate through a transactional outbox rather than direct cross-module calls, and the package and event seams are arranged so a future split into services is mechanical rather than a redesign. The operator UI is an Angular 18 single-page application of 100% standalone components with lazy-loaded routes. Data lives in one PostgreSQL 17 database shared with the still-running legacy application during migration. A thin, unchanged Python service generates the official Early-Warning bulletin PDFs. The backend serves under context-path `/api`; the frontend proxies `/api`→`:8080` and `/ew-api`→`:8600`.
+**Architecture style.** e-MAAFA is a **layered n-tier monolith** aligned with **eGA Spring Boot practice**: one Spring Boot 3.3.4 service on Java 21, packages ordered as `controller → service (interface + impl) → repository → entity`, with `dto`, `config`, and `integration` (GovESB / institutional clients). Functional disaster-management capabilities (EW, Response, Mitigation, …) remain product modules for URLs and the Angular UI; new backend code is arranged by eGA layer, not by feature root package. A transactional outbox still coordinates cross-capability events. The operator UI is an Angular 18 SPA. Data lives in one PostgreSQL 17 database shared with the still-running legacy application during migration. A thin Python service generates official Early-Warning bulletin PDFs. The backend serves under context-path `/api`; the frontend proxies `/api`→`:8080` and `/ew-api`→`:8600`. Binding structure doc: `docs/EGA-BACKEND-STRUCTURE.md`.
 
 **The most important design decisions.**
 
 - **Strangler re-platform from Laravel.** e-MAAFA runs against the *same* PostgreSQL database as the legacy Laravel app and takes over functionality module by module. The governing rule: Flyway owns only the new schemas and never mutates the legacy `public` tables; new code reads and additively extends those tables through `JdbcTemplate`.
-- **Modular monolith, not microservices.** One process, one connection pool, in-process events via the outbox — prioritising faithful behaviour and a single deployable unit, with the outbox relay documented as the single future point of change for a message broker.
+- **Layered n-tier monolith (eGA style), not microservices.** One process, one connection pool; packages follow `controller → service → repository → entity` with GovESB under `integration/`. In-process events via the outbox remain the cross-capability seam.
 - **Keycloak resource server with a self-issued HS256 token, plus a local persona.** The platform mints and validates its own HS256 JWT (`sub = users.id`) so it is runnable and fully testable without a live Keycloak; a `local`-profile persona filter authenticates dev/E2E requests from an `X-Local-Roles` header while still exercising the real `@PreAuthorize` gates.
 - **Jurisdiction & area scoping.** Authorization is role-based, layered with a jurisdiction model so that "only the nation sees everywhere": national tier sees the whole country, region tier its region, district tier its district — enforced server-side (STRICT for incidents, shared-or-own for registries).
 - **A single notification backbone.** Every outbound message — in-app bell, SMS via the national M-Gov gateway, email via SMTP — flows through one dispatcher with per-user channel preferences, off-thread delivery and a full cross-channel audit, replacing the legacy app's scattered notification logic.
@@ -281,15 +281,42 @@ e-MAAFA runs as four cooperating processes. The Angular dev server proxies all A
 
 ---
 
-### 02.2 Modular-monolith package layout
+### 02.2 Backend package layout (eGA layered standard)
 
-All backend code lives under `tz.go.pmo.dmis` (`backend/src/main/java/tz/go/pmo/dmis`). There are 16 top-level packages: one shared `common` package, a dev-only `local` seeding package, and 14 feature modules. Each module owns its controllers, services, JPA entities/repositories and request/response records; modules collaborate only through the shared `common` event outbox or through the shared database tables (never by calling another module's internals).
+**Binding standard:** e-MAAFA uses the **eGA de facto Spring Boot layered structure** (n-tier monolith). Full rules: [`docs/EGA-BACKEND-STRUCTURE.md`](./EGA-BACKEND-STRUCTURE.md).
 
-| Package | Module / responsibility | Base path(s) | Representative files |
+```text
+controller  →  service (interface)  →  service.impl  →  repository  →  entity
+dto / mapper · config · util · exception
+integration/  (govesb, nida, gepg, mgov, callback)
+```
+
+| Layer package | Responsibility |
+|---------------|----------------|
+| `controller` | Thin `@RestController` — validate, call service interface, return `ApiResponse` |
+| `service` | Business contracts (`XxxService` interfaces only) |
+| `service.impl` | `XxxServiceImpl` — transactions, orchestration |
+| `repository` | Spring Data JPA / data-access interfaces (target state) |
+| `entity` | JPA `@Entity` mappings |
+| `dto.request` / `dto.response` | Wire contracts; standard envelope `ApiResponse<T>` `{status,message,data}` |
+| `mapper` | ModelMapper / MapStruct |
+| `config` | Security beans, OpenAPI, ModelMapper, CORS |
+| `integration.*` | GovESB, NIDA, GePG, M-Gov, async callbacks (e-GIF) |
+| `util` / `exception` | Helpers and business exceptions |
+| `common` | Transitional shared security, RFC-7807 errors, outbox (until fully absorbed into layers) |
+| `local` | Dev/E2E seeders only |
+
+**New code** is added only under these layers. Product capabilities (Response, EW, Mitigation, …) remain **functional modules** for UI and URL design (`/v1/response/*`, `/v1/ew/*`, …); they are **not** the preferred root package style for new Java types.
+
+#### 02.2.1 Legacy feature packages (transition only)
+
+Until migration completes, existing code still lives in feature packages. Do not add **new** controllers there. URLs and behaviour are unchanged.
+
+| Package (legacy) | Module / responsibility | Base path(s) | Representative files |
 |---------|------------------------|--------------|----------------------|
 | `common` | Cross-cutting infrastructure: error handling, security, domain base types, event outbox, web DTOs, config | — | `common/error`, `common/security`, `common/event`, `common/config`, `common/domain` |
 | `iam` | Identity & access — email/password login over the legacy `users`/Spatie tables; mints the self-issued JWT | `/api/v1/auth` | `AuthController.java` |
-| `repository` | Disaster Repository (national loss database, UNDRR DesInventar-Sendai event cards) + Sendai analytics | `/api/v1/repository/events`, `/api/v1/repository/analytics` | `DisasterEventController`, `SendaiAnalyticsService` |
+| `repository` | Disaster Repository feature (Sendai) **and** target home for JPA repositories — feature controllers will move to `controller/` | `/api/v1/repository/events`, `/api/v1/repository/analytics` | `DisasterEventController`, `SendaiAnalyticsService` |
 | `ew` | Early Warning — bulletin ingest from PMO-DMD/TMA, warning lifecycle/approval, generated products, agency submissions, dissemination, field monitoring, scanner | `/api/v1/ew/*`, `/api/ew/*` | `EwWarningLifecycleController`, `EwBulletinIngestController`, `EwBoundaryController`, `scanner/ScannerController` |
 | `response` | Response & coordination — incidents, damage assessments, resource allocation/approval, dispatch, warehouse ops, declarations, tasks, command centre, public reports, stakeholder bidding | `/api/v1/response/*` | `IncidentController`, `ResourceApprovalController`, `DeclarationController`, `ApprovalWorkflowEngine` |
 | `preparedness` | Preparedness assets — training plans, evacuation centres, warehouses, temporary warehouses, inventory, alert subscriptions | `/api/v1/{training-plans,evacuation-centers,warehouses,temporary-warehouses,inventory,alert-subscriptions}` | `WarehouseController`, `EvacuationCenterService`, `AlertSubscriptionController` |
