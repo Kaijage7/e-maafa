@@ -1,7 +1,5 @@
-package tz.go.pmo.dmis.settings;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,40 +7,24 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.service.TranslationService;
 
 /**
- * System Settings → Translations. The bilingual (English / Kiswahili) UI-string registry seeded
- * from the public portal's i18n labels. Admins maintain the EN/SW pairs here; the public portal
- * hydrates its flat key→{en,sw} dictionary from this table via {@code GET /v1/portal/i18n}.
+ * Translations registry over {@code public.translations} + controlled {@code translation_groups}.
+ * Public portal hydrates i18n from the same table via PortalPublicService (SQL; not this service).
  */
-@RestController
-@RequestMapping("/v1/settings/translations")
-@Tag(name = "Settings: Translations", description = "Bilingual EN/SW UI strings")
+@Service
 @RequiredArgsConstructor
-public class TranslationController {
-
-    private static final String CAN_WRITE = "hasAuthority('translations.manage')";
+public class TranslationServiceImpl implements TranslationService {
 
     private final JdbcTemplate jdbc;
 
-    @GetMapping
-    @Operation(summary = "Translations (filterable) + groups + stats")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> index(@RequestParam(required = false) String group,
-                                     @RequestParam(required = false) String search) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> index(String group, String search) {
         StringBuilder where = new StringBuilder(" where 1=1");
         List<Object> args = new ArrayList<>();
         if (group != null && !group.isBlank()) {
@@ -68,11 +50,9 @@ public class TranslationController {
         return out;
     }
 
-    @PostMapping
-    @Operation(summary = "Add a translation key")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> create(@RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> create(Map<String, Object> req) {
         String key = req(req, "labelKey");
         Long dup = jdbc.queryForObject(
                 "select count(*) from public.translations where label_key = ?", Long.class, key);
@@ -88,10 +68,9 @@ public class TranslationController {
         return Map.of("id", id, "message", "Translation added");
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Edit a translation (EN / SW / group)")
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> update(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> update(long id, Map<String, Object> req) {
         String group = str(req.get("group"));
         if (group != null) {
             requireGroup(group);
@@ -105,15 +84,12 @@ public class TranslationController {
         return Map.of("message", "Translation updated");
     }
 
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a translation key")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(CAN_WRITE)
-    public void delete(@PathVariable long id) {
+    @Override
+    @Transactional
+    public void delete(long id) {
         jdbc.update("delete from public.translations where id = ?", id);
     }
 
-    /** The group must be a live row in the authoritative {@code translation_groups} vocabulary. */
     private void requireGroup(String group) {
         Integer n = jdbc.queryForObject(
                 "select count(*) from public.translation_groups where name = ? and active", Integer.class, group);
