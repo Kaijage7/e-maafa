@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.service.impl;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
@@ -12,27 +12,34 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.dto.request.TemporaryWarehouseWriteRequest;
+import tz.go.pmo.dmis.dto.response.TemporaryWarehouseResponse;
+import tz.go.pmo.dmis.entity.TemporaryWarehouse;
+import tz.go.pmo.dmis.repository.TemporaryWarehouseRepository;
+import tz.go.pmo.dmis.service.TemporaryWarehouseService;
 
 /**
- * Reads the existing temporary_warehouses table and resolves region/district names for the index screen.
- * Also creates new temporary warehouses (write via JdbcTemplate).
+ * Temporary warehouse registry: jurisdiction-scoped reads, JDBC writes (entity immutable).
+ * Deactivate blocked while residual stock remains on inventory_items.
  */
 @Service
 @RequiredArgsConstructor
-public class TemporaryWarehouseService {
+public class TemporaryWarehouseServiceImpl implements TemporaryWarehouseService {
 
     private static final DateTimeFormatter D_MON_Y = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
     private final TemporaryWarehouseRepository repo;
     private final JdbcTemplate jdbc;
-    private final tz.go.pmo.dmis.common.security.JurisdictionScope jurisdiction;
+    private final JurisdictionScope jurisdiction;
 
+    @Override
     @Transactional(readOnly = true)
     public TemporaryWarehouseResponse index() {
         Map<Long, String> regions = nameMap("regions");
         Map<Long, String> districts = nameMap("districts");
         Map<Long, String> councils = nameMap("councils");
-        var f = jurisdiction.sharedOrOwnFilter();   // region/district officer → own area + shared; national → all
+        var f = jurisdiction.sharedOrOwnFilter();
         List<TemporaryWarehouse> all = repo.findScoped(f.scope(), f.regionId(), f.districtId());
 
         List<TemporaryWarehouseResponse.Row> rows = all.stream().map(w -> new TemporaryWarehouseResponse.Row(
@@ -52,13 +59,12 @@ public class TemporaryWarehouseService {
                 new TemporaryWarehouseResponse.Stats(total, active, regional, national));
     }
 
-    /** Creates a new temporary warehouse (auto code TW-NNNNN). */
+    @Override
     @Transactional
     public Map<String, Object> create(TemporaryWarehouseWriteRequest req) {
         if (req.name() == null || req.name().isBlank() || req.level() == null || req.level().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name and level are required");
         }
-        // gap-safe code (MAX suffix +1), not count(*)+1 — pairs with the UNIQUE on code.
         Long seq = jdbc.queryForObject(
                 "select coalesce(max(nullif(regexp_replace(substring(code from 4), '[^0-9]', '', 'g'), '')::int), 0) + 1"
                         + " from public.temporary_warehouses where code like 'TW-%'", Long.class);
@@ -81,7 +87,7 @@ public class TemporaryWarehouseService {
         return Map.of("id", id, "code", code, "message", "Temporary warehouse created");
     }
 
-    /** One temporary warehouse's fields for the edit form. */
+    @Override
     @Transactional(readOnly = true)
     public Map<String, Object> detail(long id) {
         TemporaryWarehouse w = repo.findById(id).orElseThrow(
@@ -103,7 +109,7 @@ public class TemporaryWarehouseService {
         return m;
     }
 
-    /** Updates an existing temporary warehouse (the TW- code is immutable). */
+    @Override
     @Transactional
     public Map<String, Object> update(long id, TemporaryWarehouseWriteRequest req) {
         if (req.name() == null || req.name().isBlank() || req.level() == null || req.level().isBlank()) {
@@ -112,8 +118,6 @@ public class TemporaryWarehouseService {
         String status = req.operationalStatus() == null || req.operationalStatus().isBlank()
                 ? "Active" : req.operationalStatus();
         boolean active = "Active".equalsIgnoreCase(status);
-        // F66 — deactivating (or non-Active ops status) hides the store from dispatch/ops while KPIs
-        // still counted residual stock. Block until stock is transferred out.
         if (!active) {
             Long residual = jdbc.queryForObject("""
                     select coalesce(sum(quantity), 0) from public.inventory_items
@@ -147,19 +151,16 @@ public class TemporaryWarehouseService {
         return (v == null || v.isBlank()) ? null : v.trim();
     }
 
-    /** Resolve a picker region name to its public.regions id (case-insensitive). */
     private Long resolveRegion(String name) {
         return blank(name) == null ? null
                 : firstId("select id from public.regions where lower(name) = lower(?)", name.trim());
     }
 
-    /** Resolve a picker district name to its id within the chosen region. */
     private Long resolveDistrict(String name, Long regionId) {
         return (blank(name) == null || regionId == null) ? null
                 : firstId("select id from public.districts where lower(name) = lower(?) and region_id = ?", name.trim(), regionId);
     }
 
-    /** Resolve a picker council name to its id within the chosen district. */
     private Long resolveCouncil(String name, Long districtId) {
         return (blank(name) == null || districtId == null) ? null
                 : firstId("select id from public.councils where lower(name) = lower(?) and district_id = ?", name.trim(), districtId);
@@ -180,7 +181,7 @@ public class TemporaryWarehouseService {
             jdbc.query("select id, name from " + tz.go.pmo.dmis.common.sql.SafeIdentifiers.publicQualified(table),
                     rs -> { map.put(rs.getLong("id"), rs.getString("name")); });
         } catch (Exception ignored) {
-            // table may not exist locally yet — names fall back to "-"
+            // table may not exist locally yet
         }
         return map;
     }

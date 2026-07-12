@@ -147,7 +147,7 @@ Suggested migration order:
 1. ~~**Alert subscriptions**~~ — **DONE**  
 2. ~~**Evacuation centres**~~ — **DONE**  
 3. ~~**Warehouses**~~ — **DONE** (InventoryService import fix same change-set)  
-4. Temporary warehouses  
+4. ~~**Temporary warehouses**~~ — **DONE**  
 5. Inventory + Resource (Java hub)  
 6. Training plans (leaf)  
 7. Settings / catalogue  
@@ -162,6 +162,7 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Alert subscriptions | Done | `/v1/alert-subscriptions` | Full CRUD matrix + proxy + jar |
 | Evacuation centres | Done | `/v1/evacuation-centers` (+ nearest) | Full matrix + regression |
 | Warehouses | Done | `/v1/warehouses` | Full matrix + **Inventory** + warehouse-ops + prior modules |
+| Temporary warehouses | Done | `/v1/temporary-warehouses` | Full matrix + residual-stock deactivate rule + warehouse-ops/dispatch SQL consumers untouched |
 
 ---
 

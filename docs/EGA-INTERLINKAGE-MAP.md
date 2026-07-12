@@ -95,7 +95,7 @@ Inventory ── Java: WarehouseRepository, Resource (package-private)
 1. ~~Alert subscriptions~~  
 2. ~~Evacuation centres~~  
 3. ~~**Warehouse**~~ — **DONE** (InventoryService imports → `entity`/`repository` same commit)  
-4. TemporaryWarehouse (same pattern as Warehouse)  
+4. ~~**TemporaryWarehouse**~~ — **DONE** (no external Java type importers; SQL-only consumers: dispatch, warehouse-ops, relief, monitoring, bidding)  
 5. Inventory + Resource (move together; Inventory is the hub)  
 6. TrainingPlan (leaf)  
 7. Then non-preparedness modules by isolation  

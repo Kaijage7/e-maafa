@@ -1,17 +1,18 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.repository;
 
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import tz.go.pmo.dmis.entity.TemporaryWarehouse;
 
-interface TemporaryWarehouseRepository extends JpaRepository<TemporaryWarehouse, Long> {
+/** Data access for temporary_warehouses. */
+public interface TemporaryWarehouseRepository extends JpaRepository<TemporaryWarehouse, Long> {
     List<TemporaryWarehouse> findAllByOrderByNameAsc();
 
     /**
      * Jurisdiction-scoped list (shared-or-own): national tier sees all; a region/district officer sees
-     * their own area plus shared (NULL-area) rows. Driven by {@link
-     * tz.go.pmo.dmis.common.security.JurisdictionScope#sharedOrOwnFilter()}.
+     * their own area plus shared (NULL-area) rows.
      */
     @Query("""
             select w from TemporaryWarehouse w
