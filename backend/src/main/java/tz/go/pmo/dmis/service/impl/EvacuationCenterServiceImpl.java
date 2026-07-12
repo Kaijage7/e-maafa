@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,19 +13,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.dto.request.EvacuationCenterWriteRequest;
+import tz.go.pmo.dmis.dto.response.EvacuationCenterResponse;
+import tz.go.pmo.dmis.entity.EvacuationCenter;
+import tz.go.pmo.dmis.repository.EvacuationCenterRepository;
+import tz.go.pmo.dmis.service.EvacuationCenterService;
 
 /**
  * Reads the existing evacuation_centers table for the index screen, plus creates new centers
- * (write via JdbcTemplate so the read entity stays immutable). Reproduces EvacuationCenterController.
+ * (write via JdbcTemplate so the read entity stays immutable).
  */
 @Service
 @RequiredArgsConstructor
-public class EvacuationCenterService {
+public class EvacuationCenterServiceImpl implements EvacuationCenterService {
 
     private final EvacuationCenterRepository centers;
     private final ObjectMapper objectMapper;
     private final JdbcTemplate jdbc;
 
+    @Override
     @Transactional(readOnly = true)
     public EvacuationCenterResponse index() {
         List<EvacuationCenter> all = centers.findAllByOrderByIdDesc();
@@ -38,13 +44,12 @@ public class EvacuationCenterService {
                 new EvacuationCenterResponse.Stats(total, active, totalCapacity, regionsCovered));
     }
 
-    /** Creates a new evacuation center (Evacuation Centers → New Center). */
+    @Override
     @Transactional
     public Map<String, Object> create(EvacuationCenterWriteRequest req) {
         if (!StringUtils.hasText(req.centreName()) || !StringUtils.hasText(req.status())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Center name and status are required");
         }
-        // gap-safe code (MAX suffix +1), not count(*)+1 — pairs with the UNIQUE on ecentre_id.
         Long seq = jdbc.queryForObject(
                 "select coalesce(max(nullif(regexp_replace(substring(ecentre_id from 4), '[^0-9]', '', 'g'), '')::int), 0) + 1"
                         + " from public.evacuation_centers where ecentre_id like 'EC-%'", Long.class);
@@ -59,7 +64,7 @@ public class EvacuationCenterService {
         return Map.of("id", id, "ecentreId", ecentreId, "message", "Evacuation center created");
     }
 
-    /** One center's fields for the edit form (centre_type collapsed to its single value). */
+    @Override
     @Transactional(readOnly = true)
     public Map<String, Object> detail(long id) {
         EvacuationCenter c = centers.findById(id).orElseThrow(
@@ -81,7 +86,7 @@ public class EvacuationCenterService {
         return m;
     }
 
-    /** Updates an existing center (Evacuation Centers → Edit). The ecentre_id code is immutable. */
+    @Override
     @Transactional
     public Map<String, Object> update(long id, EvacuationCenterWriteRequest req) {
         if (!StringUtils.hasText(req.centreName()) || !StringUtils.hasText(req.status())) {
@@ -98,6 +103,62 @@ public class EvacuationCenterService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Evacuation center not found");
         }
         return Map.of("id", id, "message", "Evacuation center updated");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> nearest(double lat, double lng, int limit) {
+        int lim = Math.max(1, Math.min(limit, 20));
+        List<EvacuationCenter> all = centers.findAllByOrderByIdDesc();
+        return all.stream()
+                .filter(c -> c.getLatitude() != null && c.getLongitude() != null)
+                .filter(c -> {
+                    String st = c.getStatus() == null ? "active" : c.getStatus().toLowerCase();
+                    return !st.contains("closed") && !st.contains("inactive");
+                })
+                .map(c -> {
+                    double clat = c.getLatitude().doubleValue();
+                    double clng = c.getLongitude().doubleValue();
+                    double km = haversineKm(lat, lng, clat, clng);
+                    int driveMin = Math.max(1, (int) Math.round((km / 40.0) * 60.0));
+                    String st = c.getStatus() == null ? "Active" : c.getStatus();
+                    boolean active = st.toLowerCase().contains("active")
+                            && !st.toLowerCase().contains("renovation");
+                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id", c.getId());
+                    m.put("ecentreId", c.getEcentreId());
+                    m.put("centreName", c.getCentreName());
+                    m.put("region", c.getRegion());
+                    m.put("district", c.getDistrict());
+                    m.put("capacityPeople", c.getCapacityPeople());
+                    m.put("status", st);
+                    m.put("accessibility", c.getAccessibility());
+                    m.put("latitude", clat);
+                    m.put("longitude", clng);
+                    m.put("distanceKm", Math.round(km * 10.0) / 10.0);
+                    m.put("driveMinutesEstimate", driveMin);
+                    m.put("operationalPreferred", active);
+                    m.put("routeNote", "Straight-line estimate; open road directions for navigable route");
+                    m.put("gmapsDirectionsUrl",
+                            "https://www.google.com/maps/dir/?api=1&origin=" + lat + "," + lng
+                                    + "&destination=" + clat + "," + clng);
+                    return m;
+                })
+                .sorted((a, b) -> {
+                    double da = ((Number) a.get("distanceKm")).doubleValue();
+                    double db = ((Number) b.get("distanceKm")).doubleValue();
+                    if (Math.abs(da - db) > 15.0) {
+                        return Double.compare(da, db);
+                    }
+                    boolean ap = Boolean.TRUE.equals(a.get("operationalPreferred"));
+                    boolean bp = Boolean.TRUE.equals(b.get("operationalPreferred"));
+                    if (ap != bp) {
+                        return ap ? -1 : 1;
+                    }
+                    return Double.compare(da, db);
+                })
+                .limit(lim)
+                .toList();
     }
 
     private String typeArray(String type) {
@@ -137,68 +198,6 @@ public class EvacuationCenterService {
         return value == null ? null : value.doubleValue();
     }
 
-    /**
-     * Nearest registered evacuation centres to a point (incident / warning centroid).
-     * Distance is great-circle km (honest straight-line estimate — not a road network).
-     * Drive minutes assume ~40 km/h average, matching the public portal route estimator.
-     */
-    @Transactional(readOnly = true)
-    public List<Map<String, Object>> nearest(double lat, double lng, int limit) {
-        int lim = Math.max(1, Math.min(limit, 20));
-        List<EvacuationCenter> all = centers.findAllByOrderByIdDesc();
-        return all.stream()
-                .filter(c -> c.getLatitude() != null && c.getLongitude() != null)
-                .filter(c -> {
-                    String st = c.getStatus() == null ? "active" : c.getStatus().toLowerCase();
-                    return !st.contains("closed") && !st.contains("inactive");
-                })
-                .map(c -> {
-                    double clat = c.getLatitude().doubleValue();
-                    double clng = c.getLongitude().doubleValue();
-                    double km = haversineKm(lat, lng, clat, clng);
-                    int driveMin = Math.max(1, (int) Math.round((km / 40.0) * 60.0));
-                    String st = c.getStatus() == null ? "Active" : c.getStatus();
-                    boolean active = st.toLowerCase().contains("active")
-                            && !st.toLowerCase().contains("renovation");
-                    Map<String, Object> m = new java.util.LinkedHashMap<>();
-                    m.put("id", c.getId());
-                    m.put("ecentreId", c.getEcentreId());
-                    m.put("centreName", c.getCentreName());
-                    m.put("region", c.getRegion());
-                    m.put("district", c.getDistrict());
-                    m.put("capacityPeople", c.getCapacityPeople());
-                    m.put("status", st);
-                    m.put("accessibility", c.getAccessibility());
-                    m.put("latitude", clat);
-                    m.put("longitude", clng);
-                    m.put("distanceKm", Math.round(km * 10.0) / 10.0);
-                    m.put("driveMinutesEstimate", driveMin);
-                    m.put("operationalPreferred", active);
-                    m.put("routeNote", "Straight-line estimate; open road directions for navigable route");
-                    m.put("gmapsDirectionsUrl",
-                            "https://www.google.com/maps/dir/?api=1&origin=" + lat + "," + lng
-                                    + "&destination=" + clat + "," + clng);
-                    return m;
-                })
-                // Nearest first (primary); when distances are within 15 km, prefer Active over renovation
-                .sorted((a, b) -> {
-                    double da = ((Number) a.get("distanceKm")).doubleValue();
-                    double db = ((Number) b.get("distanceKm")).doubleValue();
-                    if (Math.abs(da - db) > 15.0) {
-                        return Double.compare(da, db);
-                    }
-                    boolean ap = Boolean.TRUE.equals(a.get("operationalPreferred"));
-                    boolean bp = Boolean.TRUE.equals(b.get("operationalPreferred"));
-                    if (ap != bp) {
-                        return ap ? -1 : 1;
-                    }
-                    return Double.compare(da, db);
-                })
-                .limit(lim)
-                .toList();
-    }
-
-    /** Earth great-circle distance in kilometres (WGS84 sphere). */
     static double haversineKm(double lat1, double lon1, double lat2, double lon2) {
         final double R = 6371.0;
         double dLat = Math.toRadians(lat2 - lat1);

@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,8 +18,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.security.AreaLookup;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.dto.request.EvacuationCenterWriteRequest;
+import tz.go.pmo.dmis.dto.response.EvacuationCenterResponse;
+import tz.go.pmo.dmis.service.EvacuationCenterService;
 
-/** API for the Evacuation Centers screen, over the existing table (read + create). */
+/** API for the Evacuation Centers screen. Paths unchanged from the legacy package layout. */
 @RestController
 @RequestMapping("/v1/evacuation-centers")
 @Tag(name = "Preparedness", description = "Evacuation centers")
@@ -40,11 +43,6 @@ public class EvacuationCenterController {
     @Operation(summary = "Evacuation center registry + statistics + map markers")
     @PreAuthorize("hasAnyAuthority('preparedness.view','early_warning.view','incidents.view')")
     public EvacuationCenterResponse index() {
-        // The service reads the whole registry; evacuation_centers stamps area as free TEXT
-        // (region/district columns, no region_id/district_id FK). Scope here by resolving each row's
-        // region/district name to an id and matching the caller's own area (the by-name equivalent of
-        // JurisdictionScope.appendAreaScopeByName). National + non-area roles keep the full view; an
-        // area officer sees only their own region/district. Stats are recomputed over the visible rows.
         EvacuationCenterResponse full = evacuationCenterService.index();
         JurisdictionScope.Tier tier = jurisdiction.currentTier();
         if (tier != JurisdictionScope.Tier.REGION && tier != JurisdictionScope.Tier.DISTRICT) {
@@ -66,7 +64,6 @@ public class EvacuationCenterController {
                 new EvacuationCenterResponse.Stats(total, active, totalCapacity, regionsCovered));
     }
 
-    /** True when the row's free-text area resolves to the caller's own region (REGION) or district (DISTRICT). */
     private boolean inArea(EvacuationCenterResponse.CenterRow row, JurisdictionScope.Tier tier,
                            Long myRegionId, Long myDistrictId) {
         Long rowRegionId = areaLookup.regionId(row.region());
@@ -89,10 +86,6 @@ public class EvacuationCenterController {
         return evacuationCenterService.create(request);
     }
 
-    /**
-     * Possible routes from an incident / early-warning point to registered evacuation centres.
-     * Sorted nearest-first; distances are straight-line (honest — not OSM routing).
-     */
     @GetMapping("/nearest")
     @Operation(summary = "Nearest evacuation centres to a lat/lng (incident or warning centroid)")
     @PreAuthorize("hasAnyAuthority('preparedness.view','early_warning.view','incidents.view')")
@@ -101,7 +94,6 @@ public class EvacuationCenterController {
             @RequestParam double lng,
             @RequestParam(defaultValue = "5") int limit) {
         if (lat < -12.5 || lat > 0.5 || lng < 28.5 || lng > 41.5) {
-            // Soft guard: still compute, but flag out-of-TZ bounds for operators
             List<Map<String, Object>> rows = evacuationCenterService.nearest(lat, lng, limit);
             return Map.of(
                     "origin", Map.of("latitude", lat, "longitude", lng),

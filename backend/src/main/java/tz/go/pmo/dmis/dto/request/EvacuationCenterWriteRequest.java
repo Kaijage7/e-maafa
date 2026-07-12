@@ -1,6 +1,6 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.dto.request;
 
-/** Payload for creating an evacuation center, mirroring admin/evacuation_centers/create-v2. */
+/** Payload for creating or updating an evacuation center. */
 public record EvacuationCenterWriteRequest(
         String centreName,
         String centreType,

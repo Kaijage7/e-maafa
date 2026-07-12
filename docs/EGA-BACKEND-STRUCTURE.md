@@ -144,21 +144,23 @@ The tree still contains legacy feature packages (`response/`, `ew/`, `mitigation
 
 Suggested migration order:
 
-1. ~~**Alert subscriptions (Preparedness)**~~ — **DONE** (`controller` / `service` / `service.impl` / `repository` / `entity` / `dto`). Paths unchanged: `/v1/alert-subscriptions`.  
-2. Settings / catalogue (small, JPA-friendly)  
-3. Public reports / portal admin  
-4. Mitigation master data (hazards, measures)  
-5. Other preparedness registries (warehouses, evacuation centres, …)  
-6. Response (keep SQL query ports behind `service.impl` where needed)  
-7. Early Warning  
-8. Integration clients into `integration/*`  
-9. Delete empty legacy feature packages  
+1. ~~**Alert subscriptions (Preparedness)**~~ — **DONE**  
+2. ~~**Evacuation centres (Preparedness)**~~ — **DONE**  
+3. Settings / catalogue (small, JPA-friendly)  
+4. Public reports / portal admin  
+5. Mitigation master data (hazards, measures)  
+6. Other preparedness registries (warehouses, inventory, training plans, …)  
+7. Response (keep SQL query ports behind `service.impl` where needed)  
+8. Early Warning  
+9. Integration clients into `integration/*`  
+10. Delete empty legacy feature packages  
 
 ### Migration log
 
 | Module | Status | API paths | Verified |
 |--------|--------|-----------|----------|
 | Alert subscriptions | Done | `GET/POST /v1/alert-subscriptions`, `GET/PUT /{id}` | Index, detail, create, update, 400/401/403/404, proxy via :4200, jar package layout |
+| Evacuation centres | Done | `GET/POST /v1/evacuation-centers`, `GET /nearest`, `GET/PUT /{id}` | Index, nearest, detail, create, update, validation, authz, proxy, jar layout |
 
 ---
 
