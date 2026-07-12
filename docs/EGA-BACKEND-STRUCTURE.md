@@ -151,8 +151,9 @@ Suggested migration order:
 5. ~~**Inventory + Resource entity**~~ — **DONE**  
 6. ~~**Training plans**~~ — **DONE** (preparedness package fully migrated)  
 7. ~~**Translations (Settings)**~~ — **DONE**  
-8. Remaining Settings (locations, resources catalogue controller, roles, users, …)  
-9. Response / EW (SQL-heavy)  
+8. ~~**Resource catalogue (Settings)**~~ — **DONE** (named ResourceCatalogue* to avoid clash with inventory `entity.Resource`)  
+9. Remaining Settings (locations, roles, users, institutions, approval workflows)  
+10. Response / EW (SQL-heavy)  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 

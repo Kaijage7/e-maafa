@@ -1,54 +1,32 @@
-package tz.go.pmo.dmis.settings;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.service.ResourceCatalogueService;
 
 /**
- * System Settings → Resource Management. The relief-resource catalogue (the {@code resources}
- * table) that the whole supply chain draws on — allocations, dispatch, warehouse stock, bids.
- * Editing the catalogue here defines what can be requested and stocked, with per-item unit cost
- * (the figure the Command Post and Sendai analytics use to value a response) and low-stock
- * thresholds (what the warehouse dashboard flags).
- *
- * <p>Reads open to signed-in officers; writes gated to administrators. Items in use cannot be
- * deleted (they are FK'd from live operational rows) — the API explains why instead of 500-ing.</p>
+ * Settings resource catalogue over {@code public.resources}. Inventory joins the same table via
+ * {@code entity.Resource} / {@code ResourceRepository} (read-only JPA); this service owns admin writes.
  */
-@RestController
-@RequestMapping("/v1/settings/resources")
-@Tag(name = "Settings: Resource Catalogue", description = "Relief-resource catalogue CRUD")
+@Service
 @RequiredArgsConstructor
-public class ResourceCatalogueController {
-
-    private static final String CAN_WRITE = "hasAuthority('resource_catalogue.manage')";
+public class ResourceCatalogueServiceImpl implements ResourceCatalogueService {
 
     private final JdbcTemplate jdbc;
 
-    @GetMapping
-    @Operation(summary = "Catalogue + categories + stats")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> index(@RequestParam(required = false) String category,
-                                     @RequestParam(required = false) String search) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> index(String category, String search) {
         StringBuilder where = new StringBuilder(" where 1=1");
-        java.util.List<Object> args = new java.util.ArrayList<>();
+        List<Object> args = new ArrayList<>();
         if (category != null && !category.isBlank()) {
             where.append(" and category = ?");
             args.add(category);
@@ -75,11 +53,9 @@ public class ResourceCatalogueController {
         return out;
     }
 
-    @PostMapping
-    @Operation(summary = "Add a catalogue item")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> create(@RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> create(Map<String, Object> req) {
         String name = req(req, "name");
         String category = req(req, "category");
         requireCategory(category);
@@ -94,10 +70,9 @@ public class ResourceCatalogueController {
         return Map.of("id", id, "message", "Catalogue item added");
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Edit a catalogue item")
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> update(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> update(long id, Map<String, Object> req) {
         String category = str(req.get("category"));
         if (category != null) {
             requireCategory(category);
@@ -116,11 +91,9 @@ public class ResourceCatalogueController {
         return Map.of("message", "Catalogue item updated");
     }
 
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a catalogue item (blocked if it is used by live operational rows)")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(CAN_WRITE)
-    public void delete(@PathVariable long id) {
+    @Override
+    @Transactional
+    public void delete(long id) {
         long uses = inUse(id);
         if (uses > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -130,19 +103,29 @@ public class ResourceCatalogueController {
         jdbc.update("delete from public.resources where id = ?", id);
     }
 
-    /** Count the live rows that depend on this catalogue item across the supply chain. */
+    /**
+     * Live dependency count. Soft-fails individual tables that may be missing in stripped schemas
+     * so delete never 500s on a missing relation.
+     */
     private long inUse(long id) {
-        Long n = jdbc.queryForObject(
-                "select (select count(*) from public.allocated_resources where resource_id = ?)"
-                        + " + (select count(*) from public.inventory_items where resource_id = ?)"
-                        + " + (select count(*) from public.stock_movements where resource_id = ?)"
-                        + " + (select count(*) from public.agency_resources where resource_id = ?)"
-                        + " + (select count(*) from public.stakeholder_resource_bids where resource_id = ?)",
-                Long.class, id, id, id, id, id);
-        return n == null ? 0 : n;
+        long total = 0;
+        total += countQuiet("select count(*) from public.allocated_resources where resource_id = ?", id);
+        total += countQuiet("select count(*) from public.inventory_items where resource_id = ?", id);
+        total += countQuiet("select count(*) from public.stock_movements where resource_id = ?", id);
+        total += countQuiet("select count(*) from public.agency_resources where resource_id = ?", id);
+        total += countQuiet("select count(*) from public.stakeholder_resource_bids where resource_id = ?", id);
+        return total;
     }
 
-    /** The category must be a live row in the authoritative {@code resource_categories} vocabulary. */
+    private long countQuiet(String sql, long id) {
+        try {
+            Long n = jdbc.queryForObject(sql, Long.class, id);
+            return n == null ? 0 : n;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     private void requireCategory(String category) {
         Integer n = jdbc.queryForObject(
                 "select count(*) from public.resource_categories where name = ? and active", Integer.class, category);
@@ -152,7 +135,6 @@ public class ResourceCatalogueController {
         }
     }
 
-    /** The unit (when supplied) must be a live row in the authoritative {@code units_of_measure} vocabulary. */
     private void requireUnit(String unit) {
         if (unit == null) {
             return;

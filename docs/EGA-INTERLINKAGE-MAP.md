@@ -165,8 +165,17 @@ These callers use **table SQL**, not Java types — package move of controllers/
 
 `tz.go.pmo.dmis.repository` currently holds:
 
-- **eGA data-access:** `AlertSubscriptionRepository`, `EvacuationCenterRepository`, (+ `WarehouseRepository` after move)
+- **eGA data-access:** `AlertSubscriptionRepository`, `EvacuationCenterRepository`, `WarehouseRepository`, `TemporaryWarehouseRepository`, `InventoryItemRepository`, `ResourceRepository` (JPA), `TrainingPlanRepository`
 - **Legacy feature:** `DisasterEventController`, `DisasterEventService`, `SendaiAnalyticsController`, `SendaiAnalyticsService`
+
+**Resource dual access (resolved by naming):**
+
+| Layer | Type | Role |
+|-------|------|------|
+| JPA | `entity.Resource` + `ResourceRepository` | Inventory read/join |
+| JDBC admin | `ResourceCatalogueService` / `ResourceCatalogueController` | Settings CRUD on same `public.resources` table |
+
+**Shared `@RequestMapping` bases (not bugs):** multiple controllers may share a base path when *method* paths differ, e.g. `/v1/response/incidents` (IncidentController + ops-timeline), `/v1/ew/warnings`, `/v1/onehealth/*` subpaths.
 
 Plan later: relocate Disaster Repository feature to eGA `controller`/`service` and keep `repository` for JPA only.
 
