@@ -162,7 +162,8 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Alert subscriptions | Done | `/v1/alert-subscriptions` | Full CRUD matrix + proxy + jar |
 | Evacuation centres | Done | `/v1/evacuation-centers` (+ nearest) | Full matrix + regression |
 | Warehouses | Done | `/v1/warehouses` | Full matrix + **Inventory** + warehouse-ops + prior modules |
-| Temporary warehouses | Done | `/v1/temporary-warehouses` | Full matrix + residual-stock deactivate rule + warehouse-ops/dispatch SQL consumers untouched |
+| Temporary warehouses | Done | `/v1/temporary-warehouses` | Full matrix + residual-stock deactivate + warehouse-ops SQL consumers |
+| Inventory + Resource | Done | `/v1/inventory`, `/reference` | Index, reference, create, update, AreaGuard, stock_movements; warehouse-ops + settings/resources + prior modules |
 
 ---
 
