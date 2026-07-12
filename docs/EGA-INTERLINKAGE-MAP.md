@@ -97,10 +97,10 @@ Inventory ── Java: WarehouseRepository, Resource (package-private)
 3. ~~**Warehouse**~~ — **DONE** (InventoryService imports → `entity`/`repository` same commit)  
 4. ~~**TemporaryWarehouse**~~ — **DONE** (SQL-only external consumers)  
 5. ~~**Inventory + Resource (JPA catalogue entity)**~~ — **DONE**  
-   - Java: only Inventory stack used `InventoryItem` / `Resource` / repos; Settings catalogue stays SQL (`ResourceCatalogueController`)  
-   - Depends on already-migrated `Warehouse` + `WarehouseRepository`  
-6. TrainingPlan (leaf)  
-7. Then non-preparedness modules by isolation  
+6. ~~**TrainingPlan**~~ — **DONE** (no external Java type importers; SQL consumers: SupportPledge, Bidding, M&E, finance, Command Post hub; actions write `portal_news` / `mitigation_measures` / notify Partners)  
+7. Then non-preparedness modules by isolation (Settings, Response, EW, …)  
+
+**Preparedness feature package is fully emptied of modules** — all moved to eGA layers.
 
 **Never** move Warehouse without fixing InventoryService in the same commit. (Satisfied for module 3.)
 

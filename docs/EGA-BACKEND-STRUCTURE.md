@@ -149,7 +149,7 @@ Suggested migration order:
 3. ~~**Warehouses**~~ — **DONE** (InventoryService import fix same change-set)  
 4. ~~**Temporary warehouses**~~ — **DONE**  
 5. ~~**Inventory + Resource entity**~~ — **DONE**  
-6. Training plans (leaf — only preparedness left)  
+6. ~~**Training plans**~~ — **DONE** (preparedness package fully migrated)  
 7. Settings / catalogue  
 8. Response / EW (SQL-heavy)  
 
@@ -164,6 +164,7 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Warehouses | Done | `/v1/warehouses` | Full matrix + **Inventory** + warehouse-ops + prior modules |
 | Temporary warehouses | Done | `/v1/temporary-warehouses` | Full matrix + residual-stock deactivate + warehouse-ops SQL consumers |
 | Inventory + Resource | Done | `/v1/inventory`, `/reference` | Index, reference, create, update, AreaGuard, stock_movements; warehouse-ops + settings/resources + prior modules |
+| Training plans | Done | `/v1/training-plans` (+ publish, push-priority, request-support) | Full CRUD + golden-thread actions + preparedness/response regressions |
 
 ---
 

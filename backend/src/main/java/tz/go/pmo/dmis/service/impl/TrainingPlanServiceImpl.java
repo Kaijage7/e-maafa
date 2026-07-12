@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,12 +11,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.dto.request.TrainingPlanWriteRequest;
+import tz.go.pmo.dmis.dto.response.TrainingPlanResponse;
+import tz.go.pmo.dmis.entity.TrainingPlan;
 import tz.go.pmo.dmis.notification.NotificationService;
+import tz.go.pmo.dmis.repository.TrainingPlanRepository;
+import tz.go.pmo.dmis.service.TrainingPlanService;
 
-/** Reads + creates training_plans for the index screen (json scope/audience). */
+/** Training plans: CRUD + publish/push-priority/request-support golden-thread actions. */
 @Service
 @RequiredArgsConstructor
-public class TrainingPlanService {
+public class TrainingPlanServiceImpl implements TrainingPlanService {
 
     private static final DateTimeFormatter D_MON_Y = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
@@ -27,6 +32,7 @@ public class TrainingPlanService {
 
     /** Creates a new training plan (auto training_id TRN-YYYY-NNNNN, json scope/audience). */
     @Transactional
+    @Override
     public Map<String, Object> create(TrainingPlanWriteRequest req) {
         if (req.title() == null || req.title().isBlank() || req.institution() == null || req.institution().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title and implementing institution are required");
@@ -50,6 +56,7 @@ public class TrainingPlanService {
 
     /** One training plan's fields for the edit form. */
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> detail(long id) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select id, training_id, training_title, implementing_institution, objective, "
@@ -78,6 +85,7 @@ public class TrainingPlanService {
 
     /** Updates an existing training plan (the TRN- code is immutable). */
     @Transactional
+    @Override
     public Map<String, Object> update(long id, TrainingPlanWriteRequest req) {
         if (req.title() == null || req.title().isBlank() || req.institution() == null || req.institution().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title and implementing institution are required");
@@ -110,6 +118,7 @@ public class TrainingPlanService {
 
     /** Publish an (upcoming) training as a public News/Event item (portal_news, category 'event'). */
     @Transactional
+    @Override
     public Map<String, Object> publish(long id) {
         Map<String, Object> t = requireRow(id);
         if (t.get("news_id") != null) {
@@ -136,6 +145,7 @@ public class TrainingPlanService {
 
     /** Push a training to DRR priorities — creates a mitigation_measures record carrying the priority. */
     @Transactional
+    @Override
     public Map<String, Object> pushPriority(long id, String priority) {
         String p = priority == null ? "" : priority.trim();
         if (!List.of("Low", "Medium", "High").contains(p)) {
@@ -159,6 +169,7 @@ public class TrainingPlanService {
 
     /** Request stakeholder funding support for an unfunded training (notifies partners via the backbone). */
     @Transactional
+    @Override
     public Map<String, Object> requestSupport(long id) {
         Map<String, Object> t = requireRow(id);
         String title = asText(t.get("training_title"));
@@ -193,6 +204,7 @@ public class TrainingPlanService {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public TrainingPlanResponse index() {
         List<TrainingPlan> all = repo.findAllByOrderByTrainingStartDateDesc();
         List<TrainingPlanResponse.Row> rows = all.stream().map(t -> new TrainingPlanResponse.Row(

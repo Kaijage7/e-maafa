@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,8 +14,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import tz.go.pmo.dmis.dto.request.TrainingPlanWriteRequest;
+import tz.go.pmo.dmis.dto.response.TrainingPlanResponse;
+import tz.go.pmo.dmis.service.TrainingPlanService;
 
-/** API for the Training Plans screen, over the existing table (read + create). */
+/** API for Training Plans. Paths and actions unchanged from the legacy package layout. */
 @RestController
 @RequestMapping("/v1/training-plans")
 @RequiredArgsConstructor

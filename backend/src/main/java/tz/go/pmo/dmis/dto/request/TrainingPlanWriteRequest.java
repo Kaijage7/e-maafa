@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.dto.request;
 
 import java.util.List;
 
