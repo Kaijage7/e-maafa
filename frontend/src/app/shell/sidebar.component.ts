@@ -30,6 +30,15 @@ import { qrcodegen } from '../shared/qrcodegen';
     .sb-group-head .ch { font-size: 0.65rem; opacity: 0.6; transition: transform .15s; }
     .sb-group.open .sb-group-head .ch { transform: rotate(180deg); }
     .sb-group-body { padding-bottom: 0.25rem; }
+    .sb-expand-row {
+      display: flex; gap: 6px; padding: 0.35rem 0.75rem 0.5rem;
+    }
+    .sb-expand-btn {
+      flex: 1; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.7); border-radius: 6px; font-size: 0.68rem; font-weight: 700;
+      font-family: inherit; padding: 4px 6px; cursor: pointer;
+    }
+    .sb-expand-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
   `],
   template: `
     <div class="sidebar" id="sidebar">
@@ -48,10 +57,14 @@ import { qrcodegen } from '../shared/qrcodegen';
               <div class="sb-section-icon" [style.color]="m.color"><i class="fas {{ m.icon }}"></i></div>
               <div class="sb-section-text">
                 <div class="sb-section-name">{{ m.name }}</div>
-                <div class="sb-section-count">{{ items().length }} screens · by process step</div>
+                <div class="sb-section-count">{{ items().length }} screens · all listed below</div>
               </div>
             </div>
             <div class="sb-items">
+              <div class="sb-expand-row">
+                <button type="button" class="sb-expand-btn" (click)="expandAll()">Expand all</button>
+                <button type="button" class="sb-expand-btn" (click)="collapseAll()">Collapse all</button>
+              </div>
               @for (g of groups(); track g.name) {
                 <div class="sb-group" [class.open]="isOpen(g.name)">
                   <button type="button" class="sb-group-head" (click)="toggle(g.name)">
@@ -102,8 +115,12 @@ export class SidebarComponent {
   currentModule = input<string | null>(null);
   activeItem = input<string | null>(null);
   module = computed(() => moduleBySlug(this.currentModule() ?? ''));
-  /** Which process groups are expanded (first open by default). */
-  private openGroups = signal<Set<string>>(new Set());
+  /**
+   * Expanded process groups. Empty set = “default mode” → all groups open
+   * (so Response never looks like features were removed).
+   * After Expand all / Collapse all / toggle, this set is explicit.
+   */
+  private openGroups = signal<Set<string> | null>(null);
 
   qr = (() => {
     const origin = (typeof window !== 'undefined' && window.location) ? window.location.origin : 'http://localhost:4200';
@@ -139,24 +156,29 @@ export class SidebarComponent {
   });
 
   isOpen(name: string): boolean {
-    const groups = this.groups();
     const s = this.openGroups();
-    if (s.size === 0) {
-      if (!groups.length) return true;
-      if (name === groups[0].name) return true;
-      const active = this.activeItem();
-      return groups.some(g => g.name === name && g.items.some(i => i.path === active));
-    }
+    // Default: every process group is expanded — full feature list always visible.
+    if (s === null) return true;
     return s.has(name);
   }
 
   toggle(name: string): void {
     this.openGroups.update(prev => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
+      const base = prev === null
+        ? new Set(this.groups().map(g => g.name))
+        : new Set(prev);
+      if (base.has(name)) base.delete(name);
+      else base.add(name);
+      return base;
     });
+  }
+
+  expandAll(): void {
+    this.openGroups.set(new Set(this.groups().map(g => g.name)));
+  }
+
+  collapseAll(): void {
+    this.openGroups.set(new Set());
   }
 
   linkFor(slug: string, path: string): any[] {

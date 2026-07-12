@@ -162,11 +162,36 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
     .sitrep-row b { color: #f1f5f9; }
     .sitrep-meta { display: flex; gap: 8px; flex-wrap: wrap; margin: 5px 0; color: #cbd5e1; }
     .sitrep-remark { color: #94a3b8; margin-top: 4px; }
+    /* Full Response Ops Hub — Command Post as entry to every Response function */
+    .hub-snap { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 7px; margin-bottom: 12px; }
+    .hub-snap .mini-stat b { font-size: 1.1rem; color: #7dd3fc; }
+    .hub-snap .mini-stat.hot b { color: #fbbf24; }
+    .hub-groups { display: flex; flex-direction: column; gap: 12px; }
+    .hub-group-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.7px; color: #8aa0bd; font-weight: 800; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .hub-group-label .pill { background: #334155; color: #cbd5e1; }
+    .hub-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+    a.hub-tile { display: flex; flex-direction: column; gap: 4px; background: #17263d; border: 1px solid #33485f; border-radius: 8px; padding: 10px 12px; text-decoration: none; color: #e2e8f0; transition: border-color .14s, background .14s, transform .12s; min-height: 92px; }
+    a.hub-tile:hover { border-color: #38bdf8; background: #1c2f4a; transform: translateY(-1px); }
+    a.hub-tile.hot { border-color: #b45309; box-shadow: 0 0 0 1px rgba(251,191,36,0.15) inset; }
+    a.hub-tile .hub-top { display: flex; align-items: flex-start; gap: 8px; }
+    a.hub-tile .hub-ico { width: 28px; height: 28px; border-radius: 7px; background: #0f172a; border: 1px solid #334155; display: flex; align-items: center; justify-content: center; color: #7dd3fc; flex: 0 0 auto; }
+    a.hub-tile.hot .hub-ico { color: #fbbf24; border-color: #92400e; }
+    a.hub-tile .hub-name { font-size: 0.8rem; font-weight: 800; color: #f1f5f9; line-height: 1.25; flex: 1; }
+    a.hub-tile .hub-count { font-size: 1.05rem; font-weight: 800; color: #7dd3fc; font-variant-numeric: tabular-nums; line-height: 1; }
+    a.hub-tile.hot .hub-count { color: #fbbf24; }
+    a.hub-tile .hub-cl { font-size: 0.68rem; color: #8aa0bd; text-transform: uppercase; font-weight: 700; letter-spacing: 0.3px; }
+    a.hub-tile .hub-desc { font-size: 0.72rem; color: #94a3b8; line-height: 1.3; margin-top: 2px; }
+    .hub-toggle { margin-left: auto; }
+    .hub-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .hub-quick a { font-size: 0.72rem; font-weight: 700; color: #7dd3fc; text-decoration: none; border: 1px solid #33485f; border-radius: 999px; padding: 3px 10px; background: #0f172a; }
+    .hub-quick a:hover { border-color: #38bdf8; background: #1c2f4a; }
   `],
   template: `
     <dmis-page-header title="Command Post — Disaster Response Coordination" icon="fa-tower-broadcast"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Command Post'}]">
       <a routerLink="/m/response/eocc" class="btn-add"><i class="fas fa-terminal"></i> EOCC Board</a>
+      <a routerLink="/m/response/executive-watch" class="btn-add"><i class="fas fa-binoculars"></i> Executive Watch</a>
+      <a routerLink="/m/response/dashboard" class="btn-add"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
     </dmis-page-header>
 
     <!-- ══════════ ACTIVATIONS INDEX ══════════ -->
@@ -179,6 +204,68 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
         <div class="ops-stat"><span class="ops-n" style="color:#fbbf24">{{ awaitingCount() }}</span><span class="ops-l"><i class="fas fa-hourglass-half"></i> Awaiting activation</span></div>
         <div class="ops-stat"><span class="ops-n" [style.color]="highestPosture() ? colour(highestPosture()) : '#64748b'">{{ highestPosture() ? (highestPosture() | uppercase) : 'IDLE' }}</span><span class="ops-l"><i class="fas fa-gauge-high"></i> Highest posture</span></div>
       </div>
+
+      <!-- Full Response Ops Hub — single entry to every Response function -->
+      @if (index().response_hub; as hub) {
+        <div class="card">
+          <h4>
+            <i class="fas fa-th-large"></i> {{ hub.title || 'Full Response Ops Hub' }}
+            <button class="btn-xs hub-toggle" (click)="hubOpen.set(!hubOpen())">
+              {{ hubOpen() ? 'Collapse' : 'Expand' }}
+            </button>
+          </h4>
+          <div style="color:#94a3b8; font-size:0.78rem; margin:-4px 0 10px">{{ hub.subtitle }}</div>
+          @if (hub.snapshot; as snap) {
+            <div class="hub-snap">
+              <div class="mini-stat" [class.hot]="num(snap.critical_incidents) > 0"><b>{{ snap.critical_incidents || 0 }}</b><span>critical</span></div>
+              <div class="mini-stat"><b>{{ snap.active_incidents || 0 }}</b><span>incidents</span></div>
+              <div class="mini-stat" [class.hot]="num(snap.issued_alerts) > 0"><b>{{ snap.issued_alerts || 0 }}</b><span>alerts out</span></div>
+              <div class="mini-stat" [class.hot]="num(snap.public_reports_open) > 0"><b>{{ snap.public_reports_open || 0 }}</b><span>public queue</span></div>
+              <div class="mini-stat" [class.hot]="num(snap.assessments_pending) > 0"><b>{{ snap.assessments_pending || 0 }}</b><span>assess pending</span></div>
+              <div class="mini-stat" [class.hot]="num(snap.resource_approvals_pending) > 0"><b>{{ snap.resource_approvals_pending || 0 }}</b><span>res. approvals</span></div>
+              <div class="mini-stat" [class.hot]="num(snap.dispatch_approvals_pending) > 0"><b>{{ snap.dispatch_approvals_pending || 0 }}</b><span>dispatch gate</span></div>
+              <div class="mini-stat"><b>{{ snap.open_tasks || 0 }}</b><span>open tasks</span></div>
+              <div class="mini-stat" [class.hot]="num(snap.declarations_in_chain) > 0"><b>{{ snap.active_declarations || 0 }}/{{ snap.declarations_in_chain || 0 }}</b><span>declarations</span></div>
+              <div class="mini-stat"><b>{{ snap.stock_units || 0 }}</b><span>stock units</span></div>
+            </div>
+          }
+          @if (hubOpen()) {
+            <div class="hub-groups">
+              @for (g of hub.groups ?? []; track g.key) {
+                <div>
+                  <div class="hub-group-label">{{ g.label }}
+                    @if (num(g.attention_total) > 0) { <span class="pill">{{ g.attention_total }} in queue</span> }
+                  </div>
+                  <div class="hub-tiles">
+                    @for (it of g.items ?? []; track it.key) {
+                      <a class="hub-tile" [class.hot]="it.attention" [routerLink]="hubPath(it.path)" [queryParams]="hubQuery(it.path)">
+                        <div class="hub-top">
+                          <span class="hub-ico"><i class="fas {{ it.icon }}"></i></span>
+                          <span class="hub-name">{{ it.name }}</span>
+                          @if (it.count != null) {
+                            <span style="text-align:right">
+                              <div class="hub-count">{{ it.count }}</div>
+                              <div class="hub-cl">{{ it.count_label }}</div>
+                            </span>
+                          }
+                        </div>
+                        <div class="hub-desc">{{ it.description }}</div>
+                      </a>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="hub-quick">
+              @for (it of hubQuickLinks(); track it.key) {
+                <a [routerLink]="hubPath(it.path)" [queryParams]="hubQuery(it.path)"><i class="fas {{ it.icon }}"></i> {{ it.name }}
+                  @if (it.count != null && num(it.count) > 0) { ({{ it.count }}) }</a>
+              }
+            </div>
+          }
+        </div>
+      }
 
       <!-- Doctrine: the four operational components (NDPRP 2022 / DM Act 2022) -->
       <div class="card">
@@ -490,6 +577,73 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
           <button class="btn b-outline" style="margin-left:6px" (click)="closeBoard()">← All Activations</button>
         </div>
       </div>
+
+      <!-- Response Functions hub for this activation — every Response surface deep-linked -->
+      @if (b.linked_ops; as ops) {
+        <div class="card">
+          <h4>
+            <i class="fas fa-diagram-project"></i> {{ ops.title || 'Response Functions' }}
+            <button class="btn-xs hub-toggle" (click)="boardHubOpen.set(!boardHubOpen())">
+              {{ boardHubOpen() ? 'Collapse' : 'Expand' }}
+            </button>
+          </h4>
+          <div style="color:#94a3b8; font-size:0.78rem; margin:-4px 0 10px">
+            {{ ops.subtitle }}
+            @if (!ops.has_incident) {
+              <span style="color:#fbbf24"> · Forecast-only — logistics & assessments unlock after impact creates an incident.</span>
+            }
+          </div>
+          @if (ops.snapshot; as snap) {
+            <div class="hub-snap">
+              <div class="mini-stat" [class.hot]="num(snap.tasks_open) > 0"><b>{{ snap.tasks_open || 0 }}</b><span>open tasks</span></div>
+              <div class="mini-stat"><b>{{ snap.tasks_completed || 0 }}</b><span>completed</span></div>
+              <div class="mini-stat" [class.hot]="num(snap.challenges) > 0"><b>{{ snap.challenges || 0 }}</b><span>challenges</span></div>
+              <div class="mini-stat"><b>{{ snap.ics_roles_filled || 0 }}</b><span>ICS roles</span></div>
+              <div class="mini-stat" [class.hot]="num(snap.resource_approvals_pending) > 0"><b>{{ snap.resource_approvals_pending || 0 }}</b><span>res. approvals</span></div>
+              <div class="mini-stat" [class.hot]="num(snap.dispatch_approvals_pending) > 0"><b>{{ snap.dispatch_approvals_pending || 0 }}</b><span>dispatch gate</span></div>
+              <div class="mini-stat"><b>{{ snap.allocations || 0 }}</b><span>allocations</span></div>
+              <div class="mini-stat"><b>{{ snap.assessments || 0 }}</b><span>assessments</span></div>
+              <div class="mini-stat"><b>{{ snap.situation_reports || 0 }}</b><span>SITREPs</span></div>
+              <div class="mini-stat"><b>{{ snap.alerts || 0 }}</b><span>alerts</span></div>
+            </div>
+          }
+          @if (boardHubOpen()) {
+            <div class="hub-groups">
+              @for (g of ops.groups ?? []; track g.key) {
+                <div>
+                  <div class="hub-group-label">{{ g.label }}
+                    @if (num(g.attention_total) > 0) { <span class="pill">{{ g.attention_total }}</span> }
+                  </div>
+                  <div class="hub-tiles">
+                    @for (it of g.items ?? []; track it.key) {
+                      <a class="hub-tile" [class.hot]="it.attention" [routerLink]="hubPath(it.path)" [queryParams]="hubQuery(it.path)">
+                        <div class="hub-top">
+                          <span class="hub-ico"><i class="fas {{ it.icon }}"></i></span>
+                          <span class="hub-name">{{ it.name }}</span>
+                          @if (it.count != null) {
+                            <span style="text-align:right">
+                              <div class="hub-count">{{ it.count }}</div>
+                              <div class="hub-cl">{{ it.count_label }}</div>
+                            </span>
+                          }
+                        </div>
+                        <div class="hub-desc">{{ it.description }}</div>
+                      </a>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="hub-quick">
+              @for (it of boardHubQuickLinks(); track it.key) {
+                <a [routerLink]="hubPath(it.path)" [queryParams]="hubQuery(it.path)"><i class="fas {{ it.icon }}"></i> {{ it.name }}
+                  @if (it.count != null && num(it.count) > 0) { ({{ it.count }}) }</a>
+              }
+            </div>
+          }
+        </div>
+      }
 
       <div class="split">
         <div class="card">
@@ -850,6 +1004,10 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   readonly readiness = signal<any | null>(null);
   readonly now = signal(Date.now());
   readonly lastRefreshed = signal('');
+  /** Index hub expanded by default so Command Post shows all Response functions immediately. */
+  readonly hubOpen = signal(true);
+  /** Board-level linked ops hub — expanded by default on open. */
+  readonly boardHubOpen = signal(true);
   private timer: any;
   private boardRefresh: any;
   private boardRefreshing = false;
@@ -893,6 +1051,57 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
   pct(a: any): number {
     const t = a.total_tasks || 0;
     return t ? Math.round(((a.completed_tasks || 0) / t) * 100) : 0;
+  }
+
+  /** Coerce API numeric-ish values for templates. */
+  num(v: any): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  /** Split hub deep-link path from optional query string for routerLink. */
+  hubPath(path: string | null | undefined): string {
+    if (!path) { return '/m/response/coordination'; }
+    const q = path.indexOf('?');
+    return q >= 0 ? path.slice(0, q) : path;
+  }
+
+  hubQuery(path: string | null | undefined): Record<string, string> {
+    if (!path) { return {}; }
+    const q = path.indexOf('?');
+    if (q < 0) { return {}; }
+    const out: Record<string, string> = {};
+    new URLSearchParams(path.slice(q + 1)).forEach((v, k) => { out[k] = v; });
+    return out;
+  }
+
+  /** Collapsed-mode quick chips: first item of each hub group (or attention items). */
+  hubQuickLinks(): any[] {
+    const groups = (this.index()?.response_hub?.groups ?? []) as any[];
+    const hot: any[] = [];
+    const first: any[] = [];
+    for (const g of groups) {
+      const items = (g.items ?? []) as any[];
+      for (const it of items) {
+        if (it.attention && Number(it.count) > 0) { hot.push(it); }
+      }
+      if (items[0]) { first.push(items[0]); }
+    }
+    return (hot.length ? hot : first).slice(0, 12);
+  }
+
+  boardHubQuickLinks(): any[] {
+    const groups = (this.board()?.linked_ops?.groups ?? []) as any[];
+    const hot: any[] = [];
+    const first: any[] = [];
+    for (const g of groups) {
+      const items = (g.items ?? []) as any[];
+      for (const it of items) {
+        if (it.attention && Number(it.count) > 0) { hot.push(it); }
+      }
+      if (items[0]) { first.push(items[0]); }
+    }
+    return (hot.length ? hot : first).slice(0, 12);
   }
 
   /** hh:mm:ss remaining of the 72-hour window (counts up past zero as overrun). */
@@ -1131,11 +1340,6 @@ export class CommandCenterComponent implements OnInit, OnDestroy {
         this.periodMsg.set(e?.error?.message || e?.error?.detail || 'Could not close period.');
       },
     });
-  }
-
-  num(value: any): number {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : 0;
   }
 
   coverage(row: any, key: string): number {

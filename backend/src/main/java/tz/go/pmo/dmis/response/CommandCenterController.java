@@ -140,6 +140,8 @@ public class CommandCenterController {
         out.put("awaiting", jdbc.queryForList(awaitingSql.toString(), awaitingParams.toArray()));
         out.put("posture_doctrine", jdbc.queryForList(
                 "select * from public.posture_doctrine order by sort_order"));
+        // National / area ops snapshot so the Command Post index is the single entry to all Response work.
+        out.put("response_hub", buildResponseIndexHub());
         return out;
     }
 
@@ -516,6 +518,8 @@ public class CommandCenterController {
                 """, id));
         out.put("logistics", buildLogisticsBlock(activation.get("incident_id")));
         out.put("situation_reports", buildSituationReportsBlock(activation));
+        // Full Response functional hub — every Response module surface with live counts + deep links.
+        out.put("linked_ops", buildLinkedOpsHub(activation, id));
         // F31 — real operational periods (IAP cadence), not only age-derived labels.
         out.put("operational_periods", buildOperationalPeriodsBlock(id));
         out.put("stakeholders", jdbc.queryForList(
@@ -692,6 +696,360 @@ public class CommandCenterController {
     public Map<String, Object> aar(@PathVariable long id) {
         findOr404(id);
         return buildAar(id);
+    }
+
+    // ─── Full Response Ops Hub (Command Post as the single entry to all Response work) ───
+
+    /**
+     * National / area snapshot for the activations index: every Response module surface with live
+     * queue counts and deep links so the Command Post is the hub for all Response functionalities.
+     */
+    private Map<String, Object> buildResponseIndexHub() {
+        Map<String, Object> hub = new LinkedHashMap<>();
+        hub.put("title", "Full Response Ops Hub");
+        hub.put("subtitle", "Every Response function with live queue counts — open any surface from the Command Post");
+
+        long activeIncidents = scopedCountIncidents("coalesce(i.is_simulation,false)=false and i.status in ('Active Response','Verified','Reported','Pending Verification')");
+        long criticalIncidents = scopedCountIncidents("coalesce(i.is_simulation,false)=false and i.severity_level = 'Critical' and i.status <> 'Closed'");
+        long awaitingActivation = scopedCountIncidents(
+                "i.workflow_status = 'approved' and coalesce(i.is_simulation,false)=false "
+                + "and not exists (select 1 from public.response_activations ra where ra.incident_id = i.id and ra.status = 'active')");
+        long activeActivations = safeCount("select count(*) from public.response_activations where status = 'active' and coalesce(is_simulation,false)=false");
+        long anticipatory = safeCount("select count(*) from public.response_activations where status = 'active' and trigger_type = 'forecast' and coalesce(is_simulation,false)=false");
+        long simulations = safeCount("select count(*) from public.response_activations where status = 'active' and is_simulation = true");
+        long issuedAlerts = safeCount("select count(*) from public.warnings where deleted_at is null and lower(status) in ('approved','published')");
+        long publicReportsOpen = safeCount("select count(*) from public.public_hazard_reports where status in ('new','reviewing')");
+        long assessmentsPending = scopedCountViaIncident(
+                "select count(*) from public.damage_assessments da join public.incidents i on i.id = da.incident_id where da.status = 'Pending Verification' and coalesce(i.is_simulation,false)=false");
+        long resourcesPending = scopedCountViaIncident(
+                "select count(*) from public.allocated_resources ar join public.incidents i on i.id = ar.incident_id where ar.workflow_status = 'pending_approval' and coalesce(i.is_simulation,false)=false");
+        long dispatchPending = safeCount("select count(*) from public.dispatch_approvals where status = 'Pending' and deleted_at is null");
+        long resourcesDeployed = scopedCountViaIncident(
+                "select count(*) from public.allocated_resources ar join public.incidents i on i.id = ar.incident_id where ar.status = 'Deployed' and coalesce(i.is_simulation,false)=false");
+        long tasksOpen = safeCount("""
+                select count(*) from public.incident_tasks t
+                where t.status in ('To Do','In Progress','On Hold')
+                  and not exists (select 1 from public.response_activations sa where sa.id = t.activation_id and sa.is_simulation)
+                """);
+        long declarationsActive = safeCount("""
+                select count(*) from public.disaster_declarations
+                where status = 'declared' and coalesce(is_simulation,false)=false
+                  and (effective_until is null or effective_until >= current_date)
+                """);
+        long declarationsChain = safeCount("""
+                select count(*) from public.disaster_declarations
+                where status in ('proposed','technical_review','steering_endorsed') and coalesce(is_simulation,false)=false
+                """);
+        long dlnaOpen = safeCount("select count(*) from public.dlna_assessments where status <> 'Final'");
+        long alertsToday = safeCount("select count(*) from public.alerts where created_at::date = current_date");
+        long stockUnits = safeCount("select coalesce(sum(quantity),0) from public.inventory_items where status = 'Good Condition'");
+        long donationsOpen = safeCount("select count(*) from public.ndmf_donations where status in ('pledged','received','pending','acknowledged')");
+        long supportNeeds = safeCount("""
+                select
+                  (select count(*) from public.mitigation_measures m
+                    where m.approval_status = 'approved' and m.support_funded_at is null
+                      and m.additional_support_required is not null and btrim(m.additional_support_required) <> ''
+                      and lower(m.additional_support_required) not in ('no','none','n/a'))
+                + (select count(*) from public.training_plans t
+                    where t.support_requested_at is not null and (t.source_of_fund is null or t.source_of_fund = ''))
+                """);
+        long procurementLines = safeCount("""
+                select count(*) from public.allocated_resources ar
+                where ar.source_details is not null and ar.source_details::text like '%procurement%'
+                  and ar.status not in ('Delivered','Deployed','Cancelled','Rejected')
+                """);
+
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("active_incidents", activeIncidents);
+        snapshot.put("critical_incidents", criticalIncidents);
+        snapshot.put("active_activations", activeActivations);
+        snapshot.put("anticipatory_activations", anticipatory);
+        snapshot.put("simulations", simulations);
+        snapshot.put("awaiting_activation", awaitingActivation);
+        snapshot.put("issued_alerts", issuedAlerts);
+        snapshot.put("public_reports_open", publicReportsOpen);
+        snapshot.put("assessments_pending", assessmentsPending);
+        snapshot.put("resource_approvals_pending", resourcesPending);
+        snapshot.put("dispatch_approvals_pending", dispatchPending);
+        snapshot.put("resources_deployed", resourcesDeployed);
+        snapshot.put("open_tasks", tasksOpen);
+        snapshot.put("active_declarations", declarationsActive);
+        snapshot.put("declarations_in_chain", declarationsChain);
+        snapshot.put("dlna_open", dlnaOpen);
+        snapshot.put("alerts_today", alertsToday);
+        snapshot.put("stock_units", stockUnits);
+        hub.put("snapshot", snapshot);
+
+        List<Map<String, Object>> groups = new ArrayList<>();
+        groups.add(hubGroup("command", "1. Command", List.of(
+                hubLink("dashboard", "Response Dashboard", "fa-tachometer-alt", "/m/response/dashboard",
+                        activeIncidents, "active incidents", "National / area response overview"),
+                hubLink("eocc", "EOCC Command Center", "fa-terminal", "/m/response/eocc",
+                        activeActivations, "active posts", "Live multi-activation operations board"),
+                hubLink("executive", "Executive Watch", "fa-binoculars", "/m/response/executive-watch",
+                        criticalIncidents, "critical", "National situation picture for leadership"),
+                hubLink("coordination", "Command Post", "fa-tower-broadcast", "/m/response/coordination",
+                        activeActivations + simulations, "live + drill", "DRF coordination, posture, anticipatory & simulation"),
+                hubLink("declarations", "Disaster Declarations", "fa-file-contract", "/m/response/declarations",
+                        declarationsActive + declarationsChain, "active / in chain", "s.32 Disaster Area & s.33 State of Emergency")
+        )));
+        groups.add(hubGroup("alerts", "2. Alerts & intake", List.of(
+                hubLink("issued-alerts", "Issued Alerts", "fa-bell", "/m/response/issued-alerts",
+                        issuedAlerts, "published", "Government warnings issued for action"),
+                hubLink("public-reports", "Public Reports", "fa-flag", "/m/response/public-reports",
+                        publicReportsOpen, "open queue", "Citizen hazard reports awaiting triage"),
+                hubLink("communication", "Alert Dissemination", "fa-comments", "/m/response/communication",
+                        alertsToday, "sent today", "Multi-channel alert distribution")
+        )));
+        groups.add(hubGroup("incidents", "3. Incidents & assessment", List.of(
+                hubLink("incidents", "Active Incidents", "fa-exclamation-triangle", "/m/response/incidents",
+                        activeIncidents, "open", "Track and manage response incidents"),
+                hubLink("assessments", "Damage Assessments", "fa-clipboard-check", "/m/response/assessments",
+                        assessmentsPending, "pending verify", "Per-incident damage & needs assessments"),
+                hubLink("dlna", "DLNA & Recovery Plans", "fa-file-lines", "/m/response/dlna",
+                        dlnaOpen, "in progress", "NDRF Annex 1 DLNA and Annex 2 recovery plans")
+        )));
+        groups.add(hubGroup("logistics", "4. Resources & logistics", List.of(
+                hubLink("resource-approvals", "Resource Approvals", "fa-truck", "/m/response/resource-approvals",
+                        resourcesPending, "pending approval", "Approve resource allocation requests"),
+                hubLink("resource-dispatch", "Resource Dispatch", "fa-shipping-fast", "/m/response/resource-dispatch",
+                        resourcesDeployed, "deployed", "Source and dispatch allocated resources"),
+                hubLink("dispatch-approvals", "Dispatch Approvals", "fa-clipboard-check", "/m/response/dispatch-approvals",
+                        dispatchPending, "pending", "Warehouse / source dispatch gate"),
+                hubLink("procurement", "Procurement Requests", "fa-shopping-cart", "/m/response/procurement",
+                        procurementLines, "open lines", "Procurement chain for shortfalls"),
+                hubLink("warehouse", "Warehouse Operations", "fa-warehouse", "/m/response/warehouse-ops",
+                        stockUnits, "stock units", "Intake, removals, transfers, stock taking"),
+                hubLink("donations", "Stakeholder Donations", "fa-hand-holding-heart", "/m/response/donations",
+                        donationsOpen, "open", "NDMF and partner donations"),
+                hubLink("support-needs", "Support Needs", "fa-hands-helping", "/m/response/support-needs",
+                        supportNeeds, "open", "Support needs and pledges")
+        )));
+        groups.add(hubGroup("coordination", "5. Coordination", List.of(
+                hubLink("tasks", "Task Assignment", "fa-tasks", "/m/response/tasks",
+                        tasksOpen, "open tasks", "Assign and monitor response tasks"),
+                hubLink("communication-coord", "Alert Dissemination", "fa-comments", "/m/response/communication",
+                        alertsToday, "today", "Comms desk — SMS / email / app / web")
+        )));
+        hub.put("groups", groups);
+        return hub;
+    }
+
+    /**
+     * Activation-scoped ops hub on the open board: deep-links into every Response function, with
+     * counts filtered to this activation's incident where applicable.
+     */
+    private Map<String, Object> buildLinkedOpsHub(Map<String, Object> activation, long activationId) {
+        Map<String, Object> hub = new LinkedHashMap<>();
+        hub.put("title", "Response Functions — this activation");
+        hub.put("subtitle", "Jump to every Response surface for this command post");
+        Object incidentIdRaw = activation.get("incident_id");
+        Long incidentId = incidentIdRaw == null ? null : ((Number) incidentIdRaw).longValue();
+        hub.put("incident_id", incidentId);
+        hub.put("activation_id", activationId);
+        hub.put("has_incident", incidentId != null);
+
+        long tasksOpen = safeCount(
+                "select count(*) from public.incident_tasks where activation_id = ? and status in ('To Do','In Progress','On Hold')",
+                activationId);
+        long tasksDone = safeCount(
+                "select count(*) from public.incident_tasks where activation_id = ? and status = 'Completed'",
+                activationId);
+        long challenges = safeCount(
+                "select count(*) from public.incident_tasks where activation_id = ? and coalesce(challenge,'') <> ''",
+                activationId);
+        long injectsOpen = safeCount(
+                "select count(*) from public.activation_injects where activation_id = ? and status in ('pending','fired')",
+                activationId);
+        long rolesFilled = safeCount(
+                "select count(*) from public.activation_command_roles where activation_id = ? and relieved_at is null",
+                activationId);
+        long periodsOpen = periodTableReady()
+                ? safeCount("select count(*) from public.activation_periods where activation_id = ? and status = 'open'", activationId)
+                : 0L;
+
+        long allocations = 0, pendingApproval = 0, pendingDispatch = 0, assessments = 0, sitreps = 0, dlna = 0, alerts = 0;
+        if (incidentId != null) {
+            allocations = safeCount("select count(*) from public.allocated_resources where incident_id = ?", incidentId);
+            pendingApproval = safeCount(
+                    "select count(*) from public.allocated_resources where incident_id = ? and workflow_status = 'pending_approval'",
+                    incidentId);
+            pendingDispatch = safeCount("""
+                    select count(*) from public.dispatch_approvals da
+                    join public.allocated_resources ar on ar.id = da.allocated_resource_id
+                    where ar.incident_id = ? and da.status = 'Pending' and da.deleted_at is null
+                    """, incidentId);
+            assessments = safeCount("select count(*) from public.damage_assessments where incident_id = ?", incidentId);
+            sitreps = safeCount("select count(*) from public.incident_history_reports where incident_id = ?", incidentId);
+            dlna = safeCount("""
+                    select count(*) from public.dlna_assessments d
+                    where d.incident_id = ?
+                       or exists (select 1 from public.dlna_incidents di where di.assessment_id = d.id and di.incident_id = ?)
+                    """, incidentId, incidentId);
+            alerts = safeCount("select count(*) from public.alerts where incident_id = ?", incidentId);
+        }
+
+        String incidentQ = incidentId == null ? "" : ("?incident_id=" + incidentId);
+        String activationQ = "?activation=" + activationId;
+        String dispatchUrl = incidentId == null ? "/m/response/resource-dispatch" : "/m/response/resource-dispatch" + incidentQ;
+        String approvalsUrl = incidentId == null ? "/m/response/resource-approvals" : "/m/response/resource-approvals" + incidentQ;
+        String incidentUrl = incidentId == null ? "/m/response/incidents" : "/m/response/incidents/" + incidentId;
+        String assessUrl = incidentId == null ? "/m/response/assessments" : "/m/response/assessments" + incidentQ;
+        String dlnaUrl = incidentId == null ? "/m/response/dlna" : "/m/response/dlna" + incidentQ;
+        String recoveryUrl = incidentId == null ? "/m/response/dlna" : "/m/response/recovery-plan/" + incidentId;
+        String tasksUrl = "/m/response/tasks" + (incidentId == null ? "" : incidentQ);
+        String commsUrl = "/m/response/communication" + (incidentId == null ? "" : incidentQ);
+
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("tasks_open", tasksOpen);
+        snapshot.put("tasks_completed", tasksDone);
+        snapshot.put("challenges", challenges);
+        snapshot.put("injects_open", injectsOpen);
+        snapshot.put("ics_roles_filled", rolesFilled);
+        snapshot.put("periods_open", periodsOpen);
+        snapshot.put("allocations", allocations);
+        snapshot.put("resource_approvals_pending", pendingApproval);
+        snapshot.put("dispatch_approvals_pending", pendingDispatch);
+        snapshot.put("assessments", assessments);
+        snapshot.put("situation_reports", sitreps);
+        snapshot.put("dlna", dlna);
+        snapshot.put("alerts", alerts);
+        hub.put("snapshot", snapshot);
+
+        List<Map<String, Object>> groups = new ArrayList<>();
+        groups.add(hubGroup("command", "Command & picture", List.of(
+                hubLink("eocc", "EOCC Board", "fa-terminal", "/m/response/eocc",
+                        null, null, "Multi-activation operations picture"),
+                hubLink("executive", "Executive Watch", "fa-binoculars", "/m/response/executive-watch",
+                        null, null, "Escalate the national picture"),
+                hubLink("declarations", "Declarations", "fa-file-contract", "/m/response/declarations" + activationQ,
+                        null, null, "Link Disaster Area / SoE to this activation"),
+                hubLink("incident", "Incident record", "fa-exclamation-triangle", incidentUrl,
+                        sitreps, "SITREPs", incidentId == null
+                                ? "Available after impact creates an incident"
+                                : "Situation reports, history, people & damage")
+        )));
+        groups.add(hubGroup("drf", "DRF & tasking (this post)", List.of(
+                hubLink("tasks", "Task Assignment", "fa-tasks", tasksUrl,
+                        tasksOpen, "open", "All tasks for this activation / incident"),
+                hubLink("challenges", "Challenges feed", "fa-triangle-exclamation", "/m/response/coordination" + activationQ,
+                        challenges, "flagged", "Scroll to challenges on this board"),
+                hubLink("injects", "Scenario injects", "fa-bolt", "/m/response/coordination" + activationQ,
+                        injectsOpen, "pending/fired", "Exercise injects for this post"),
+                hubLink("ics", "ICS command roles", "fa-sitemap", "/m/response/coordination" + activationQ,
+                        rolesFilled, "filled", "Appoint IC and General Staff on this board")
+        )));
+        groups.add(hubGroup("alerts", "Alerts & intake", List.of(
+                hubLink("issued-alerts", "Issued Alerts", "fa-bell", "/m/response/issued-alerts",
+                        null, null, "Published warnings covering the area"),
+                hubLink("public-reports", "Public Reports", "fa-flag", "/m/response/public-reports",
+                        null, null, "Citizen reports for triage"),
+                hubLink("communication", "Alert Dissemination", "fa-comments", commsUrl,
+                        alerts, "for incident", "Send multi-channel alerts for this response")
+        )));
+        groups.add(hubGroup("assessment", "Assessment & recovery", List.of(
+                hubLink("assessments", "Damage Assessments", "fa-clipboard-check", assessUrl,
+                        assessments, "filed", incidentId == null ? "After incident link" : "Field assessments for this incident"),
+                hubLink("dlna", "DLNA", "fa-file-lines", dlnaUrl,
+                        dlna, "assessments", "NDRF Annex 1 sector DLNA"),
+                hubLink("recovery", "Recovery Plan", "fa-road", recoveryUrl,
+                        null, null, incidentId == null ? "After incident link" : "Annex 2 recovery implementation plan")
+        )));
+        groups.add(hubGroup("logistics", "Resources & logistics", List.of(
+                hubLink("resource-approvals", "Resource Approvals", "fa-truck", approvalsUrl,
+                        pendingApproval, "pending", "Approve allocations for this incident"),
+                hubLink("dispatch", "Resource Dispatch", "fa-shipping-fast", dispatchUrl,
+                        allocations, "lines", "Source and move resources"),
+                hubLink("dispatch-approvals", "Dispatch Approvals", "fa-clipboard-check",
+                        "/m/response/dispatch-approvals" + (incidentId == null ? "" : incidentQ),
+                        pendingDispatch, "pending", "Source-side dispatch gate"),
+                hubLink("procurement", "Procurement", "fa-shopping-cart",
+                        "/m/response/procurement" + (incidentId == null ? "" : incidentQ),
+                        null, null, "Buy / procure shortfalls"),
+                hubLink("warehouse", "Warehouse Ops", "fa-warehouse", "/m/response/warehouse-ops",
+                        null, null, "Stock intake, transfer, stock-take"),
+                hubLink("donations", "Donations", "fa-hand-holding-heart", "/m/response/donations",
+                        null, null, "Partner / NDMF donations"),
+                hubLink("support-needs", "Support Needs", "fa-hands-helping", "/m/response/support-needs",
+                        null, null, "Support needs and pledges")
+        )));
+        hub.put("groups", groups);
+        return hub;
+    }
+
+    private Map<String, Object> hubGroup(String key, String label, List<Map<String, Object>> items) {
+        Map<String, Object> g = new LinkedHashMap<>();
+        g.put("key", key);
+        g.put("label", label);
+        g.put("items", items);
+        long attention = items.stream()
+                .map(i -> i.get("count"))
+                .filter(c -> c instanceof Number)
+                .mapToLong(c -> ((Number) c).longValue())
+                .sum();
+        g.put("attention_total", attention);
+        return g;
+    }
+
+    private Map<String, Object> hubLink(String key, String name, String icon, String path,
+                                        Long count, String countLabel, String description) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("key", key);
+        item.put("name", name);
+        item.put("icon", icon);
+        item.put("path", path);
+        item.put("description", description);
+        if (count != null) {
+            item.put("count", count);
+            item.put("count_label", countLabel == null ? "" : countLabel);
+            item.put("attention", count > 0);
+        } else {
+            item.put("count", null);
+            item.put("count_label", countLabel);
+            item.put("attention", false);
+        }
+        return item;
+    }
+
+    private long safeCount(String sql, Object... args) {
+        try {
+            Long n = jdbc.queryForObject(sql, Long.class, args);
+            return n == null ? 0L : n;
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    /** Count incidents with optional extra WHERE, applying area jurisdiction scope. */
+    private long scopedCountIncidents(String extraWhere) {
+        try {
+            StringBuilder sql = new StringBuilder("select count(*) from public.incidents i where ");
+            List<Object> params = new ArrayList<>();
+            if (extraWhere != null && !extraWhere.isBlank()) {
+                sql.append("(").append(extraWhere).append(")");
+            } else {
+                sql.append("true");
+            }
+            jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
+            Long n = jdbc.queryForObject(sql.toString(), Long.class, params.toArray());
+            return n == null ? 0L : n;
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
+
+    /** Run a count SQL that already joins incidents as alias {@code i}, then append jurisdiction scope. */
+    private long scopedCountViaIncident(String baseSqlEndingBeforeOrder) {
+        try {
+            // baseSql must include "join public.incidents i" and a WHERE clause already.
+            StringBuilder sql = new StringBuilder(baseSqlEndingBeforeOrder);
+            List<Object> params = new ArrayList<>();
+            jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
+            Long n = jdbc.queryForObject(sql.toString(), Long.class, params.toArray());
+            return n == null ? 0L : n;
+        } catch (Exception e) {
+            return 0L;
+        }
     }
 
     /**
