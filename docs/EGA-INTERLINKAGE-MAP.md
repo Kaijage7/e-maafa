@@ -95,8 +95,10 @@ Inventory ── Java: WarehouseRepository, Resource (package-private)
 1. ~~Alert subscriptions~~  
 2. ~~Evacuation centres~~  
 3. ~~**Warehouse**~~ — **DONE** (InventoryService imports → `entity`/`repository` same commit)  
-4. ~~**TemporaryWarehouse**~~ — **DONE** (no external Java type importers; SQL-only consumers: dispatch, warehouse-ops, relief, monitoring, bidding)  
-5. Inventory + Resource (move together; Inventory is the hub)  
+4. ~~**TemporaryWarehouse**~~ — **DONE** (SQL-only external consumers)  
+5. ~~**Inventory + Resource (JPA catalogue entity)**~~ — **DONE**  
+   - Java: only Inventory stack used `InventoryItem` / `Resource` / repos; Settings catalogue stays SQL (`ResourceCatalogueController`)  
+   - Depends on already-migrated `Warehouse` + `WarehouseRepository`  
 6. TrainingPlan (leaf)  
 7. Then non-preparedness modules by isolation  
 

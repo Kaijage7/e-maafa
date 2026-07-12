@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.dto.request;
 
 /** Payload for creating an emergency-supply (inventory) item, mirroring inventory_items/create-v2. */
 public record InventoryWriteRequest(

@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

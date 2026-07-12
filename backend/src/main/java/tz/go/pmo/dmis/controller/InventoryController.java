@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,8 +17,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.dto.request.InventoryWriteRequest;
+import tz.go.pmo.dmis.dto.response.InventoryResponse;
+import tz.go.pmo.dmis.service.InventoryService;
 
-/** API for the Emergency Supplies screen, over the existing inventory_items table (read + create). */
+/** API for Emergency Supplies. Paths unchanged from the legacy package layout. */
 @RestController
 @RequestMapping("/v1/inventory")
 @Tag(name = "Preparedness", description = "Emergency supplies / inventory")

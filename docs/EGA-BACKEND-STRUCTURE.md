@@ -148,8 +148,8 @@ Suggested migration order:
 2. ~~**Evacuation centres**~~ — **DONE**  
 3. ~~**Warehouses**~~ — **DONE** (InventoryService import fix same change-set)  
 4. ~~**Temporary warehouses**~~ — **DONE**  
-5. Inventory + Resource (Java hub)  
-6. Training plans (leaf)  
+5. ~~**Inventory + Resource entity**~~ — **DONE**  
+6. Training plans (leaf — only preparedness left)  
 7. Settings / catalogue  
 8. Response / EW (SQL-heavy)  
 

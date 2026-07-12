@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.preparedness;
+package tz.go.pmo.dmis.service.impl;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -16,17 +16,23 @@ import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import tz.go.pmo.dmis.dto.request.InventoryWriteRequest;
+import tz.go.pmo.dmis.dto.response.InventoryResponse;
+import tz.go.pmo.dmis.entity.InventoryItem;
+import tz.go.pmo.dmis.entity.Resource;
 import tz.go.pmo.dmis.entity.Warehouse;
+import tz.go.pmo.dmis.repository.InventoryItemRepository;
+import tz.go.pmo.dmis.repository.ResourceRepository;
 import tz.go.pmo.dmis.repository.WarehouseRepository;
+import tz.go.pmo.dmis.service.InventoryService;
 
 /**
- * Reads the existing inventory_items (joining resources + warehouses) for the Emergency Supplies index,
- * with low-stock / expiring / expired flags and the four statistics. Also creates new items (writes
- * via JdbcTemplate so the read entity stays immutable).
+ * Emergency supplies: inventory_items + resources catalogue + permanent warehouses.
+ * Writes via JdbcTemplate; entities remain immutable read models.
  */
 @Service
 @RequiredArgsConstructor
-public class InventoryService {
+public class InventoryServiceImpl implements InventoryService {
 
     private static final ZoneId ZONE = ZoneId.of("Africa/Dar_es_Salaam");
     private static final DateTimeFormatter D_MON_Y = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH);
@@ -56,6 +62,7 @@ public class InventoryService {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public InventoryResponse index() {
         List<Resource> catalogue = resources.findAll();
         Map<Long, String> resourceName = catalogue.stream()
@@ -89,6 +96,7 @@ public class InventoryService {
 
     /** Resources + warehouses for the New Item form dropdowns. */
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> reference() {
         List<Map<String, Object>> res = resources.findAll().stream()
                 .sorted((a, b) -> safe(a.getName()).compareToIgnoreCase(safe(b.getName())))
@@ -106,6 +114,7 @@ public class InventoryService {
 
     /** Creates a new inventory item (Emergency Supplies → New Item). */
     @Transactional
+    @Override
     public Map<String, Object> create(InventoryWriteRequest req) {
         if (req.resourceId() == null || req.itemName() == null || req.itemName().isBlank()
                 || req.warehouseId() == null || req.quantity() == null) {
@@ -132,6 +141,7 @@ public class InventoryService {
 
     /** One inventory item's fields for the edit form. */
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> detail(long id) {
         InventoryItem i = items.findById(id).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found"));
@@ -151,6 +161,7 @@ public class InventoryService {
 
     /** Updates an existing inventory item (Emergency Supplies → Edit). */
     @Transactional
+    @Override
     public Map<String, Object> update(long id, InventoryWriteRequest req) {
         if (req.resourceId() == null || req.itemName() == null || req.itemName().isBlank()
                 || req.warehouseId() == null || req.quantity() == null) {
