@@ -42,6 +42,25 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.NOT_FOUND, "Not found", "No endpoint matches this path.");
     }
 
+    /**
+     * Wrong HTTP method on a path that exists for other methods (e.g. GET /translations/map when only
+     * PUT/DELETE /translations/{id} exist). Must be 405, not a leaked 500.
+     */
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    ProblemDetail handleMethodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        return problem(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed",
+                "This path does not support " + ex.getMethod() + ".");
+    }
+
+    /**
+     * Path variable type mismatch (e.g. /translations/map matched /{id} long). Clean 400, not 500.
+     */
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    ProblemDetail handleTypeMismatch(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "Invalid path parameter",
+                "A path parameter has the wrong type.");
+    }
+
     @ExceptionHandler(BusinessRuleException.class)
     ProblemDetail handleBusinessRule(BusinessRuleException ex) {
         return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Business rule violated", ex.getMessage());
