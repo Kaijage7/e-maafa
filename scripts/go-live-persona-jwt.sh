@@ -42,7 +42,7 @@ DAS=$(login das@pmo.go.tz password) || true
 sleep 1
 RAS=$(login ras@pmo.go.tz password) || true
 sleep 1
-SA=$(login admin@example.com admin) || true
+SA=$(login admin@example.com 'Password@2026') || true
 
 if [[ -n "${DAS:-}" ]]; then
   expect_code DAS-own "$DAS" /v1/response/incidents/3 200

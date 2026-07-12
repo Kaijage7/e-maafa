@@ -185,17 +185,32 @@ public class HazardAreaContextController {
         String place = URLEncoder.encode(label == null ? "Tanzania" : label, StandardCharsets.UTF_8);
 
         List<Map<String, Object>> layers = new ArrayList<>();
+        // ── Street / admin ────────────────────────────────────────────────
         layers.add(link("OpenStreetMap", "open_street_map",
                 "https://www.openstreetmap.org/?mlat=" + cLat + "&mlon=" + cLng + "#map=12/" + cLat + "/" + cLng,
                 "Street map / context (© OpenStreetMap contributors)"));
-        layers.add(link("OSM + cycle/transport context", "osm_export",
+        layers.add(link("OSM export / bbox", "osm_export",
                 "https://www.openstreetmap.org/export#map=14/" + cLat + "/" + cLng,
                 "Export/view bounding box on OSM"));
-        // Esri World Imagery is commonly used as an open basemap endpoint in Leaflet; we only deep-link via
-        // a well-known viewer pattern — operators can also use OSM.
+        layers.add(link("OpenTopoMap (relief)", "opentopomap",
+                "https://www.opentopomap.org/#map=12/" + cLat + "/" + cLng,
+                "Open topographic basemap for terrain context — third-party tiles"));
+        // Esri World Imagery tiles are open for basemap use; deep-link to public viewer (not DMIS AI).
         layers.add(link("Esri World Imagery (aerial basemap)", "esri_world_imagery",
-                "https://www.openstreetmap.org/#map=15/" + cLat + "/" + cLng,
-                "Use with local GIS or Leaflet Esri World Imagery tiles for aerial context — not DMIS-owned satellite analysis"));
+                "https://www.arcgis.com/home/webmap/viewer.html?center=" + cLng + "," + cLat + "&level=15"
+                        + "&basemapUrl=https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
+                "Aerial/satellite basemap via Esri World Imagery — not DMIS-owned analysis; third-party ToS apply"));
+        // ── Buildings / near-current structure detail (external ToS — not embedded) ──
+        // Google Earth Web typically shows roofs/buildings with the freshest commercial imagery.
+        layers.add(link("Google Earth (buildings · near-current)", "google_earth",
+                String.format(Locale.US,
+                        "https://earth.google.com/web/@%.6f,%.6f,600a,2500d,35y,0h,45t,0r", cLat, cLng),
+                "Best buildings/3D structures view — opens Google Earth Web externally (Google ToS). "
+                        + "Not DMIS-owned; not damage AI; not embedded."));
+        layers.add(link("Google Maps satellite (high zoom)", "google_maps_satellite",
+                String.format(Locale.US,
+                        "https://www.google.com/maps/@%.6f,%.6f,18z/data=!3m1!1e3", cLat, cLng),
+                "Google Maps satellite basemap at high zoom for roofs/structures (Google ToS)"));
         layers.add(link("Google Maps", "google_maps",
                 "https://www.google.com/maps/@?api=1&map_action=map&center=" + cLat + "," + cLng + "&zoom=15",
                 "Opens Google Maps externally (Google terms apply)"));
@@ -206,17 +221,53 @@ public class HazardAreaContextController {
         layers.add(link("Google Maps search (area name)", "google_maps_search",
                 "https://www.google.com/maps/search/?api=1&query=" + place,
                 "Search by place name when coordinates are approximate"));
-        // Sentinel Hub / EO Browser — open EO context without claiming we host Sentinel processing
+        layers.add(link("Mapillary (open street-level)", "mapillary",
+                "https://www.mapillary.com/app/?lat=" + cLat + "&lng=" + cLng + "&z=14",
+                "Open street-level imagery if available — not a Google Street View substitute"));
+        // ── Open EO / international space assets (human review only) ─────
         layers.add(link("EO Browser (Sentinel open data)", "sentinel_eo_browser",
                 "https://apps.sentinel-hub.com/eo-browser/?lat=" + cLat + "&lng=" + cLng + "&zoom=12",
-                "Open European open satellite data browser near the point — not a DMIS AI model"));
+                "European open satellite data browser — not a DMIS AI model"));
+        // Prefer yesterday for daily true-colour (today may still be incomplete NRT)
+        String day = java.time.LocalDate.now(java.time.ZoneOffset.UTC).minusDays(1).toString();
+        String wvBox = String.format(Locale.US, "%.4f,%.4f,%.4f,%.4f",
+                cLng - 1.2, cLat - 0.9, cLng + 1.2, cLat + 0.9);
+        layers.add(link("NASA Worldview (daily true-colour timeline)", "nasa_worldview",
+                "https://worldview.earthdata.nasa.gov/?v=" + wvBox
+                        + "&t=" + day
+                        + "&l=MODIS_Terra_CorrectedReflectance_TrueColor,Coastlines_15m",
+                "NASA GIBS temporal browser — scrub days, animate, compare. Not DMIS AI classification."));
+        layers.add(link("NASA Worldview compare / swipe", "nasa_worldview_compare",
+                "https://worldview.earthdata.nasa.gov/?v=" + wvBox
+                        + "&t=" + day
+                        + "&l=MODIS_Terra_CorrectedReflectance_TrueColor,Coastlines_15m&ca=true",
+                "Side-by-side / swipe date comparison for before-after exposure judgement"));
+        layers.add(link("Copernicus Browser", "copernicus_browser",
+                "https://browser.dataspace.copernicus.eu/?lat=" + cLat + "&lng=" + cLng + "&zoom=10",
+                "EU Copernicus open data browser — products external until EMS MoU dual-proved"));
+        // ── Multi-hazard situational awareness (open portals) ────────────
+        layers.add(link("GDACS global disaster alerts", "gdacs",
+                "https://www.gdacs.org/",
+                "UN/EU multi-hazard alert overview — contextual only, not Tanzania SoR"));
+        layers.add(link("ReliefWeb Tanzania", "reliefweb_tz",
+                "https://reliefweb.int/country/tza",
+                "OCHA humanitarian reports for Tanzania — external situational context"));
 
         out.put("contextLinks", layers);
+        out.put("internationalNote",
+                "Impact Analysis in e-MAAFA intentionally exceeds a single-agency bulletin: dual basemap "
+                        + "(map/satellite), INFORM dimensions, entity bus, evacuation routing, Action Guide "
+                        + "composition, and open international EO/context links — without inventing national "
+                        + "API green lights or satellite damage AI.");
         out.put("embedHints", Map.of(
                 "leafletOsm", "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                 "leafletEsriWorldImagery",
                 "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-                "note", "SPA may show OSM/Esri tiles in-app; Street View should remain an external open (ToS)."));
+                "leafletCartoLight",
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                "leafletCartoLabels",
+                "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
+                "note", "SPA may show OSM/Esri/Carto tiles in-app; Street View / Google remain external (ToS)."));
         return out;
     }
 

@@ -385,14 +385,43 @@ Workbench UI: **M&E Data Workbench → Organization indicators**.
 
 Returns honesty note + links to:
 
-- OpenStreetMap  
+- OpenStreetMap / OpenTopoMap / Mapillary  
+- Esri World Imagery (aerial basemap viewer)  
 - Google Maps / Street View (**external** browser tab; Google ToS)  
-- EO Browser (Sentinel open data — **not** DMIS AI)  
-- Leaflet tile URL hints for OSM / Esri World Imagery  
+- EO Browser (Sentinel) · NASA Worldview · Copernicus Browser  
+- GDACS · ReliefWeb Tanzania (situational awareness)  
+- Leaflet tile URL hints for OSM / Esri / Carto (map + labels hybrid)  
 
 **Does not** classify damage or run satellite AI. PMO impact-support remains the analytical layer.
 
-UI: **PMO DMD Consolidated → Justification → Load context links** for selected district.
+UI: **PMO-DMD Impact Analysis → Context bar / Justification → Load context links** for selected district.
+Paint on a district also soft-loads context links.
+
+### Impact Analysis command surface (beyond typical international bulletins)
+
+| Group | What is captured |
+|-------|------------------|
+| **View** | Map basemap · Satellite (Esri) · Entity / Support / INFORM / Focus |
+| **Paint** | Per-day colour · shapes · clear |
+| **Imagery** | **SAT24 real-time** weather satellite (Tanzania / Africa) · NASA GIBS daily EO · Structures (Esri + Google Earth) |
+| **Compose** | Readiness · directives · Multirisk PDF |
+| **Context** | Exposure links · EC · overlay catalogue |
+| **Paint / Edit** | Per-day district paint · colour-matched circle/polygon draw · clear shapes · PDF carries level colour |
+| **Compose** | Per-day directives + impact narrative · colour sections → Multirisk PDF chips · readiness strip · Action Guide statements |
+| **Context** | Exposure catalogue (live / ready / deferred / planned) · **Satellite feature set (24)** · evacuation centres · open EO & street context links |
+
+### Satellite feature set (24) — accommodation map
+
+Shared catalogue in `frontend/src/app/core/eo-gibs.ts` (`SAT_FEATURE_CATALOGUE`):
+
+| Surface | Role |
+|---------|------|
+| **Impact Analysis** | Daily GIBS time-slice, filmstrip, entity paint over EO, Street View context |
+| **Prevention & Mitigation → Risk Mapping** | **Historical A/B change** (30d–10y), past-disaster date snap, risk assets over EO, mitigation evidence context |
+| **Both** | Basemaps, products, Worldview/Copernicus deep links |
+| **Platform deferred/planned** | `satellite_scene` SoR, automated change AI (F105/F114), exposure intersect, EMS ingest |
+
+**Honesty catalogue (never invent green lights):** live entity bus, INFORM, EC; ready basemaps, GIBS time-slice, historical A/B; **deferred** NBS / NIDA / LATRA / TANESCO / basin national APIs / **satellite damage AI**; **planned** CAP, Copernicus EMS product ingest, WorldPop, e-IDSR, governed scene metadata.
 
 ## 12. Suggested next engineering ticket (if approved)
 

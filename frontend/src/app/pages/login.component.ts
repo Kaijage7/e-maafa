@@ -93,16 +93,22 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
                 <i class="fas fa-envelope f-icon"></i>
                 <span class="f-label">Email Address</span>
               </div>
-              <div class="field-group">
+              <div class="field-group has-pwd-toggle">
                 <input [type]="showPwd() ? 'text' : 'password'" name="password" [(ngModel)]="password" placeholder=" " required autocomplete="current-password">
                 <i class="fas fa-lock f-icon"></i>
                 <span class="f-label">Password</span>
-                <button type="button" class="pwd-toggle" (click)="showPwd.set(!showPwd())">
+                <button type="button" class="pwd-toggle" (click)="showPwd.set(!showPwd())"
+                        [attr.aria-label]="showPwd() ? 'Hide password' : 'Show password'"
+                        [attr.title]="showPwd() ? 'Hide password' : 'Show password'">
                   <i class="fas" [class.fa-eye]="!showPwd()" [class.fa-eye-slash]="showPwd()"></i>
+                  <span class="pwd-toggle-text">{{ showPwd() ? 'Hide' : 'Show' }}</span>
                 </button>
               </div>
-              <div class="options-row" style="justify-content:flex-end;">
-                <a class="forgot-link" routerLink="/forgot-password">Forgot your password?</a>
+              <div class="options-row">
+                <span class="options-hint">Need help signing in?</span>
+                <a class="forgot-link" routerLink="/forgot-password">
+                  <i class="fas fa-key"></i> Forgot password?
+                </a>
               </div>
               <button type="submit" class="btn-primary-tz" [class.is-loading]="loading()">
                 <span class="btn-text"><i class="fas fa-right-to-bracket"></i> Sign In</span>
@@ -132,20 +138,35 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
           @if (step() === 'password') {
             <form (ngSubmit)="onForcedPassword()">
               <p class="step-help">Your administrator set a temporary password. Choose a new one before using the system.</p>
-              <div class="field-group">
-                <input type="password" name="curPwd" [(ngModel)]="curPwd" placeholder=" " required autocomplete="current-password">
+              <div class="field-group has-pwd-toggle">
+                <input [type]="showCurPwd() ? 'text' : 'password'" name="curPwd" [(ngModel)]="curPwd" placeholder=" " required autocomplete="current-password">
                 <i class="fas fa-key f-icon"></i>
                 <span class="f-label">Current (temporary) password</span>
+                <button type="button" class="pwd-toggle" (click)="showCurPwd.set(!showCurPwd())"
+                        [attr.aria-label]="showCurPwd() ? 'Hide password' : 'Show password'"
+                        [attr.title]="showCurPwd() ? 'Hide password' : 'Show password'">
+                  <i class="fas" [class.fa-eye]="!showCurPwd()" [class.fa-eye-slash]="showCurPwd()"></i>
+                </button>
               </div>
-              <div class="field-group">
-                <input type="password" name="newPwd" [(ngModel)]="newPwd" placeholder=" " required autocomplete="new-password">
+              <div class="field-group has-pwd-toggle">
+                <input [type]="showNewPwd() ? 'text' : 'password'" name="newPwd" [(ngModel)]="newPwd" placeholder=" " required autocomplete="new-password">
                 <i class="fas fa-lock f-icon"></i>
                 <span class="f-label">New password</span>
+                <button type="button" class="pwd-toggle" (click)="showNewPwd.set(!showNewPwd())"
+                        [attr.aria-label]="showNewPwd() ? 'Hide password' : 'Show password'"
+                        [attr.title]="showNewPwd() ? 'Hide password' : 'Show password'">
+                  <i class="fas" [class.fa-eye]="!showNewPwd()" [class.fa-eye-slash]="showNewPwd()"></i>
+                </button>
               </div>
-              <div class="field-group">
-                <input type="password" name="newPwd2" [(ngModel)]="newPwd2" placeholder=" " required autocomplete="new-password">
+              <div class="field-group has-pwd-toggle">
+                <input [type]="showNewPwd2() ? 'text' : 'password'" name="newPwd2" [(ngModel)]="newPwd2" placeholder=" " required autocomplete="new-password">
                 <i class="fas fa-lock f-icon"></i>
                 <span class="f-label">Confirm new password</span>
+                <button type="button" class="pwd-toggle" (click)="showNewPwd2.set(!showNewPwd2())"
+                        [attr.aria-label]="showNewPwd2() ? 'Hide password' : 'Show password'"
+                        [attr.title]="showNewPwd2() ? 'Hide password' : 'Show password'">
+                  <i class="fas" [class.fa-eye]="!showNewPwd2()" [class.fa-eye-slash]="showNewPwd2()"></i>
+                </button>
               </div>
               <p class="policy-hint">Min 10 characters · upper · lower · number · special · not a common password.</p>
               <button type="submit" class="btn-primary-tz" [class.is-loading]="loading()">
@@ -267,6 +288,7 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
 
     .field-group { position:relative; margin-bottom:0.85rem; }
     .field-group input { width:100%; padding:0.6rem 0.85rem 0.6rem 2.4rem; background:var(--surface); border:1px solid var(--line); border-radius:6px; font-size:0.9rem; font-weight:500; color:var(--ink); outline:none; transition:border-color .15s, box-shadow .15s; }
+    .field-group.has-pwd-toggle input { padding-right:4.6rem; }
     .field-group input::placeholder { color:transparent; }
     .field-group input:hover { border-color:#c8d2dd; }
     .field-group input:focus { border-color:var(--navy); box-shadow:0 0 0 3px rgba(11,61,107,0.10); }
@@ -274,14 +296,16 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
     .field-group input:focus ~ .f-icon { color:var(--navy); }
     .field-group .f-label { position:absolute; left:2.4rem; top:50%; transform:translateY(-50%); font-size:0.9rem; font-weight:500; color:var(--muted); pointer-events:none; transition:all .15s ease; }
     .field-group input:focus ~ .f-label, .field-group input:not(:placeholder-shown) ~ .f-label { top:-9px; left:0.7rem; font-size:0.75rem; font-weight:700; color:var(--navy); background:var(--surface); padding:0 6px; letter-spacing:0.4px; text-transform:uppercase; }
-    .pwd-toggle { position:absolute; right:0.65rem; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; padding:0.3rem; border-radius:4px; }
+    .pwd-toggle { position:absolute; right:0.4rem; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; padding:0.3rem 0.45rem; border-radius:4px; display:inline-flex; align-items:center; gap:0.3rem; font-family:inherit; font-size:0.75rem; font-weight:700; z-index:2; }
     .pwd-toggle:hover { color:var(--navy); background:#f0f3f7; }
-    .options-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+    .pwd-toggle-text { letter-spacing:0.02em; }
+    .options-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:0.75rem; }
+    .options-hint { font-size:0.78rem; color:var(--muted); font-weight:500; }
     .remember-label { display:flex; align-items:center; gap:0.45rem; cursor:pointer; }
     .remember-label input[type="checkbox"] { appearance:none; width:14px; height:14px; border:1.5px solid var(--line); border-radius:3px; cursor:pointer; position:relative; }
     .remember-label input:checked { background:var(--navy); border-color:var(--navy); }
     .remember-label span { font-size:0.8rem; color:var(--muted); font-weight:500; }
-    .forgot-link { font-size:0.8rem; font-weight:600; color:var(--navy); text-decoration:none; }
+    .forgot-link { font-size:0.82rem; font-weight:700; color:var(--navy); text-decoration:none; display:inline-flex; align-items:center; gap:0.35rem; padding:0.2rem 0; }
     .forgot-link:hover { text-decoration:underline; }
     .btn-primary-tz { width:100%; padding:0.65rem; border:1px solid var(--navy); border-radius:6px; font-size:0.9rem; font-weight:650; color:#fff; background:var(--navy); cursor:pointer; position:relative; display:flex; align-items:center; justify-content:center; gap:0.5rem; transition:background .15s; }
     .btn-primary-tz:hover { background:var(--navy-700); }
@@ -311,6 +335,9 @@ export class LoginComponent implements OnInit, OnDestroy {
   newPwd2 = '';
   private challengeToken = '';
   showPwd = signal(false);
+  showCurPwd = signal(false);
+  showNewPwd = signal(false);
+  showNewPwd2 = signal(false);
   loading = signal(false);
   error = signal('');
   info = signal('');

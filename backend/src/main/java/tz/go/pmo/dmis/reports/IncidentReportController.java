@@ -61,9 +61,9 @@ public class IncidentReportController {
         if (notBlank(status)) { where.append(" and i.status = ?"); p.add(status); }
         if (notBlank(severity)) { where.append(" and i.severity_level = ?"); p.add(severity); }
         if (notBlank(region)) { where.append(" and i.region_name ilike ?"); p.add("%" + region + "%"); }
-        // Area officers report only their own area (or shared/national); national sees the whole country.
-        // One append covers every breakdown below — they all share this where + args on alias i (incidents).
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, p);
+        // STRICT area scope (same as incident registry / dashboard F35): region sees only own region,
+        // district/LGA sees only own district/council — no shared/null-area leakage into tallies.
+        jurisdiction.appendAreaScopeWithCouncil("i", where, p);
         Object[] args = p.toArray();
         String w = where.toString();
 

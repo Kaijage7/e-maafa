@@ -97,7 +97,7 @@ public class DispatchController {
                 left join public.users au on au.id = ar.approved_by
                 where ar.status in (?,?,?,?)""");
         sql.append(incidentFilter);
-        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
         sql.append(" order by ar.allocation_date desc nulls last, ar.created_at desc");
         List<Map<String, Object>> allocations = jdbc.queryForList(sql.toString(), params.toArray());
 

@@ -17,8 +17,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
     h1 { font-size: 1.15rem; color: #0d3b66; margin: 0 0 6px; }
     p { font-size: 0.88rem; color: #475569; margin: 0 0 10px; }
     label { display: block; font-size: 0.8rem; font-weight: 600; color: #334155; margin: 10px 0 4px; }
-    input { width: 100%; font-size: 0.92rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 9px 11px; font-family: inherit; box-sizing: border-box; }
-    input:focus { outline: 2px solid #0d3b66; outline-offset: 1px; }
+    .field { position: relative; }
+    .field input { width: 100%; font-size: 0.92rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 9px 4.5rem 9px 11px; font-family: inherit; box-sizing: border-box; }
+    .field input:focus { outline: 2px solid #0d3b66; outline-offset: 1px; }
+    .pwd-toggle { position: absolute; right: 0.35rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; cursor: pointer; padding: 0.3rem 0.45rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.3rem; font-family: inherit; font-size: 0.75rem; font-weight: 700; }
+    .pwd-toggle:hover { color: #0d3b66; background: #f0f3f7; }
     .hint { font-size: 0.78rem; color: #94a3b8; margin-top: 8px; }
     .btn { width: 100%; margin-top: 16px; padding: 10px; background: #0d3b66; color: #fff; border: none; border-radius: 7px; font-size: 0.92rem; font-weight: 700; cursor: pointer; font-family: inherit; }
     .btn:disabled { opacity: 0.6; cursor: default; }
@@ -40,10 +43,28 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
           <a class="back" routerLink="/login"><i class="fas fa-right-to-bracket"></i> Proceed to sign in</a>
         } @else {
           <form (ngSubmit)="submit()">
-            <label>New password</label>
-            <input type="password" [(ngModel)]="pw" name="pw" autocomplete="new-password" [disabled]="busy()">
-            <label>Confirm new password</label>
-            <input type="password" [(ngModel)]="confirm" name="confirm" autocomplete="new-password" [disabled]="busy()">
+            <label for="rp-pw">New password</label>
+            <div class="field">
+              <input id="rp-pw" [type]="showPw() ? 'text' : 'password'" [(ngModel)]="pw" name="pw"
+                     autocomplete="new-password" [disabled]="busy()">
+              <button type="button" class="pwd-toggle" (click)="showPw.set(!showPw())"
+                      [attr.aria-label]="showPw() ? 'Hide password' : 'Show password'"
+                      [attr.title]="showPw() ? 'Hide password' : 'Show password'">
+                <i class="fas" [class.fa-eye]="!showPw()" [class.fa-eye-slash]="showPw()"></i>
+                <span>{{ showPw() ? 'Hide' : 'Show' }}</span>
+              </button>
+            </div>
+            <label for="rp-confirm">Confirm new password</label>
+            <div class="field">
+              <input id="rp-confirm" [type]="showConfirm() ? 'text' : 'password'" [(ngModel)]="confirm" name="confirm"
+                     autocomplete="new-password" [disabled]="busy()">
+              <button type="button" class="pwd-toggle" (click)="showConfirm.set(!showConfirm())"
+                      [attr.aria-label]="showConfirm() ? 'Hide password' : 'Show password'"
+                      [attr.title]="showConfirm() ? 'Hide password' : 'Show password'">
+                <i class="fas" [class.fa-eye]="!showConfirm()" [class.fa-eye-slash]="showConfirm()"></i>
+                <span>{{ showConfirm() ? 'Hide' : 'Show' }}</span>
+              </button>
+            </div>
             <div class="hint">At least 10 characters, with uppercase, lowercase, a number and a special character.</div>
             @if (msg()) { <div class="note err">{{ msg() }}</div> }
             <button type="submit" class="btn" [disabled]="busy()">{{ busy() ? 'Saving…' : 'Reset password' }}</button>
@@ -61,6 +82,8 @@ export class ResetPasswordComponent implements OnInit {
   readonly busy = signal(false);
   readonly done = signal(false);
   readonly msg = signal('');
+  readonly showPw = signal(false);
+  readonly showConfirm = signal(false);
   token = '';
   pw = '';
   confirm = '';

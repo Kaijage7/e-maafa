@@ -140,7 +140,7 @@ public class CommunicationController {
                         + "      or exists (select 1 from public.response_activations ra"
                         + "                  where ra.incident_id = i.id and ra.allow_real_ops))");
         List<Object> incidentParams = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", incidentSql, incidentParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", incidentSql, incidentParams);
         incidentSql.append(" order by i.reported_at desc limit 50");
         out.put("incidents", jdbc.queryForList(incidentSql.toString(), incidentParams.toArray()));
         return out;
@@ -426,7 +426,7 @@ public class CommunicationController {
                 where 1=1""");
         List<Object> params = new ArrayList<>();
         if (scopeArea) {
-            jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+            jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
         }
         sql.append(" order by a.created_at desc ").append(limit);
         List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
@@ -458,7 +458,7 @@ public class CommunicationController {
         StringBuilder where = new StringBuilder("a.id = ?");
         List<Object> params = new ArrayList<>();
         params.add(id);
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
         List<Map<String, Object>> alerts = jdbc.queryForList(
                 "select a.*, i.title as incident_title, u.name as created_by_name"
                         + " from public.alerts a"

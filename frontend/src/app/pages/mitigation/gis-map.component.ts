@@ -4,6 +4,23 @@ import { escapeHtml } from '../../core/html';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { StatCardComponent } from '../../shell/stat-card.component';
 import { addDmisBaseLayer, addMapNav } from '../../core/tz-map';
+import {
+  EAST_AFRICA_AOI,
+  EO_GIBS_PRODUCTS,
+  TZ_NATIONAL_AOI,
+  clampAoiToAfrica,
+  clampToProductArchive,
+  createGibsTileLayer,
+  eoExternalLinks,
+  eoProductById,
+  eoToday,
+  ensureGibsPane,
+  isoDateOffset,
+  isoYearsBack,
+  sentinelLinks,
+  snapshotUrl,
+  type EoAoi,
+} from '../../core/eo-gibs';
 
 declare const L: any;
 
@@ -66,6 +83,120 @@ interface GisPayload {
     .leaflet-container path:focus, .leaflet-interactive:focus { outline: none !important; }
     .leaflet-control-attribution { display: none !important; }
     @media (max-width: 575px) { #gisMap { height: 50vh; min-height: 300px; } }
+    /* Prevention EO: two-panel exposure compare only (no weather catalogue rows) */
+    .eo-hist {
+      margin: 0 0 14px; padding: 0; border-radius: 14px; overflow: hidden;
+      border: 1px solid #e2e8f0; background: #fff;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    }
+    .eo-bar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+      padding: 12px 14px; background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .eo-bar h3 {
+      margin: 0; font-size: 0.92rem; font-weight: 800; color: #0f172a;
+      display: flex; align-items: center; gap: 8px; min-width: 160px;
+    }
+    .eo-bar h3 small { font-size: 0.7rem; font-weight: 600; color: #64748b; }
+    .eo-seg {
+      display: inline-flex; flex-wrap: wrap; border: 1px solid #e2e8f0; border-radius: 10px;
+      overflow: hidden; background: #fff;
+    }
+    .eo-seg button {
+      border: none; border-right: 1px solid #e2e8f0; background: transparent;
+      padding: 7px 12px; font: inherit; font-size: 0.74rem; font-weight: 700;
+      color: #475569; cursor: pointer; white-space: nowrap;
+    }
+    .eo-seg button:last-child { border-right: none; }
+    .eo-seg button.on { background: #0f766e; color: #fff; }
+    .eo-seg.place button.on { background: #1e293b; color: #fff; }
+    .eo-seg button:disabled { opacity: 0.4; cursor: default; }
+    .eo-bar .spacer { flex: 1; min-width: 8px; }
+    .eo-hint {
+      margin: 0; padding: 0 14px 10px; font-size: 0.72rem; color: #64748b; line-height: 1.35;
+    }
+    .eo-hint b { color: #334155; }
+    .eo-compare-grid {
+      display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; align-items: stretch;
+    }
+    @media (max-width: 860px) {
+      .eo-compare-grid { grid-template-columns: 1fr; }
+      .eo-vs { display: none !important; }
+    }
+    .eo-panel {
+      display: flex; flex-direction: column; background: #fff; min-width: 0;
+    }
+    .eo-panel.a { border-right: 1px solid #f1f5f9; }
+    .eo-panel.b { border-left: 1px solid #f1f5f9; }
+    @media (max-width: 860px) {
+      .eo-panel.a { border-right: none; border-bottom: 1px solid #f1f5f9; }
+      .eo-panel.b { border-left: none; }
+    }
+    .eo-panel.on-map { background: #f0fdfa; }
+    .eo-panel .ph {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 12px 8px;
+    }
+    .eo-panel .ph .tag {
+      font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 6px;
+    }
+    .eo-panel.a .tag { background: #e0f2fe; color: #0369a1; }
+    .eo-panel.b .tag { background: #ffedd5; color: #c2410c; }
+    .eo-panel .ph input[type="date"] {
+      border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px 8px;
+      font: inherit; font-size: 0.78rem; font-weight: 700; color: #0f172a; background: #fff;
+    }
+    .eo-panel .shot {
+      position: relative; aspect-ratio: 16/10; background: #0f172a; cursor: pointer; margin: 0 12px;
+      border-radius: 10px; overflow: hidden; border: 1px solid #1e293b;
+    }
+    .eo-panel .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .eo-panel .shot .empty {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #94a3b8; font-size: 0.78rem; padding: 16px; text-align: center;
+    }
+    .eo-panel .shot .badge-map {
+      position: absolute; top: 8px; left: 8px; background: #0f766e; color: #fff;
+      font-size: 0.65rem; font-weight: 800; padding: 3px 7px; border-radius: 5px;
+    }
+    .eo-panel .pf {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px 12px;
+    }
+    .eo-vs {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; padding: 8px 6px; background: #f8fafc; border-left: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9;
+      min-width: 52px;
+    }
+    .eo-vs .vs {
+      width: 36px; height: 36px; border-radius: 50%; background: #0f172a; color: #fff;
+      font-size: 0.65rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    }
+    .eo-vs button {
+      border: 1px solid #e2e8f0; background: #fff; border-radius: 8px; padding: 5px 7px;
+      font: inherit; font-size: 0.65rem; font-weight: 700; color: #475569; cursor: pointer; width: 100%;
+    }
+    .eo-vs button:hover { border-color: #0f766e; color: #0f766e; }
+    .map-btn {
+      border: none; border-radius: 8px; padding: 6px 11px; font-size: 0.72rem; font-weight: 700;
+      font-family: inherit; cursor: pointer; background: #e2e8f0; color: #334155;
+    }
+    .map-btn.on { background: #0f766e; color: #fff; }
+    .map-btn.ghost { background: transparent; border: 1px solid #e2e8f0; color: #64748b; }
+    .eo-foot {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      padding: 10px 14px; border-top: 1px solid #f1f5f9; background: #fafbfc;
+    }
+    .eo-foot .lbl {
+      font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #94a3b8;
+    }
+    .eo-foot a {
+      color: #0f766e; font-weight: 700; text-decoration: none; font-size: 0.74rem;
+      border: 1px solid #99f6e4; background: #f0fdfa; border-radius: 8px; padding: 5px 10px;
+    }
+    .eo-foot a:hover { background: #ccfbf1; }
+    .eo-foot .note { font-size: 0.68rem; color: #94a3b8; margin-left: auto; }
   `],
   template: `
     <dmis-page-header title="Risk Mapping & GIS" icon="fa-map-marked-alt"
@@ -78,6 +209,101 @@ interface GisPayload {
       <dmis-stat-card [value]="stats().warehouses" label="Warehouses" icon="fa-warehouse" color="#059669" />
     </div>
 
+    <!-- Two-panel exposure compare: type · place · pick time · Sentinel (not weather) -->
+    <div class="eo-hist">
+      <div class="eo-bar">
+        <h3><i class="fas fa-clone" style="color:#0f766e"></i> Compare <small>{{ currentAoi().label }}</small></h3>
+        <div class="eo-seg" title="Exposure / landscape imagery — not weather">
+          @for (p of eoProducts; track p.id) {
+            <button type="button" [class.on]="eoProduct()===p.id" (click)="setEoProduct(p.id)" [title]="p.hint">{{ p.label }}</button>
+          }
+        </div>
+        <div class="eo-seg place" title="Frame locked to Tanzania / East Africa">
+          <button type="button" [class.on]="aoiMode()==='tz'" (click)="setAoiMode('tz')">Tanzania</button>
+          <button type="button" [class.on]="aoiMode()==='eaf'" (click)="setAoiMode('eaf')">East Africa</button>
+          <button type="button" [class.on]="aoiMode()==='region'" (click)="setAoiMode('region')"
+            [disabled]="!currentRegion()">{{ currentRegion() || 'Pick region on map' }}</button>
+        </div>
+        <span class="spacer"></span>
+        @if (eoOnMap()) {
+          <button type="button" class="map-btn ghost" (click)="clearEoMap()">Clear map EO</button>
+        }
+      </div>
+      <p class="eo-hint">
+        <b>{{ productHint() }}</b>
+        · Pick a date on each panel (archive from {{ archiveMin().slice(0, 4) }}).
+        Landscape / flood / vegetation exposure — not live weather satellite.
+      </p>
+
+      <div class="eo-compare-grid">
+        <div class="eo-panel a" [class.on-map]="eoOnMap() && eoActiveSlot()==='A'">
+          <div class="ph">
+            <span class="tag">A · Before</span>
+            <input type="date" [value]="eoDateA()" [min]="archiveMin()" [max]="eoTodayIso"
+              (change)="setEoDateA($any($event.target).value)">
+          </div>
+          <div class="shot" (click)="showEoSlot('A')" title="Show panel A on the risk map">
+            @if (eoOnMap() && eoActiveSlot()==='A') { <span class="badge-map">On map</span> }
+            @if (shotA()) {
+              <img [src]="shotA()!" alt="Before" loading="lazy" (error)="onShotError('A')">
+            } @else {
+              <div class="empty">No snapshot for this date — try another day or type</div>
+            }
+          </div>
+          <div class="pf">
+            <button type="button" class="map-btn" [class.on]="eoOnMap() && eoActiveSlot()==='A'" (click)="showEoSlot('A')">
+              {{ eoOnMap() && eoActiveSlot()==='A' ? 'Showing A' : 'Show A on map' }}
+            </button>
+            <button type="button" class="map-btn ghost" (click)="applyHorizonYears(5)">−5 years</button>
+            <button type="button" class="map-btn ghost" (click)="applyHorizonYears(10)">−10 years</button>
+            <button type="button" class="map-btn ghost" (click)="applyHorizonYears(20)">−20 years</button>
+          </div>
+        </div>
+
+        <div class="eo-vs">
+          <span class="vs">VS</span>
+          <button type="button" (click)="swapEoDates()" title="Swap dates">A ↔ B</button>
+          <button type="button" (click)="jumpToArchiveStart()" title="Earliest archive day">{{ archiveMin().slice(0, 4) }}</button>
+        </div>
+
+        <div class="eo-panel b" [class.on-map]="eoOnMap() && eoActiveSlot()==='B'">
+          <div class="ph">
+            <span class="tag">B · After</span>
+            <input type="date" [value]="eoDateB()" [min]="archiveMin()" [max]="eoTodayIso"
+              (change)="setEoDateB($any($event.target).value)">
+          </div>
+          <div class="shot" (click)="showEoSlot('B')" title="Show panel B on the risk map">
+            @if (eoOnMap() && eoActiveSlot()==='B') { <span class="badge-map">On map</span> }
+            @if (shotB()) {
+              <img [src]="shotB()!" alt="After" loading="lazy" (error)="onShotError('B')">
+            } @else {
+              <div class="empty">No snapshot for this date — try another day or type</div>
+            }
+          </div>
+          <div class="pf">
+            <button type="button" class="map-btn" [class.on]="eoOnMap() && eoActiveSlot()==='B'" (click)="showEoSlot('B')">
+              {{ eoOnMap() && eoActiveSlot()==='B' ? 'Showing B' : 'Show B on map' }}
+            </button>
+            <button type="button" class="map-btn ghost" (click)="setEoDateB(eoTodayIso)">Today</button>
+            <button type="button" class="map-btn ghost" (click)="setRecentDays(30)">−30 days</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="eo-foot">
+        <span class="lbl">Sentinel &amp; tools</span>
+        @for (l of sentinelLinksList(); track l.key) {
+          <a [href]="l.url" target="_blank" rel="noopener noreferrer">{{ l.title }}</a>
+        }
+        @for (l of externalLinks(); track l.key) {
+          @if (l.key === 'worldview_compare') {
+            <a [href]="l.url" target="_blank" rel="noopener noreferrer" [title]="l.note">Worldview swipe</a>
+          }
+        }
+        <span class="note">NASA GIBS snapshots · human review only</span>
+      </div>
+    </div>
+
     <div class="panel" style="animation-delay:.25s;">
       <div class="panel-head">
         <div class="panel-title"><i class="fas fa-globe-africa"></i> Tanzania Risk Map</div>
@@ -87,6 +313,9 @@ interface GisPayload {
           <span class="legend-item"><span class="legend-dot" style="background:#dc2626;"></span>Incidents</span>
           <span class="legend-item"><span class="legend-dot" style="background:#059669;"></span>Warehouses</span>
           <span class="legend-item"><span class="legend-dot" style="background:#004d66;"></span>Past Disasters</span>
+          @if (eoOnMap()) {
+            <span class="legend-item"><span class="legend-dot" style="background:#0f766e;"></span>EO {{ eoActiveSlot() }}</span>
+          }
         </div>
       </div>
       <div class="map-container">
@@ -152,6 +381,20 @@ export class GisMapComponent implements AfterViewInit, OnDestroy {
   info = signal({ name: 'Region', level: 'None', color: '#003366', assessments: 0, high: 0, medium: 0, low: 0, measures: 0, barPct: 0 });
   layerOn = signal<Record<string, boolean>>({ infra: true, risk: true, incidents: true, warehouses: true, pastDisasters: true, choropleth: true, lakes: true });
 
+  eoProducts = EO_GIBS_PRODUCTS;
+  eoTodayIso = eoToday();
+  /** Default: true colour landscape (not weather). */
+  eoProduct = signal('truecolor');
+  /** Default A = 15 years back for real trend compare. */
+  eoDateA = signal(clampToProductArchive(isoYearsBack(15), eoProductById('truecolor')));
+  eoDateB = signal(isoDateOffset(1));
+  eoOnMap = signal(false);
+  eoActiveSlot = signal<'A' | 'B'>('B');
+  shotA = signal<string | null>(null);
+  shotB = signal<string | null>(null);
+  /** Frame lock: Tanzania | East Africa | map-selected region (clamped to Africa). */
+  aoiMode = signal<'tz' | 'eaf' | 'region'>('tz');
+
   toggles: { key: string; label: string; color: string; icon: string; count: number | null }[] = [
     { key: 'infra', label: 'Infrastructure', color: '#003366', icon: 'fa-building', count: 0 },
     { key: 'risk', label: 'Risk Assessments', color: '#FFD700', icon: 'fa-clipboard-check', count: 0 },
@@ -168,6 +411,7 @@ export class GisMapComponent implements AfterViewInit, OnDestroy {
   private wardLayer: any = null;
   private activeLayer: any = null;
   private viewReady = false;
+  private gibsLayer: any = null;
 
   constructor() {
     this.http.get<GisPayload>('/api/v1/gis-map').subscribe(d => {
@@ -187,9 +431,165 @@ export class GisMapComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.removeGibs();
     if (this.map) {
       this.map.remove();
     }
+  }
+
+  archiveMin(): string {
+    return eoProductById(this.eoProduct()).archiveStart;
+  }
+
+  /** Short operator hint for the selected exposure product (not weather). */
+  productHint(): string {
+    return eoProductById(this.eoProduct()).hint;
+  }
+
+  setRecentDays(days: number): void {
+    this.setEoDateB(isoDateOffset(days));
+  }
+
+  /** Locked AOI: Tanzania · East Africa · or selected region (clamped inside Africa). */
+  currentAoi(): EoAoi {
+    const mode = this.aoiMode();
+    if (mode === 'eaf') return EAST_AFRICA_AOI;
+    if (mode === 'region' && this.currentRegion() && this.activeLayer?.getBounds) {
+      try {
+        const b = this.activeLayer.getBounds();
+        const c = b.getCenter();
+        return clampAoiToAfrica({
+          lat: c.lat,
+          lng: c.lng,
+          label: this.currentRegion(),
+          bbox: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()],
+        });
+      } catch { /* fall through */ }
+    }
+    return TZ_NATIONAL_AOI;
+  }
+
+  setAoiMode(mode: 'tz' | 'eaf' | 'region'): void {
+    if (mode === 'region' && !this.currentRegion()) return;
+    this.aoiMode.set(mode);
+    this.fitMapToAoi();
+    this.refreshCompareShots();
+  }
+
+  setEoProduct(id: string): void {
+    this.eoProduct.set(id);
+    const p = eoProductById(id);
+    this.eoDateA.set(clampToProductArchive(this.eoDateA(), p));
+    this.eoDateB.set(clampToProductArchive(this.eoDateB(), p));
+    this.refreshCompareShots();
+    if (this.eoOnMap()) this.applyGibs();
+  }
+
+  setEoDateA(iso: string): void {
+    if (!iso) return;
+    this.eoDateA.set(clampToProductArchive(iso, eoProductById(this.eoProduct())));
+    this.refreshCompareShots();
+    if (this.eoOnMap() && this.eoActiveSlot() === 'A') this.applyGibs();
+  }
+
+  setEoDateB(iso: string): void {
+    if (!iso) return;
+    this.eoDateB.set(clampToProductArchive(iso, eoProductById(this.eoProduct())));
+    this.refreshCompareShots();
+    if (this.eoOnMap() && this.eoActiveSlot() === 'B') this.applyGibs();
+  }
+
+  swapEoDates(): void {
+    const a = this.eoDateA();
+    this.eoDateA.set(this.eoDateB());
+    this.eoDateB.set(a);
+    this.refreshCompareShots();
+    if (this.eoOnMap()) this.applyGibs();
+  }
+
+  applyHorizonYears(years: number): void {
+    const p = eoProductById(this.eoProduct());
+    this.eoDateA.set(clampToProductArchive(isoYearsBack(years), p));
+    this.eoDateB.set(clampToProductArchive(isoDateOffset(1), p));
+    this.refreshCompareShots();
+    this.showEoSlot('A');
+  }
+
+  jumpToArchiveStart(): void {
+    const p = eoProductById(this.eoProduct());
+    this.eoDateA.set(p.archiveStart);
+    this.eoDateB.set(clampToProductArchive(isoDateOffset(1), p));
+    this.refreshCompareShots();
+    this.showEoSlot('A');
+  }
+
+  onShotError(which: 'A' | 'B'): void {
+    if (which === 'A') this.shotA.set(null);
+    else this.shotB.set(null);
+  }
+
+  sentinelLinksList() {
+    return sentinelLinks(this.currentAoi(), this.eoDateA(), this.eoDateB());
+  }
+
+  showEoSlot(slot: 'A' | 'B'): void {
+    this.eoActiveSlot.set(slot);
+    this.eoOnMap.set(true);
+    this.fitMapToAoi();
+    this.applyGibs();
+  }
+
+  clearEoMap(): void {
+    this.eoOnMap.set(false);
+    this.removeGibs();
+  }
+
+  refreshCompareShots(): void {
+    const aoi = this.currentAoi();
+    const p = eoProductById(this.eoProduct());
+    this.shotA.set(snapshotUrl(aoi, p, this.eoDateA(), 480, 300));
+    this.shotB.set(snapshotUrl(aoi, p, this.eoDateB(), 480, 300));
+  }
+
+  externalLinks() {
+    return eoExternalLinks(
+      this.currentAoi(),
+      this.eoDateB(),
+      eoProductById(this.eoProduct()),
+      this.eoDateA(),
+    );
+  }
+
+  /** Keep basemap on Tanzania / EA frame so GIBS never “looks like another continent”. */
+  private fitMapToAoi(): void {
+    if (!this.map || typeof L === 'undefined') return;
+    const [w, s, e, n] = this.currentAoi().bbox;
+    try {
+      this.map.fitBounds([[s, w], [n, e]], { padding: [20, 20], maxZoom: 7 });
+    } catch { /* ignore */ }
+  }
+
+  private removeGibs(): void {
+    if (this.map && this.gibsLayer) {
+      try {
+        if (this.map.hasLayer(this.gibsLayer)) this.map.removeLayer(this.gibsLayer);
+      } catch { /* ignore */ }
+    }
+    this.gibsLayer = null;
+  }
+
+  private applyGibs(): void {
+    if (!this.map || typeof L === 'undefined' || !this.eoOnMap()) {
+      this.removeGibs();
+      return;
+    }
+    ensureGibsPane(this.map, 'dmisGibsPane', 265);
+    const p = eoProductById(this.eoProduct());
+    const raw = this.eoActiveSlot() === 'A' ? this.eoDateA() : this.eoDateB();
+    const time = clampToProductArchive(raw, p);
+    this.removeGibs();
+    this.gibsLayer = createGibsTileLayer(p, time, { opacity: 0.82, pane: 'dmisGibsPane' });
+    this.gibsLayer.addTo(this.map);
   }
 
   toggleLayer(name: string, show: boolean): void {
@@ -400,6 +800,9 @@ export class GisMapComponent implements AfterViewInit, OnDestroy {
               this.showRegionInfo(name, rd);
             }
             this.loadDistricts(name);
+            if (this.aoiMode() === 'region') {
+              this.refreshCompareShots();
+            }
           });
           setTimeout(() => {
             layer.setStyle({ fillColor: targetFillColor, fillOpacity: targetOpacity, color: '#1565C0', weight: 1.2, opacity: 0.7 });
@@ -427,10 +830,22 @@ export class GisMapComponent implements AfterViewInit, OnDestroy {
         .bindPopup(this.makePopup(item.name, item.zone || 'Warehouse', item.operational_status)).addTo(this.layers['warehouses']);
     });
     d.pastDisasters.forEach(item => {
-      L.circleMarker([item.latitude, item.longitude], { radius: 6, fillColor: '#004d66', color: '#fff', weight: 2, fillOpacity: 0.8 })
-        .bindPopup(this.makePopup(item.event_name, item.hazard_name || 'Unknown', item.event_date ? String(item.event_date).substring(0, 10) : '')).addTo(this.layers['pastDisasters']);
+      const evDate = item.event_date ? String(item.event_date).substring(0, 10) : '';
+      const m = L.circleMarker([item.latitude, item.longitude], { radius: 6, fillColor: '#004d66', color: '#fff', weight: 2, fillOpacity: 0.8 })
+        .bindPopup(this.makePopup(item.event_name, item.hazard_name || 'Unknown', evDate
+          + (evDate ? ' · click marker title area then use Historical EO with date A ≈ event' : '')))
+        .addTo(this.layers['pastDisasters']);
+      m.on('click', () => {
+        if (evDate && /^\d{4}-\d{2}-\d{2}$/.test(evDate)) {
+          // Align historical EO: A ≈ event day, B ≈ recent — operator evidence for mitigation review
+          this.eoDateA.set(evDate);
+          this.eoDateB.set(isoDateOffset(1));
+          this.refreshCompareShots();
+        }
+      });
     });
 
+    this.refreshCompareShots();
     setTimeout(() => this.map.invalidateSize(), 300);
   }
 }

@@ -47,7 +47,7 @@ public class GisMapController {
                         + "and coalesce(i.is_simulation, false) = false "
                         + "and i.status in ('Reported','Pending Verification','Verified','Active Response','Monitoring','Escalated')");
         List<Object> incidentsParams = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", incidentsSql, incidentsParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", incidentsSql, incidentsParams);
         incidentsSql.append(" order by i.reported_at desc limit 100");
         List<Map<String, Object>> incidents = rows(incidentsSql.toString(), incidentsParams.toArray());
 

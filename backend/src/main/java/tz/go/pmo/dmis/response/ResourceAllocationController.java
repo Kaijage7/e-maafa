@@ -138,7 +138,8 @@ public class ResourceAllocationController {
             sql.append(" and (").append(where).append(')');
         }
         List<Object> params = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        // STRICT: only allocations for incidents in the caller's district/LGA or region (no cross-region leak).
+        jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
         sql.append(" order by ").append(order);
         return jdbc.queryForList(sql.toString(), params.toArray());
     }
@@ -417,12 +418,11 @@ public class ResourceAllocationController {
     @GetMapping("/{id}/track")
     public Map<String, Object> track(@PathVariable long id) {
         areaGuard.assertNotStakeholder();   // staff deployment tracking — not for partners
-        // Jurisdiction visibility: an area officer may track only an allocation whose incident is in their own
-        // district/region (or shared/null-area); national tier sees all. Out of area → 404 (mirrors the queues).
+        // Jurisdiction visibility: area officer tracks only allocations for in-area incidents (strict).
         StringBuilder where = new StringBuilder("ar.id = ?");
         List<Object> params = new ArrayList<>();
         params.add(id);
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
         List<Map<String, Object>> found = jdbc.queryForList("""
                 select ar.*, i.title as incident_title, i.id as incident_id, r.name as resource_name,
                        w.name as warehouse_name, u.name as requested_by_name

@@ -75,7 +75,7 @@ public class TaskController {
         }
         // Row-level area scope on the joined incident: a region/district officer sees only their own
         // area's tasks (plus area-less ones); national + non-area roles keep the full view.
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("tasks", jdbc.queryForList("""
                 select t.id, t.title, t.priority, t.status, t.due_date, t.completed_at, t.progress_percent,
@@ -93,7 +93,7 @@ public class TaskController {
         // statistics/by_priority/upcoming roll up the whole country. Join the incident and append the scope.
         StringBuilder statWhere = new StringBuilder(NOT_SIM_TASK);
         List<Object> statParams = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", statWhere, statParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", statWhere, statParams);
         out.put("statistics", jdbc.queryForMap(("""
                 select count(*) as total_tasks,
                        count(*) filter (where t.status = 'To Do') as pending_tasks,
@@ -113,7 +113,7 @@ public class TaskController {
         StringBuilder upWhere = new StringBuilder(NOT_SIM_TASK
                 + " and t.status <> 'Completed' and t.due_date between now() and now() + interval '7 days'");
         List<Object> upParams = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", upWhere, upParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", upWhere, upParams);
         out.put("upcoming_deadlines", jdbc.queryForList(("""
                 select t.id, t.title, t.priority, t.due_date, i.title as incident_title, u.name as assigned_to_name
                 from public.incident_tasks t
@@ -137,7 +137,7 @@ public class TaskController {
                 where t.status <> 'Cancelled' and t.due_date is not null""");
         List<Object> params = new ArrayList<>();
         // Same area scope as the board: an area officer's calendar shows only their own area's tasks.
-        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
         sql.append(" order by t.due_date");
         List<Map<String, Object>> events = jdbc.queryForList(sql.toString(), params.toArray());
         for (Map<String, Object> event : events) {
@@ -159,7 +159,7 @@ public class TaskController {
         // district/region (or shared/null-area ones); national tier keeps the full list. Mirrors the board.
         StringBuilder incWhere = new StringBuilder("i.status in ('Active Response','Verified')");
         List<Object> incParams = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", incWhere, incParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", incWhere, incParams);
         out.put("incidents", jdbc.queryForList(
                 "select i.id, i.title, i.severity_level from public.incidents i where " + incWhere
                         + " order by i.severity_level limit 100",
@@ -366,7 +366,7 @@ public class TaskController {
         StringBuilder where = new StringBuilder("t.id = ?");
         List<Object> params = new ArrayList<>();
         params.add(id);
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select t.* from public.incident_tasks t left join public.incidents i on i.id = t.incident_id where " + where,
                 params.toArray());

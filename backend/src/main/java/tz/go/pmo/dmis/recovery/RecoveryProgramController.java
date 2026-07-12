@@ -58,7 +58,7 @@ public class RecoveryProgramController {
             params.add("%" + search + "%");
         }
         // Area scope via linked incident (null incident = national/cross-cutting, visible as shared).
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("programs", jdbc.queryForList("""
@@ -97,7 +97,7 @@ public class RecoveryProgramController {
 
         StringBuilder incidentWhere = new StringBuilder("coalesce(i.is_simulation,false)=false");
         List<Object> incidentParams = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", incidentWhere, incidentParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", incidentWhere, incidentParams);
         out.put("incidents", jdbc.queryForList("""
                 select i.id, i.title, i.region_name, i.district_name
                 from public.incidents i

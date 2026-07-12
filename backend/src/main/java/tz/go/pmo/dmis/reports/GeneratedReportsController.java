@@ -51,7 +51,7 @@ public class GeneratedReportsController {
             sql.append(" and g.incident_id = ?");
             params.add(incident_id);
         }
-        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
         sql.append(" order by g.generated_at desc limit 300");
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("reports", jdbc.queryForList(sql.toString(), params.toArray()));

@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
 /**
  * Ensures EVERY SRS role is represented by at least one user, so User Management and the access
  * model are demonstrable end-to-end (the base {@code LocalDataSeeder} only seeds 5 of the 13).
- * Creates a demo account (BCrypt "password", email-verified) for each role that has no user and
- * assigns it, idempotently. {@code model_type} matches AuthController / UserManagementController.
+ * Creates a demo account (constant local test password, email-verified) for each role that has no
+ * user and assigns it, idempotently. {@code model_type} matches AuthController / UserManagementController.
  */
 @Component
 @Profile("local")
@@ -59,7 +59,8 @@ public class UserRoleCoverageSeeder implements CommandLineRunner {
             Long userId = jdbc.queryForObject(
                     "insert into public.users(name, email, password, email_verified_at, created_at, updated_at)"
                             + " values (?,?,?, now(), now(), now()) returning id",
-                    Long.class, e.getValue()[0], e.getValue()[1], encoder.encode("password"));
+                    Long.class, e.getValue()[0], e.getValue()[1],
+                    encoder.encode(LocalTestCredentials.PASSWORD));
             jdbc.update("insert into public.model_has_roles(role_id, model_type, model_id) values (?,?,?)"
                     + " on conflict do nothing", roleId, MODEL_TYPE, userId);
             created++;

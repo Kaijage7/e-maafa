@@ -117,7 +117,7 @@ public class AssessmentController {
                 left join public.users u on u.id = da.assessor_id
                 where """);
         sql.append(' ').append(where);
-        jurisdiction.appendAreaScopeSharedOrOwn("i", sql, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
         sql.append(" order by da.created_at desc limit 200");
         out.put("assessments", jdbc.queryForList(sql.toString(), params.toArray()));
         out.put("stats", jdbc.queryForMap("""
@@ -444,7 +444,7 @@ public class AssessmentController {
         StringBuilder where = new StringBuilder("da.id = ?");
         List<Object> params = new ArrayList<>();
         params.add(id);
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select da.* from public.damage_assessments da left join public.incidents i on i.id = da.incident_id where " + where,
                 params.toArray());

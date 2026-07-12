@@ -108,7 +108,7 @@ public class CommandCenterController {
                 left join public.users u on u.id = ra.activated_by
                 where ra.status = 'active'""");
         List<Object> activeParams = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", activeSql, activeParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", activeSql, activeParams);
         activeSql.append(" order by ra.activated_at desc");
         out.put("active", jdbc.queryForList(activeSql.toString(), activeParams.toArray())
                 .stream().map(CommandCenterController::cleanActivationJson).toList());
@@ -123,7 +123,7 @@ public class CommandCenterController {
                 left join public.users u on u.id = ra.activated_by
                 where ra.status in ('completed','deactivated')""");
         List<Object> completedParams = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", completedSql, completedParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", completedSql, completedParams);
         completedSql.append(" order by ra.deactivated_at desc nulls last limit 10");
         out.put("completed", jdbc.queryForList(completedSql.toString(), completedParams.toArray())
                 .stream().map(CommandCenterController::cleanActivationJson).toList());
@@ -135,7 +135,7 @@ public class CommandCenterController {
                   and not exists (select 1 from public.response_activations ra
                                   where ra.incident_id = i.id and ra.status = 'active')""");
         List<Object> awaitingParams = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", awaitingSql, awaitingParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", awaitingSql, awaitingParams);
         awaitingSql.append(" order by i.reported_at desc limit 50");
         out.put("awaiting", jdbc.queryForList(awaitingSql.toString(), awaitingParams.toArray()));
         out.put("posture_doctrine", jdbc.queryForList(
@@ -1302,7 +1302,7 @@ public class CommandCenterController {
         StringBuilder where = new StringBuilder("ra.id = ?");
         List<Object> params = new ArrayList<>();
         params.add(id);
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select ra.* from public.response_activations ra "
                         + "left join public.incidents i on i.id = ra.incident_id where " + where,

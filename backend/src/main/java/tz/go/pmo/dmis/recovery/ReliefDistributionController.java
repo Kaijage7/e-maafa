@@ -70,7 +70,7 @@ public class ReliefDistributionController {
         // region/district (plus incident-less / unassigned rows, which surface as i.* IS NULL via the
         // LEFT JOIN); national + non-area roles add nothing and keep the full view. Appended last in
         // the WHERE so its bind param trails the status/search params in '?' order.
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("distributions", jdbc.queryForList("""
                 select d.id, d.distribution_date, d.location_name, d.district_name, d.region_name,

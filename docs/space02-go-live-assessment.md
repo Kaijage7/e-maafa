@@ -470,12 +470,12 @@ e-MAAFA/DMIS is a **working, interlinked modular disaster operations platform** 
 
 | Field | Value |
 |-------|--------|
-| File | `docs/space02-go-live-assessment.md` |
+| File | `/home/kaijage/model/maafa/space02.md` |
 | Assessment date | 2026-07-10 |
 | Live smoke | 17/17 APIs 200; unauth 401 |
 | Controllers | ~86 across 17 packages |
 | Public tables | ~148 |
-| Flyway lineage | through **V196** (V190–V191 integrity; V192–V193 genuine public-source history; **V194–V196 pre-deploy + residual accept flags space02 closeout** — poly-link integrity, UI-test exclude, issue register on readiness board) |
+| Flyway lineage | through **V195** (V190–V191 integrity; V192–V193 genuine public-source history; **V194–V195 pre-deploy space02 closeout** — poly-link integrity, UI-test exclude, issue register on readiness board) |
 | Platform vs cutover | **Platform code/data integrity for space02 is dual-proved (next-level pre-deploy).** Prod certificate remains **open** until ops secrets, clean DB, role walkthrough, residual sign-off |
 | Next review | After prod cutover or first external adapter |
 
@@ -566,5 +566,59 @@ Honest delivery against §5 DBA waves and §7.2 go-live gates. **No fake NIDA/LA
 5. Finance: dual-prove IFMIS export with MoF, then mark endpoint `live`.  
 6. M-Gov/SMTP only when ready for controlled test send.  
 7. National adapters only after MoU + dual-proved client.
+
+---
+
+## 12. Pre-deploy re-score — 2026-07-12 (next-level closeout)
+
+> **Honesty:** Local machine still runs **`spring.profiles.active=local`** → careful certificate **false** by design. Platform code + data integrity + space02 board **openCode=0**. Production certificate remains **ops cutover**, not a code OPEN bucket.
+
+### Dual-proof this day
+
+| Check | Result |
+|-------|--------|
+| Health | **UP** |
+| `scripts/go-live-smoke.sh` (JWT Super Admin) | **12/12 PASS** |
+| Unauth `/v1/settings/users` | **401** |
+| Flyway | **V200** (`platform.flyway_schema_history`) |
+| Integrity residual counters | **all zero** (orphans, dual status, poly links, unbridged past, missing area, unscoped warehouses) |
+| Geo aliases ↔ INFORM | **156/156** |
+| `space02IssueRegister` SUMMARY | **`PLATFORM_READY_OPS_GATES`** · **openCode=0** · opsGates=1 (GL-01 local) |
+| Module smoke (97 list APIs Super Admin) | **97/97 200** |
+| Jurisdiction dual-proof (NAT / RAS Dodoma / RAS Dar / DAS Kinondoni / DAS Nyamagana) | **LIVE_OK** — region≠other region; district≠other district |
+| Area EW alerts (dashboard strip + Issued Alerts) | **LIVE_OK** — RAS Dodoma 4 published in-area warnings |
+| Prevention EO two-panel compare | **LIVE_OK** — exposure types + time + Sentinel; not weather |
+
+### Issue board capture (new LIVE_OK rows on readiness API)
+
+| ID | Status | Note |
+|----|--------|------|
+| **JURIS-01** | LIVE_OK | Strict WithCouncil on incidents/resources/tallies |
+| **ALERT-01** | LIVE_OK | Area `area_early_warnings` + Issued Alerts feed |
+| **EO-01** | LIVE_OK | Prevention A/B GIBS exposure compare |
+| **MOD-01** | LIVE_OK | Module-by-module API smoke |
+| **F114** | DEFERRED (honest partial) | Two-panel GIBS **live**; full satellite scene SoR / AI still deferred |
+
+### Still not “code bugs” (must not re-open as stop-ship)
+
+| Class | Items | Action at cutover |
+|-------|--------|-------------------|
+| **Ops** | GL-01 `prod` + JWT secret + CORS + no local | Deploy with `docs/env.prod.example` |
+| **Ops** | GL-02 DLR secret · GL-03 live SMTP test | Configure or accept deferred flags |
+| **Ops** | Clean DB · rotate demo passwords · TOTP Super Admin | GO-LIVE-RUNBOOK GL-04…GL-05 |
+| **Accept** | GL-08 sparse DAS phones | Fill phones or accept |
+| **Planned** | NIDA / LATRA / NAPA / live IFMIS | Adapters after MoU |
+| **Deferred** | F105 AI · F114 full EO SoR · F116 contracts | Post go-live programme |
+
+### Deploy sequence (copy into cutover ticket)
+
+1. Build backend jar + `frontend/dist/dmis-web` (prod Angular build).  
+2. Start with **`prod`** profile + secrets from `docs/env.prod.example` (never `local`).  
+3. Confirm Flyway **≥200**, `GET /api/v1/ops/go-live-readiness` → SUMMARY carefulCertificate when gates met.  
+4. Re-run `scripts/go-live-smoke.sh` + `scripts/go-live-persona-jwt.sh` with **real** accounts.  
+5. Sign residual acceptance table in `docs/GO-LIVE-RUNBOOK.md`.  
+6. Do **not** mark NIDA/LATRA/NAPA/live IFMIS or AI as live without dual-proof.
+
+**Platform verdict 2026-07-12:** space02 issues are **all captured** on the live board; **code OPEN = 0**; integrity clean; modules dual-proved. Remaining work is **cutover ops**, not hundreds of unfixed defects.
 
 **End of space02.md**

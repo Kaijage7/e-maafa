@@ -174,6 +174,8 @@ public class DashboardController {
         out.put("my_area", myArea());
         out.put("needs_action", needsActionQueue());
         out.put("submitted_by_me", submittedByMeQueue());
+        // Issued early-warning ALERTS for this login's area (bell/dashboard — not EW workbench module).
+        out.put("area_early_warnings", areaIssuedEarlyWarnings());
         out.put("timestamp", OffsetDateTime.now().toString());
         return out;
     }
@@ -381,8 +383,104 @@ public class DashboardController {
                 + incidentScope("i", null, aaP)
                 + " order by ra.activated_at desc limit 1", aaP.toArray())));
         out.put("my_area", myArea());
+        // Area officers see only issued EW alerts for their jurisdiction (not national catalogue).
+        out.put("area_early_warnings", areaIssuedEarlyWarnings());
         out.put("timestamp", OffsetDateTime.now().toString());
         return out;
+    }
+
+    /**
+     * Issued early-warning ALERTS for the caller's area — dashboard / EOCC strip (not the EW workbench).
+     * National tier: recent published warnings. Region: hazards covering that region. District/LGA:
+     * own district rows or region-wide hazard lines (district_id null) in the officer's region.
+     */
+    private List<Map<String, Object>> areaIssuedEarlyWarnings() {
+        List<Object> p = new ArrayList<>();
+        StringBuilder area = new StringBuilder();
+        JurisdictionScope.Tier tier = jurisdiction.currentTier();
+        Map<String, Object> a = jurisdiction.currentArea();
+        Long rid = asLongId(a.get("region_id"));
+        Long did = asLongId(a.get("district_id"));
+        if (tier == JurisdictionScope.Tier.REGION) {
+            if (rid == null) {
+                return List.of();
+            }
+            // EXISTS keeps one row per warning even when many district hazard lines match the region.
+            area.append(" and exists (select 1 from public.warning_hazards wh2")
+                    .append(" where wh2.warning_id = w.id and wh2.deleted_at is null and wh2.region_id = ?)");
+            p.add(rid);
+        } else if (tier == JurisdictionScope.Tier.DISTRICT) {
+            if (did == null && rid == null) {
+                return List.of();
+            }
+            if (did != null && rid != null) {
+                area.append(" and exists (select 1 from public.warning_hazards wh2")
+                        .append(" where wh2.warning_id = w.id and wh2.deleted_at is null")
+                        .append(" and (wh2.district_id = ? or (wh2.district_id is null and wh2.region_id = ?)))");
+                p.add(did);
+                p.add(rid);
+            } else if (did != null) {
+                area.append(" and exists (select 1 from public.warning_hazards wh2")
+                        .append(" where wh2.warning_id = w.id and wh2.deleted_at is null and wh2.district_id = ?)");
+                p.add(did);
+            } else {
+                area.append(" and exists (select 1 from public.warning_hazards wh2")
+                        .append(" where wh2.warning_id = w.id and wh2.deleted_at is null and wh2.region_id = ?)");
+                p.add(rid);
+            }
+        } else if (tier != JurisdictionScope.Tier.NATIONAL) {
+            return List.of();
+        }
+        // Issued (published) bulletins with hazard/area labels for the dashboard alerts strip.
+        // Scope is applied via EXISTS on warning_hazards; outer join is only for display labels.
+        String sql = """
+                select w.id, w.warning_code, w.status, coalesce(w.updated_at, w.created_at) as issued_at,
+                       (select wh.warning_level from public.warning_hazards wh
+                         where wh.warning_id = w.id and wh.deleted_at is null
+                         order by case lower(coalesce(wh.warning_level,''))
+                           when 'major warning' then 1 when 'warning' then 2 when 'advisory' then 3 else 4 end
+                         limit 1) as warning_level,
+                       (select string_agg(distinct h.name, ', ')
+                          from public.warning_hazards wh
+                          left join public.hazards h on h.id = wh.hazard_id
+                         where wh.warning_id = w.id and wh.deleted_at is null) as hazard_names,
+                       (select string_agg(distinct r.name, ', ')
+                          from public.warning_hazards wh
+                          left join public.regions r on r.id = wh.region_id
+                         where wh.warning_id = w.id and wh.deleted_at is null) as region_names,
+                       (select string_agg(distinct d.name, ', ')
+                          from public.warning_hazards wh
+                          left join public.districts d on d.id = wh.district_id
+                         where wh.warning_id = w.id and wh.deleted_at is null and wh.district_id is not null) as district_names
+                from public.warnings w
+                where lower(coalesce(w.status,'')) = 'published'
+                """ + area + """
+                order by coalesce(w.updated_at, w.created_at) desc nulls last
+                limit 12
+                """;
+        try {
+            return jdbc.queryForList(sql, p.toArray());
+        } catch (Exception e) {
+            // Keep dashboard up; surface the cause in logs so empty strips are diagnosable.
+            org.slf4j.LoggerFactory.getLogger(DashboardController.class)
+                    .warn("areaIssuedEarlyWarnings failed (tier={}, rid={}, did={}): {}",
+                            tier, rid, did, e.toString());
+            return List.of();
+        }
+    }
+
+    private static Long asLongId(Object v) {
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(v).trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**

@@ -801,18 +801,21 @@ public class MonitoringEvaluationEntryService {
     private Map<String, Object> indicator(Map<String, Object> req) {
         Long id = longOrNull(req.get("indicatorId"));
         String code = str(req.get("indicatorCode"));
+        // Include source_module so org-assign auto-capture can draft values without a second query.
         List<Map<String, Object>> rows = id != null
                 ? rows("""
                         select id, code, level, value_type as "valueType", owner_type as "ownerType",
                                owner_agency_id as "ownerAgencyId", stakeholder_type as "stakeholderType",
-                               sector, applicable_sectors as "applicableSectors",
+                               sector, source_module as "sourceModule",
+                               applicable_sectors as "applicableSectors",
                                applicable_institution_classes as "applicableInstitutionClasses", active
                         from public.me_indicator_catalog where id = ?
                         """, id)
                 : rows("""
                         select id, code, level, value_type as "valueType", owner_type as "ownerType",
                                owner_agency_id as "ownerAgencyId", stakeholder_type as "stakeholderType",
-                               sector, applicable_sectors as "applicableSectors",
+                               sector, source_module as "sourceModule",
+                               applicable_sectors as "applicableSectors",
                                applicable_institution_classes as "applicableInstitutionClasses", active
                         from public.me_indicator_catalog where upper(code) = upper(?)
                         """, code);

@@ -23,7 +23,9 @@ public final class PasswordPolicy {
     private static final Set<String> COMMON_PASSWORDS = Set.of(
             "password", "password1", "password12", "password123", "password1234", "passw0rd", "passw0rd1",
             "12345678", "123456789", "1234567890", "qwertyui", "qwerty123", "iloveyou1", "admin123",
-            "administrator", "letmein123", "welcome123", "changeme1", "p@ssw0rd", "p@ssword1", "abcd1234");
+            "administrator", "letmein123", "welcome123", "changeme1", "p@ssw0rd", "p@ssword1", "abcd1234",
+            // Local/dev constant test password — must never be accepted as a production self-service secret.
+            "password@2026", "Password@2026");
 
     /**
      * Core guessable words: a password whose NORMALIZED form (lowercased, leet substitutions applied,

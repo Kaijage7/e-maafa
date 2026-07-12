@@ -6,7 +6,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -37,12 +40,15 @@ import tz.go.pmo.dmis.notification.MailService;
 @Tag(name = "Identity", description = "Login, password lifecycle, optional TOTP 2FA")
 public class AuthController {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
     private final JdbcTemplate jdbc;
     private final JwtTokenService tokens;
     private final CurrentUserResolver currentUser;
     private final MailService mail;
     private final TotpService totp;
     private final TokenDenylist denylist;
+    private final Environment environment;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
     private final String decoyHash = encoder.encode("constant-time-decoy");
     private final java.security.SecureRandom secureRandom = new java.security.SecureRandom();
@@ -303,11 +309,21 @@ public class AuthController {
     @Operation(summary = "Request a password-reset link by email (uniform response, rate-limited)")
     public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody ForgotPasswordRequest req) {
         String email = req.email() == null ? "" : req.email().trim();
+        boolean mailConfigured = mail.isConfigured();
         if (!email.isBlank()) {
             java.util.concurrent.CompletableFuture.runAsync(() -> issueResetToken(email));
         }
-        return ResponseEntity.ok(Map.of("success", true,
-                "message", "If an account exists for that email, a password reset link has been sent."));
+        // Do not reveal whether the account exists. Do reveal whether SMTP is wired so ops
+        // are not misled by a green "sent" when MAIL_USERNAME is empty.
+        String message = mailConfigured
+                ? "If an account exists for that email, a password reset link has been sent. Check inbox and spam."
+                : "If an account exists, a reset was recorded — but the mail gateway is not configured "
+                        + "(set MAIL_HOST / MAIL_USERNAME / MAIL_PASSWORD). Contact your administrator.";
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("success", true);
+        body.put("message", message);
+        body.put("mailConfigured", mailConfigured);
+        return ResponseEntity.ok(body);
     }
 
     private void issueResetToken(String email) {
@@ -334,10 +350,28 @@ public class AuthController {
                     + "<p><a href=\"" + link + "\">" + link + "</a></p>"
                     + "<p>If you did not request this, no action is needed — your password remains unchanged.</p>"
                     + "<p>Prime Minister's Office — Disaster Management Department</p>";
-            mail.send(canonical, "e-MAAFA: Password reset", body, "password_reset", null, null);
-        } catch (Exception ignored) {
-            // Best-effort; uniform response already sent.
+            // Local profile only: surface the link in server logs so demo accounts
+            // (e.g. admin@example.com) can still reset when inbox delivery is impossible.
+            if (isLocalProfile()) {
+                log.info("LOCAL password-reset link for {}: {}", canonical, link);
+            }
+            MailService.MailResult result =
+                    mail.send(canonical, "e-MAAFA: Password reset", body, "password_reset", null, null);
+            if (!result.success()) {
+                log.warn("Password-reset email not delivered to {}: {}", canonical, result.message());
+            }
+        } catch (Exception ex) {
+            log.warn("Password-reset issue failed for {}: {}", email, ex.toString());
         }
+    }
+
+    private boolean isLocalProfile() {
+        for (String p : environment.getActiveProfiles()) {
+            if ("local".equalsIgnoreCase(p) || "dev".equalsIgnoreCase(p)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @PostMapping("/reset-password")

@@ -21,7 +21,8 @@ import org.springframework.stereotype.Component;
  * agencies and stakeholders that feed M&amp;E and other modules.
  *
  * <p>Does NOT delete or overwrite existing users. Skips emails already taken and institutions
- * that already have a linked focal. Local-only password: {@code password}.</p>
+ * that already have a linked focal. Local-only password:
+ * {@link LocalTestCredentials#PASSWORD}.</p>
  *
  * <p>Priority (M&amp;E feeders first): Security/response → Ministries with policy/acronym →
  * key MDAs → academic/research → remaining ministries → UN/dev partners → known NGOs/FBOs/
@@ -93,7 +94,7 @@ public class InstitutionFocalLocalSeeder implements CommandLineRunner {
                 log.warn("institution focal seed skipped: roles missing");
                 return;
             }
-            String hash = encoder.encode("password");
+            String hash = encoder.encode(LocalTestCredentials.PASSWORD);
             int mda = seedMdaFocals(mdaRole, hash);
             int partners = seedPartnerFocals(partnerRole, hash);
             log.info("institution focal seed: {} MDA focals, {} partner focals created (idempotent)",

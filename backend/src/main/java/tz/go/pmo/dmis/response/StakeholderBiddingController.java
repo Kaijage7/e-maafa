@@ -78,7 +78,7 @@ public class StakeholderBiddingController {
 
     /**
      * An allocation is area-scoped via its incident (the table has no region/district of its own). Mirrors
-     * how the list paths use {@code appendAreaScopeSharedOrOwn("i")}: own + shared/unlinked incidents are
+     * how the list paths use {@code appendAreaScopeWithCouncil("i")}: own + shared/unlinked incidents are
      * visible, national tier sees all; a cross-area allocation 404s.
      */
     private void guardAllocationArea(long allocationId) {
@@ -467,7 +467,7 @@ public class StakeholderBiddingController {
         }
         // Area officers see only donations whose underlying request serves their own area (or shared/unlinked
         // rows, where i.* is null via the left join); national + non-area roles keep the full queue.
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
         // STAKEHOLDER ISOLATION: a partner login (bound to a stakeholder org) sees ONLY its OWN donations/bids,
         // never other organisations'. Operators / PMO (no stakeholder link) keep the management queue.
         Long myStakeholder = jurisdiction.currentStakeholderId();
@@ -527,7 +527,7 @@ public class StakeholderBiddingController {
         }
         // Area officers see only open needs whose incident is in their own area (or shared); national and
         // non-area PMO roles keep the full national list of open needs.
-        jurisdiction.appendAreaScopeSharedOrOwn("i", where, params);
+        jurisdiction.appendAreaScopeWithCouncil("i", where, params);
         List<Map<String, Object>> allocations = jdbc.queryForList("""
                 select ar.id, ar.status, ar.quantity_allocated, ar.unit_of_measure, ar.bid_deadline,
                        coalesce(sum(case when srb.status in ('Accepted','Received') then srb.quantity_offered else 0 end), 0) as committed_quantity,

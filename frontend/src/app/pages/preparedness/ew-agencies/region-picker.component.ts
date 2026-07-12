@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { escapeHtml } from '../../../core/html';
-import { alertColor, HAZ_ICON } from './ew-agency.model';
+import { alertColor, HAZ_ICON, leafletDrawControlOptions, leafletDrawShapeOptions } from './ew-agency.model';
 import { addDmisBaseLayer } from '../../../core/tz-map';
 
 declare const L: any;
@@ -10,18 +10,21 @@ declare const L: any;
  * Reusable Tanzania map selector for the warning entities. Two capture modes, both carrying their own
  * colour + the institution's hazard icon (per-area, like the TMA map):
  *   • SELECT — click a region to paint it at the active level.
- *   • DELINEATE — draw circles / polygons / lines (Leaflet Draw); each drawn shape keeps the active
- *     level's colour and shows the institution's hazard icon, exactly like a selected region.
+ *   • DELINEATE — draw circles / polygons / lines (Leaflet Draw); stroke/fill match the active
+ *     Advisory (yellow) / Warning (orange) / Major (red) colour; trash tool removes unwanted shapes.
  */
 @Component({
   selector: 'ew-region-picker',
   standalone: true,
   styles: [`
     .rp { height: 540px; border-radius: 12px; border: 1px solid #e3e6ed; }
-    .hint { font-size: 0.8rem; color: #94a3b8; margin-top: 6px; }
+    .hint { font-size: 0.8rem; color: #94a3b8; margin-top: 6px; line-height: 1.4; }
   `],
   template: `<div [id]="mapId" class="rp"></div>
-    <div class="hint"><i class="fas fa-hand-pointer"></i> Click a region to paint it, or use the draw tools (top-left) to delineate a circle/polygon — each keeps the active level's colour + your hazard icon. Click a region again to remove it.</div>`,
+    <div class="hint"><i class="fas fa-hand-pointer"></i> Click a region to paint it, or use the draw tools (top-left)
+      for circle / polygon / rectangle — they draw in the <b>selected alert colour</b>.
+      Use the trash tool (or select + delete) to remove shapes you do not want on the map or PDF.
+      Click a painted region again to clear it.</div>`,
 })
 export class RegionPickerComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selected: string[] = [];
@@ -40,10 +43,19 @@ export class RegionPickerComponent implements OnInit, OnChanges, OnDestroy {
   private icons: any;       // region hazard icons
   private drawnGroup: any;  // delineation layer (shapes + their icons)
   private refGroup: any;    // reference overlay — what OTHER entities issued (read-only markers)
+  private drawControl: any;
   private shapeSeq = 0;
+  private lastDrawLevel = '';
 
   ngOnInit(): void { setTimeout(() => this.init(), 0); }
-  ngOnChanges(): void { this.restyle(); this.renderRef(); }
+  ngOnChanges(): void {
+    this.restyle();
+    this.renderRef();
+    // Rebuild draw toolbar when the active colour changes so the next stroke uses that palette.
+    if (this.map && this.level !== this.lastDrawLevel) {
+      this.rebuildDrawControl();
+    }
+  }
   ngOnDestroy(): void { if (this.map) { this.map.remove(); this.map = null; } }
 
   private init(): void {
@@ -77,38 +89,54 @@ export class RegionPickerComponent implements OnInit, OnChanges, OnDestroy {
     this.initDraw();
   }
 
-  /** Leaflet Draw toolbar — delineate circles / polygons / rectangles / lines, coloured by the active level. */
+  /** Leaflet Draw toolbar — stroke/fill match active Advisory / Warning / Major colour. */
   private initDraw(): void {
     if (!(L.Control && L.Control.Draw)) return;
-    const ctl = new L.Control.Draw({
-      position: 'topleft',
-      edit: { featureGroup: this.drawnGroup, edit: false, remove: true },
-      draw: { polygon: { shapeOptions: { color: '#374151' } }, polyline: { shapeOptions: { color: '#374151' } },
-        rectangle: { shapeOptions: { color: '#374151' } }, circle: { shapeOptions: { color: '#374151' } },
-        marker: false, circlemarker: { color: '#374151' } },
-    });
-    this.map.addControl(ctl);
+    this.rebuildDrawControl();
     this.map.on(L.Draw.Event.CREATED, (e: any) => this.onDrawCreated(e));
     this.map.on(L.Draw.Event.DELETED, (e: any) => {
       const ids = new Set<number>();
       e.layers.eachLayer((l: any) => { if (l._shapeId) ids.add(l._shapeId); });
-      if (ids.size) { const next = (this.shapes ?? []).filter(s => !ids.has(s.id)); this.shapes = next; this.renderShapes(); this.shapesChange.emit(next); }
+      if (ids.size) {
+        const next = (this.shapes ?? []).filter(s => !ids.has(s.id));
+        this.shapes = next;
+        this.renderShapes();
+        this.shapesChange.emit(next);
+      }
     });
   }
+
+  /** Recreate the draw control so in-progress tools use the current palette (not grey). */
+  private rebuildDrawControl(): void {
+    if (!this.map || !(L.Control && L.Control.Draw) || !this.drawnGroup) return;
+    if (this.drawControl) {
+      try { this.map.removeControl(this.drawControl); } catch { /* ignore */ }
+      this.drawControl = null;
+    }
+    this.lastDrawLevel = this.level;
+    this.drawControl = new L.Control.Draw(leafletDrawControlOptions(this.drawnGroup, this.level));
+    this.map.addControl(this.drawControl);
+  }
+
   private onDrawCreated(e: any): void {
     const layer = e.layer, type = e.layerType, lvl = this.level;
+    // Snap the temporary draw layer to the active colour immediately (before re-render).
+    try {
+      const so = leafletDrawShapeOptions(lvl);
+      if (layer.setStyle) { layer.setStyle(so); }
+    } catch { /* ignore */ }
     let s: any;
     if (type === 'circle') {
       const c = layer.getLatLng();
       s = { id: ++this.shapeSeq, kind: 'circle', level: lvl, radius: Math.round(layer.getRadius()),
-        geojson: { type: 'Feature', properties: { kind: 'circle', radius: Math.round(layer.getRadius()), level: lvl }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
+        geojson: { type: 'Feature', properties: { kind: 'circle', radius: Math.round(layer.getRadius()), level: lvl, fill: alertColor(lvl), color: alertColor(lvl) }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
     } else if (type === 'circlemarker' || type === 'marker') {
       const c = layer.getLatLng();
       s = { id: ++this.shapeSeq, kind: 'point', level: lvl,
-        geojson: { type: 'Feature', properties: { kind: 'point', level: lvl }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
+        geojson: { type: 'Feature', properties: { kind: 'point', level: lvl, fill: alertColor(lvl), color: alertColor(lvl) }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
     } else {
       const gj = layer.toGeoJSON();
-      gj.properties = { ...(gj.properties || {}), kind: type, level: lvl };
+      gj.properties = { ...(gj.properties || {}), kind: type, level: lvl, fill: alertColor(lvl), color: alertColor(lvl) };
       s = { id: ++this.shapeSeq, kind: type, level: lvl, geojson: gj };
     }
     const next = [...(this.shapes ?? []), s];
@@ -195,8 +223,7 @@ export class RegionPickerComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
   private layerFromShape(s: any): any {
-    const col = alertColor(s.level);
-    const style = { color: col, weight: 2, fillColor: col, fillOpacity: 0.45, pane: 'ewshapes' };
+    const style = { ...leafletDrawShapeOptions(s.level), pane: 'ewshapes' };
     const geom = s.geojson?.geometry;
     if (s.kind === 'circle' && geom?.type === 'Point') { const [lng, lat] = geom.coordinates; return L.circle([lat, lng], { radius: s.radius ?? 10000, ...style }); }
     if (geom?.type === 'Point') { const [lng, lat] = geom.coordinates; return L.circleMarker([lat, lng], { radius: 7, ...style, fillOpacity: 0.9 }); }

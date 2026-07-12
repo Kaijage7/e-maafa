@@ -68,10 +68,13 @@ curl -sS -o /dev/null -w "%{http_code}\n" https://<host>/api/v1/settings/users
 
 1. Provision PostgreSQL 16.  
 2. Restore **certified baseline** (V122) **or** empty schema + load `db/baseline/baseline.sql` then Flyway.  
-3. Run app so Flyway advances to current jar max version.  
+3. Run app so Flyway advances to current jar max version (includes **V198** demo password revoke).  
 4. **Delete / rotate** any demo users from baseline dumps.  
 5. Create real Super Admin / ICT Admin with forced password change + 2FA.  
-6. Confirm: `select max(version) from flyway_schema_history;` matches release notes.
+6. Confirm: `select max(version) from flyway_schema_history;` matches release notes.  
+7. **Revoke local test password** `Password@2026` — see **`docs/LOCAL-TEST-PASSWORD.md`**. Prove:  
+   `POST /api/v1/auth/login` with `admin@example.com` / `Password@2026` **must fail**.  
+   Never set `SPRING_PROFILES_ACTIVE=local` on the public edge (that profile re-applies the constant).
 
 ### GL-05 — Role walkthrough (minimum)
 

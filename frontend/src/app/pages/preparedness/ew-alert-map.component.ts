@@ -10,6 +10,7 @@ import { loadCrossAgencyRef, renderCrossAgencyRef, RefMarker } from './ew-agenci
 import { EwCrossAgencyPanelComponent } from './ew-agencies/ew-cross-agency-panel.component';
 import { EwPreviewModalComponent } from './ew-agencies/ew-preview-modal.component';
 import { EntityTaskingsComponent } from './ew-agencies/entity-taskings.component';
+import { leafletDrawControlOptions, leafletDrawShapeOptions, alertColor as paletteAlertColor } from './ew-agencies/ew-agency.model';
 
 declare const L: any;
 
@@ -182,7 +183,7 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
           }
           <span class="paint-sep"></span>
           <span class="paint-lbl">Shape level:</span>
-          <select class="paint-select" [value]="drawLevel()" (change)="drawLevel.set($any($event.target).value)">
+          <select class="paint-select" [value]="drawLevel()" (change)="setDrawLevel($any($event.target).value)">
             @for (l of paintLevels; track l.key) { <option [value]="l.key">{{ l.label }}</option> }
           </select>
         </div>
@@ -434,8 +435,7 @@ export class EwAlertMapComponent {
     }
   }
   private layerFromDelineation(dln: Delineation): any {
-    const c = this.colorOf(dln.level);
-    const style = { color: c, weight: 2, fillColor: c, fillOpacity: 0.25, pane: 'delineation-pane' };
+    const style = { ...leafletDrawShapeOptions(dln.level), pane: 'delineation-pane' };
     const geom = dln.geojson?.geometry;
     let lyr: any = null;
     if (dln.kind === 'circle' && geom?.type === 'Point') {
@@ -452,28 +452,42 @@ export class EwAlertMapComponent {
     if (lyr) { lyr._dlnId = dln.id; }
     return lyr;
   }
+  private drawControl: any;
+  setDrawLevel(key: string): void {
+    this.drawLevel.set(key);
+    this.rebuildDrawControl();
+  }
+  private rebuildDrawControl(): void {
+    if (!this.map || !this.drawnGroup || !(L.Control && L.Control.Draw)) return;
+    if (this.drawControl) { try { this.map.removeControl(this.drawControl); } catch { /* ignore */ } }
+    this.drawControl = new L.Control.Draw(leafletDrawControlOptions(this.drawnGroup, this.drawLevel()));
+    this.map.addControl(this.drawControl);
+  }
+
   private onDrawCreated(e: any): void {
     const layer = e.layer;
     const type = e.layerType;
     const lvl = this.drawLevel();
+    try { if (layer.setStyle) layer.setStyle(leafletDrawShapeOptions(lvl)); } catch { /* ignore */ }
+    const col = paletteAlertColor(lvl);
     let dln: Delineation;
     if (type === 'circle') {
       const c = layer.getLatLng();
       dln = { id: ++this.shapeSeq, kind: 'circle', level: lvl, radius: Math.round(layer.getRadius()),
-        geojson: { type: 'Feature', properties: { kind: 'circle', radius: Math.round(layer.getRadius()), level: lvl }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
+        geojson: { type: 'Feature', properties: { kind: 'circle', radius: Math.round(layer.getRadius()), level: lvl, fill: col, color: col }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
     } else if (type === 'marker' || type === 'circlemarker') {
       const c = layer.getLatLng();
       dln = { id: ++this.shapeSeq, kind: 'point', level: lvl,
-        geojson: { type: 'Feature', properties: { kind: 'point', level: lvl }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
+        geojson: { type: 'Feature', properties: { kind: 'point', level: lvl, fill: col, color: col }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
     } else {
       const gj = layer.toGeoJSON();
-      gj.properties = { ...(gj.properties || {}), kind: type, level: lvl };
+      gj.properties = { ...(gj.properties || {}), kind: type, level: lvl, fill: col, color: col };
       dln = { id: ++this.shapeSeq, kind: type, level: lvl, geojson: gj };
     }
     if (!this.activeHazard()) { this.addHazard(); }
     this.mutateActiveHazard(h => ({ ...h, delineations: [...h.delineations, dln] }), false);
     this.renderDelineations();
-    this.flash(`${dln.kind} delineation added (${this.activeLevelLabel()} hazard).`, false);
+    this.flash(`${dln.kind} drawn in ${this.activeLevelLabel()} colour — trash tool removes if unwanted.`, false);
   }
 
   private initMap(): void {
@@ -514,16 +528,9 @@ export class EwAlertMapComponent {
       }
     });
 
-    // Draw toolbar (leaflet-draw) — polygon / polyline / rectangle / circle / point for hazard products.
+    // Draw toolbar — stroke/fill = active Advisory/Warning/Major colour; trash removes for clean PDF.
     if (L.Control && L.Control.Draw) {
-      const drawCtl = new L.Control.Draw({
-        position: 'topleft',
-        edit: { featureGroup: this.drawnGroup, edit: false, remove: true },
-        draw: { polygon: { shapeOptions: { color: '#374151' } }, polyline: { shapeOptions: { color: '#374151' } },
-          rectangle: { shapeOptions: { color: '#374151' } }, circle: { shapeOptions: { color: '#374151' } },
-          marker: false, circlemarker: { color: '#374151' } },
-      });
-      this.map.addControl(drawCtl);
+      this.rebuildDrawControl();
       this.map.on(L.Draw.Event.CREATED, (e: any) => this.onDrawCreated(e));
       this.map.on(L.Draw.Event.DELETED, (e: any) => {
         const ids = new Set<number>();

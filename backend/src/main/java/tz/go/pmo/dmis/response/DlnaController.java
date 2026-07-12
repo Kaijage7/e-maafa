@@ -134,7 +134,7 @@ public class DlnaController {
         StringBuilder scopeSub = new StringBuilder(
                 " and exists (select 1 from public.dlna_incidents dix join public.incidents i2 on i2.id = dix.incident_id"
                         + " where dix.assessment_id = d.id");
-        jurisdiction.appendAreaScopeSharedOrOwn("i2", scopeSub, params);
+        jurisdiction.appendAreaScopeWithCouncil("i2", scopeSub, params);
         scopeSub.append(")");
         sql.append(scopeSub);
         sql.append(" order by d.created_at desc limit 200");
@@ -151,7 +151,7 @@ public class DlnaController {
                 left join public.hazards h on h.id = i.hazard_id
                 where 1=1""");
         List<Object> incParams = new ArrayList<>();
-        jurisdiction.appendAreaScopeSharedOrOwn("i", inc, incParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", inc, incParams);
         inc.append(" order by i.created_at desc limit 500");
         out.put("incidents", jdbc.queryForList(inc.toString(), incParams.toArray()));
         return out;
@@ -575,7 +575,7 @@ public class DlnaController {
         StringBuilder scopeSub = new StringBuilder(
                 " and exists (select 1 from public.dlna_incidents dix join public.incidents i2 on i2.id = dix.incident_id"
                         + " where dix.assessment_id = d.id");
-        jurisdiction.appendAreaScopeSharedOrOwn("i2", scopeSub, params);
+        jurisdiction.appendAreaScopeWithCouncil("i2", scopeSub, params);
         scopeSub.append(")");
         sql.append(scopeSub).append(" order by d.created_at desc, s.id limit 100");
         out.put("sections", jdbc.queryForList(sql.toString(), params.toArray()));

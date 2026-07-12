@@ -26,10 +26,12 @@ public class NotificationService {
 
     private final JdbcTemplate jdbc;
     private final ExternalDeliveryService external;
+    private final AudienceService audiences;
 
-    public NotificationService(JdbcTemplate jdbc, ExternalDeliveryService external) {
+    public NotificationService(JdbcTemplate jdbc, ExternalDeliveryService external, AudienceService audiences) {
         this.jdbc = jdbc;
         this.external = external;
+        this.audiences = audiences;
     }
 
     /**
@@ -74,9 +76,27 @@ public class NotificationService {
         return dispatch(resolveUsers(where), n);
     }
 
-    /** Everyone with an account (broad system broadcast, e.g. a published early warning). */
+    /** Everyone with an account (broad system broadcast — use sparingly). */
     public int notifyAllUsers(Notice n) {
         return dispatch(resolveUsers("1=1"), n);
+    }
+
+    /**
+     * In-app (and optional SMS/email per prefs) to area coordinators whose {@code users.region_id}
+     * / {@code district_id} match the affected areas — so regions/districts see <em>issued alerts
+     * for their area</em>, not every national warning and not the full EW workbench requirement.
+     * National roles are notified separately via {@link #notifyRoles}.
+     */
+    public int notifyAreaCoordinators(Collection<String> areaNames, Notice n) {
+        if (areaNames == null || areaNames.isEmpty()) {
+            return 0;
+        }
+        List<Long> ids = audiences.coordinatorUserIds(areaNames);
+        if (ids.isEmpty()) {
+            log.info("notifyAreaCoordinators: no coordinator users for areas {}", areaNames);
+            return 0;
+        }
+        return notifyUsers(ids, n);
     }
 
     /**

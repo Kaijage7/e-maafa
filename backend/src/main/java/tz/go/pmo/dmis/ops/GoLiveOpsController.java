@@ -149,7 +149,7 @@ public class GoLiveOpsController {
                     rs -> rs.next() ? rs.getString(1) : null);
             Long flywayMax = parseVersion(ver);
             db.put("flywayMaxVersion", ver);
-            db.put("ok", flywayMax != null && flywayMax >= 197);
+            db.put("ok", flywayMax != null && flywayMax >= 200);
             db.put("detail", "Flyway max version " + ver + " (platform.flyway_schema_history)");
         } catch (DataAccessException e) {
             db.put("ok", false);
@@ -421,13 +421,24 @@ public class GoLiveOpsController {
 
         // Deferred product / INT
         reg.add(issue("F105", "DEFERRED", "AI/ML registry + prediction", "DEFERRED", "Post go-live; not claimed"));
-        reg.add(issue("F114", "DEFERRED", "Satellite / full exposure", "DEFERRED", "Impact-support INFORM present; satellite later"));
+        reg.add(issue("F114", "DEFERRED", "Satellite / full exposure AI", "DEFERRED",
+                "Prevention two-panel GIBS exposure compare LIVE; full scene SoR / AI change-detect deferred"));
         reg.add(issue("F116", "DEFERRED", "Executable multiscale contracts", "DEFERRED", "Monolith API contracts enough for cutover"));
         reg.add(issue("INT-NIDA-01", "INT", "NIDA verify adapter", "PLANNED", "Registry only; legal + API required"));
         reg.add(issue("INT-LATRA-01", "INT", "LATRA logistics adapter", "PLANNED", "Registry only"));
         reg.add(issue("INT-NAPA-01", "INT", "NAPA programme mapping", "PLANNED", "Registry only"));
         reg.add(issue("INT-FIN-01", "INT", "IFMIS commitment export", "PLATFORM_OK", "Export + audit path; not live IFMIS post"));
         reg.add(issue("INT-EW-01", "INT", "Agency bus credentials", "PLATFORM_OK", "In-platform bus ready; per-agency prod keys ops"));
+
+        // Pre-deploy campaign dual-proofs (2026-07-12) — captured, not hidden
+        reg.add(issue("JURIS-01", "LIVE-OK", "Strict area scope (incident/resource/tallies)",
+                "LIVE_OK", "Region≠other regions; district≠other districts; reports use WithCouncil"));
+        reg.add(issue("ALERT-01", "LIVE-OK", "Area issued early-warning alerts strip",
+                "LIVE_OK", "Dashboard/EOCC area_early_warnings + Issued Alerts feed; not EW workbench"));
+        reg.add(issue("EO-01", "LIVE-OK", "Prevention EO two-panel exposure compare",
+                "LIVE_OK", "True colour / land-veg / flood / hi-res; TZ·EA; Sentinel; not weather SAT24"));
+        reg.add(issue("MOD-01", "LIVE-OK", "Module-by-module API smoke",
+                "LIVE_OK", "97 critical list endpoints 200 Super Admin; go-live smoke 12/12"));
 
         // Working pillars (must not regress)
         for (String p : List.of(

@@ -47,17 +47,21 @@ public class LocalDataSeeder implements CommandLineRunner {
             jdbc.update("insert into public.roles(id,name,guard_name,created_at,updated_at) values (?,?,'web',now(),now())",
                     i + 1, roles[i]);
         }
-        user(1, "System Administrator", "admin@example.com", "admin", "Super Admin");
-        user(2, "EOCC Officer", "eocc@pmo.go.tz", "eocc", "EOCC");
-        user(3, "PMO Director", "director@pmo.go.tz", "director", "Director");
-        user(4, "District Coordinator", "dc@test.com", "dc", "Dist DC");
-        user(5, "TMA Focal", "tma@meteo.go.tz", "mda", "MDA Focal");
-        log.info("local seed: done (5 users, 13 roles)");
+        // Constant local test password — see LocalTestCredentials / docs/LOCAL-TEST-PASSWORD.md
+        String pw = LocalTestCredentials.PASSWORD;
+        user(1, "System Administrator", "admin@example.com", pw, "Super Admin");
+        user(2, "EOCC Officer", "eocc@pmo.go.tz", pw, "EOCC");
+        user(3, "PMO Director", "director@pmo.go.tz", pw, "Director");
+        user(4, "District Coordinator", "dc@test.com", pw, "Dist DC");
+        user(5, "TMA Focal", "tma@meteo.go.tz", pw, "MDA Focal");
+        log.info("local seed: done (5 users, 13 roles) with constant local test password");
     }
 
     private void user(long id, String name, String email, String password, String role) {
-        jdbc.update("insert into public.users(id,name,email,password,email_verified_at,created_at,updated_at) "
-                + "values (?,?,?,?,now(),now(),now())", id, name, email, encoder.encode(password));
+        jdbc.update("insert into public.users(id,name,email,password,email_verified_at,"
+                        + "must_change_password,created_at,updated_at) "
+                        + "values (?,?,?,?,now(),false,now(),now())",
+                id, name, email, encoder.encode(password));
         Long roleId = jdbc.queryForObject("select id from public.roles where name = ?", Long.class, role);
         jdbc.update("insert into public.model_has_roles(role_id,model_type,model_id) values (?, 'App\\Models\\User', ?)",
                 roleId, id);

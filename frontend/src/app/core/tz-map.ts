@@ -27,14 +27,27 @@ function ensureBasePane(map: any, name: string, zIndex: number): void {
   map.getPane(name).style.pointerEvents = 'none';
 }
 
-function addLocalVectorBase(map: any, http: HttpClient, variant: DmisMapBaseVariant): void {
+/**
+ * Offline-capable Tanzania vector basemap (country / water / boundary).
+ * Used when external tiles are disallowed or fail — Impact Analysis Map mode fallback.
+ * Returns a layer group so callers can add/remove cleanly (e.g. Map ↔ Satellite swap).
+ */
+export function addLocalVectorBase(
+  map: any,
+  http: HttpClient,
+  variant: DmisMapBaseVariant = 'light',
+  opts?: { panePrefix?: string; addToMap?: boolean },
+): any {
   const light = variant === 'light';
-  ensureBasePane(map, 'dmisBaseLandPane', 180);
-  ensureBasePane(map, 'dmisBaseWaterPane', 185);
-  ensureBasePane(map, 'dmisBaseBoundaryPane', 190);
+  const prefix = opts?.panePrefix ?? 'dmisBase';
+  const addToMap = opts?.addToMap !== false;
+  ensureBasePane(map, `${prefix}LandPane`, 180);
+  ensureBasePane(map, `${prefix}WaterPane`, 185);
+  ensureBasePane(map, `${prefix}BoundaryPane`, 190);
+  const group = L.layerGroup();
   http.get<any>('/geojson/tz_country.geojson').subscribe((c: any) => {
     const land = L.geoJSON(c, {
-      pane: 'dmisBaseLandPane',
+      pane: `${prefix}LandPane`,
       style: {
         fillColor: light ? '#f3f6f9' : '#eef2f5',
         fillOpacity: 1,
@@ -42,12 +55,12 @@ function addLocalVectorBase(map: any, http: HttpClient, variant: DmisMapBaseVari
         weight: light ? 0.6 : 0.4,
       },
       interactive: false,
-    }).addTo(map);
-    land.bringToBack();
+    });
+    group.addLayer(land);
   });
   http.get<any>('/geojson/tz_water_gis.geojson').subscribe((w: any) => {
-    L.geoJSON(w, {
-      pane: 'dmisBaseWaterPane',
+    group.addLayer(L.geoJSON(w, {
+      pane: `${prefix}WaterPane`,
       style: {
         fillColor: light ? '#c8e2f3' : '#a5cde8',
         fillOpacity: 0.92,
@@ -55,15 +68,20 @@ function addLocalVectorBase(map: any, http: HttpClient, variant: DmisMapBaseVari
         weight: 0.5,
       },
       interactive: false,
-    }).addTo(map);
+    }));
   });
   http.get<any>('/geojson/tz_boundary_gis.geojson').subscribe((b: any) => {
-    L.geoJSON(b, {
-      pane: 'dmisBaseBoundaryPane',
+    group.addLayer(L.geoJSON(b, {
+      pane: `${prefix}BoundaryPane`,
       style: { color: light ? '#64748b' : '#8a99a8', weight: 1.1, fill: false },
       interactive: false,
-    }).addTo(map);
+    }));
   });
+  if (addToMap) {
+    group.addTo(map);
+    try { group.eachLayer((ly: any) => ly.bringToBack?.()); } catch { /* ignore */ }
+  }
+  return group;
 }
 
 export function addDmisBaseLayer(map: any, http: HttpClient, variant: DmisMapBaseVariant = 'standard'): void {

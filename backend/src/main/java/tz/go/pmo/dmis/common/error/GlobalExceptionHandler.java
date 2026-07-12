@@ -61,6 +61,15 @@ public class GlobalExceptionHandler {
                 "A path parameter has the wrong type.");
     }
 
+    /**
+     * Required query/form parameter missing (e.g. /nearest without lat/lng). Clean 400, not a leaked 500.
+     */
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    ProblemDetail handleMissingParam(org.springframework.web.bind.MissingServletRequestParameterException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "Missing parameter",
+                "Required parameter '" + ex.getParameterName() + "' is missing.");
+    }
+
     @ExceptionHandler(BusinessRuleException.class)
     ProblemDetail handleBusinessRule(BusinessRuleException ex) {
         return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Business rule violated", ex.getMessage());

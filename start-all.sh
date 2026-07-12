@@ -34,4 +34,4 @@ echo "[4/5] EW generate service :8600 (kind-routed, localhost-only)…"; fuser -
 echo "[5/5] Frontend :4200 (proxies /api + /ew-engine + /ew-api)…"; fuser -k 4200/tcp >/dev/null 2>&1; sleep 2
 ( cd "$ROOT/dmis-platform/frontend" && setsid npm exec ng serve -- --host 0.0.0.0 --port 4200 --proxy-config proxy.conf.json --poll 2000 >/tmp/dmis-ngserve.log 2>&1 < /dev/null & )
 
-echo "Open http://localhost:4200  (login admin@example.com / admin). Wait ~30s for first compile."
+echo "Open http://localhost:4200  (login admin@example.com / Password@2026 — local test only; revoke for prod — docs/LOCAL-TEST-PASSWORD.md). Wait ~30s for first compile."

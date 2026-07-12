@@ -23,10 +23,9 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  *
  * <p>Jurisdiction (area) scoping: allocations are incident-children (every row carries an
  * {@code incident_id}), so each aggregate joins the parent incident and applies
- * {@link JurisdictionScope#appendAreaScopeSharedOrOwn} on the incident alias {@code "i"} — mirroring
- * how the Command Center scopes activations by their incident. An area officer reports only on
- * allocations whose incident is in their own area (or shared/unparented); the national tier keeps the
- * whole-country roll-up.
+ * {@link JurisdictionScope#appendAreaScopeWithCouncil} on the incident alias {@code "i"}.
+ * An area officer reports only on allocations whose incident is in their own district/LGA or region;
+ * the national tier keeps the whole-country roll-up. No cross-region leakage via null-area rows.
  */
 @RestController
 @RequestMapping("/v1/reports/resource-allocations")
@@ -75,7 +74,7 @@ public class ResourceReportController {
                   and not exists (select 1 from public.incidents s
                                    where s.id = ar.incident_id and s.is_simulation)""");
         List<Object> summaryParams = new ArrayList<>(List.of(start, endExclusive));
-        jurisdiction.appendAreaScopeSharedOrOwn("i", summarySql, summaryParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", summarySql, summaryParams);
         out.put("summary", jdbc.queryForMap(summarySql.toString(), summaryParams.toArray()));
 
         StringBuilder recordsSql = new StringBuilder("""
@@ -90,7 +89,7 @@ public class ResourceReportController {
                   and not exists (select 1 from public.incidents s
                                    where s.id = ar.incident_id and s.is_simulation)""");
         List<Object> recordsParams = new ArrayList<>(List.of(start, endExclusive));
-        jurisdiction.appendAreaScopeSharedOrOwn("i", recordsSql, recordsParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", recordsSql, recordsParams);
         recordsSql.append(" order by ar.created_at desc limit 500");
         out.put("records", jdbc.queryForList(recordsSql.toString(), recordsParams.toArray()));
 
@@ -102,7 +101,7 @@ public class ResourceReportController {
                   and not exists (select 1 from public.incidents s
                                    where s.id = ar.incident_id and s.is_simulation)""");
         List<Object> byStatusParams = new ArrayList<>(List.of(start, endExclusive));
-        jurisdiction.appendAreaScopeSharedOrOwn("i", byStatusSql, byStatusParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", byStatusSql, byStatusParams);
         byStatusSql.append(" group by ar.status order by count desc");
         out.put("by_status", jdbc.queryForList(byStatusSql.toString(), byStatusParams.toArray()));
 
@@ -116,7 +115,7 @@ public class ResourceReportController {
                   and not exists (select 1 from public.incidents s
                                    where s.id = ar.incident_id and s.is_simulation)""");
         List<Object> byCategoryParams = new ArrayList<>(List.of(start, endExclusive));
-        jurisdiction.appendAreaScopeSharedOrOwn("i", byCategorySql, byCategoryParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", byCategorySql, byCategoryParams);
         byCategorySql.append(" group by r.category order by count desc");
         out.put("by_category", jdbc.queryForList(byCategorySql.toString(), byCategoryParams.toArray()));
         return out;

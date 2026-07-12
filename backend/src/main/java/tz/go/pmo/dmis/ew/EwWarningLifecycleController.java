@@ -293,12 +293,30 @@ public class EwWarningLifecycleController {
                 .filter(x -> x != null && !x.isBlank())
                 .max((a, b) -> Integer.compare(levelRank(a), levelRank(b)))
                 .orElse("Warning");
+        // Areas touched by this warning (region + district names) — target alerts by jurisdiction.
+        final java.util.List<String> affectedAreas = hazards.stream()
+                .flatMap(h -> java.util.stream.Stream.of(
+                        str(h.get("region_name")), str(h.get("district_name"))))
+                .filter(x -> x != null && !x.isBlank())
+                .distinct()
+                .toList();
         Runnable broadcast = () -> {
             try {
-                // Staff in-app feed (unchanged eligibility — internal operators use preferences for SMS/email).
-                notifications.notifyAllUsers(tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
-                        "early_warning_published", "Early warning published", pubMessage,
-                        "/m/preparedness/early-warnings", "early_warning", id, "warning"));
+                // In-app ALERTS to area coordinators (RAS/Reg DC/DAS/DED/…) whose area is affected —
+                // they see issued alerts for their district/region, not the whole national catalogue.
+                // Link goes to Response dashboard (alerts strip), not the EW workbench module.
+                notifications.notifyAreaCoordinators(affectedAreas,
+                        tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
+                                "early_warning_published", "Early warning for your area", pubMessage,
+                                "/m/response", "early_warning", id, "warning"));
+            } catch (Exception ignored) { }
+            try {
+                // National ops still get every published warning (command picture).
+                notifications.notifyRoles(
+                        java.util.List.of("EOCC", "Director", "Asst. Director", "Secretary", "Super Admin", "Comms Officer"),
+                        tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
+                                "early_warning_published", "Early warning published", pubMessage,
+                                "/m/preparedness/early-warnings", "early_warning", id, "warning"));
             } catch (Exception ignored) { }
             try {
                 // Public subscribers (alert_subscriptions): SMS+email when channel + area + hazard + priority match.

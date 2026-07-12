@@ -9,7 +9,8 @@
 #   AUTH_HEADER="Authorization: Bearer $TOKEN" ./scripts/go-live-smoke.sh
 #
 #   # Login then smoke (uses email/password once):
-#   LOGIN_EMAIL=admin@example.com LOGIN_PASSWORD=admin ./scripts/go-live-smoke.sh
+#   LOGIN_EMAIL=admin@example.com LOGIN_PASSWORD='Password@2026' ./scripts/go-live-smoke.sh
+#   (Password@2026 = local test constant only — never use on public edge; see docs/LOCAL-TEST-PASSWORD.md)
 #
 # Env:
 #   BASE_URL          default http://127.0.0.1:8080/api

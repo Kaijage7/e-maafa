@@ -21,6 +21,41 @@ export const ALERT_RANK: Record<string, number> = { ADVISORY: 1, WARNING: 2, MAJ
 export const ALERT_COLOR: Record<string, string> = { ADVISORY: '#FFFF00', WARNING: '#FFA500', MAJOR_WARNING: '#FF0000', NONE: '#E5E7EB' };
 export const alertColor = (lvl?: string | null) => ALERT_COLOR[(lvl ?? 'NONE').toUpperCase()] ?? '#F5F5F5';
 
+/**
+ * Leaflet.Draw shapeOptions that match the active alert palette (yellow / orange / red).
+ * Used while drawing AND after commit so the preview stroke/fill is never neutral grey.
+ */
+export function leafletDrawShapeOptions(level?: string | null): {
+  color: string; fillColor: string; fillOpacity: number; weight: number; opacity: number;
+} {
+  const col = alertColor(level);
+  const none = (level ?? '').toUpperCase() === 'NONE';
+  return {
+    color: col,
+    fillColor: col,
+    fillOpacity: none ? 0.18 : 0.45,
+    weight: 2.5,
+    opacity: 1,
+  };
+}
+
+/** Full Leaflet.Draw control options: colour-matched draw tools + edit/remove for optional clean-up. */
+export function leafletDrawControlOptions(featureGroup: any, level?: string | null): any {
+  const so = leafletDrawShapeOptions(level);
+  return {
+    position: 'topleft',
+    edit: { featureGroup, edit: true, remove: true },
+    draw: {
+      polygon: { shapeOptions: { ...so }, showArea: false, allowIntersection: true },
+      polyline: { shapeOptions: { ...so } },
+      rectangle: { shapeOptions: { ...so } },
+      circle: { shapeOptions: { ...so } },
+      marker: false,
+      circlemarker: false,
+    },
+  };
+}
+
 export type AgencyKey = 'tma' | 'mow' | 'gst' | 'moh' | 'moa' | 'nemc' | 'mlf';
 
 export interface AgencyDef {

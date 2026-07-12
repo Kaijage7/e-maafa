@@ -38,6 +38,8 @@ const POLL_MS = 30_000; // verbatim source cadence
     .bar-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 8px; align-items: center; font-size: 0.78rem; padding: 3px 0; }
     .bar { height: 10px; border-radius: 5px; background: #dc3545; min-width: 2px; }
     .crit { background: #fee2e2; border-left: 3px solid #dc2626; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 0.8rem; }
+    .ew-alert { background: #fff7ed; border-left: 3px solid #ea580c; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 0.8rem; }
+    .ew-alert .lvl { font-weight:700; color:#9a3412; font-size:0.72rem; text-transform:uppercase; }
     .pill { font-size: 0.75rem; color: #16a34a; font-weight: 700; }
     .queue-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
     .queue-item { display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; padding:8px 0; border-bottom:1px dashed #e3e6ed; font-size:0.8rem; }
@@ -61,6 +63,22 @@ const POLL_MS = 30_000; // verbatim source cadence
       <div class="stat"><b style="color:#dc2626">{{ d().statistics?.critical_incidents ?? 0 }}</b><span>Critical</span></div>
       <div class="stat"><b>{{ d().statistics?.assessments_pending ?? 0 }}</b><span>Assessments Pending</span></div>
     </div>
+
+    <dmis-panel title="Issued Early-Warning Alerts (Your Area)" icon="fa-bell"
+      [badge]="(d().area_early_warnings?.length ?? 0) + ''">
+      @for (w of d().area_early_warnings ?? []; track w.id) {
+        <div class="ew-alert">
+          <span class="lvl">{{ w.warning_level || 'Warning' }}</span>
+          <b style="margin-left:6px">{{ w.warning_code }}</b>
+          — {{ w.hazard_names || 'Hazard' }}
+          <div class="queue-meta">{{ w.district_names || w.region_names || 'Area' }} · {{ when(w.issued_at) }} · {{ w.status }}</div>
+        </div>
+      } @empty {
+        <div style="font-size:0.8rem;color:#94a3b8;padding:10px 0">
+          No published early-warning alerts currently cover your jurisdiction.
+        </div>
+      }
+    </dmis-panel>
 
     <div class="queue-grid">
       <dmis-panel title="Needs Your Action" icon="fa-person-circle-exclamation" [badge]="(d().needs_action?.length ?? 0) + ''">

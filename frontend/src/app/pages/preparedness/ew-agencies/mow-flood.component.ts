@@ -9,7 +9,7 @@ import { EwCrossAgencyPanelComponent } from './ew-cross-agency-panel.component';
 import { EwPreviewModalComponent } from './ew-preview-modal.component';
 import { EntityTaskingsComponent } from './entity-taskings.component';
 import { CATCHMENT_BASINS, BASIN_BY_KEY } from './catchment-basins';
-import { ALERT_LEVELS, ALERT_RANK, alertColor, AGENCIES, HAZ_ICON, LIKELIHOOD, IMPACT } from './ew-agency.model';
+import { ALERT_LEVELS, ALERT_RANK, alertColor, AGENCIES, HAZ_ICON, LIKELIHOOD, IMPACT, leafletDrawControlOptions, leafletDrawShapeOptions } from './ew-agency.model';
 import { loadCrossAgencyRef, renderCrossAgencyRef, RefMarker } from './cross-agency-ref';
 import { escapeHtml } from '../../../core/html';
 import { addDmisBaseLayer } from '../../../core/tz-map';
@@ -327,29 +327,40 @@ export class MowFloodComponent implements OnInit, OnDestroy {
     this.renderShapes();
   }
 
-  // ── delineation (draw circles/polygons) — each shape keeps its assessment's colour + the flood icon ──
+  // ── delineation — stroke/fill match assessment alert colour; trash removes unwanted shapes ──
+  private drawControl: any;
   private initDraw(): void {
     if (!(L.Control && L.Control.Draw)) return;
-    const ctl = new L.Control.Draw({
-      position: 'topleft',
-      edit: { featureGroup: this.drawnGroup, edit: false, remove: true },
-      draw: { polygon: { shapeOptions: { color: '#374151' } }, polyline: { shapeOptions: { color: '#374151' } },
-        rectangle: { shapeOptions: { color: '#374151' } }, circle: { shapeOptions: { color: '#374151' } }, marker: false, circlemarker: false },
-    });
-    this.map.addControl(ctl);
+    this.rebuildDrawControl();
     this.map.on(L.Draw.Event.CREATED, (e: any) => this.onDraw(e));
     this.map.on(L.Draw.Event.DELETED, (e: any) => {
       const ids = new Set<number>(); e.layers.eachLayer((l: any) => { if (l._shapeId) ids.add(l._shapeId); });
       if (ids.size) { for (const a of this.current().assessments) { a.drawn_shapes = (a.drawn_shapes ?? []).filter((s: any) => !ids.has(s.id)); } this.days.set([...this.days()]); this.renderShapes(); }
     });
   }
+  private rebuildDrawControl(): void {
+    if (!this.map || !this.drawnGroup || !(L.Control && L.Control.Draw)) return;
+    if (this.drawControl) { try { this.map.removeControl(this.drawControl); } catch { /* ignore */ } }
+    const lvl = this.current()?.assessments?.[0]?.alert_level || 'WARNING';
+    this.drawControl = new L.Control.Draw(leafletDrawControlOptions(this.drawnGroup, lvl));
+    this.map.addControl(this.drawControl);
+  }
   private onDraw(e: any): void {
     const target = this.current().assessments.find(a => a.basins.length) ?? this.current().assessments[0];
     if (!target) return;
     const layer = e.layer, type = e.layerType, lvl = target.alert_level;
+    try { if (layer.setStyle) layer.setStyle(leafletDrawShapeOptions(lvl)); } catch { /* ignore */ }
+    const col = alertColor(lvl);
     let s: any;
-    if (type === 'circle') { const c = layer.getLatLng(); s = { id: ++this.shapeSeq, kind: 'circle', level: lvl, radius: Math.round(layer.getRadius()), geojson: { type: 'Feature', properties: { kind: 'circle', radius: Math.round(layer.getRadius()), level: lvl }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } }; }
-    else { const gj = layer.toGeoJSON(); gj.properties = { ...(gj.properties || {}), kind: type, level: lvl }; s = { id: ++this.shapeSeq, kind: type, level: lvl, geojson: gj }; }
+    if (type === 'circle') {
+      const c = layer.getLatLng();
+      s = { id: ++this.shapeSeq, kind: 'circle', level: lvl, radius: Math.round(layer.getRadius()),
+        geojson: { type: 'Feature', properties: { kind: 'circle', radius: Math.round(layer.getRadius()), level: lvl, fill: col, color: col }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
+    } else {
+      const gj = layer.toGeoJSON();
+      gj.properties = { ...(gj.properties || {}), kind: type, level: lvl, fill: col, color: col };
+      s = { id: ++this.shapeSeq, kind: type, level: lvl, geojson: gj };
+    }
     target.drawn_shapes = [...(target.drawn_shapes ?? []), s];
     this.days.set([...this.days()]); this.renderShapes();
   }
@@ -358,7 +369,7 @@ export class MowFloodComponent implements OnInit, OnDestroy {
     this.drawnGroup.clearLayers();
     for (const a of this.current().assessments) {
       for (const s of (a.drawn_shapes ?? [])) {
-        const col = alertColor(s.level); const style = { color: col, weight: 2, fillColor: col, fillOpacity: 0.45, pane: 'ewshapes' };
+        const col = alertColor(s.level); const style = { ...leafletDrawShapeOptions(s.level), pane: 'ewshapes' };
         const geom = s.geojson?.geometry; let lyr: any = null;
         if (s.kind === 'circle' && geom?.type === 'Point') { const [lng, lat] = geom.coordinates; lyr = L.circle([lat, lng], { radius: s.radius ?? 10000, ...style }); }
         else if (geom?.type === 'Polygon') { lyr = L.polygon(geom.coordinates.map((r: any[]) => r.map(([lng, lat]: number[]) => [lat, lng])), style); }

@@ -60,9 +60,9 @@ public class PublicReportsController {
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
-        // The DDMC sees citizen reports in their own district plus untagged ones (a NULL area = a not-yet-
-        // assigned report visible to all coordinators); national triage sees all.
-        jurisdiction.appendAreaScopeSharedOrOwn("r", where, params);
+        // STRICT area scope for citizen reports: district/LGA sees only own district; region sees own region;
+        // national sees all. Untagged (null area) reports stay national triage only — not every district queue.
+        jurisdiction.appendAreaScope("r", where, params);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("reports", jdbc.queryForList("""
                 select r.id, r.report_code, r.hazard_type, r.description, r.location_description,
@@ -200,9 +200,8 @@ public class PublicReportsController {
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Report not found.");
         }
-        // Mirror the list scope (appendAreaScopeSharedOrOwn): in-area officers may action their own reports
-        // plus untagged (NULL area) ones; cross-area access 404s. National tier sees/acts on everything.
-        areaGuard.assertOwnOrShared("public.public_hazard_reports", id);
+        // Mirror the list scope (strict appendAreaScope): only own district/region; national sees all.
+        areaGuard.assertOwn("public.public_hazard_reports", id);
         return rows.get(0);
     }
 
