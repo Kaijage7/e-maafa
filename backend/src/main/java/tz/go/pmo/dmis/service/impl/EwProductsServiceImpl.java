@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.ew;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
@@ -14,44 +14,31 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
+import tz.go.pmo.dmis.ew.MgovSmsService;
 import tz.go.pmo.dmis.notification.AudienceService;
 import tz.go.pmo.dmis.notification.MailService;
 import tz.go.pmo.dmis.notification.NotificationService;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-import tz.go.pmo.dmis.common.error.BusinessRuleException;
-import tz.go.pmo.dmis.common.security.Authz;
-import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.service.EwProductsService;
 
 /**
- * EW Generated Products (Phase 2) — each generated 722E_4 bulletin PDF is STORED and anchored to its
- * geography so it can be listed, appended on a map, viewed and downloaded. The PDF is produced by the
- * UNCHANGED Python engine (Angular gets the blob from /ew-api and uploads it here). Read + store only.
+ * EW Generated Products — each generated 722E_4 bulletin PDF is stored and anchored
+ * to its geography for list/map/download. Dissemination wires to Communication Center.
+ * <p>Logic in service.impl (eGA). Acting user via {@link CurrentUserResolver}.
+ * Index filters severity/type are productive; stats match the same filter.
  */
-@RestController
-@RequestMapping("/v1/ew/products")
-// Read endpoints (index/show) require authentication — made EXPLICIT here, consistent with the sibling EW
-// list (EwController GET /v1/ew/warnings is @PreAuthorize("isAuthenticated()")). It is intentionally NOT a
-// narrower role tier: the role-filtered menu shows the EW module to 9 roles (operators, Comms, MDA Focal,
-// RAS, Reg DC, DAS, Dist DC), all of whom legitimately open the EOCC Bulletin, and a published bulletin is
-// public on the portal anyway. Pre-publication exposure is closed at the write side (the bulletin upload's
-// approved/published business-state gate). store() keeps its stricter @PreAuthorize(EW_INGEST) (method-level,
-// overrides this class gate).
-@org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
-public class EwProductController {
+@Service
+public class EwProductsServiceImpl implements EwProductsService {
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final List<String> SEV_ORDER = List.of("ADVISORY", "WARNING", "MAJOR_WARNING");
+
 
     private final JdbcTemplate jdbc;
     private final String publicRoot;
@@ -59,28 +46,28 @@ public class EwProductController {
     private final MailService mail;
     private final AudienceService audiences;
     private final NotificationService notifications;
+    private final CurrentUserResolver users;
 
-    public EwProductController(JdbcTemplate jdbc,
-                              @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot,
-                              MgovSmsService sms, MailService mail,
-                              AudienceService audiences, NotificationService notifications) {
+    public EwProductsServiceImpl(JdbcTemplate jdbc,
+                                 @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot,
+                                 MgovSmsService sms, MailService mail,
+                                 AudienceService audiences, NotificationService notifications,
+                                 CurrentUserResolver users) {
         this.jdbc = jdbc;
         this.publicRoot = publicRoot;
         this.sms = sms;
         this.mail = mail;
         this.audiences = audiences;
         this.notifications = notifications;
+        this.users = users;
     }
 
     /** Store a generated bulletin: the PDF blob + its envelope/geo metadata. */
-    @PostMapping
     @Transactional
-    // Was completely ungated (any unauthenticated client could store arbitrary bulletin PDFs). Storing into
-    // the national EW product registry is trusted-operator only (EW_INGEST); the read endpoints now require
     // the broader EW dissemination tier via the class-level gate above.
-    @PreAuthorize("hasAuthority('early_warning.create')")
-    public Map<String, Object> store(@RequestParam("pdf") MultipartFile pdf,
-                                     @RequestParam("payload") String payloadJson) throws Exception {
+    @Override
+    public Map<String, Object> store(MultipartFile pdf,
+                                     String payloadJson) throws Exception {
         if (pdf == null || pdf.isEmpty()) {
             throw new BusinessRuleException("The generated PDF is required.");
         }
@@ -136,12 +123,11 @@ public class EwProductController {
      * published. Publication here is an internal registry state; it does not change the warning_code
      * linkage that drives the public portal.
      */
-    @PostMapping("/upload")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('early_warning.create')")
-    public Map<String, Object> upload(@RequestParam("pdf") MultipartFile pdf,
-                                      @RequestParam(required = false) String title,
-                                      @RequestParam(required = false) String description) throws Exception {
+    public Map<String, Object> upload(MultipartFile pdf,
+                                      String title,
+                                      String description) throws Exception {
         if (pdf == null || pdf.isEmpty()) {
             throw new BusinessRuleException("The bulletin PDF is required.");
         }
@@ -156,7 +142,7 @@ public class EwProductController {
                 insert into public.ew_generated_products(title, bulletin_type, issue_date, severity, regions,
                     pdf_path, file_name, description, generated_by, generated_at, created_at)
                 values (?, 'MANUAL', current_date, 'ADVISORY', '[]'::json, ?, ?, ?, ?, now(), now()) returning id
-                """, Long.class, displayTitle, relPath, displayTitle + ".pdf", str(description), currentUserId());
+                """, Long.class, displayTitle, relPath, displayTitle + ".pdf", str(description), users.actingUserId());
         Path target = Path.of(publicRoot, "ew-products", fileName);
         try {
             Files.createDirectories(target.getParent());
@@ -175,11 +161,10 @@ public class EwProductController {
      * target selected the bulletin is unpublished (its Publications document is removed and it leaves
      * the map). Internal-only registry rows simply stay unpublished.
      */
-    @PatchMapping("/{id}/publish")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('early_warning.disseminate')")
-    public Map<String, Object> setPublished(@PathVariable long id,
-                                            @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> setPublished(long id,
+                                            Map<String, Object> body) {
         boolean toPublications = body != null && Boolean.TRUE.equals(body.get("publications"));
         boolean toMap = body != null && Boolean.TRUE.equals(body.get("map"));
         boolean published = toPublications || toMap;
@@ -190,7 +175,7 @@ public class EwProductController {
             throw new ResourceNotFoundException("Bulletin product not found.");
         }
         Map<String, Object> b = rows.get(0);
-        Long userId = published ? currentUserId() : null;
+        Long userId = published ? users.actingUserId() : null;
 
         jdbc.update("""
                 update public.ew_generated_products
@@ -238,10 +223,9 @@ public class EwProductController {
      * (RAS/Reg DC/DAS/Dist DC in the affected areas — reachable once users carry an area). Manual
      * recipients may be added. Gated by COMMS_DISSEMINATE — the same tier as the Communication Center.
      */
-    @PostMapping("/{id}/disseminate")
-    @PreAuthorize("hasAuthority('early_warning.disseminate')")
-    public Map<String, Object> disseminate(@PathVariable long id,
-                                           @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> disseminate(long id,
+                                           Map<String, Object> body) {
         Map<String, Object> b = body == null ? Map.of() : body;
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select id, title, warning_code, severity, regions, pdf_path, "
@@ -318,7 +302,7 @@ public class EwProductController {
                     atts.add(new MailService.Attachment(safeFile(title) + ".pdf", "application/pdf", pdf));
                 } catch (Exception e) { /* file missing → send the email without the attachment */ }
             }
-            MailService.MailResult r = mail.sendComposed(new ArrayList<>(emails), subject, message, atts, currentUserId());
+            MailService.MailResult r = mail.sendComposed(new ArrayList<>(emails), subject, message, atts, users.actingUserId());
             result.put("email", Map.of("attempted", emails.size(), "sent", r.sent(), "failed", r.failed(), "success", r.success()));
         } else {
             result.put("email", Map.of("attempted", 0, "skipped", true));
@@ -343,9 +327,9 @@ public class EwProductController {
     }
 
     /** List products for the map + registry (newest first). */
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) String severity,
-                                     @RequestParam(required = false) String type) {
+    @Override
+    public Map<String, Object> index(String severity,
+                                     String type) {
         StringBuilder where = new StringBuilder("1=1");
         java.util.List<Object> args = new java.util.ArrayList<>();
         if (severity != null && !severity.isBlank()) { where.append(" and p.severity = ?"); args.add(severity); }
@@ -366,20 +350,22 @@ public class EwProductController {
                 """).formatted(where), args.toArray());
         rows.forEach(r -> { parseJson(r, "regions"); r.put("pdf_url", "/api/storage/" + r.get("pdf_path")); });
         out.put("products", rows);
-        out.put("stats", jdbc.queryForMap("""
+        // Stats use the same WHERE as the list (productive when severity/type filters apply).
+        out.put("stats", jdbc.queryForMap(("""
                 select count(*) as total,
-                       count(*) filter (where severity='MAJOR_WARNING') as major,
-                       count(*) filter (where severity='WARNING') as warning,
-                       count(*) filter (where severity='ADVISORY') as advisory,
-                       count(*) filter (where issue_date = current_date) as today
-                from public.ew_generated_products
-                """));
+                       count(*) filter (where p.severity='MAJOR_WARNING') as major,
+                       count(*) filter (where p.severity='WARNING') as warning,
+                       count(*) filter (where p.severity='ADVISORY') as advisory,
+                       count(*) filter (where p.issue_date = current_date) as today
+                from public.ew_generated_products p
+                where %s
+                """).formatted(where), args.toArray()));
         return out;
     }
 
     /** One product with its full envelope (areas+levels+delineations) — for the map detail / build-on. */
-    @GetMapping("/{id}")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    public Map<String, Object> show(long id) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select * from public.ew_generated_products where id = ?", id);
         if (rows.isEmpty()) {
@@ -406,22 +392,6 @@ public class EwProductController {
         return b.length >= 5 && b[0] == 0x25 && b[1] == 0x50 && b[2] == 0x44 && b[3] == 0x46 && b[4] == 0x2D;
     }
 
-    /** The acting user's id for upload/publish attribution (null when unresolved — both columns are nullable). */
-    private Long currentUserId() {
-        try {
-            String name = tz.go.pmo.dmis.common.security.SecurityUtils.currentUserName();
-            if (name != null && !name.isBlank() && !name.equalsIgnoreCase("System")) {
-                List<Long> ids = jdbc.queryForList(
-                        "select id from public.users where email = ? or name = ? limit 1", Long.class, name, name);
-                if (!ids.isEmpty()) {
-                    return ids.get(0);
-                }
-            }
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
     private static String jsonOrNull(Object v) throws Exception { return v == null ? null : JSON.writeValueAsString(v); }
     private static String str(Object v) {
         if (v == null) { return null; }
@@ -469,7 +439,7 @@ public class EwProductController {
     @SuppressWarnings("unchecked")
     private static Map<String, double[]> loadRegionCentroids() {
         Map<String, double[]> out = new java.util.HashMap<>();
-        try (var in = EwProductController.class.getResourceAsStream("/ew/region_centroids.json")) {
+        try (var in = EwProductsServiceImpl.class.getResourceAsStream("/ew/region_centroids.json")) {
             if (in == null) { return out; }
             Map<String, Map<String, Object>> raw = JSON.readValue(in, Map.class);
             for (Map.Entry<String, Map<String, Object>> e : raw.entrySet()) {

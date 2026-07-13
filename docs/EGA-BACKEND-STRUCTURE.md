@@ -182,7 +182,8 @@ Suggested migration order:
 36. Response fat controllers complete; transitional support services remain  
 37. ~~**EW Boundary (monitoring reports)**~~ — **DONE** (first EW eGA leaf; productive filters)  
 38. ~~**EW Warnings registry (index)**~~ — **DONE** (read; area isolation productive; no fake query filters)  
-39. Remaining EW (lifecycle, products, agency, bulletin ingest, scanner) then other modules  
+39. ~~**EW Products (bulletins)**~~ — **DONE** (severity/type filters + aligned stats; disseminate retained)  
+40. Remaining EW (lifecycle, agency, bulletin ingest, scanner) then other modules  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -227,8 +228,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Command Center | Done | `/v1/response/coordination` | Thin controller + service.impl; ActivationService retained; coexists with scenarios; SA board/readiness/AAR; area OOA **404**; bad posture/forecast **422** net-zero; Partner **403** |
 | EW Boundary | Done | `/ew/monitoring/reports` | Thin controller + service.impl; `bulletin_number`/`warning_code` productive (blank=unfiltered, nonsense=0); store requires `focal_point_name`; create drill net-zero; Partner **403** |
 | EW Warnings index | Done | `GET /v1/ew/warnings` | Thin controller + service.impl; JSON DTO unchanged; **no unused query params** (isolation via JurisdictionScope); SA **17** vs Dist/Reg **5** Dodoma-only; stats.total = list length; Partner **403** |
+| EW Products | Done | `/v1/ew/products` | Thin controller + service.impl; `severity`/`type` productive; **stats use same WHERE as list**; show **404**; missing PDF **400**; publish missing **404**; Partner **403** |
 
-38. ~~**EW Warnings index**~~ — **DONE**; remaining EW: lifecycle, products, agency, bulletin, scanner
+39. ~~**EW Products**~~ — **DONE**; remaining EW: lifecycle, agency, bulletin ingest, scanner
 
 ---
 

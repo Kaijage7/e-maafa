@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 37 thin eGA controllers, 37 service + 37 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 38 thin eGA controllers, 38 service + 38 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
 | Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
 | Response remaining | **Support hubs only** | Transitional services in `response/` |
-| EW | **In progress** | **Boundary** + **Warnings index** done; remaining: lifecycle, products, agency, bulletin ingest, scanner |
+| EW | **In progress** | Boundary + Warnings index + **Products** done; remaining: lifecycle, agency, bulletin ingest, scanner |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**EW Warnings index**~~ **DONE** | Next EW: bulletin ingest or products — lifecycle later (shared path + writes) |
+| Next eGA leaf (binding order) | ~~**EW Products**~~ **DONE** | Next EW: agency reads or bulletin ingest — lifecycle later |
 
-**Honest score:** Master data + Response controllers + two EW leaves eGA-shaped. Residual: EW write/lifecycle controllers + Response support services.
+**Honest score:** Master data + Response + three EW leaves eGA-shaped. Residual: EW lifecycle/agency/bulletin/scanner + Response support services.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -49,6 +49,7 @@
 | Command Center | SA index/warnings/board/readiness/AAR match; scenarios coexists **200**; Dist/Reg board OOA **404**; Dist warnings **403**; bad posture/forecast **422** net-zero; Partner **403** |
 | EW Boundary | GET reports **200**; blank filters = full list; `warning_code` scopes; nonsense = **0**; AND filters productive; empty store **422** (`focal_point_name`); create+filter+delete net-zero; Partner **403**; DAS create **403** |
 | EW Warnings index | SA **17** / Dist+Reg **5**; stats.total = list size; Dist hazard regions **Dodoma only**; Partner **403**; unauth **401**; no fake query filters (unknown query ignored, full national for SA) |
+| EW Products | `severity`/`type` filters exact; nonsense = **0** list+stats; filtered stats.total = list n; show **404**; missing PDF **400**; Partner **403** |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -92,6 +93,7 @@
 - ~~Command Center eGA extract~~ — **DONE** (ActivationService + AnticipatoryPlansService retained; coexists with scenarios; multi-persona baseline; no posture mutation in verify).
 - ~~EW Boundary eGA extract~~ — **DONE** (JdbcTemplate + CurrentUserResolver; productive bulletin/warning filters; store validation; create drill net-zero).
 - ~~EW Warnings index eGA extract~~ — **DONE** (EwWarningsServiceImpl; repos public/split; JurisdictionScope isolation verified; no invented filters).
+- ~~EW Products eGA extract~~ — **DONE** (filters severity/type; stats aligned to filter; CurrentUserResolver; Mgov/Mail/Audience retained).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
