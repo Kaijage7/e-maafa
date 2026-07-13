@@ -455,8 +455,8 @@ public class DispatchController {
     /** All allocations carrying a procurement journal entry, flattened for the queue. */
     @GetMapping("/procurement-requests")
     public Map<String, Object> procurementRequests() {
-        List<Map<String, Object>> requests = new ArrayList<>();
-        for (Map<String, Object> a : jdbc.queryForList("""
+        // Same incident-area wall as the dispatch board — Dist must not see Dar procurement rows.
+        StringBuilder sql = new StringBuilder("""
                 select ar.id, ar.source_details, ar.status, ar.unit_of_measure, i.title as incident_title,
                        r.name as resource_name, u.name as requested_by_name
                 from public.allocated_resources ar
@@ -464,8 +464,12 @@ public class DispatchController {
                 join public.resources r on r.id = ar.resource_id
                 left join public.users u on u.id = ar.requested_by
                 where ar.source_details is not null and ar.source_details::text like '%procurement%'
-                order by ar.updated_at desc limit 200
-                """)) {
+                """);
+        List<Object> params = new ArrayList<>();
+        jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
+        sql.append(" order by ar.updated_at desc limit 200");
+        List<Map<String, Object>> requests = new ArrayList<>();
+        for (Map<String, Object> a : jdbc.queryForList(sql.toString(), params.toArray())) {
             for (Map<String, Object> d : journal(a.get("source_details"))) {
                 if ("procurement".equals(d.get("source_type"))) {
                     Map<String, Object> row = new LinkedHashMap<>(d);
@@ -512,6 +516,12 @@ public class DispatchController {
         long destinationId = lng(body.get("warehouse_id") != null ? body.get("warehouse_id")
                 : body.get("temporary_warehouse_id"), "warehouse_id");
         Map<String, Object> allocation = findOr404(allocationId);
+        // Destination must be visible under the caller's warehouse matrix (picker is scoped; body is not trusted).
+        if ("warehouse".equals(destinationType)) {
+            areaGuard.assertWarehouseVisible("public.warehouses", destinationId);
+        } else {
+            areaGuard.assertWarehouseVisible("public.temporary_warehouses", destinationId);
+        }
         long resourceId = ((Number) allocation.get("resource_id")).longValue();
         String destinationName = sourceName(destinationType, destinationId);
 

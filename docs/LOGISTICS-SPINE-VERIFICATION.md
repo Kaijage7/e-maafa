@@ -88,10 +88,26 @@ INCIDENT (approved or Active Response)
 
 **Code:** `appendAreaScopeSharedOrOwn` on agency list; `assertOwnOrShared` on agency dispatch body; `assertNotDispatchRequester` on approve/reject.
 
+## Procurement channel (careful follow-up)
+
+| Step | Result |
+|------|--------|
+| Submit procurement (Reg DC, alloc **61**) | **200** → status **Sourcing** |
+| Approve (EOCC) | **200** → journal **Procurement Approved** |
+| Deliver → WH1 | **200**; stock intake + movement; journal **Delivered** |
+| Dist track foreign | **404** |
+| Procurement queue Dist | **0** rows (was leaking Dar) |
+| Procurement queue Reg | sees own-area only (alloc **61**) |
+| Deliver to Arusha WH4 body | **404** `assertWarehouseVisible` |
+| Deliver to WH11 in-area | **200** |
+
+**Code:** `procurement-requests` uses `appendAreaScopeWithCouncil`; deliver re-checks destination warehouse visibility.
+
 ## Remaining honest limits
 
 - Dual catalogue surfaces remain (`/v1/settings/resources` eGA + response settings) — both productive.  
-- Live agency stock corpus is small and mostly **untagged** (NULL area → national shared until operators stamp region/district).
+- Live agency stock corpus is small and mostly **untagged** (NULL area → national shared until operators stamp region/district).  
+- Support pledges list is a **national PMO review queue** for any staff with `resource_allocation.view` (not area-scoped by training/measure geography).
 
 ## Seats used (proof matrix)
 
