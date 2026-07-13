@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,23 +8,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.notification.NotificationService;
+import tz.go.pmo.dmis.response.DispatchSupportService;
+import tz.go.pmo.dmis.response.SimulationGuard;
+import tz.go.pmo.dmis.service.DispatchService;
 
 /**
- * Port of Admin\ResourceDispatchController (2,662 lines) — the dispatch console:
+ * Port of Admin\ResourceDispatchController — the dispatch console:
  * fully-approved allocations grouped per incident, the source picker, the
  * warehouse-manager dispatch-approval gate, and the procurement chain.
  *
@@ -42,29 +39,30 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  *
  * source_details is the allocation's append-only JSON fulfilment journal —
  * same shape as the Laravel array so existing production rows render as-is.
+ * <p>Logic lives in service.impl (eGA); paths/JSON unchanged. Acting user via
+ * {@link CurrentUserResolver}; stock via transitional {@link DispatchSupportService}.
  */
-@RestController
-@RequestMapping("/v1/response/dispatch")
-public class DispatchController {
+@Service
+public class DispatchServiceImpl implements DispatchService {
 
-    /** Allocation statuses that may appear on the dispatch board (source's $statuses). */
     private static final List<String> BOARD_STATUSES =
             List.of("Approved", "Sourcing", "Requested to Stakeholders", "Awaiting Dispatch Approval");
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final TypeReference<List<Map<String, Object>>> JOURNAL = new TypeReference<>() {};
 
+
     private final JdbcTemplate jdbc;
     private final DispatchSupportService sources;
-    private final IncidentWorkflowService users;
-    private final tz.go.pmo.dmis.notification.NotificationService notifications; // the ONE dispatcher
+    private final CurrentUserResolver users;
+    private final NotificationService notifications;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
-    private final SimulationGuard simulationGuard; // table-top drills never move real stock
+    private final SimulationGuard simulationGuard;
 
-    public DispatchController(JdbcTemplate jdbc, DispatchSupportService sources, IncidentWorkflowService users,
-                              tz.go.pmo.dmis.notification.NotificationService notifications, JurisdictionScope jurisdiction,
-                              AreaGuard areaGuard, SimulationGuard simulationGuard) {
+    public DispatchServiceImpl(JdbcTemplate jdbc, DispatchSupportService sources, CurrentUserResolver users,
+                               NotificationService notifications, JurisdictionScope jurisdiction,
+                               AreaGuard areaGuard, SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.sources = sources;
         this.users = users;
@@ -77,8 +75,8 @@ public class DispatchController {
     // ─── Dashboard ───
 
     /** Dispatch board: allocations grouped by incident, same-resource rows aggregated. */
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) Long incident_id) {
+    @Override
+    public Map<String, Object> index(Long incident_id) {
         List<Object> params = new ArrayList<>(BOARD_STATUSES);
         String incidentFilter = "";
         if (incident_id != null) {
@@ -184,8 +182,8 @@ public class DispatchController {
     }
 
     /** Source picker payload for one allocation (AJAX getAvailableSources + form context). */
-    @GetMapping("/allocations/{id}/sources")
-    public Map<String, Object> sourcesFor(@PathVariable long id) {
+    @Override
+    public Map<String, Object> sourcesFor(long id) {
         Map<String, Object> allocation = findOr404(id);
         List<Map<String, Object>> journal = journal(allocation.get("source_details"));
         double dispatched = journal.stream().mapToDouble(d -> dbl(d.get("quantity_dispatched"))).sum();
@@ -220,10 +218,9 @@ public class DispatchController {
      * Dispatch from a stocked source. Warehouse-backed sources go through the
      * manager gate (no stock moves yet); agency stock dispatches immediately.
      */
-    @PostMapping("/allocations/{id}/dispatch")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> dispatch(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> dispatch(long id, Map<String, Object> body) {
         // Drill isolation (defence-in-depth): even a legacy table-top drill allocation cannot move real stock.
         simulationGuard.assertAllocationNotSimulation(id, "dispatching real stock");
         String sourceType = require(str(body.get("source_type")), "source_type");
@@ -309,7 +306,7 @@ public class DispatchController {
 
     // ─── Dispatch approvals (the warehouse manager's queue) ───
 
-    @GetMapping("/approvals")
+    @Override
     public Map<String, Object> approvals() {
         // Same incident-area wall as the dispatch board — district/region officers must not see
         // foreign-area warehouse dispatch gates (or act on them via the list UI).
@@ -358,10 +355,9 @@ public class DispatchController {
      * to 'Dispatch Approved'. Guarded by a row lock so a double-submit cannot
      * deduct twice (the source's lockForUpdate + isPending check).
      */
-    @PostMapping("/approvals/{id}/approve")
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> approveDispatch(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> approveDispatch(long id, Map<String, Object> body) {
         Map<String, Object> approval = lockApproval(id);
         if (!"Pending".equals(approval.get("status"))) {
             throw new BusinessRuleException("This dispatch request has already been processed.");
@@ -403,10 +399,9 @@ public class DispatchController {
     }
 
     /** Manager rejects: nothing moves; allocation returns to 'Approved' for another source. */
-    @PostMapping("/approvals/{id}/reject")
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> rejectDispatch(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> rejectDispatch(long id, Map<String, Object> body) {
         String reason = str(body.get("reason"));
         if (reason == null || reason.length() < 10) {
             throw new BusinessRuleException("The rejection reason must be at least 10 characters.");
@@ -432,10 +427,9 @@ public class DispatchController {
     // ─── Procurement chain ───
 
     /** Submit an allocation to procurement; tracked inside source_details. */
-    @PostMapping("/allocations/{id}/procurement")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> submitProcurement(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> submitProcurement(long id, Map<String, Object> body) {
         double quantity = positive(body.get("quantity"));
         String urgency = urgencyOrDefault(body.get("urgency"));
         Map<String, Object> allocation = findOr404(id);
@@ -458,7 +452,7 @@ public class DispatchController {
     }
 
     /** All allocations carrying a procurement journal entry, flattened for the queue. */
-    @GetMapping("/procurement-requests")
+    @Override
     public Map<String, Object> procurementRequests() {
         // Same incident-area wall as the dispatch board — Dist must not see Dar procurement rows.
         StringBuilder sql = new StringBuilder("""
@@ -491,11 +485,10 @@ public class DispatchController {
         return Map.of("requests", requests);
     }
 
-    @PostMapping("/procurement/{allocationId}/approve")
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> approveProcurement(@PathVariable long allocationId,
-                                                  @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> approveProcurement(long allocationId,
+                                                  Map<String, Object> body) {
         mutateProcurement(allocationId, d -> {
             d.put("status", "Procurement Approved");
             d.put("approved_by", users.actingUserId());
@@ -509,10 +502,9 @@ public class DispatchController {
      * Record a (possibly partial) procurement delivery: track totals on the journal
      * entry and intake the received quantity into the destination warehouse.
      */
-    @PostMapping("/procurement/{allocationId}/deliver")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> deliverProcurement(@PathVariable long allocationId, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> deliverProcurement(long allocationId, Map<String, Object> body) {
         String destinationType = require(str(body.get("destination_type")), "destination_type");
         if (!List.of("warehouse", "temporary_warehouse").contains(destinationType)) {
             throw new BusinessRuleException("The selected destination type is invalid.");
@@ -582,10 +574,9 @@ public class DispatchController {
                 : "Partial delivery recorded: %s units. Total: %s/%s. Stock added to %s.".formatted(fmt(delivered), fmt(totals[1]), fmt(totals[0]), destinationName));
     }
 
-    @PostMapping("/procurement/{allocationId}/cancel")
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> cancelProcurement(@PathVariable long allocationId, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> cancelProcurement(long allocationId, Map<String, Object> body) {
         String reason = str(body.get("reason"));
         if (reason == null || reason.length() < 10) {
             throw new BusinessRuleException("The cancellation reason must be at least 10 characters.");
@@ -600,8 +591,8 @@ public class DispatchController {
     }
 
     /** Procurement tracking payload: the journal entry + destinations for the deliver form. */
-    @GetMapping("/procurement/{allocationId}/track")
-    public Map<String, Object> trackProcurement(@PathVariable long allocationId) {
+    @Override
+    public Map<String, Object> trackProcurement(long allocationId) {
         findOr404(allocationId); // same 404 guard as the regression-sweep fixes
         Map<String, Object> allocation = jdbc.queryForMap("""
                 select ar.*, i.title as incident_title, r.name as resource_name
@@ -631,10 +622,9 @@ public class DispatchController {
 
     // ─── Agency request (national channel; journal entry, no immediate stock move) ───
 
-    @PostMapping("/allocations/{id}/agency-request")
-    @PreAuthorize("hasAuthority('resource_allocation.request')")
+    @Override
     @Transactional
-    public Map<String, Object> submitAgencyRequest(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> submitAgencyRequest(long id, Map<String, Object> body) {
         long agencyResourceId = lng(body.get("agency_resource_id"), "agency_resource_id");
         double quantity = positive(body.get("quantity"));
         Map<String, Object> allocation = findOr404(id);

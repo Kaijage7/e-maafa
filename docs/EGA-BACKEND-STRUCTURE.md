@@ -175,7 +175,8 @@ Suggested migration order:
 29. ~~**Resource Approvals**~~ — **DONE** (queues + actions; ApprovalWorkflowEngine retained)  
 30. ~~**Resource Allocations**~~ — **DONE** (request queues + store/lifecycle; engine + DispatchSupportService retained)  
 31. ~~**Warehouse Ops**~~ — **DONE** (stock ledger ops; DispatchSupportService + SimulationGuard retained)  
-32. Response remaining (dispatch/bidding/hubs last) then EW  
+32. ~~**Dispatch**~~ — **DONE** (board + sources + dispatch gate + procurement; DispatchSupportService retained)  
+33. Response remaining (bidding/hubs last) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 

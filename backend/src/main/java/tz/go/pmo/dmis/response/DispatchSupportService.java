@@ -29,7 +29,8 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
 public class DispatchSupportService {
 
     /** Dispatch source types that need a source-manager approval before stock moves. */
-    static final List<String> APPROVAL_REQUIRED_SOURCES = List.of("warehouse", "temporary_warehouse");
+    /** Public for eGA service.impl (dispatch layer). */
+    public static final List<String> APPROVAL_REQUIRED_SOURCES = List.of("warehouse", "temporary_warehouse");
 
     /** Warehouse operational statuses (lowercased) that may serve as dispatch sources. */
     private static final List<String> WAREHOUSE_AVAILABLE_STATUSES = List.of("operational", "full", "standby");
