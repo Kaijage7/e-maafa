@@ -21,6 +21,7 @@ import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.service.AnticipatoryPlansService;
 
 /**
  * Port of Response\CoordinationController — the Command Center: disaster
@@ -69,12 +70,12 @@ public class CommandCenterController {
     private final JdbcTemplate jdbc;
     private final ActivationService activations;
     private final IncidentWorkflowService users;
-    private final AnticipatoryPlanController plans;
+    private final AnticipatoryPlansService plans;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
 
     public CommandCenterController(JdbcTemplate jdbc, ActivationService activations,
-                                   IncidentWorkflowService users, AnticipatoryPlanController plans,
+                                   IncidentWorkflowService users, AnticipatoryPlansService plans,
                                    JurisdictionScope jurisdiction, AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.activations = activations;

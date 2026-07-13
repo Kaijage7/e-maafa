@@ -250,7 +250,8 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R5 | Public reports | `/v1/response/public-reports` | ~278 | **Java type** → `IncidentWorkflowService` (helpers made public for eGA service.impl) | **DONE** |
 | R6 | Declarations | `/v1/response/declarations` | ~294 | Executive/activation SQL consumers (SQL-only; controller eGA) | **DONE** |
 | R7 | Resource approvals | `/v1/response/approvals` | ~285 | **ApprovalWorkflowEngine** + warehouses | pending |
-| R8+ | Tasks, assessments, anticipatory, communication, settings, warehouse-ops, dispatch, allocations, bidding, DLNA, incidents, command center | various | large | High SQL + engine + shared bases — last | pending |
+| R8 | Anticipatory plans | `/v1/response/anticipatory-plans` | ~372 | Area scope; `matchingPlans` consumed by CommandCenter (now via service) | **DONE** |
+| R8+ | Tasks, assessments, communication, settings, warehouse-ops, dispatch, allocations, bidding, DLNA, incidents, command center | various | large | High SQL + engine + shared bases — last | pending |
 
 ### 10.5 Do **not** start with
 

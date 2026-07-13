@@ -163,7 +163,8 @@ Suggested migration order:
 17. ~~**Contingency Plans (Response R4 / map R3)**~~ — **DONE** (lifecycle; thin controller + service.impl; no workflow coupling)  
 18. ~~**Support Pledges (map R4)**~~ — **DONE** (needs + pledge + accept/decline; NotificationService retained)  
 19. ~~**Declarations (map R6)**~~ — **DONE** (statutory s.32/s.33 chain; thin controller + service.impl)  
-20. Response remaining (never engine/dispatch/allocation first) then EW  
+20. ~~**Anticipatory Plans**~~ — **DONE** (area scope; matchingPlans on service for Command Post)  
+21. Response remaining (never engine/dispatch/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -190,8 +191,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Contingency Plans (map R3) | Done | `/v1/response/contingency-plans` | Thin controller + service.impl; filters productive; lifecycle create→submit→reject→approve→archive; perm walls (Dist **403**); show 404; drill net-zero |
 | Support Pledges (map R4) | Done | `/v1/response/support` | Thin controller + service.impl; needs/pledges; staff-on-behalf + donor scope; accept funds training/measure; decline; validation **422**; Dist accept **403**; drills net-zero |
 | Declarations (map R6) | Done | `/v1/response/declarations` | Thin controller + service.impl; propose→review→endorse→declare→extend→revoke; Dist/Reg **403**; stage **422**; SA break-glass declare; drill net-zero |
+| Anticipatory Plans | Done | `/v1/response/anticipatory-plans` | Thin controller + service.impl; area scope + OOA show **404**; Reg OOA create **422**; lifecycle drill net-zero; CommandCenter uses `AnticipatoryPlansService.matchingPlans` |
 
-19. ~~**Declarations**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
+20. ~~**Anticipatory Plans**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
 
 ---
 

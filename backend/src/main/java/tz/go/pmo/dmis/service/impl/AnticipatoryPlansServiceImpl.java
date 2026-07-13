@@ -1,58 +1,39 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.service.AnticipatoryPlansService;
 
 /**
- * Port of Admin\AnticipatoryActionPlanController — the per-area preparedness plans that
- * the Disaster Management Act 2022 and NDPRP 2022 require be activated for forecast-impact
- * areas BEFORE a disaster ("preparedness plans activated as per specific areas forecasted
- * to have impact"). Full CRUD + the source's approve/reject (gated on status='pending').
- *
- * The {@code matching} endpoint is the Command Post link: given a hazard and a set of
- * forecast-impact areas, return the active plans whose hazard and council/coverage match —
- * this is what the anticipatory-activation readiness panel renders.
+ * Anticipatory action plan registry and lifecycle. Logic moved from the former response package
+ * controller; Angular paths/JSON unchanged. Area scope via {@link JurisdictionScope};
+ * acting user via {@link CurrentUserResolver}. {@link #matchingPlans} remains the Command Post
+ * readiness matcher.
  */
-@RestController
-@RequestMapping("/v1/response/anticipatory-plans")
-public class AnticipatoryPlanController {
+@Service
+@RequiredArgsConstructor
+public class AnticipatoryPlansServiceImpl implements AnticipatoryPlansService {
 
-    private static final List<String> STATUSES = List.of("draft", "pending", "active", "archived");
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final JdbcTemplate jdbc;
-    private final IncidentWorkflowService users;
+    private final CurrentUserResolver users;
     private final JurisdictionScope jurisdiction;
 
-    public AnticipatoryPlanController(JdbcTemplate jdbc, IncidentWorkflowService users,
-                                      JurisdictionScope jurisdiction) {
-        this.jdbc = jdbc;
-        this.users = users;
-        this.jurisdiction = jurisdiction;
-    }
-
     /**
-     * Resolve the plan's area from the councils registry (district_council -> region_id/district_id) and
-     * enforce the caller's jurisdiction: a region/district officer may only create or edit a plan in their
-     * own area; an unresolved council binds to the area officer's own area; national binds whatever the
-     * council resolves to (possibly NULL = shared). Returns {regionId, districtId}, either may be null.
+     * Resolve the plan's area from the councils registry and enforce the caller's jurisdiction.
+     * Returns {regionId, districtId}, either may be null.
      */
     private Long[] resolveAndAssertArea(String council) {
         Long regionId = null;
@@ -88,11 +69,9 @@ public class AnticipatoryPlanController {
         return v instanceof Number n ? n.longValue() : null;
     }
 
-    @GetMapping
-    @PreAuthorize("hasAuthority('anticipatory_action_plans.view')")
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false) String hazard,
-                                     @RequestParam(required = false) String search) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> index(String status, String hazard, String search) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
         if (status != null && !status.isBlank()) {
@@ -138,16 +117,15 @@ public class AnticipatoryPlanController {
         return out;
     }
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('anticipatory_action_plans.view')")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> show(long id) {
         return Map.of("plan", findOr404(id));
     }
 
-    @PreAuthorize("hasAuthority('anticipatory_action_plans.create')")
-    @PostMapping
+    @Override
     @Transactional
-    public Map<String, Object> store(@RequestBody Map<String, Object> body) throws Exception {
+    public Map<String, Object> store(Map<String, Object> body) throws Exception {
         String hazard = require(body.get("hazard_type"), "hazard_type");
         String council = require(body.get("district_council"), "district_council");
         Long[] area = resolveAndAssertArea(council);   // bind region/district + enforce caller jurisdiction
@@ -169,10 +147,9 @@ public class AnticipatoryPlanController {
         return Map.of("success", true, "id", id, "message", "Anticipatory action plan created.");
     }
 
-    @PreAuthorize("hasAuthority('anticipatory_action_plans.create')")
-    @PostMapping("/{id}")
+    @Override
     @Transactional
-    public Map<String, Object> update(@PathVariable long id, @RequestBody Map<String, Object> body) throws Exception {
+    public Map<String, Object> update(long id, Map<String, Object> body) throws Exception {
         findOr404(id);
         String hazard = require(body.get("hazard_type"), "hazard_type");
         String council = require(body.get("district_council"), "district_council");
@@ -195,11 +172,9 @@ public class AnticipatoryPlanController {
         return Map.of("success", true, "message", "Anticipatory action plan updated.");
     }
 
-    /** Submit a draft plan for approval. */
-    @PreAuthorize("hasAuthority('anticipatory_action_plans.create')")
-    @PostMapping("/{id}/submit")
+    @Override
     @Transactional
-    public Map<String, Object> submit(@PathVariable long id) {
+    public Map<String, Object> submit(long id) {
         Map<String, Object> plan = findOr404(id);
         if (!"draft".equals(plan.get("status"))) {
             throw new BusinessRuleException("Only draft plans can be submitted for approval.");
@@ -208,11 +183,9 @@ public class AnticipatoryPlanController {
         return Map.of("success", true, "message", "Plan submitted for approval.");
     }
 
-    /** Approve a pending plan — it becomes active and available to anticipatory activations. */
-    @PreAuthorize("hasAuthority('anticipatory_action_plans.approve')")
-    @PostMapping("/{id}/approve")
+    @Override
     @Transactional
-    public Map<String, Object> approve(@PathVariable long id) {
+    public Map<String, Object> approve(long id) {
         Map<String, Object> plan = findOr404(id);
         if (!"pending".equals(plan.get("status"))) {
             throw new BusinessRuleException("Only pending plans can be approved.");
@@ -224,10 +197,9 @@ public class AnticipatoryPlanController {
         return Map.of("success", true, "message", "Plan approved and now active.");
     }
 
-    @PreAuthorize("hasAuthority('anticipatory_action_plans.approve')")
-    @PostMapping("/{id}/reject")
+    @Override
     @Transactional
-    public Map<String, Object> reject(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> reject(long id, Map<String, Object> body) {
         Map<String, Object> plan = findOr404(id);
         if (!"pending".equals(plan.get("status"))) {
             throw new BusinessRuleException("Only pending plans can be rejected.");
@@ -237,21 +209,17 @@ public class AnticipatoryPlanController {
                 + (body != null && body.get("reason") != null ? ": " + body.get("reason") : "."));
     }
 
-    @PreAuthorize("hasAuthority('anticipatory_action_plans.approve')")
-    @PostMapping("/{id}/archive")
+    @Override
     @Transactional
-    public Map<String, Object> archive(@PathVariable long id) {
+    public Map<String, Object> archive(long id) {
         findOr404(id);
         jdbc.update("update public.anticipatory_action_plans set status = 'archived', updated_at = now() where id = ?", id);
         return Map.of("success", true, "message", "Plan archived.");
     }
 
-    /**
-     * Reusable matcher: active plans matching a hazard and any of the forecast-impact areas (matched on
-     * hazard keyword — cyclone forecast → 'Cyclone'/'Floods' plans — and council/coverage text containing
-     * any area name). Called directly by the Command Post readiness endpoint (no standalone HTTP route).
-     */
-    List<Map<String, Object>> matchingPlans(String hazard, List<String> areas) {
+    @Override
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> matchingPlans(String hazard, List<String> areas) {
         // Pull the hazard keyword(s): a cyclone forecast also activates flood plans.
         List<String> hazardKeys = new ArrayList<>();
         String h = hazard == null ? "" : hazard.toLowerCase();
@@ -325,8 +293,6 @@ public class AnticipatoryPlanController {
             row.put(key, List.of());
         }
     }
-
-    // ── helpers ──
 
     private Map<String, Object> findOr404(long id) {
         StringBuilder where = new StringBuilder("id = ?");
