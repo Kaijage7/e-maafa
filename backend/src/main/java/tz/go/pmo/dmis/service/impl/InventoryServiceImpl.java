@@ -11,8 +11,9 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,7 @@ public class InventoryServiceImpl implements InventoryService {
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
     private final CurrentUserResolver currentUser;
+    private final AreaGuard areaGuard;
 
     /**
      * Warehouse ids the caller may see — own area + NULL-area national/shared stores. Returns {@code null}
@@ -124,6 +126,8 @@ public class InventoryServiceImpl implements InventoryService {
         if (req.quantity() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity cannot be negative");
         }
+        // Area officers may only stock warehouses in their jurisdiction (404 if out of area).
+        areaGuard.assertWarehouseVisible("public.warehouses", req.warehouseId());
         Long id = jdbc.queryForObject(
                 "insert into public.inventory_items(resource_id,warehouse_id,item_name,category,quantity,"
                         + "minimum_threshold,batch_number,expiry_date,status,warehouse_type,created_at,updated_at) "
@@ -145,6 +149,9 @@ public class InventoryServiceImpl implements InventoryService {
     public Map<String, Object> detail(long id) {
         InventoryItem i = items.findById(id).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found"));
+        if (i.getWarehouseId() != null) {
+            areaGuard.assertWarehouseVisible("public.warehouses", i.getWarehouseId());
+        }
         Map<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("id", i.getId());
         m.put("resourceId", i.getResourceId());
@@ -181,6 +188,11 @@ public class InventoryServiceImpl implements InventoryService {
         Map<String, Object> existing = existingRows.get(0);
         Long oldResourceId = longOrNull(existing.get("resource_id"));
         Long oldWarehouseId = longOrNull(existing.get("warehouse_id"));
+        // Existing line + target warehouse must both be visible (no move stock into foreign stores).
+        if (oldWarehouseId != null) {
+            areaGuard.assertWarehouseVisible("public.warehouses", oldWarehouseId);
+        }
+        areaGuard.assertWarehouseVisible("public.warehouses", req.warehouseId());
         int oldQuantity = intOrZero(existing.get("quantity"));
         boolean resourceChanged = oldResourceId == null || !oldResourceId.equals(req.resourceId());
         if (resourceChanged && oldQuantity > 0) {

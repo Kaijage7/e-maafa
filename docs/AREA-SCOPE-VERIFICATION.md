@@ -37,6 +37,19 @@
    own region or fully national). Dist DC Dodoma now **2** warehouses (was 10).  
 5. **Backfill** `users.region_id` from district when missing (V202).
 
+## Dispatch + inventory write re-check (careful pass)
+
+| Check | Dist DC Dodoma | National |
+|-------|----------------|----------|
+| Dispatch board `grouped` | empty | Dar incident board |
+| Dispatch incident picker | **no Dar #1** | includes Dar |
+| Dispatch stats / pending approvals | **0** (area-scoped) | live counts |
+| Dispatch sources on foreign alloc | **404** | ok |
+| Inventory create OOA warehouse | blocked (manage perm / area guard) | — |
+
+**Fixes:** Dispatch index picker + stats + findOr404 + pending approvals now join **incident area**.  
+Inventory create/update/detail call `assertWarehouseVisible`.
+
 ## Allocations re-check (careful pass)
 
 | Check | Dist DC Dodoma | Reg DC Dodoma | National |

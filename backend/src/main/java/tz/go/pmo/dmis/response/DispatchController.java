@@ -152,19 +152,31 @@ public class DispatchController {
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("grouped", board);
-        out.put("incidents", jdbc.queryForList("""
+        // Filter picker must use the same incident area scope as the board — never list foreign incidents.
+        StringBuilder isql = new StringBuilder("""
                 select distinct i.id, i.title from public.incidents i
                 join public.allocated_resources ar on ar.incident_id = i.id and ar.status in (?,?,?,?)
-                order by i.title limit 50
-                """, BOARD_STATUSES.toArray()));
+                where 1=1""");
+        List<Object> iparams = new ArrayList<>(BOARD_STATUSES);
+        jurisdiction.appendAreaScopeWithCouncil("i", isql, iparams);
+        isql.append(" order by i.title limit 50");
+        out.put("incidents", jdbc.queryForList(isql.toString(), iparams.toArray()));
         out.put("stats", Map.of(
-                "total_pending", count("status in ('Approved','Sourcing')"),
-                "awaiting_approval", count("status = 'Awaiting Dispatch Approval'"),
-                "in_transit", count("status = 'In Transit'"),
-                "deployed", count("status = 'Deployed'"),
-                "delivered", count("status = 'Delivered'")));
+                "total_pending", count("ar.status in ('Approved','Sourcing')"),
+                "awaiting_approval", count("ar.status = 'Awaiting Dispatch Approval'"),
+                "in_transit", count("ar.status = 'In Transit'"),
+                "deployed", count("ar.status = 'Deployed'"),
+                "delivered", count("ar.status = 'Delivered'")));
+        // Pending dispatch-manager gates only for allocations in the caller's area.
+        StringBuilder pendsql = new StringBuilder("""
+                select count(*) from public.dispatch_approvals da
+                join public.allocated_resources ar on ar.id = da.allocated_resource_id
+                join public.incidents i on i.id = ar.incident_id
+                where da.status = 'Pending' and da.deleted_at is null""");
+        List<Object> pendparams = new ArrayList<>();
+        jurisdiction.appendAreaScopeWithCouncil("i", pendsql, pendparams);
         out.put("pending_approval_count",
-                jdbc.queryForObject("select count(*) from public.dispatch_approvals where status = 'Pending' and deleted_at is null", Long.class));
+                jdbc.queryForObject(pendsql.toString(), Long.class, pendparams.toArray()));
         return out;
     }
 
@@ -557,9 +569,17 @@ public class DispatchController {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("allocation", allocation);
         out.put("procurement", procurement);
-        out.put("warehouses", jdbc.queryForList("select id, name from public.warehouses order by name"));
-        out.put("temporary_warehouses", jdbc.queryForList(
-                "select id, name, level from public.temporary_warehouses where is_active = true order by level, name"));
+        StringBuilder wh = new StringBuilder("select id, name from public.warehouses w where 1=1");
+        List<Object> whp = new ArrayList<>();
+        jurisdiction.appendWarehouseScope("w", wh, whp);
+        wh.append(" order by name");
+        out.put("warehouses", jdbc.queryForList(wh.toString(), whp.toArray()));
+        StringBuilder tw = new StringBuilder(
+                "select id, name, level from public.temporary_warehouses t where is_active = true");
+        List<Object> twp = new ArrayList<>();
+        jurisdiction.appendWarehouseScope("t", tw, twp);
+        tw.append(" order by level, name");
+        out.put("temporary_warehouses", jdbc.queryForList(tw.toString(), twp.toArray()));
         return out;
     }
 
@@ -724,15 +744,33 @@ public class DispatchController {
     }
 
     private Map<String, Object> findOr404(long id) {
-        List<Map<String, Object>> rows = jdbc.queryForList("select * from public.allocated_resources where id = ?", id);
+        // Same area wall as the board: out-of-area allocations 404 (no cross-region dispatch actions).
+        StringBuilder sql = new StringBuilder("""
+                select ar.* from public.allocated_resources ar
+                join public.incidents i on i.id = ar.incident_id
+                where ar.id = ?""");
+        List<Object> params = new ArrayList<>();
+        params.add(id);
+        jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
+        List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Allocation not found.");
         }
         return rows.get(0);
     }
 
+    /** Counts allocations in the caller's incident area only ({@code where} must use alias {@code ar.}). */
     private long count(String where) {
-        Long c = jdbc.queryForObject("select count(*) from public.allocated_resources where " + where, Long.class);
+        StringBuilder sql = new StringBuilder("""
+                select count(*) from public.allocated_resources ar
+                join public.incidents i on i.id = ar.incident_id
+                where 1=1""");
+        if (where != null && !where.isBlank()) {
+            sql.append(" and (").append(where).append(')');
+        }
+        List<Object> params = new ArrayList<>();
+        jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
+        Long c = jdbc.queryForObject(sql.toString(), Long.class, params.toArray());
         return c == null ? 0 : c;
     }
 
