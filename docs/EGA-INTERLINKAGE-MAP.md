@@ -236,7 +236,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | Base path | Controllers |
 |-----------|-------------|
 | `/v1/response/incidents` | `controller.IncidentController` (eGA) + `IncidentTimelineController` |
-| `/v1/response/coordination` | `CommandCenterController` (+ scenarios under `/coordination/scenarios`) |
+| `/v1/response/coordination` | `controller.CommandCenterController` (eGA) + scenarios under `/coordination/scenarios` |
 | `/v1/response` | `controller.DashboardController` (dashboard + eocc + activate; eGA) |
 
 ### 10.4 Recommended Response migration order (safest first)
@@ -264,7 +264,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R19 | Dispatch | `/v1/response/dispatch` | ~900 | DispatchSupportService + SimulationGuard + NotificationService; APPROVAL_REQUIRED_SOURCES public | **DONE** |
 | R20 | Stakeholder Bidding | `/v1/response/bidding` | ~1037 | DispatchSupportService + SimulationGuard + NotificationService; NDMF cash | **DONE** |
 | R21 | Incidents | `/v1/response/incidents` | ~1283 | IncidentWorkflowService retained; multipart; coexists with ops-timeline | **DONE** |
-| R8+ | Command center | `/v1/response/coordination` | ~1883 | Largest hub + shared path with scenarios — last | pending |
+| R22 | Command Center | `/v1/response/coordination` | ~1883 | ActivationService + AnticipatoryPlansService; coexists with scenarios | **DONE** |
 
 ### 10.5 Do **not** start with
 

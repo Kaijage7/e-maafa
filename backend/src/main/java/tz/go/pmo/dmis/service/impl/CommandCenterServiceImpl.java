@@ -1,42 +1,31 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.response.ActivationService;
 import tz.go.pmo.dmis.service.AnticipatoryPlansService;
+import tz.go.pmo.dmis.service.CommandCenterService;
 
 /**
- * Port of Response\CoordinationController — the Command Center: disaster
- * response activations coordinated as 15 NDPRP DRF lanes over incident_tasks,
- * with the 72-hour critical strip, challenges feed and a full activity
- * timeline. Live mode runs the real incident; Simulation mode (user
- * requirement, V29) runs a flagged drill clone through identical machinery.
- *
- * Task statuses use the unified vocabulary: To Do / In Progress /
- * On Hold / Completed / Cancelled — the source's coordination screens wrote
- * 'Pending' into the same column Task Management read as 'To Do'.
+ * Command Post / Coordination center: activations board, posture, readiness,
+ * operational periods, injects, AAR, DRF lanes, tasks, command roles.
+ * <p>Logic lives in service.impl (eGA); paths/JSON unchanged. Acting user via
+ * {@link CurrentUserResolver}; activate via transitional {@link ActivationService}.
+ * Shares base path with scenarios controller.
  */
-@RestController
-@RequestMapping("/v1/response/coordination")
-public class CommandCenterController {
+@Service
+public class CommandCenterServiceImpl implements CommandCenterService {
 
     private static final List<String> TASK_STATUSES = List.of("To Do", "In Progress", "On Hold", "Completed", "Cancelled");
     private static final List<String> PRIORITIES = List.of("Low", "Medium", "High", "Critical");
@@ -67,16 +56,17 @@ public class CommandCenterController {
             new com.fasterxml.jackson.databind.ObjectMapper();
     private static final TypeReference<List<Map<String, Object>>> JOURNAL = new TypeReference<>() {};
 
+
     private final JdbcTemplate jdbc;
     private final ActivationService activations;
-    private final IncidentWorkflowService users;
+    private final CurrentUserResolver users;
     private final AnticipatoryPlansService plans;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
 
-    public CommandCenterController(JdbcTemplate jdbc, ActivationService activations,
-                                   IncidentWorkflowService users, AnticipatoryPlansService plans,
-                                   JurisdictionScope jurisdiction, AreaGuard areaGuard) {
+    public CommandCenterServiceImpl(JdbcTemplate jdbc, ActivationService activations,
+                                    CurrentUserResolver users, AnticipatoryPlansService plans,
+                                    JurisdictionScope jurisdiction, AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.activations = activations;
         this.users = users;
@@ -87,7 +77,7 @@ public class CommandCenterController {
 
     // ─── Activations index ───
 
-    @GetMapping
+    @Override
     public Map<String, Object> index() {
         Map<String, Object> out = new LinkedHashMap<>();
         // LEFT JOIN incidents throughout — anticipatory (forecast) activations have no incident
@@ -112,7 +102,7 @@ public class CommandCenterController {
         jurisdiction.appendAreaScopeWithCouncil("i", activeSql, activeParams);
         activeSql.append(" order by ra.activated_at desc");
         out.put("active", jdbc.queryForList(activeSql.toString(), activeParams.toArray())
-                .stream().map(CommandCenterController::cleanActivationJson).toList());
+                .stream().map(CommandCenterServiceImpl::cleanActivationJson).toList());
         StringBuilder completedSql = new StringBuilder("""
                 select ra.*, coalesce(i.title, ra.hazard_description) as incident_title,
                        ew.warning_code, s.title as scenario_title, er.run_code, u.name as activated_by_name
@@ -127,7 +117,7 @@ public class CommandCenterController {
         jurisdiction.appendAreaScopeWithCouncil("i", completedSql, completedParams);
         completedSql.append(" order by ra.deactivated_at desc nulls last limit 10");
         out.put("completed", jdbc.queryForList(completedSql.toString(), completedParams.toArray())
-                .stream().map(CommandCenterController::cleanActivationJson).toList());
+                .stream().map(CommandCenterServiceImpl::cleanActivationJson).toList());
         // Approved incidents that have no activation yet (the source's awaiting list)
         StringBuilder awaitingSql = new StringBuilder("""
                 select i.id, i.title, i.severity_level, i.region_name, i.workflow_status
@@ -147,11 +137,10 @@ public class CommandCenterController {
     }
 
     /** Open an activation — mode 'live' or 'simulation' (drill clone, V29). */
-    @PreAuthorize("hasAuthority('command_post.activate')")
-    @PostMapping("/activate/{incidentId}")
+    @Override
     @Transactional
-    public Map<String, Object> activate(@PathVariable long incidentId,
-                                        @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> activate(long incidentId,
+                                        Map<String, Object> body) {
         // Only open a command post for an incident in the caller's own area (national sees all).
         areaGuard.assertOwn("public.incidents", incidentId);
         boolean simulation = body != null && "simulation".equals(body.get("mode"));
@@ -168,8 +157,7 @@ public class CommandCenterController {
     }
 
     /** Issued warnings eligible to open an anticipatory command post. */
-    @PreAuthorize("hasAuthority('command_post.activate')")
-    @GetMapping("/warnings")
+    @Override
     public Map<String, Object> issuedWarningsForActivation() {
         return Map.of("warnings", jdbc.queryForList("""
                 select w.id as warning_id, w.warning_code, w.status,
@@ -201,10 +189,9 @@ public class CommandCenterController {
      * preparedness plans activate for the forecast-impact areas, and every DRF
      * lane goes visibly ON CALL.
      */
-    @PreAuthorize("hasAuthority('command_post.activate')")
-    @PostMapping("/forecast")
+    @Override
     @Transactional
-    public Map<String, Object> activateFromForecast(@RequestBody Map<String, Object> body) throws Exception {
+    public Map<String, Object> activateFromForecast(Map<String, Object> body) throws Exception {
         Map<String, Object> warning = linkedWarning(body);
         Long warningId = warning == null ? null : ((Number) warning.get("warning_id")).longValue();
         String warningCode = warning == null ? null : str(warning.get("warning_code"));
@@ -263,10 +250,9 @@ public class CommandCenterController {
      * Walk the posture ladder (monitoring → emergency → disaster), per the
      * NDPRP escalation triggers. De-escalation is allowed (storm weakening).
      */
-    @PreAuthorize("hasAuthority('command_post.posture')")
-    @PostMapping("/{id}/posture")
+    @Override
     @Transactional
-    public Map<String, Object> changePosture(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> changePosture(long id, Map<String, Object> body) {
         Map<String, Object> activation = findOr404(id);
         assertMayManageForecast(activation);
         String posture = require(body.get("posture"), "posture");
@@ -286,10 +272,9 @@ public class CommandCenterController {
     }
 
     /** The forecast died or missed — stand the post down, journalling the reason. */
-    @PreAuthorize("hasAuthority('command_post.posture')")
-    @PostMapping("/{id}/cancel-forecast")
+    @Override
     @Transactional
-    public Map<String, Object> cancelForecast(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> cancelForecast(long id, Map<String, Object> body) {
         Map<String, Object> activation = findOr404(id);
         assertMayManageForecast(activation);
         if (!"forecast".equals(activation.get("trigger_type"))) {
@@ -310,10 +295,9 @@ public class CommandCenterController {
      * forecast activation becomes a disaster response — an incident is created
      * from the forecast details and linked, posture jumps to 'disaster'.
      */
-    @PreAuthorize("hasAuthority('command_post.posture')")
-    @PostMapping("/{id}/impact")
+    @Override
     @Transactional
-    public Map<String, Object> confirmImpact(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> confirmImpact(long id, Map<String, Object> body) {
         Map<String, Object> activation = findOr404(id);
         assertMayManageForecast(activation);
         if (activation.get("incident_id") != null) {
@@ -391,8 +375,8 @@ public class CommandCenterController {
     }
 
     /** Readiness picture for the affected areas: evacuation centres, stockpiles, agencies on call. */
-    @GetMapping("/{id}/readiness")
-    public Map<String, Object> readiness(@PathVariable long id) throws Exception {
+    @Override
+    public Map<String, Object> readiness(long id) throws Exception {
         Map<String, Object> activation = findOr404(id);
         List<String> areas = new ArrayList<>();
         if (activation.get("affected_areas") != null) {
@@ -459,8 +443,8 @@ public class CommandCenterController {
 
     // ─── Command board ───
 
-    @GetMapping("/{id}")
-    public Map<String, Object> board(@PathVariable long id) {
+    @Override
+    public Map<String, Object> board(long id) {
         Map<String, Object> activation = findOr404(id);
         Map<String, Object> out = new LinkedHashMap<>();
         // LEFT JOIN incidents: an anticipatory (forecast-triggered) activation has no
@@ -562,10 +546,9 @@ public class CommandCenterController {
      * Open a new operational period. Closes any currently open period (with optional handover notes
      * on that close via a separate close call — this method only opens the next numbered period).
      */
-    @PostMapping("/{id}/periods")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('command_post.posture')")
-    public Map<String, Object> openPeriod(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> openPeriod(long id, Map<String, Object> body) {
         findOr404(id);
         ensurePeriodTable();
         // Auto-close previous open period if any
@@ -594,11 +577,10 @@ public class CommandCenterController {
     }
 
     /** Close an open operational period with optional handover notes (feeds AAR). */
-    @PostMapping("/{id}/periods/{periodId}/close")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('command_post.posture')")
-    public Map<String, Object> closePeriod(@PathVariable long id, @PathVariable long periodId,
-                                           @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> closePeriod(long id, long periodId,
+                                           Map<String, Object> body) {
         findOr404(id);
         ensurePeriodTable();
         String notes = body == null ? null : str(body.get("handover_notes"));
@@ -622,10 +604,9 @@ public class CommandCenterController {
     // ─── Scenario injects (exercise director tools) ───
 
     /** Script an inject into the exercise: fires at due_at, or manually via /fire. */
-    @PostMapping("/{id}/injects")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('command_post.posture')")
-    public Map<String, Object> addInject(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> addInject(long id, Map<String, Object> body) {
         findOr404(id);
         String title = require(body.get("title"), "title");
         String type = body.get("inject_type") == null ? "event" : String.valueOf(body.get("inject_type"));
@@ -643,10 +624,9 @@ public class CommandCenterController {
     }
 
     /** Fire an inject NOW (exercise director pushes the event onto the board). */
-    @PostMapping("/{id}/injects/{injectId}/fire")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('command_post.posture')")
-    public Map<String, Object> fireInject(@PathVariable long id, @PathVariable long injectId) {
+    public Map<String, Object> fireInject(long id, long injectId) {
         findOr404(id);
         int n = jdbc.update("update public.activation_injects set status='fired', fired_at=now(), updated_at=now() "
                 + "where id = ? and activation_id = ? and status = 'pending'", injectId, id);
@@ -659,11 +639,10 @@ public class CommandCenterController {
     }
 
     /** Commander resolves a fired inject with the decision/response taken (feeds the AAR). */
-    @PostMapping("/{id}/injects/{injectId}/resolve")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('tasks.manage')")
-    public Map<String, Object> resolveInject(@PathVariable long id, @PathVariable long injectId,
-                                             @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> resolveInject(long id, long injectId,
+                                             Map<String, Object> body) {
         findOr404(id);
         String resolution = body == null ? null : str(body.get("resolution"));
         int n = jdbc.update("update public.activation_injects set status='resolved', resolved_at=now(), "
@@ -679,10 +658,9 @@ public class CommandCenterController {
     }
 
     /** Remove a pending inject (mis-scripted). */
-    @DeleteMapping("/{id}/injects/{injectId}")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('command_post.posture')")
-    public Map<String, Object> deleteInject(@PathVariable long id, @PathVariable long injectId) {
+    public Map<String, Object> deleteInject(long id, long injectId) {
         findOr404(id);
         int n = jdbc.update("delete from public.activation_injects where id = ? and activation_id = ? and status = 'pending'",
                 injectId, id);
@@ -693,8 +671,8 @@ public class CommandCenterController {
     }
 
     /** After-action review — also available mid-exercise as a live scorecard. */
-    @GetMapping("/{id}/aar")
-    public Map<String, Object> aar(@PathVariable long id) {
+    @Override
+    public Map<String, Object> aar(long id) {
         findOr404(id);
         return buildAar(id);
     }
@@ -1107,8 +1085,8 @@ public class CommandCenterController {
     }
 
     /** One DRF lane's tasks (the drawer behind each lane card). */
-    @GetMapping("/{id}/drf/{drfId}")
-    public Map<String, Object> drfDetail(@PathVariable long id, @PathVariable long drfId) {
+    @Override
+    public Map<String, Object> drfDetail(long id, long drfId) {
         findOr404(id);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("drf", jdbc.queryForMap("select * from public.disaster_response_functions where id = ?", drfId));
@@ -1125,11 +1103,10 @@ public class CommandCenterController {
     // ─── Lane actions ───
 
     /** Hand a whole DRF lane to a stakeholder organisation. */
-    @PreAuthorize("hasAuthority('tasks.manage')")
-    @PostMapping("/{id}/drf/{drfId}/assign")
+    @Override
     @Transactional
-    public Map<String, Object> assignDrf(@PathVariable long id, @PathVariable long drfId,
-                                         @RequestBody Map<String, Object> body) {
+    public Map<String, Object> assignDrf(long id, long drfId,
+                                         Map<String, Object> body) {
         findOr404(id);
         long stakeholderId = lng(body.get("stakeholder_id"), "stakeholder_id");
         Map<String, Object> drf = jdbc.queryForMap(
@@ -1144,11 +1121,10 @@ public class CommandCenterController {
     }
 
     /** Add a custom task to a lane. */
-    @PreAuthorize("hasAuthority('tasks.manage')")
-    @PostMapping("/{id}/drf/{drfId}/task")
+    @Override
     @Transactional
-    public Map<String, Object> addTask(@PathVariable long id, @PathVariable long drfId,
-                                       @RequestBody Map<String, Object> body) {
+    public Map<String, Object> addTask(long id, long drfId,
+                                       Map<String, Object> body) {
         Map<String, Object> activation = findOr404(id);
         String title = require(body.get("title"), "title");
         String priority = requireIn(body.get("priority"), PRIORITIES, "priority");
@@ -1168,11 +1144,10 @@ public class CommandCenterController {
     }
 
     /** Update a lane task — only changed fields are written, each change journalled. */
-    @PreAuthorize("hasAuthority('tasks.manage')")
-    @PostMapping("/{id}/task/{taskId}")
+    @Override
     @Transactional
-    public Map<String, Object> updateTask(@PathVariable long id, @PathVariable long taskId,
-                                          @RequestBody Map<String, Object> body) {
+    public Map<String, Object> updateTask(long id, long taskId,
+                                          Map<String, Object> body) {
         findOr404(id);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select * from public.incident_tasks where id = ? and activation_id = ?", taskId, id);
@@ -1235,10 +1210,9 @@ public class CommandCenterController {
         return Map.of("success", true, "message", "Task updated.");
     }
 
-    @PreAuthorize("hasAuthority('tasks.manage')")
-    @DeleteMapping("/{id}/task/{taskId}")
+    @Override
     @Transactional
-    public Map<String, Object> destroyTask(@PathVariable long id, @PathVariable long taskId) {
+    public Map<String, Object> destroyTask(long id, long taskId) {
         findOr404(id);
         List<String> titles = jdbc.queryForList(
                 "select title from public.incident_tasks where id = ? and activation_id = ?", String.class, taskId, id);
@@ -1252,10 +1226,9 @@ public class CommandCenterController {
     }
 
     /** Close the activation as completed (mission done) or deactivated (stood down). */
-    @PreAuthorize("hasAuthority('command_post.posture')")
-    @PostMapping("/{id}/deactivate")
+    @Override
     @Transactional
-    public Map<String, Object> deactivate(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> deactivate(long id, Map<String, Object> body) {
         assertMayManageForecast(findOr404(id));
         String status = require(body.get("status"), "status");
         if (!List.of("completed", "deactivated").contains(status)) {
@@ -1278,10 +1251,9 @@ public class CommandCenterController {
      * The current incumbent — if any — is relieved first, and BOTH events are journalled into
      * task_activity_log so the After-Action Review shows the command handover.
      */
-    @PreAuthorize("hasAuthority('tasks.manage')")
-    @PostMapping("/{id}/command-roles")
+    @Override
     @Transactional
-    public Map<String, Object> appointCommandRole(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> appointCommandRole(long id, Map<String, Object> body) {
         findOr404(id);
         String role = requireIn(body.get("role"), COMMAND_ROLES, "role");
         long userId = lng(body.get("user_id"), "user_id");
@@ -1321,11 +1293,10 @@ public class CommandCenterController {
     }
 
     /** Relieve a command-role holder WITHOUT a replacement — the role goes vacant (journalled). */
-    @PreAuthorize("hasAuthority('tasks.manage')")
-    @PostMapping("/command-roles/{roleId}/relieve")
+    @Override
     @Transactional
-    public Map<String, Object> relieveCommandRole(@PathVariable long roleId,
-                                                  @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> relieveCommandRole(long roleId,
+                                                  Map<String, Object> body) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select r.*, u.name as user_name from public.activation_command_roles r
                 left join public.users u on u.id = r.user_id
@@ -1724,7 +1695,7 @@ public class CommandCenterController {
 
     private static List<String> requestAreas(Object raw) {
         if (raw instanceof List<?> list) {
-            return list.stream().map(CommandCenterController::str).filter(s -> s != null).toList();
+            return list.stream().map(CommandCenterServiceImpl::str).filter(s -> s != null).toList();
         }
         return splitCsv(str(raw));
     }

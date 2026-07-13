@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 34 thin eGA controllers, 34 service + 34 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 35 thin eGA controllers, 35 service + 35 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, Response Settings, Exercise Scenarios, Ops Timeline, DLNA, Dashboard + EOCC, Resource Approvals, Resource Allocations, Warehouse Ops, Dispatch, Stakeholder Bidding, **Incidents** |
-| Response remaining | **Legacy fat** | ~1 hub under `response/` (CommandCenter ~1.8k) + workflow engine/support services |
+| Response leaves | **Migrated** | **All former fat Response controllers** (SC through Command Center) are eGA-layered |
+| Response remaining | **Support hubs only** | No fat controllers left under `response/`; transitional services remain (`IncidentWorkflowService`, `ApprovalWorkflowEngine`, `DispatchSupportService`, `ActivationService`, `SimulationGuard`) |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Incidents**~~ **DONE** | Next: CommandCenter hub last |
+| Next eGA leaf (binding order) | ~~**Command Center**~~ **DONE** | Response controller eGA complete; next: EW or extract support services when touching them |
 
-**Honest score:** Master data + twenty-one Response leaves are eGA-shaped. Only CommandCenter remains fat under Response. That is documented hub debt, not pretend compliance.
+**Honest score:** Master data + full Response controller surface are eGA-shaped. Residual debt is transitional support services in `response/` package (not fat controllers) plus EW/other modules.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -46,6 +46,7 @@
 | Dispatch | SA/DED/RAS/DAS board stats match; sources SA/RAS **200** DED OOA **404**; procurement track DED **404**; empty dispatch **422** net-zero; Partner **403** |
 | Stakeholder Bidding | SA/DED/RAS/DAS donations/open-needs/NDMF match; pool SA **200** Dist/Reg OOA **404**; empty bid/ndmf **422** net-zero; Partner module **403** |
 | Incidents | SA/DED/RAS/DAS index+form-data match; show OOA **404**; ops-timeline coexists **200**; empty store/update **422** with `errors`; Partner approve **403**; no workflow mutation |
+| Command Center | SA index/warnings/board/readiness/AAR match; scenarios coexists **200**; Dist/Reg board OOA **404**; Dist warnings **403**; bad posture/forecast **422** net-zero; Partner **403** |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass

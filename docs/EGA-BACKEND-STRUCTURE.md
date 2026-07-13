@@ -178,7 +178,8 @@ Suggested migration order:
 32. ~~**Dispatch**~~ — **DONE** (board + sources + dispatch gate + procurement; DispatchSupportService retained)  
 33. ~~**Stakeholder Bidding**~~ — **DONE** (bids/donations/NDMF; DispatchSupportService retained)  
 34. ~~**Incidents**~~ — **DONE** (registry/show/workflow/multipart; IncidentWorkflowService retained)  
-35. Response remaining (CommandCenter hub last) then EW  
+35. ~~**Command Center**~~ — **DONE** (coordination hub; ActivationService + AnticipatoryPlansService retained)  
+36. Response fat controllers complete; transitional support services remain; then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -220,8 +221,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Dispatch | Done | `/v1/response/dispatch` | Thin controller + service.impl; stock support retained; SA/DED/RAS/DAS board stats match; sources OOA **404**; empty dispatch **422** net-zero; Partner **403** |
 | Stakeholder Bidding | Done | `/v1/response/bidding` | Thin controller + service.impl; stock + NotificationService retained; donations/open-needs/NDMF multi-persona match; pool OOA **404**; empty bid/ndmf **422** net-zero; Partner **403** |
 | Incidents | Done | `/v1/response/incidents` | Thin controller + service.impl; workflow hub retained; multipart store/update; coexists with ops-timeline; multi-persona index/show; empty store/update **422**; Partner approve **403** |
+| Command Center | Done | `/v1/response/coordination` | Thin controller + service.impl; ActivationService retained; coexists with scenarios; SA board/readiness/AAR; area OOA **404**; bad posture/forecast **422** net-zero; Partner **403** |
 
-34. ~~**Incidents**~~ — **DONE**; remaining Response leaves next (CommandCenter hub last)
+35. ~~**Command Center**~~ — **DONE**; Response fat controllers complete (support services remain transitional)
 
 ---
 
