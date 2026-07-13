@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,41 +9,25 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
-import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.response.ApprovalWorkflowEngine;
+import tz.go.pmo.dmis.service.AssessmentsService;
 
 /**
- * Port of Response\DamageAssessmentController — Disaster Needs Assessments:
- * a per-incident, category-itemised damage survey with photo evidence, a
- * Draft → Pending Verification → Completed workflow, and direct resource
- * requests that flow into the standard allocation pipeline.
- *
- * Source bugs fixed: store() hardcoded status 'Submitted', a value the
- * workflow doesn't accept (assessments could never be verified); and
- * resource requests went to a disconnected resource_requests table — here
- * they are allocated_resources rows on the V24 approval chain, linked by
- * assessment_id from V27.
+ * Disaster Needs Assessments. Logic moved from the former response package controller;
+ * Angular paths/multipart/JSON unchanged. Area scope + AreaGuard on writes; resource
+ * requests still land on {@link ApprovalWorkflowEngine#initialize}.
  */
-@RestController
-@RequestMapping("/v1/response/assessments")
-public class AssessmentController {
+@Service
+public class AssessmentsServiceImpl implements AssessmentsService {
 
     /** Verbatim category tree from the source's create() (hardcoded there, data here). */
     private static final Map<String, List<String>> CATEGORY_TREE = new LinkedHashMap<>();
@@ -70,16 +54,16 @@ public class AssessmentController {
     private static final TypeReference<List<Map<String, Object>>> LIST_OF_MAPS = new TypeReference<>() {};
 
     private final JdbcTemplate jdbc;
-    private final IncidentWorkflowService users;
+    private final CurrentUserResolver users;
     private final ApprovalWorkflowEngine approvals;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
     private final Path storageRoot;
 
-    public AssessmentController(JdbcTemplate jdbc, IncidentWorkflowService users,
-                                ApprovalWorkflowEngine approvals, JurisdictionScope jurisdiction,
-                                AreaGuard areaGuard,
-                                @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
+    public AssessmentsServiceImpl(JdbcTemplate jdbc, CurrentUserResolver users,
+                                  ApprovalWorkflowEngine approvals, JurisdictionScope jurisdiction,
+                                  AreaGuard areaGuard,
+                                  @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
         this.jdbc = jdbc;
         this.users = users;
         this.approvals = approvals;
@@ -88,11 +72,9 @@ public class AssessmentController {
         this.storageRoot = Path.of(publicRoot);
     }
 
-    // ─── Registry + dashboard ───
-
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false) Long incident_id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> index(String status, Long incidentId) {
         // Filter clause + params only (area scope is applied separately per query — never copy
         // a params list that already contains area bind values or area seats get SQL/arg mismatch → 409).
         StringBuilder filter = new StringBuilder("1=1");
@@ -101,9 +83,9 @@ public class AssessmentController {
             filter.append(" and da.status = ?");
             filterParams.add(status);
         }
-        if (incident_id != null) {
+        if (incidentId != null) {
             filter.append(" and da.incident_id = ?");
-            filterParams.add(incident_id);
+            filterParams.add(incidentId);
         }
         Map<String, Object> out = new LinkedHashMap<>();
         // Area officers see only assessments on incidents in their own district/region (or shared/unlinked);
@@ -150,8 +132,8 @@ public class AssessmentController {
         return out;
     }
 
-    /** Everything the create/edit form needs (the source hardcoded most of this in the view). */
-    @GetMapping("/form-data")
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> formData() {
         Map<String, Object> out = new LinkedHashMap<>();
         // Same incident-area wall as dispatch/allocations pickers — never offer foreign incidents.
@@ -174,19 +156,9 @@ public class AssessmentController {
         return out;
     }
 
-    // ─── Create ───
-
-    /**
-     * Multipart create: scalar fields + `categories`/`requirements`/`resource_requests`
-     * as JSON strings + photo files. Categories are itemised rows; resource requests
-     * become allocated_resources on the V24 chain; status starts at 'Draft'.
-     */
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Override
     @Transactional
-    public Map<String, Object> store(
-            @RequestParam Map<String, String> form,
-            @RequestPart(name = "photos", required = false) List<MultipartFile> photos) throws Exception {
+    public Map<String, Object> store(Map<String, String> form, List<MultipartFile> photos) throws Exception {
         long incidentId = requireLong(form, "incident_id");
         // An area officer may file an assessment only against an incident in their own area; a body-supplied
         // foreign incident_id 404s (mirrors findOr404/IncidentController.show). National tier sees all.
@@ -222,10 +194,9 @@ public class AssessmentController {
         return Map.of("success", true, "id", id, "message", "Damage assessment created successfully.");
     }
 
-    // ─── Show / update ───
-
-    @GetMapping("/{id}")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> show(long id) {
         Map<String, Object> assessment = findOr404(id);
         Map<String, Object> out = new LinkedHashMap<>(jdbc.queryForMap("""
                 select da.*, i.title as incident_title, i.severity_level, a.name as assessor_name,
@@ -269,14 +240,9 @@ public class AssessmentController {
         return out;
     }
 
-    /** Update (multipart, same shape as store); completed assessments are immutable. */
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
-    @PostMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Override
     @Transactional
-    public Map<String, Object> update(
-            @PathVariable long id,
-            @RequestParam Map<String, String> form,
-            @RequestPart(name = "photos", required = false) List<MultipartFile> photos) throws Exception {
+    public Map<String, Object> update(long id, Map<String, String> form, List<MultipartFile> photos) throws Exception {
         Map<String, Object> assessment = findOr404(id);
         if ("Completed".equals(assessment.get("status"))) {
             throw new BusinessRuleException("Completed assessments cannot be modified.");
@@ -303,12 +269,9 @@ public class AssessmentController {
         return Map.of("success", true, "message", "Damage assessment updated successfully.");
     }
 
-    // ─── Workflow ───
-
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
-    @PostMapping("/{id}/submit")
+    @Override
     @Transactional
-    public Map<String, Object> submit(@PathVariable long id) {
+    public Map<String, Object> submit(long id) {
         Map<String, Object> assessment = findOr404(id);
         if (!"Draft".equals(assessment.get("status"))) {
             throw new BusinessRuleException("Only draft assessments can be submitted for verification.");
@@ -320,10 +283,9 @@ public class AssessmentController {
         return Map.of("success", true, "message", "Assessment submitted for verification.");
     }
 
-    @PreAuthorize("hasAuthority('damage_assessment.verify')")
-    @PostMapping("/{id}/verify")
+    @Override
     @Transactional
-    public Map<String, Object> verify(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> verify(long id, Map<String, Object> body) {
         Map<String, Object> assessment = findOr404(id);
         if (!"Pending Verification".equals(assessment.get("status"))) {
             throw new BusinessRuleException("Only assessments pending verification can be verified.");
@@ -336,10 +298,9 @@ public class AssessmentController {
         return Map.of("success", true, "message", "Assessment verified and completed.");
     }
 
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
-    @DeleteMapping("/{id}/photos/{photoId}")
+    @Override
     @Transactional
-    public Map<String, Object> deletePhoto(@PathVariable long id, @PathVariable long photoId) {
+    public Map<String, Object> deletePhoto(long id, long photoId) {
         findOr404(id);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select photo_path from public.assessment_photos where id = ? and assessment_id = ?", photoId, id);
@@ -355,9 +316,9 @@ public class AssessmentController {
         return Map.of("success", true, "message", "Photo deleted.");
     }
 
-    /** Report payload: per-category totals with a severity breakdown (generateReport). */
-    @GetMapping("/{id}/report")
-    public Map<String, Object> report(@PathVariable long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> report(long id) {
         Map<String, Object> out = show(id);
         List<Map<String, Object>> bySeverity = jdbc.queryForList("""
                 select category, severity, count(*) as items, coalesce(sum(damage_value),0) as damage
@@ -367,8 +328,6 @@ public class AssessmentController {
         out.put("severity_breakdown", bySeverity);
         return out;
     }
-
-    // ─── internals ───
 
     private void insertCategoryItems(long assessmentId, List<Map<String, Object>> categories) {
         for (Map<String, Object> category : categories) {

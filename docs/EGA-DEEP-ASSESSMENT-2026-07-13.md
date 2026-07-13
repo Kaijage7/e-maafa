@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 21 thin eGA controllers, 21 service + 21 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 22 thin eGA controllers, 22 service + 22 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, **Tasks** |
-| Response remaining | **Legacy fat** | ~14 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
+| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, **Assessments** |
+| Response remaining | **Legacy fat** | ~13 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Tasks**~~ **DONE** | Next: Assessments or Communication (never engine/dispatch first) |
+| Next eGA leaf (binding order) | ~~**Assessments**~~ **DONE** | Next: Communication (never engine/dispatch first) |
 
-**Honest score:** Master data + eight Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
+**Honest score:** Master data + nine Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -33,6 +33,7 @@
 | Declarations | Full statutory chain; Dist/Reg **403**; stage/role rules; drill net-zero |
 | Anticipatory Plans | Reg area scope; OOA show **404**; OOA create **422**; CP readiness still has `anticipatory_plans` |
 | Tasks | Reg stats area-scoped; OOA show/create **404**; status/assign **200**; drill net-zero |
+| Assessments | Multipart create; Reg OOA **404**; Dist **403**; submit/verify; stats filter productive (no 409) |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass

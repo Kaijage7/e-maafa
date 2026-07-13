@@ -165,7 +165,8 @@ Suggested migration order:
 19. ~~**Declarations (map R6)**~~ — **DONE** (statutory s.32/s.33 chain; thin controller + service.impl)  
 20. ~~**Anticipatory Plans**~~ — **DONE** (area scope; matchingPlans on service for Command Post)  
 21. ~~**Tasks**~~ — **DONE** (board/calendar/assign/status; area scope + NotificationService)  
-22. Response remaining (never engine/dispatch/allocation first) then EW  
+22. ~~**Assessments**~~ — **DONE** (multipart DNA; ApprovalWorkflowEngine.initialize retained)  
+23. Response remaining (never engine/dispatch/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -194,8 +195,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Declarations (map R6) | Done | `/v1/response/declarations` | Thin controller + service.impl; propose→review→endorse→declare→extend→revoke; Dist/Reg **403**; stage **422**; SA break-glass declare; drill net-zero |
 | Anticipatory Plans | Done | `/v1/response/anticipatory-plans` | Thin controller + service.impl; area scope + OOA show **404**; Reg OOA create **422**; lifecycle drill net-zero; CommandCenter uses `AnticipatoryPlansService.matchingPlans` |
 | Tasks | Done | `/v1/response/tasks` | Thin controller + service.impl; board/calendar/form-data; Reg stats area-scoped; OOA show/create **404**; status/assign; drill net-zero |
+| Assessments | Done | `/v1/response/assessments` | Thin controller + service.impl; multipart create; form-data; status filter; Reg OOA show **404**; Dist **403**; submit/verify lifecycle; drill net-zero |
 
-21. ~~**Tasks**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
+22. ~~**Assessments**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
 
 ---
 
