@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
@@ -11,28 +11,21 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
+import tz.go.pmo.dmis.response.ActivationService;
+import tz.go.pmo.dmis.service.ExerciseScenariosService;
 
 /**
- * Reusable exercise scenarios for scaled Command Post simulations (F06).
- *
- * A scenario is a pre-authored exercise package: multiple incident templates, MSEL injects,
- * participant roster and a compressed exercise clock. Launching it creates flagged simulation
- * incidents and normal Command Post activations, so the existing board, DRF lanes, injects,
- * command roles and AAR remain the single execution path.
+ * Exercise scenarios for Command Post drills. Logic moved from the former response
+ * package controller; Angular paths/JSON unchanged. Launch still uses
+ * {@link ActivationService} (transitional Response coupling).
  */
-@RestController
-@RequestMapping("/v1/response/coordination/scenarios")
-public class ExerciseScenarioController {
+@Service
+public class ExerciseScenariosServiceImpl implements ExerciseScenariosService {
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final List<String> COMMAND_ROLES = List.of(
@@ -40,16 +33,16 @@ public class ExerciseScenarioController {
 
     private final JdbcTemplate jdbc;
     private final ActivationService activations;
-    private final IncidentWorkflowService users;
+    private final CurrentUserResolver users;
 
-    public ExerciseScenarioController(JdbcTemplate jdbc, ActivationService activations,
-                                      IncidentWorkflowService users) {
+    public ExerciseScenariosServiceImpl(JdbcTemplate jdbc, ActivationService activations,
+                                      CurrentUserResolver users) {
         this.jdbc = jdbc;
         this.activations = activations;
         this.users = users;
     }
 
-    @GetMapping
+    @Override
     public Map<String, Object> index() {
         List<Map<String, Object>> scenarios = jdbc.queryForList("""
                 select s.*,
@@ -66,19 +59,18 @@ public class ExerciseScenarioController {
                 group by s.id
                 order by case s.status when 'active' then 0 when 'draft' then 1 else 2 end,
                          s.title
-                """).stream().map(ExerciseScenarioController::cleanScenarioJson).toList();
+                """).stream().map(ExerciseScenariosServiceImpl::cleanScenarioJson).toList();
         return Map.of("scenarios", scenarios);
     }
 
-    @GetMapping("/{id}")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    public Map<String, Object> show(long id) {
         return scenarioPayload(id);
     }
 
-    @PostMapping
     @Transactional
-    @PreAuthorize("hasAuthority('command_post.activate')")
-    public Map<String, Object> create(@RequestBody Map<String, Object> body) throws Exception {
+    @Override
+    public Map<String, Object> create(Map<String, Object> body) throws Exception {
         String title = require(body.get("title"), "title");
         String hazard = require(body.get("hazard"), "hazard");
         List<Map<String, Object>> incidentRows = mapList(body.get("incidents"));
@@ -189,11 +181,10 @@ public class ExerciseScenarioController {
         return out;
     }
 
-    @PostMapping("/{id}/launch")
     @Transactional
-    @PreAuthorize("hasAuthority('command_post.activate')")
-    public Map<String, Object> launch(@PathVariable long id,
-                                      @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> launch(long id,
+                                      Map<String, Object> body) {
         Map<String, Object> scenario = scenarioRow(id);
         List<Map<String, Object>> incidentTemplates = jdbc.queryForList("""
                 select * from public.scenario_incidents

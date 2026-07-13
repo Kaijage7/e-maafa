@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 24 thin eGA controllers, 24 service + 24 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 25 thin eGA controllers, 25 service + 25 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, **Response Settings** |
-| Response remaining | **Legacy fat** | ~11 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
+| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, Response Settings, **Exercise Scenarios** |
+| Response remaining | **Legacy fat** | ~10 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Response Settings**~~ **DONE** | Next: DLNA or Exercise scenarios (never engine/dispatch first) |
+| Next eGA leaf (binding order) | ~~**Exercise Scenarios**~~ **DONE** | Next: DLNA or Incident Timeline (never engine/dispatch first) |
 
-**Honest score:** Master data + eleven Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
+**Honest score:** Master data + twelve Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -36,6 +36,7 @@
 | Assessments | Multipart create; Reg OOA **404**; Dist **403**; submit/verify; stats filter productive (no 409) |
 | Communication | Dash/alerts/analytics **200**; Dist **403**; template CRUD; app-only send drill net-zero |
 | Response Settings | Chains/resources/types/automation **200**; Dist **403**; resource in-use delete **422** |
+| Exercise Scenarios | Index/show **200**; Dist **403**; create validation **422**; create drill net-zero |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass

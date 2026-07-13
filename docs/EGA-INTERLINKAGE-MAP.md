@@ -255,7 +255,8 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R10 | Assessments | `/v1/response/assessments` | ~541 | Multipart + AreaGuard + ApprovalWorkflowEngine.initialize | **DONE** |
 | R11 | Communication | `/v1/response/communication` | ~712 | NotificationService + ExternalDeliveryService + SimulationGuard; @Scheduled dispatch | **DONE** |
 | R12 | Response Settings | `/v1/response/settings` | ~371 | JdbcTemplate only; approval chains + catalogue + types + ladder automation | **DONE** |
-| R8+ | Warehouse-ops, dispatch, allocations, bidding, DLNA, incidents, command center, dashboard, timeline, exercise scenarios, resource approvals | various | large | High SQL + engine + shared bases — last | pending |
+| R13 | Exercise Scenarios | `/v1/response/coordination/scenarios` | ~592 | ActivationService for launch; create/show package | **DONE** |
+| R8+ | Warehouse-ops, dispatch, allocations, bidding, DLNA, incidents, command center, dashboard, timeline, resource approvals | various | large | High SQL + engine + shared bases — last | pending |
 
 ### 10.5 Do **not** start with
 
