@@ -1,52 +1,38 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
 import tz.go.pmo.dmis.notification.NotificationService;
+import tz.go.pmo.dmis.service.SupportPledgesService;
 
 /**
- * Donor / partner SUPPORT pledges. The partner portal's funding side: a donor sees ONLY the prevention /
- * preparedness items that need support — mitigation measures (DRR priorities) and unfunded trainings, from
- * anywhere — and pledges ITS OWN contribution (cash or in-kind). PMO staff then review and accept/decline;
- * accepting marks the item funded so it leaves the feed. A donor sees only its own pledges; staff see all.
+ * Donor support needs + pledge lifecycle. Logic moved from the former response package
+ * controller; Angular paths/JSON unchanged. National donor queue by design (area not filtered);
+ * stakeholder-linked users see only their own pledges.
  */
-@RestController
-@RequestMapping("/v1/response/support")
-public class SupportPledgeController {
+@Service
+@RequiredArgsConstructor
+public class SupportPledgesServiceImpl implements SupportPledgesService {
 
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
     private final CurrentUserResolver currentUser;
     private final NotificationService notifications;
 
-    public SupportPledgeController(JdbcTemplate jdbc, JurisdictionScope jurisdiction,
-                                   CurrentUserResolver currentUser, NotificationService notifications) {
-        this.jdbc = jdbc;
-        this.jurisdiction = jurisdiction;
-        this.currentUser = currentUser;
-        this.notifications = notifications;
-    }
-
-    /** The discovery feed donors see: measures + trainings needing support (from anywhere — donors help any area). */
-    @GetMapping("/needs")
-    @PreAuthorize("hasAnyAuthority('resource_allocation.view','stakeholder_portal.donate')")
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> needs() {
         List<Map<String, Object>> measures = jdbc.queryForList("""
                 select m.id, m.title, m.priority, m.budget, m.additional_support_required,
@@ -77,11 +63,9 @@ public class SupportPledgeController {
         return out;
     }
 
-    /** A donor pledges its OWN contribution toward a measure or training. Staff may pledge on a partner's behalf. */
-    @PostMapping("/pledges")
-    @PreAuthorize("hasAnyAuthority('resource_allocation.request','stakeholder_portal.donate')")
+    @Override
     @Transactional
-    public Map<String, Object> pledge(@RequestBody Map<String, Object> b) {
+    public Map<String, Object> pledge(Map<String, Object> b) {
         String type = req(b, "target_type");
         if (!type.equals("measure") && !type.equals("training")) {
             throw new BusinessRuleException("target_type must be 'measure' or 'training'.");
@@ -122,9 +106,8 @@ public class SupportPledgeController {
         return Map.of("success", true, "id", id, "message", "Thank you — your pledge has been recorded for PMO review.");
     }
 
-    /** Pledges: a donor sees ONLY its own; PMO staff see all (the review queue). */
-    @GetMapping("/pledges")
-    @PreAuthorize("hasAnyAuthority('resource_allocation.view','stakeholder_portal.donate')")
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> pledges() {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
@@ -147,11 +130,9 @@ public class SupportPledgeController {
         return Map.of("pledges", rows);
     }
 
-    /** PMO staff ACCEPTS a pledge → the item is marked funded and leaves the donor feed. */
-    @PostMapping("/pledges/{id}/accept")
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> accept(@PathVariable long id, @RequestBody(required = false) Map<String, Object> b) {
+    public Map<String, Object> accept(long id, Map<String, Object> b) {
         Map<String, Object> p = one("""
                 select target_type, mitigation_measure_id, training_plan_id, status, stakeholder_id,
                        amount, currency, pledged_by
@@ -174,10 +155,9 @@ public class SupportPledgeController {
         return Map.of("success", true, "message", "Pledge accepted — the item is now funded.");
     }
 
-    @PostMapping("/pledges/{id}/decline")
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> decline(@PathVariable long id, @RequestBody(required = false) Map<String, Object> b) {
+    public Map<String, Object> decline(long id, Map<String, Object> b) {
         Map<String, Object> p = one("""
                 select target_type, mitigation_measure_id, training_plan_id, status, stakeholder_id,
                        amount, currency, pledged_by
@@ -223,8 +203,9 @@ public class SupportPledgeController {
         }
     }
 
-    // ── helpers ──
-    private Long me() { return currentUser.actingUserId(); }
+    private Long me() {
+        return currentUser.actingUserId();
+    }
 
     private Map<String, Object> one(String sql, Object... args) {
         List<Map<String, Object>> rows = jdbc.queryForList(sql, args);
@@ -241,20 +222,38 @@ public class SupportPledgeController {
     }
 
     private static String str(Object v) {
-        if (v == null) { return null; }
+        if (v == null) {
+            return null;
+        }
         String s = String.valueOf(v).trim();
         return s.isEmpty() ? null : s;
     }
 
     private static Long lng(Object v) {
-        if (v == null) { return null; }
-        if (v instanceof Number n) { return n.longValue(); }
-        try { return Long.valueOf(String.valueOf(v).trim()); } catch (NumberFormatException e) { return null; }
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
+        try {
+            return Long.valueOf(String.valueOf(v).trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static BigDecimal dec(Object v) {
-        if (v == null) { return null; }
-        if (v instanceof Number n) { return new BigDecimal(n.toString()); }
-        try { return new BigDecimal(String.valueOf(v).trim()); } catch (NumberFormatException e) { return null; }
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Number n) {
+            return new BigDecimal(n.toString());
+        }
+        try {
+            return new BigDecimal(String.valueOf(v).trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }
