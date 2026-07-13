@@ -1,71 +1,33 @@
-package tz.go.pmo.dmis.settings;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.dto.request.InstitutionClassificationRequest;
+import tz.go.pmo.dmis.dto.request.InstitutionProfileRequest;
+import tz.go.pmo.dmis.service.InstitutionRegistryService;
 
 /**
- * Unified System Settings view over agencies + stakeholders. Agencies remain the login/sector-control registry
- * for MDAs; stakeholders remain the partner portal registry. This endpoint provides the governance layer across
- * both: class, sector tags, source provenance, policy role and M&E obligation.
+ * JDBC governance over agencies + stakeholders. Item rows intentionally keep snake_case
+ * column names from the union query so the Angular registry (institution_class, me_required, …)
+ * continues to bind without a FE change.
  */
-@RestController
-@RequestMapping("/v1/settings/institutions")
+@Service
 @RequiredArgsConstructor
-@Tag(name = "System Settings", description = "Unified institution/stakeholder registry")
-public class InstitutionRegistryController {
+public class InstitutionRegistryServiceImpl implements InstitutionRegistryService {
 
     private final JdbcTemplate jdbc;
 
-    public record ClassificationRequest(String institutionClass, String institutionSubclass, String sectorTags,
-                                        Boolean meRequired, String policyRoleCode, String roleSummary,
-                                        String sourceReference) {
-    }
-
-    /** Full profile edit from System Settings (names, contacts, class, active flag, M&E fields). */
-    public record InstitutionProfileRequest(
-            String name,
-            String acronym,
-            String type,
-            String institutionClass,
-            String institutionSubclass,
-            String sectorTags,
-            String policyRoleCode,
-            String roleSummary,
-            String sourceReference,
-            String contactPersonName,
-            String contactPersonEmail,
-            String contactPersonPhone,
-            String address,
-            String website,
-            Boolean meRequired,
-            Boolean isActive) {
-    }
-
-    @GetMapping
-    @Operation(summary = "Unified institution registry with provenance, classes and policy roles")
-    @PreAuthorize("hasAuthority('user_management.view')")
-    public Map<String, Object> index(@RequestParam(required = false) String kind,
-                                     @RequestParam(required = false) String institutionClass,
-                                     @RequestParam(required = false) String sector,
-                                     @RequestParam(required = false) String source,
-                                     @RequestParam(required = false) String search,
-                                     @RequestParam(defaultValue = "500") int limit) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> index(String kind, String institutionClass, String sector, String source,
+                                     String search, int limit) {
         List<Object> args = new ArrayList<>();
         StringBuilder where = new StringBuilder(" where 1=1");
         if (kind != null && !kind.isBlank()) {
@@ -114,25 +76,23 @@ public class InstitutionRegistryController {
                         """ + where + "\n order by kind, coalesce(institution_class,'zz'), name limit ?", args.toArray()));
     }
 
-    @PutMapping("/{kind}/{id}/classification")
-    @Operation(summary = "Update institution governance fields (class, policy role, M&E flag)")
-    @PreAuthorize("hasAuthority('user_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> updateClassification(@PathVariable String kind, @PathVariable long id,
-                                                    @RequestBody ClassificationRequest req) {
+    public Map<String, Object> updateClassification(String kind, long id, InstitutionClassificationRequest req) {
         assertKind(kind);
-        int n = jdbc.update("""
-                update """ + table(kind) + """
-                   set institution_class = coalesce(?, institution_class),
-                       institution_subclass = coalesce(?, institution_subclass),
-                       sector_tags = coalesce(?, sector_tags),
-                       me_required = coalesce(?, me_required),
-                       policy_role_code = coalesce(?, policy_role_code),
-                       role_summary = coalesce(?, role_summary),
-                       source_reference = coalesce(?, source_reference),
-                       updated_at = now()
-                 where id = ?
-                """, blankToNull(req.institutionClass()), blankToNull(req.institutionSubclass()),
+        // Build SQL with an explicit space after UPDATE — text-block concat used to yield
+        // "updatepublic.agencies" (silent 500 on governance classification saves).
+        int n = jdbc.update(
+                "update " + table(kind)
+                        + " set institution_class = coalesce(?, institution_class),"
+                        + " institution_subclass = coalesce(?, institution_subclass),"
+                        + " sector_tags = coalesce(?, sector_tags),"
+                        + " me_required = coalesce(?, me_required),"
+                        + " policy_role_code = coalesce(?, policy_role_code),"
+                        + " role_summary = coalesce(?, role_summary),"
+                        + " source_reference = coalesce(?, source_reference),"
+                        + " updated_at = now() where id = ?",
+                blankToNull(req.institutionClass()), blankToNull(req.institutionSubclass()),
                 blankToNull(req.sectorTags()), req.meRequired(), blankToNull(req.policyRoleCode()),
                 blankToNull(req.roleSummary()), blankToNull(req.sourceReference()), id);
         if (n == 0) {
@@ -141,18 +101,16 @@ public class InstitutionRegistryController {
         return Map.of("kind", kind, "id", id, "message", "Institution governance updated");
     }
 
-    @PutMapping("/{kind}/{id}")
-    @Operation(summary = "Full institution profile update (name, contacts, class, active, M&E)")
-    @PreAuthorize("hasAuthority('user_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> updateProfile(@PathVariable String kind, @PathVariable long id,
-                                             @RequestBody InstitutionProfileRequest req) {
+    public Map<String, Object> updateProfile(String kind, long id, InstitutionProfileRequest req) {
         assertKind(kind);
         if (req.name() != null && req.name().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name cannot be blank.");
         }
         int n;
         if ("agency".equals(kind)) {
+            // mandate_description mirrors role_summary (historical dual-write; FE only sends roleSummary).
             n = jdbc.update("""
                     update public.agencies
                        set name = coalesce(?, name),
@@ -184,6 +142,7 @@ public class InstitutionRegistryController {
                     blankToNull(req.contactPersonPhone()), blankToNull(req.address()),
                     blankToNull(req.website()), req.meRequired(), req.isActive(), id);
         } else {
+            // stakeholders.organization is denormalised display name; sector mirrors sector_tags.
             n = jdbc.update("""
                     update public.stakeholders
                        set name = coalesce(?, name),
@@ -222,10 +181,9 @@ public class InstitutionRegistryController {
         return Map.of("kind", kind, "id", id, "message", "Institution profile updated");
     }
 
-    @GetMapping("/{kind}/{id}")
-    @Operation(summary = "Get one institution for editing")
-    @PreAuthorize("hasAuthority('user_management.view')")
-    public Map<String, Object> one(@PathVariable String kind, @PathVariable long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> one(String kind, long id) {
         assertKind(kind);
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select * from (""" + unionSql() + """
@@ -289,7 +247,7 @@ public class InstitutionRegistryController {
     }
 
     /**
-     * Clear M&E reporting paths so operators know: MDAs use agency workbench;
+     * Clear M&amp;E reporting paths so operators know: MDAs use agency workbench;
      * partners use stakeholder workbench — both governed here in System Settings.
      */
     private List<Map<String, Object>> reportingPaths() {
@@ -406,6 +364,11 @@ public class InstitutionRegistryController {
                 """);
     }
 
+    /**
+     * Unified projection. Column names are intentionally mostly un-aliased snake_case so
+     * Spring's Map keys match what the Angular registry already binds (institution_class, …).
+     * Aggregation queries above alias to camelCase for the meta panels only.
+     */
     private String unionSql() {
         return """
                 select 'agency' as kind, id, name, acronym, agency_type as type,

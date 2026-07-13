@@ -154,8 +154,9 @@ Suggested migration order:
 8. ~~**Resource catalogue (Settings)**~~ — **DONE** (named ResourceCatalogue* to avoid clash with inventory `entity.Resource`)  
 9. ~~**Approval workflows (Settings)**~~ — **DONE** (`RoleCatalogue` made public for service.impl reuse; engine remains SQL-coupled only)  
 10. ~~**Locations (Settings)**~~ — **DONE** (hierarchy CRUD + seat seeding; SQL consumers unchanged)  
-11. Remaining Settings (roles, users, institutions)  
-12. Response / EW (SQL-heavy)  
+11. ~~**Institutions (Settings)**~~ — **DONE** (agencies + stakeholders governance; snake_case item keys preserved)  
+12. Remaining Settings (roles, users + RoleCatalogue)  
+13. Response / EW (SQL-heavy)  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -173,6 +174,7 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Resource catalogue | Done | `/v1/settings/resources` | CRUD + vocab guards + in-use delete 409; inventory/reference linkage; proxy + regressions |
 | Approval workflows | Done | `/v1/settings/approval-workflows` | Index + roles, add/edit/move/delete level, toggle module restore, bad-role 400; FE proxy; allocations/coordination regressions; `ApprovalWorkflowRoleVocabTest` |
 | Locations | Done | `/v1/settings/locations` | Index + cascade reads, region/district/council/ward lifecycle net-zero, delete-with-children 409; FE proxy; jurisdiction/user-mgmt regressions; location unit tests |
+| Institutions | Done | `/v1/settings/institutions` | Index filters, one, classification + profile round-trip (agency/stakeholder type-normalize), blank-name 400, bad kind 400; **fixed** classification SQL (`updatepublic.*` text-block concat); snake_case items; FE proxy + regressions |
 
 ---
 
