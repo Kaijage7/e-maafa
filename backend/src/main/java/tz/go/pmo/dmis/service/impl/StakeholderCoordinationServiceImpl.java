@@ -1,52 +1,37 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.service.StakeholderCoordinationService;
 
 /**
- * Stakeholder Coordination — the 360° linkage view that ties each partner organisation to the
- * three operational pillars the Disaster Management Act 2022 connects them to:
- *
- *   • RESPONSE   — DRF coordination lanes assigned to the stakeholder (Command Post),
- *                  reflecting the National Stakeholders Platform's role in execution (ss.11–12).
- *   • RECOVERY   — donations and resource bids the stakeholder has offered, per the Fund and
- *                  donation-remittance provisions (ss.34–35).
- *   • WAREHOUSE  — the agency stock the stakeholder holds and can dispatch as a source,
- *                  matched to the agency by organisation name.
- *
- * Read-only over the stakeholders table (owned by the content/portal side) and the linkage tables;
- * it never writes stakeholders. This closes the "stakeholders not linked to warehouse/response/
- * recovery" gap.
+ * Read-only JDBC 360° stakeholder footprint. Paths/JSON unchanged from the former response package
+ * controller. Never writes {@code stakeholders} (portal/settings own that registry).
  */
-@RestController
-@RequestMapping("/v1/response/stakeholder-coordination")
-public class StakeholderCoordinationController {
+@Service
+@RequiredArgsConstructor
+public class StakeholderCoordinationServiceImpl implements StakeholderCoordinationService {
 
     private final JdbcTemplate jdbc;
-    private final tz.go.pmo.dmis.common.security.JurisdictionScope jurisdiction;
-    private final tz.go.pmo.dmis.common.security.AreaGuard areaGuard;
+    private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
 
-    public StakeholderCoordinationController(JdbcTemplate jdbc,
-                                             tz.go.pmo.dmis.common.security.JurisdictionScope jurisdiction,
-                                             tz.go.pmo.dmis.common.security.AreaGuard areaGuard) {
-        this.jdbc = jdbc;
-        this.jurisdiction = jurisdiction;
-        this.areaGuard = areaGuard;
-    }
-
-    @GetMapping
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> index() {
         Map<String, Object> out = new LinkedHashMap<>();
         // jurisdiction visibility: region/district officer sees their own area + shared partners; national sees all.
         StringBuilder area = new StringBuilder();
-        List<Object> params = new java.util.ArrayList<>();
+        List<Object> params = new ArrayList<>();
         jurisdiction.appendAreaScopeSharedOrOwn("s", area, params);
         // Each stakeholder with a count of their footprint across the three pillars.
         out.put("stakeholders", jdbc.queryForList(
@@ -76,9 +61,9 @@ public class StakeholderCoordinationController {
         return out;
     }
 
-    /** The full 360° footprint of one stakeholder across response, recovery and warehouse. */
-    @GetMapping("/{id}")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> show(long id) {
         List<Map<String, Object>> rows = jdbc.queryForList("select * from public.stakeholders where id = ?", id);
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Stakeholder not found.");

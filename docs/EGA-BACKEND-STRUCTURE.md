@@ -157,7 +157,8 @@ Suggested migration order:
 11. ~~**Institutions (Settings)**~~ — **DONE** (agencies + stakeholders governance; snake_case item keys preserved)  
 12. ~~**Roles & permissions (Settings)**~~ — **DONE** (matrix + Super Admin rename/empty-matrix guards)  
 13. ~~**User management (Settings)**~~ — **DONE** (last Super Admin guard; unknown role names rejected; RoleCatalogue remains shared helper)  
-14. Response / EW (SQL-heavy) — next after Settings complete  
+14. ~~**Stakeholder coordination (Response R1)**~~ — **DONE** (read-only first Response leaf)  
+15. Response remaining (executive → … → never engine/dispatch/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -178,6 +179,7 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Institutions | Done | `/v1/settings/institutions` | Index filters, one, classification + profile round-trip (agency/stakeholder type-normalize), blank-name 400, bad kind 400; **fixed** classification SQL (`updatepublic.*` text-block concat); snake_case items; FE proxy + regressions |
 | Roles & permissions | Done | `/v1/settings/roles` | Index/catalogue/show, create/update/delete net-zero, dup 409, held-role delete 409; **Super Admin guards**: no rename, no delete, matrix save always re-applies full catalogue (closes prior 91/97 gap); auto `.view` on matrix save; FE proxy + regressions |
 | User management | Done | `/v1/settings/users` | Index filters/groups, create/update/roles/password/delete net-zero; last Super Admin strip/delete 409; **unknown role 400** (was silent skip); bad password policy; FE proxy + roles/locations/institutions regressions |
+| Stakeholder coordination | Done | `/v1/response/stakeholder-coordination` | Index + show 360°; not-found; FE proxy; preparedness/settings/response regressions; first Response eGA leaf |
 
 ---
 

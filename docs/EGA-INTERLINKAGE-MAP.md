@@ -1,7 +1,7 @@
 # e-MAAFA — System Interlinkage Map (eGA migration)
 
 **Status:** Authoritative dependency map for safe package moves  
-**Captured:** 2026-07-12  
+**Captured:** 2026-07-12 · **Updated:** 2026-07-13 (Settings complete; Response order locked)  
 **Backup:** `backup/pre-ega-reassess-20260712-212115`, stash `stash@{0}`,  
 `/home/kaijage/model/maafa/backups/dmis-platform-pre-ega-reassess-20260712-212115.tar.gz`
 
@@ -98,9 +98,12 @@ Inventory ── Java: WarehouseRepository, Resource (package-private)
 4. ~~**TemporaryWarehouse**~~ — **DONE** (SQL-only external consumers)  
 5. ~~**Inventory + Resource (JPA catalogue entity)**~~ — **DONE**  
 6. ~~**TrainingPlan**~~ — **DONE** (no external Java type importers; SQL consumers: SupportPledge, Bidding, M&E, finance, Command Post hub; actions write `portal_news` / `mitigation_measures` / notify Partners)  
-7. Then non-preparedness modules by isolation (Settings, Response, EW, …)  
+7. ~~**Settings (full)**~~ — **DONE** (translations → resource catalogue → approval workflows → locations → institutions → roles → users; residual `RoleCatalogue` + `package-info` only)  
+8. **Response** — by isolation (see §10); never engine/dispatch/allocation first  
+9. **EW** — after Response leafs that are SQL-only; shared `/v1/ew/warnings` base needs method-path care  
 
-**Preparedness feature package is fully emptied of modules** — all moved to eGA layers.
+**Preparedness feature package is fully emptied of modules** — all moved to eGA layers.  
+**Settings feature controllers fully emptied** — only shared `RoleCatalogue` remains.
 
 **Never** move Warehouse without fixing InventoryService in the same commit. (Satisfied for module 3.)
 
@@ -207,6 +210,77 @@ Plan later: relocate Disaster Repository feature to eGA `controller`/`service` a
 2. List SQL consumers of every table  
 3. List FE paths and permission strings  
 4. Move layers; update imports in same commit  
+5. Baseline HTTP → package → jar bak → deploy → full matrix + regressions → commit  
+
+---
+
+## 10. Response module — coupling capture (2026-07-13)
+
+### 10.1 Live health (Super Admin local) — all **200** before first Response move
+
+Preparedness eGA + Settings eGA + key Response endpoints verified live.
+
+### 10.2 Java type coupling (Response package)
+
+| Type | Imported by (outside response/) | Risk |
+|------|----------------------------------|------|
+| `DispatchSupportService` | `recovery/ReliefDistributionController` | **Hard** — must update import if package changes |
+| `SimulationGuard` | `recovery/ReliefDistributionController` | **Hard** — same commit |
+| All controllers | none found | Package move of controller alone is compile-safe |
+
+**Internal hubs (stay in response/ until all callers moved):**  
+`ApprovalWorkflowEngine`, `IncidentWorkflowService`, `DispatchSupportService`, `ActivationService`, `SimulationGuard`.
+
+### 10.3 Shared path bases (not bugs)
+
+| Base path | Controllers |
+|-----------|-------------|
+| `/v1/response/incidents` | `IncidentController` + `IncidentTimelineController` |
+| `/v1/response/coordination` | `CommandCenterController` (+ scenarios under `/coordination/scenarios`) |
+| `/v1/response` | `DashboardController` (root dashboard) |
+
+### 10.4 Recommended Response migration order (safest first)
+
+| # | Module | Path | Lines (approx) | Coupling notes | Status |
+|---|--------|------|----------------|----------------|--------|
+| R1 | **Stakeholder coordination** | `/v1/response/stakeholder-coordination` | ~138 | **Read-only**; SQL on stakeholders/tasks/bids/agency_resources; JurisdictionScope + AreaGuard; **no** response service imports | **DONE** |
+| R2 | Executive watch | `/v1/response/executive` | ~214 | Read-only national COP; many tables; NATIONAL tier gate only | pending |
+| R3 | Contingency plans | `/v1/response/contingency-plans` | ~209 | Own path; check FE + writes | pending |
+| R4 | Support pledges | `/v1/response/support` | ~260 | Writes + NotificationService; SQL to training_plans / mitigation_measures | pending |
+| R5 | Public reports | `/v1/response/public-reports` | ~278 | **Java type** → `IncidentWorkflowService` (same package helper) | pending |
+| R6 | Declarations | `/v1/response/declarations` | ~294 | Executive/activation SQL consumers | pending |
+| R7 | Resource approvals | `/v1/response/approvals` | ~285 | **ApprovalWorkflowEngine** + warehouses | pending |
+| R8+ | Tasks, assessments, anticipatory, communication, settings, warehouse-ops, dispatch, allocations, bidding, DLNA, incidents, command center | various | large | High SQL + engine + shared bases — last | pending |
+
+### 10.5 Do **not** start with
+
+- `ApprovalWorkflowEngine` (hub)  
+- `DispatchController` / `WarehouseOpsController` / `ResourceAllocationController` (stock + incidents)  
+- `IncidentController` / `CommandCenterController` (largest + shared path)  
+- `StakeholderBiddingController` (1010 lines, multi-table writes)  
+
+### 10.6 R1 deep capture — Stakeholder coordination
+
+| Check | Result |
+|-------|--------|
+| Java importers of controller | **none** |
+| Imports other response types | **none** (only JdbcTemplate, JurisdictionScope, AreaGuard, ResourceNotFoundException) |
+| Tables read | `stakeholders`, `incident_tasks`, `disaster_response_functions`, `response_activations`, `incidents`, `stakeholder_resource_bids`, `resources`, `allocated_resources`, `agency_resources`, `agencies` |
+| Writes | **none** |
+| Path | unique `/v1/response/stakeholder-coordination` |
+| FE | Response stakeholder coordination UI (if present) via same path |
+| Baseline | GET index 200 (200 rows cap, stats 335 total); GET /{id} 200 (lanes/donations/stock/summary) |
+
+---
+
+## 11. Hidden issues already fixed during Settings eGA
+
+| Issue | Fix commit line |
+|-------|-----------------|
+| Classification SQL `updatepublic.*` | institutions migration |
+| Super Admin rename / partial matrix strip | roles migration (full catalogue re-apply) |
+| Unknown user role names silent skip | users migration (400) |
+| RoleCatalogue package-private | made public for service.impl |
 5. Compile  
 6. Restart backend from new jar  
 7. Test: index, detail, create, update, 400/401/403/404, proxy, **linked modules**  
