@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.reports;
+package tz.go.pmo.dmis.service.impl;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -7,45 +7,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.service.EwManagementReportService;
 
 /**
- * Early Warning Management analytics — links Early Warning THROUGHOUT: each issued warning
- * (warning_hazards, the per-area validity-window source of truth) is correlated with the incidents that
- * occurred in its warned area during its window, and with the preparedness activities active then. This
- * yields the four early-warning-effectiveness classes the user asked to capture:
- *   • warned → incident (true positive, with the days/times)
- *   • warning → no incident (forecast that did not materialise / false alarm)
- *   • unwarned incident (a hazard struck with no covering warning — the gap)
- *   • preparedness during warning (an anticipatory plan / training active in the warned window)
- * It also exposes the DRR-in-the-EW-context metric: % of archived disasters linked to an early warning.
- *
- * <p>Row granularity: ONE row per warning × warned region — the underlying warning_hazards rows (one per
- * district) are aggregated (min validity_start / max validity_end / district list), so a warning covering
- * 7 districts of one region is ONE row, not seven, and headline counts are per DISTINCT warning. When those
- * rows name districts, incident matching is still district-precise inside the aggregate row.
- *
- * <p>Match key: warned AREA (district_id when warning_hazards names districts; otherwise region_id/name)
- * + TIME (incident.reported_at within the warning's validity window, with a short tail) + HAZARD compatibility (exact hazard_id equality, or the related
- * family map in {@link #hazardFamily}; a side without hazard info cannot be refuted and is kept).
- * Area+time matches that FAIL hazard compatibility are reported in the row's
- * {@code different_hazard_incidents} bucket ("same area, different hazard") instead of counting as
- * warned→incident hits — the spatial coincidence stays visible but no longer inflates true positives.
- * Read-only; nothing is mutated.
+ * Early Warning Management analytics — links issued warnings to incidents and preparedness.
+ * Logic in service.impl (eGA). Read-only. Path {@code GET /v1/reports/early-warnings} unchanged.
  */
-@RestController
-@RequestMapping("/v1/reports/early-warnings")
-public class EwManagementController {
+@Service
+public class EwManagementReportServiceImpl implements EwManagementReportService {
+
+
 
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
 
-    public EwManagementController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
+    public EwManagementReportServiceImpl(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
     }
@@ -60,9 +39,8 @@ public class EwManagementController {
         return null;
     }
 
-    @GetMapping
-    public Map<String, Object> analysis(@RequestParam(required = false) String from,
-                                        @RequestParam(required = false) String to) {
+    @Override
+    public Map<String, Object> analysis(String from, String to) {
         // EW effectiveness analytics is a staff/leadership report — a donor/partner account must not read it.
         if (jurisdiction.currentStakeholderId() != null) {
             throw new ResourceNotFoundException("Not found.");

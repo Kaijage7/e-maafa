@@ -187,7 +187,8 @@ Suggested migration order:
 41. ~~**EW Bulletin Ingest**~~ — **DONE** (PMO-DMD push → pending warnings; productive params + net-zero drill)  
 42. ~~**EW Warning Lifecycle**~~ — **DONE** (approve/publish/map/bulletin; SoD + net-zero drill)  
 43. ~~**EW Scanner / Monitoring**~~ — **DONE** (advanced dual stats + productive multi-filters; DisasterScannerService retained)  
-44. EW fat controllers complete; other modules next  
+44. ~~**EW Management Report**~~ — **DONE** (`GET /v1/reports/early-warnings`; productive from/to + area isolation)  
+45. Other modules (mitigation/portal/recovery/…) next  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 

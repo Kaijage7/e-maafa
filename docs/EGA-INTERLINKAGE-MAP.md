@@ -272,6 +272,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | E5 | EW Bulletin Ingest | `POST /ew/bulletins/ingest` | ~339 | NotificationService afterCommit; pending Warning + hazards; tma/dmd parsers; 1h duplicate | **DONE** |
 | E6 | EW Warning Lifecycle | `POST /v1/ew/warnings/{id}/approve\|publish\|map\|bulletin` | ~462 | early_warning.approve SoD; clone to early_warnings; NotificationService broadcast; OH kick | **DONE** |
 | E7 | EW Scanner | `/v1/ew/scanner/*` | ~503+ | Dual stats; productive multi-filters; real dispatch router; DisasterScannerService OSINT; tasking SoD | **DONE** |
+| E8 | EW Management Report | `GET /v1/reports/early-warnings` | ~388 | from/to window; area isolation; warned↔incident effectiveness + DRR coverage | **DONE** |
 
 ### 10.5 Do **not** start with
 
