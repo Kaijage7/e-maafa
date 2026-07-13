@@ -183,7 +183,8 @@ Suggested migration order:
 37. ~~**EW Boundary (monitoring reports)**~~ — **DONE** (first EW eGA leaf; productive filters)  
 38. ~~**EW Warnings registry (index)**~~ — **DONE** (read; area isolation productive; no fake query filters)  
 39. ~~**EW Products (bulletins)**~~ — **DONE** (severity/type filters + aligned stats; disseminate retained)  
-40. Remaining EW (lifecycle, agency, bulletin ingest, scanner) then other modules  
+40. ~~**EW Agency bus**~~ — **DONE** (submit/update/withdraw/latest/history/updates/DMD; agency isolation productive)  
+41. Remaining EW (lifecycle, bulletin ingest, scanner) then other modules  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -229,8 +230,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | EW Boundary | Done | `/ew/monitoring/reports` | Thin controller + service.impl; `bulletin_number`/`warning_code` productive (blank=unfiltered, nonsense=0); store requires `focal_point_name`; create drill net-zero; Partner **403** |
 | EW Warnings index | Done | `GET /v1/ew/warnings` | Thin controller + service.impl; JSON DTO unchanged; **no unused query params** (isolation via JurisdictionScope); SA **17** vs Dist/Reg **5** Dodoma-only; stats.total = list length; Partner **403** |
 | EW Products | Done | `/v1/ew/products` | Thin controller + service.impl; `severity`/`type` productive; **stats use same WHERE as list**; show **404**; missing PDF **400**; publish missing **404**; Partner **403** |
+| EW Agency bus | Done | `/v1/ew/agency/*`, `/v1/ew/dmd/*` | Thin controller + service.impl; JurisdictionScope agency isolation; productive `agency`/`warning_code`/`limit`/`exclude`/`days`/`hazardFocus`; empty/no-geo submit **422** (no supersede); MoH→TMA **403**; Partner **403**; JSON baselines identical post-extract |
 
-39. ~~**EW Products**~~ — **DONE**; remaining EW: lifecycle, agency, bulletin ingest, scanner
+40. ~~**EW Agency bus**~~ — **DONE**; remaining EW: lifecycle, bulletin ingest, scanner
 
 ---
 

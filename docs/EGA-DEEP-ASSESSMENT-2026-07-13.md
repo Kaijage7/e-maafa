@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 38 thin eGA controllers, 38 service + 38 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 39 thin eGA controllers, 39 service + 39 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
 | Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
 | Response remaining | **Support hubs only** | Transitional services in `response/` |
-| EW | **In progress** | Boundary + Warnings index + **Products** done; remaining: lifecycle, agency, bulletin ingest, scanner |
+| EW | **In progress** | Boundary + Warnings index + Products + **Agency bus** done; remaining: lifecycle, bulletin ingest, scanner |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**EW Products**~~ **DONE** | Next EW: agency reads or bulletin ingest — lifecycle later |
+| Next eGA leaf (binding order) | ~~**EW Agency bus**~~ **DONE** | Next EW: bulletin ingest (write) or lifecycle — scanner last |
 
-**Honest score:** Master data + Response + three EW leaves eGA-shaped. Residual: EW lifecycle/agency/bulletin/scanner + Response support services.
+**Honest score:** Master data + Response + four EW leaves eGA-shaped. Residual: EW lifecycle/bulletin/scanner + Response support services.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -50,6 +50,7 @@
 | EW Boundary | GET reports **200**; blank filters = full list; `warning_code` scopes; nonsense = **0**; AND filters productive; empty store **422** (`focal_point_name`); create+filter+delete net-zero; Partner **403**; DAS create **403** |
 | EW Warnings index | SA **17** / Dist+Reg **5**; stats.total = list size; Dist hazard regions **Dodoma only**; Partner **403**; unauth **401**; no fake query filters (unknown query ignored, full national for SA) |
 | EW Products | `severity`/`type` filters exact; nonsense = **0** list+stats; filtered stats.total = list n; show **404**; missing PDF **400**; Partner **403** |
+| EW Agency bus | SA JSON baselines identical post-extract; TMA only sees self (latest/updates/consolidated); MoH→TMA read/write **403**; `agency=nosuch`/`warning_code` nonsense = **0**; history `limit` clamped; `exclude=tma` count **0**; empty/no-geo submit **422** without superseding latest; Partner **403**; unauth **401** |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -94,6 +95,7 @@
 - ~~EW Boundary eGA extract~~ — **DONE** (JdbcTemplate + CurrentUserResolver; productive bulletin/warning filters; store validation; create drill net-zero).
 - ~~EW Warnings index eGA extract~~ — **DONE** (EwWarningsServiceImpl; repos public/split; JurisdictionScope isolation verified; no invented filters).
 - ~~EW Products eGA extract~~ — **DONE** (filters severity/type; stats aligned to filter; CurrentUserResolver; Mgov/Mail/Audience retained).
+- ~~EW Agency bus eGA extract~~ — **DONE** (JurisdictionScope isolation; DmdImpactSupport + ActionGuide retained; productive filters; write validation preserves prior latest).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -125,6 +127,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 21. ~~eGA migrate **Command Center**~~ — **DONE**.  
 22. ~~eGA migrate **EW Boundary**~~ — **DONE**.  
 23. ~~eGA migrate **EW Warnings index**~~ — **DONE**.  
-24. Next EW: bulletin ingest → products → agency → lifecycle → scanner (writes last).  
-25. Stamp area on temp warehouses + agency stock data hygiene.  
-26. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+24. ~~eGA migrate **EW Products**~~ — **DONE**.  
+25. ~~eGA migrate **EW Agency bus**~~ — **DONE**.  
+26. Next EW: bulletin ingest → lifecycle → scanner.  
+27. Stamp area on temp warehouses + agency stock data hygiene.  
+28. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.

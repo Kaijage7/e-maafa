@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.ew;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -10,38 +10,28 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
-import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.ew.ActionGuideStatementService;
+import tz.go.pmo.dmis.ew.DmdImpactSupportService;
+import tz.go.pmo.dmis.service.EwAgencyService;
 
 /**
- * Cross-agency Early Warning integration bus — native re-platform of the Python file-bus
- * ({@code ew/output/bridge/latest_<agency>.json}). The Python authoring pages are UNTOUCHED; this is the
- * DMIS-native data integration the user asked for, starting with Early Warning:
+ * Cross-agency Early Warning integration bus — native re-platform of the Python file-bus.
+ * Logic in service.impl (eGA). Paths under {@code /v1/ew} unchanged.
  *
  * <ul>
- *   <li><b>Submit</b> — every warning entity posts its bulletin/assessment ({@code POST /agency/{a}/submission}).</li>
- *   <li><b>Interlink</b> — every entity can read each other's latest ({@code GET /agency/{a}/latest},
- *       {@code GET /agency/latest}); e.g. MoW reads TMA rainfall to inform flood forecasting.</li>
- *   <li><b>Overlay</b> — PMO-DMD reads ALL and consolidates into one realistic bulletin
- *       ({@code GET /dmd/consolidated}) with the Python's highest-alert-wins-per-area merge.</li>
+ *   <li><b>Submit</b> — every warning entity posts its bulletin/assessment.</li>
+ *   <li><b>Interlink / isolation</b> — agency-bound logins see only their entity; PMO sees all.</li>
+ *   <li><b>Overlay</b> — PMO-DMD consolidation with highest-alert-wins-per-area merge.</li>
  * </ul>
  */
-@RestController
-@RequestMapping("/v1/ew")
-// Cross-agency reads (latest, consolidated, history) stay authenticated; the two WRITES are role-gated
-// per method: submit = field/operator tier, withdraw = oversight (retracting a public alert).
-@PreAuthorize("isAuthenticated()")
-public class EwAgencySubmissionController {
+@Service
+public class EwAgencyServiceImpl implements EwAgencyService {
+
+
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final Set<String> AGENCIES = Set.of("tma", "mow", "gst", "moh", "moa", "nemc", "mlf");
@@ -83,9 +73,9 @@ public class EwAgencySubmissionController {
     /** Action Guide Book statement proposals (deterministic) for painted impact colours — never auto-sends. */
     private final ActionGuideStatementService actionGuide;
 
-    public EwAgencySubmissionController(JdbcTemplate jdbc, JurisdictionScope jurisdiction,
-                                        DmdImpactSupportService impactSupport,
-                                        ActionGuideStatementService actionGuide) {
+    public EwAgencyServiceImpl(JdbcTemplate jdbc, JurisdictionScope jurisdiction,
+                               DmdImpactSupportService impactSupport,
+                               ActionGuideStatementService actionGuide) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
         this.impactSupport = impactSupport;
@@ -131,7 +121,7 @@ public class EwAgencySubmissionController {
     }
 
     private static Map<String, List<String>> loadRegionDistricts() {
-        try (var in = EwAgencySubmissionController.class.getResourceAsStream("/ew/region_districts.json")) {
+        try (var in = EwAgencyServiceImpl.class.getResourceAsStream("/ew/region_districts.json")) {
             if (in == null) return Map.of();
             Map<String, List<String>> raw = JSON.readValue(in,
                 new com.fasterxml.jackson.core.type.TypeReference<Map<String, List<String>>>() {});
@@ -202,12 +192,10 @@ public class EwAgencySubmissionController {
     }
 
     // ── Submit ──────────────────────────────────────────────────────────────────────────────────
-    @PostMapping("/agency/{agency}/submission")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('early_warning.create')")
     @SuppressWarnings("unchecked")
-    public Map<String, Object> submit(@PathVariable String agency,
-                                      @RequestBody Map<String, Object> payload) throws Exception {
+    public Map<String, Object> submit(String agency, Map<String, Object> payload) throws Exception {
         String a = agency == null ? "" : agency.toLowerCase(Locale.ROOT);
         if (!AGENCIES.contains(a)) {
             throw new BusinessRuleException("Unknown warning entity: " + agency);
@@ -259,13 +247,10 @@ public class EwAgencySubmissionController {
     /** Update under the index of an already-issued warning (warning_code). Supersedes the agency's latest so
      *  consolidation sees the newest layer, and stamps is_update + warning_code + revision so Monitoring
      *  receives it and PMO can re-consolidate / revise the same warning_code. */
-    @PostMapping("/agency/{agency}/update")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('early_warning.create')")
     @SuppressWarnings("unchecked")
-    public Map<String, Object> update(@PathVariable String agency,
-                                      @RequestParam("warningCode") String warningCode,
-                                      @RequestBody Map<String, Object> payload) throws Exception {
+    public Map<String, Object> update(String agency, String warningCode, Map<String, Object> payload) throws Exception {
         String a = agency == null ? "" : agency.toLowerCase(Locale.ROOT);
         if (!AGENCIES.contains(a)) throw new BusinessRuleException("Unknown warning entity: " + agency);
         assertAgencyWrite(a);
@@ -308,9 +293,8 @@ public class EwAgencySubmissionController {
     }
 
     /** Monitoring reads entity updates (by warning_code or agency). */
-    @GetMapping("/agency/updates")
-    public Map<String, Object> updates(@RequestParam(required = false) String warning_code,
-                                       @RequestParam(required = false) String agency) {
+    @Override
+    public Map<String, Object> updates(String warning_code, String agency) {
         StringBuilder where = new StringBuilder("is_update = true");
         List<Object> args = new ArrayList<>();
         if (warning_code != null && !warning_code.isBlank()) { where.append(" and warning_code = ?"); args.add(warning_code); }
@@ -326,8 +310,8 @@ public class EwAgencySubmissionController {
     }
 
     // ── Read one agency's latest (the envelope) ───────────────────────────────────────────────────
-    @GetMapping("/agency/{agency}/latest")
-    public Map<String, Object> latest(@PathVariable String agency) {
+    @Override
+    public Map<String, Object> latest(String agency) {
         String a = agency == null ? "" : agency.toLowerCase(Locale.ROOT);
         assertAgencyRead(a);
         List<Map<String, Object>> rows = jdbc.queryForList(
@@ -341,9 +325,8 @@ public class EwAgencySubmissionController {
     }
 
     // ── Submission history for an agency (audit timeline) ─────────────────────────────────────────
-    @GetMapping("/agency/{agency}/history")
-    public Map<String, Object> history(@PathVariable String agency,
-                                       @RequestParam(required = false, defaultValue = "20") int limit) {
+    @Override
+    public Map<String, Object> history(String agency, int limit) {
         String a = agency == null ? "" : agency.toLowerCase(Locale.ROOT);
         assertAgencyRead(a);
         List<Map<String, Object>> rows = jdbc.queryForList(
@@ -359,10 +342,9 @@ public class EwAgencySubmissionController {
      * (or an approver retracts one): clears is_latest so it leaves the cross-agency reads + the DMD
      * consolidation immediately. The superseded rows remain for audit. The issuing entity (early_warning.create)
      * can clear; an agency-bound login may only clear ITS OWN entity. */
-    @org.springframework.web.bind.annotation.DeleteMapping("/agency/{agency}/latest")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('early_warning.create') or hasAuthority('early_warning.approve')")
-    public Map<String, Object> withdraw(@PathVariable String agency) {
+    public Map<String, Object> withdraw(String agency) {
         String a = agency == null ? "" : agency.toLowerCase(Locale.ROOT);
         if (!AGENCIES.contains(a)) throw new BusinessRuleException("Unknown warning entity: " + agency);
         String mine = myAgencyOrNull();
@@ -374,8 +356,8 @@ public class EwAgencySubmissionController {
     }
 
     // ── Read every agency's latest at once (the cross-agency visibility map) ───────────────────────
-    @GetMapping("/agency/latest")
-    public Map<String, Object> allLatest(@RequestParam(required = false) String exclude) {
+    @Override
+    public Map<String, Object> allLatest(String exclude) {
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select id, agency, bridge_ts, issue_date, issue_time, report_period, payload, regions, " +
             "districts, hazard_types, alert_summary, top_alert, item_count from public.ew_agency_submissions " +
@@ -393,9 +375,9 @@ public class EwAgencySubmissionController {
     }
 
     // ── PMO-DMD consolidation: overlay all inputs, highest-alert-wins per area ─────────────────────
-    @GetMapping("/dmd/consolidated")
+    @Override
     @SuppressWarnings("unchecked")
-    public Map<String, Object> consolidated(@RequestParam(required = false, defaultValue = "5") int days) {
+    public Map<String, Object> consolidated(int days) {
         // PMO-DMD consolidation overlays every entity; an agency-bound login only sees its own contribution.
         String mine = myAgencyOrNull();
         List<Map<String, Object>> rows = mine == null
@@ -469,11 +451,9 @@ public class EwAgencySubmissionController {
      * merge or bulletin ingest. Returns INFORM context + suggested red/orange/yellow per district
      * under entity hydromet tiers for the requested day so PMO can paint more realistically.
      */
-    @GetMapping("/dmd/impact-support")
+    @Override
     @SuppressWarnings("unchecked")
-    public Map<String, Object> impactSupport(@RequestParam(required = false, defaultValue = "1") int day,
-                                            @RequestParam(required = false, defaultValue = "5") int days,
-                                            @RequestParam(required = false, defaultValue = "auto") String hazardFocus) {
+    public Map<String, Object> impactSupport(int day, int days, String hazardFocus) {
         Map<String, Object> cons = consolidated(days);
         List<Map<String, Object>> dayList = (List<Map<String, Object>>) cons.get("days");
         Map<String, Object> dayRow = null;
@@ -531,7 +511,7 @@ public class EwAgencySubmissionController {
     /**
      * Action Guide Book catalog metadata (hazards, levels, no-harm scaling). Read-only assist for PMO.
      */
-    @GetMapping("/dmd/action-guide")
+    @Override
     public Map<String, Object> actionGuideMeta() {
         return actionGuide.meta();
     }
@@ -542,8 +522,8 @@ public class EwAgencySubmissionController {
      * PMO applies a proposal into on-screen comment/directive boxes, then continues the normal flow:
      * Generate Impact Bulletin → Publish to EOCC → portal / dissemination.
      */
-    @PostMapping("/dmd/action-statements")
-    public Map<String, Object> actionStatements(@RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> actionStatements(Map<String, Object> body) {
         return actionGuide.propose(body);
     }
 
