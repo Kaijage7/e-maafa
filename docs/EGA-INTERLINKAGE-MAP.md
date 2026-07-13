@@ -279,6 +279,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | RC2 | Relief distributions | `/v1/recovery/relief-distributions` | — | DispatchSupportService + SimulationGuard + AreaGuard | **DONE** |
 | RC3 | Strategic projects | `/v1/recovery/strategic-projects` | — | Reconstruction tracking; paths unchanged | **DONE** |
 | RC4 | Knowledge repository | `/v1/recovery/knowledge` | — | Multipart document/attachment; approve | **DONE** |
+| P1–P7 | Portal CMS admins | content/portal,news,upload,education,materials,sections + settings/agencies | — | Thin eGA; public facade + threats residual | **DONE** |
 
 ### 10.5 Do **not** start with
 

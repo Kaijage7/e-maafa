@@ -1,25 +1,13 @@
-package tz.go.pmo.dmis.portal;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.PortalNewsService;
 
 /**
  * Content Management → News & Events — admin CRUD over portal_news, reproducing
@@ -27,22 +15,13 @@ import tz.go.pmo.dmis.common.security.Authz;
  * published_at auto-set the moment an item is activated without a date.
  * The PUBLIC landing/news pages consume what is managed here.
  */
-@RestController
-@RequestMapping("/v1/content/news")
-@RequiredArgsConstructor
-@Tag(name = "Content Management", description = "Portal news & events (admin)")
-public class PortalNewsAdminController {
+@Service
+@lombok.RequiredArgsConstructor
+public class PortalNewsServiceImpl implements PortalNewsService {
+
 
     private final JdbcTemplate jdbc;
-
-    public record NewsWriteRequest(String title, String excerpt, String body, String image,
-                                   String category, Boolean isActive,
-                                   String title_sw, String excerpt_sw, String body_sw) {
-    }
-
-    @GetMapping
-    @Operation(summary = "All news/events with stats (admin list)")
-    @PreAuthorize("isAuthenticated()")
+    @Override
     public Map<String, Object> index() {
         List<Map<String, Object>> items = jdbc.queryForList(
                 "select id, title, slug, excerpt, body, image, category, is_active as \"isActive\","
@@ -56,12 +35,9 @@ public class PortalNewsAdminController {
                 "stats", Map.of("total", items.size(), "news", news, "events", events, "published", published));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a news/event item (slug auto-generated)")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> create(@RequestBody NewsWriteRequest req) {
+    public Map<String, Object> create(PortalNewsService.NewsWriteRequest req) {
         requireTitle(req);
         boolean active = req.isActive() == null || req.isActive();
         String slug = uniqueSlug(slugify(req.title()), null);
@@ -76,11 +52,9 @@ public class PortalNewsAdminController {
         return Map.of("id", id, "slug", slug, "message", "Created");
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Update a news/event item")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> update(@PathVariable long id, @RequestBody NewsWriteRequest req) {
+    public Map<String, Object> update(long id, PortalNewsService.NewsWriteRequest req) {
         requireTitle(req);
         boolean active = req.isActive() == null || req.isActive();
         int updated = jdbc.update(
@@ -97,16 +71,14 @@ public class PortalNewsAdminController {
         return Map.of("id", id, "message", "Updated");
     }
 
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a news/event item")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> delete(@PathVariable long id) {
+    public Map<String, Object> delete(long id) {
         jdbc.update("delete from public.portal_news where id=?", id);
         return Map.of("id", id, "message", "Deleted");
     }
 
-    private static void requireTitle(NewsWriteRequest req) {
+    private static void requireTitle(PortalNewsService.NewsWriteRequest req) {
         if (req.title() == null || req.title().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title is required");
         }
@@ -128,4 +100,5 @@ public class PortalNewsAdminController {
         }
         return slug;
     }
+
 }

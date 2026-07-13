@@ -1,48 +1,26 @@
-package tz.go.pmo.dmis.portal;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.EducationalContentService;
 
 /**
  * Content Management → Educational Content — admin CRUD over educational_contents,
  * reproducing Admin/EducationalContentController. Published items feed the PUBLIC
  * education portal (/education) via PortalPublicService.
  */
-@RestController
-@RequestMapping("/v1/content/education")
-@RequiredArgsConstructor
-@Tag(name = "Content Management", description = "Educational content (admin)")
-public class EducationalContentAdminController {
+@Service
+@lombok.RequiredArgsConstructor
+public class EducationalContentServiceImpl implements EducationalContentService {
+
 
     private final JdbcTemplate jdbc;
-
-    public record EduWriteRequest(String title, String contentType, String summary, String fullContent,
-                                  String author, String publicationDate, String targetAudience,
-                                  String keywords, Boolean isPublished,
-                                  String titleSw, String summarySw, String fullContentSw) {
-    }
-
-    @GetMapping
-    @Operation(summary = "All educational content + stats")
-    @PreAuthorize("isAuthenticated()")
+    @Override
     public Map<String, Object> index() {
         List<Map<String, Object>> items = jdbc.queryForList(
                 "select id, title, content_type as \"contentType\", summary, full_content as \"fullContent\", author,"
@@ -56,12 +34,9 @@ public class EducationalContentAdminController {
                 "stats", Map.of("total", items.size(), "published", published, "drafts", items.size() - published));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create educational content")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> create(@RequestBody EduWriteRequest req) {
+    public Map<String, Object> create(EducationalContentService.EduWriteRequest req) {
         requireTitle(req);
         Long id = jdbc.queryForObject(
                 "insert into public.educational_contents(title,content_type,summary,full_content,author,"
@@ -75,11 +50,9 @@ public class EducationalContentAdminController {
         return Map.of("id", id, "message", "Created");
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Update educational content")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> update(@PathVariable long id, @RequestBody EduWriteRequest req) {
+    public Map<String, Object> update(long id, EducationalContentService.EduWriteRequest req) {
         requireTitle(req);
         int n = jdbc.update("update public.educational_contents set title=?, content_type=?, summary=?,"
                         + " full_content=coalesce(?, full_content), author=?, publication_date=?::date,"
@@ -96,16 +69,14 @@ public class EducationalContentAdminController {
         return Map.of("id", id, "message", "Updated");
     }
 
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete educational content")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> delete(@PathVariable long id) {
+    public Map<String, Object> delete(long id) {
         jdbc.update("delete from public.educational_contents where id=?", id);
         return Map.of("id", id, "message", "Deleted");
     }
 
-    private static void requireTitle(EduWriteRequest req) {
+    private static void requireTitle(EducationalContentService.EduWriteRequest req) {
         if (req.title() == null || req.title().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title is required");
         }
@@ -118,4 +89,5 @@ public class EducationalContentAdminController {
     private static String blank(String v) {
         return (v == null || v.isBlank()) ? null : v;
     }
+
 }

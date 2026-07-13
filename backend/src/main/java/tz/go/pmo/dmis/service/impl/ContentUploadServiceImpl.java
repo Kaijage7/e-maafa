@@ -1,7 +1,5 @@
-package tz.go.pmo.dmis.portal;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,14 +10,10 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.ContentUploadService;
 
 /**
  * Content Management → image upload for News & Gallery editors (Discussion D3).
@@ -28,10 +22,9 @@ import tz.go.pmo.dmis.common.security.Authz;
  * {@code portal/<folder>/}. Returns the relative path the content tables store plus the
  * ready-to-use URL. Same validation pattern as FrameworkService.storeFile.
  */
-@RestController
-@RequestMapping("/v1/content/upload")
-@Tag(name = "Content Management", description = "Image upload (news, gallery)")
-public class ContentUploadController {
+@Service
+public class ContentUploadServiceImpl implements ContentUploadService {
+
 
     private static final List<String> ALLOWED_EXTENSIONS = List.of("jpg", "jpeg", "png", "webp", "gif", "pdf");
     private static final long MAX_BYTES = 5L * 1024 * 1024; // 5 MB, matching the Laravel validators
@@ -39,11 +32,9 @@ public class ContentUploadController {
     @Value("${dmis.storage.public-root:${user.dir}/storage/public}")
     private String publicRoot;
 
-    @PostMapping
-    @PreAuthorize("hasAuthority('content_management.manage')")
-    @Operation(summary = "Upload an image; returns the stored path + serving URL")
-    public Map<String, Object> upload(@RequestParam("file") MultipartFile file,
-                                      @RequestParam(defaultValue = "news") String folder) {
+    @Override
+    public Map<String, Object> upload(MultipartFile file,
+                                      String folder) {
         String original = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
         String ext = original.contains(".")
                 ? original.substring(original.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT) : "";
@@ -98,4 +89,5 @@ public class ContentUploadController {
             default -> false;
         };
     }
+
 }

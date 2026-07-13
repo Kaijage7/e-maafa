@@ -132,7 +132,7 @@ Optional later: subpackages under layers for readability only, e.g. `controller.
 
 ## 7. Transition rules (existing code)
 
-Legacy fat packages under `ew/` and `recovery/` controllers are gone. Shared Response engines live in `service.support/` (not fat controllers). Other domains (`portal/`, One Health, finance, M&E, remaining reports, …) may still host controllers until migrated.
+Legacy fat packages under `ew/` and `recovery/` controllers are gone. Portal CMS admins are eGA-layered; `portal/` still holds public facade + threats. Shared Response engines live in `service.support/`. Other domains (One Health, finance, M&E, remaining reports, …) may still host controllers until migrated.
 
 | Rule | |
 |------|---|
@@ -198,7 +198,8 @@ Suggested migration order:
 52. ~~**Relief distributions**~~ — **DONE** (stock + AreaGuard; confirm path)
 53. ~~**Strategic projects**~~ — **DONE** (reconstruction tracking; paths unchanged)
 54. ~~**Knowledge repository**~~ — **DONE** (multipart document/attachment; approve)
-55. Remaining fat domains: portal, One Health, finance, M&E, remaining reports, notification, stakeholder admin, ops/IAM
+55. ~~**Portal CMS admins (7 leaves)**~~ — **DONE** (management, upload, news, education, materials, sections, agencies)
+56. Portal residual: public facade + threat admin (then One Health / finance / M&E / reports / notification / stakeholder / ops-IAM)
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
@@ -263,6 +264,13 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Relief distributions | Done | `/v1/recovery/relief-distributions` | Thin controller + service.impl; stock support + SimulationGuard; filter-aligned stats; empty store **422**; confirm missing **404** |
 | Strategic projects | Done | `/v1/recovery/strategic-projects` | Thin controller + service.impl; productive status/sector/search; index open (legacy); manage on writes; list filters; global stats preserved |
 | Knowledge repository | Done | `/v1/recovery/knowledge` | Thin controller + service.impl; JSON + multipart (`document`/`attachment`); approve; download; type filter productive |
+| Portal management | Done | `/v1/content/portal` | Thin controller + service.impl; slides/gallery/settings; unauth **401** |
+| Content upload | Done | `/v1/content/upload` | Thin controller + service.impl; magic-byte validation; folder allowlist |
+| Portal news | Done | `/v1/content/news` | Thin controller + service.impl; slug unique; create **201**; empty title **400**; delete net-zero |
+| Educational content | Done | `/v1/content/education` | Thin controller + service.impl; admin list+stats baseline exact |
+| Education materials | Done | `/v1/content/education-materials` | Thin controller + service.impl; audience/type vocab; baseline exact |
+| Portal sections | Done | `/v1/content/sections` | Thin controller + service.impl; hazard cards + JSON settings; baseline exact |
+| Agency admin | Done | `/v1/settings/agencies` | Thin controller + service.impl; empty name **400**; FK delete **409** retained |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 

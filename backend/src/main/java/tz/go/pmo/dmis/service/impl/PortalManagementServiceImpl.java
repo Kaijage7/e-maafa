@@ -1,20 +1,11 @@
-package tz.go.pmo.dmis.portal;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import tz.go.pmo.dmis.common.security.Authz;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.PortalManagementService;
 
 /**
  * Content Management → Portal Management — controls what the PUBLIC landing shows,
@@ -22,17 +13,14 @@ import tz.go.pmo.dmis.common.security.Authz;
  * image toggles + marquee row placement, and the key/value portal settings
  * (hero stat tiles, counters). Changes are visible on the public site immediately.
  */
-@RestController
-@RequestMapping("/v1/content/portal")
-@RequiredArgsConstructor
-@Tag(name = "Content Management", description = "Public portal management (admin)")
-public class PortalManagementAdminController {
+@Service
+@lombok.RequiredArgsConstructor
+public class PortalManagementServiceImpl implements PortalManagementService {
+
 
     private final JdbcTemplate jdbc;
 
-    @GetMapping
-    @Operation(summary = "Slides + gallery + settings in one admin payload")
-    @PreAuthorize("isAuthenticated()")
+    @Override
     public Map<String, Object> index() {
         List<Map<String, Object>> slides = jdbc.queryForList(
                 "select id, title, slide_type as \"slideType\", sort_order as \"sortOrder\","
@@ -46,22 +34,18 @@ public class PortalManagementAdminController {
         return Map.of("slides", slides, "gallery", gallery, "settings", settings);
     }
 
-    @PutMapping("/slides/{id}")
-    @Operation(summary = "Toggle a hero slide / change its order")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> updateSlide(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> updateSlide(long id, Map<String, Object> req) {
         jdbc.update("update public.portal_slides set is_active = coalesce(?, is_active),"
                         + " sort_order = coalesce(?, sort_order), updated_at = now() where id = ?",
                 bool(req.get("isActive")), intOrNull(req.get("sortOrder")), id);
         return Map.of("id", id, "message", "Slide updated");
     }
 
-    @PutMapping("/gallery/{id}")
-    @Operation(summary = "Toggle a gallery image / move it between marquee rows")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> updateGallery(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> updateGallery(long id, Map<String, Object> req) {
         jdbc.update("update public.portal_gallery set is_active = coalesce(?, is_active),"
                         + " marquee_row = coalesce(?, marquee_row), caption = coalesce(?, caption),"
                         + " updated_at = now() where id = ?",
@@ -70,11 +54,9 @@ public class PortalManagementAdminController {
         return Map.of("id", id, "message", "Gallery image updated");
     }
 
-    @PutMapping("/settings/{key}")
-    @Operation(summary = "Update one portal setting value (hero stats, counters …)")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> updateSetting(@PathVariable String key, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> updateSetting(String key, Map<String, Object> req) {
         String value = req.get("value") == null ? null : String.valueOf(req.get("value"));
         int updated = jdbc.update("update public.portal_settings set value=?, updated_at=now() where key=?", value, key);
         if (updated == 0) {
@@ -96,4 +78,5 @@ public class PortalManagementAdminController {
             return null;
         }
     }
+
 }

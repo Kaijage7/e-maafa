@@ -1,25 +1,13 @@
-package tz.go.pmo.dmis.portal;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.EducationMaterialService;
 
 /**
  * Content Management → Public Awareness — the hazard education repository. Every material is
@@ -27,11 +15,10 @@ import tz.go.pmo.dmis.common.security.Authz;
  * one of: action guide (action statements), video, document or poster. The public hazard hubs
  * (/education/hazard/{name}) render exactly what is managed here.
  */
-@RestController
-@RequestMapping("/v1/content/education-materials")
-@RequiredArgsConstructor
-@Tag(name = "Content Management", description = "Hazard education materials (admin)")
-public class EducationMaterialAdminController {
+@Service
+@lombok.RequiredArgsConstructor
+public class EducationMaterialServiceImpl implements EducationMaterialService {
+
 
     /** Allowed audience + type vocabularies — kept server-side so bad values can't reach the hubs. */
     private static final List<String> AUDIENCES = List.of("children", "adults", "disabilities", "all");
@@ -39,15 +26,7 @@ public class EducationMaterialAdminController {
     private static final List<String> PHASES = List.of("before", "during", "after", "any");
 
     private final JdbcTemplate jdbc;
-
-    public record MaterialWrite(String hazard, String audience, String materialType, String title,
-                                String body, String titleSw, String bodySw, String videoUrl,
-                                String filePath, Integer sortOrder, Boolean isActive, String phase) {
-    }
-
-    @GetMapping
-    @Operation(summary = "All materials + per-hazard counts (admin list)")
-    @PreAuthorize("isAuthenticated()")
+    @Override
     public Map<String, Object> index() {
         List<Map<String, Object>> items = jdbc.queryForList(
                 "select id, hazard, audience, material_type as \"materialType\", title, body,"
@@ -60,12 +39,9 @@ public class EducationMaterialAdminController {
         return Map.of("items", items, "counts", counts);
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Add a material to a hazard's repository")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> create(@RequestBody MaterialWrite req) {
+    public Map<String, Object> create(EducationMaterialService.MaterialWrite req) {
         validate(req);
         Long id = jdbc.queryForObject(
                 "insert into public.education_materials(hazard,audience,material_type,title,body,title_sw,body_sw,"
@@ -79,11 +55,9 @@ public class EducationMaterialAdminController {
         return Map.of("id", id, "message", "Material added");
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Update a material")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> update(@PathVariable long id, @RequestBody MaterialWrite req) {
+    public Map<String, Object> update(long id, EducationMaterialService.MaterialWrite req) {
         validate(req);
         int n = jdbc.update("update public.education_materials set hazard=?, audience=?, material_type=?,"
                         + " title=?, body=?, title_sw=?, body_sw=?, video_url=?, file_path=?,"
@@ -99,11 +73,9 @@ public class EducationMaterialAdminController {
         return Map.of("id", id, "message", "Updated");
     }
 
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a material")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> delete(@PathVariable long id) {
+    public Map<String, Object> delete(long id) {
         jdbc.update("delete from public.education_materials where id=?", id);
         return Map.of("id", id, "message", "Deleted");
     }
@@ -113,7 +85,7 @@ public class EducationMaterialAdminController {
         return (s == null || s.isBlank()) ? null : s;
     }
 
-    private static void validate(MaterialWrite req) {
+    private static void validate(EducationMaterialService.MaterialWrite req) {
         if (req.hazard() == null || req.hazard().isBlank() || req.title() == null || req.title().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Hazard and title are required");
         }
@@ -126,4 +98,5 @@ public class EducationMaterialAdminController {
                     "Type must be one of: " + String.join(", ", TYPES));
         }
     }
+
 }

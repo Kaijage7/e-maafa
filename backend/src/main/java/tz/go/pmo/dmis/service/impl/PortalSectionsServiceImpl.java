@@ -1,26 +1,14 @@
-package tz.go.pmo.dmis.portal;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.PortalSectionsService;
 
 /**
  * Content Management → landing-page sections that were previously hardcoded, now fully managed:
@@ -36,24 +24,16 @@ import tz.go.pmo.dmis.common.security.Authz;
  * The public landing consumes all three through /v1/portal/landing, so every edit here is
  * immediately visible on the public site.
  */
-@RestController
-@RequestMapping("/v1/content/sections")
-@RequiredArgsConstructor
-@Tag(name = "Content Management", description = "Landing sections: hazard cards, capabilities, hotlines")
-public class PortalSectionsAdminController {
+@Service
+@lombok.RequiredArgsConstructor
+public class PortalSectionsServiceImpl implements PortalSectionsService {
+
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
-
-    public record HazardCardWrite(String name, String nameSw, String icon, String color, String descriptionEn,
-                                  String descriptionSw, String link, Integer sortOrder, Boolean isActive) {
-    }
-
     // ------------------------------------------------------------ hazard cards
 
-    @GetMapping("/hazard-cards")
-    @Operation(summary = "All hazard education cards (admin)")
-    @PreAuthorize("isAuthenticated()")
+    @Override
     public Map<String, Object> hazardCards() {
         return Map.of("items", jdbc.queryForList(
                 "select id, name, name_sw as \"nameSw\", icon, color, description_en as \"descriptionEn\","
@@ -61,12 +41,9 @@ public class PortalSectionsAdminController {
                         + " is_active as \"isActive\" from public.portal_hazard_cards order by sort_order, id"));
     }
 
-    @PostMapping("/hazard-cards")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Add a hazard card")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> createHazardCard(@RequestBody HazardCardWrite req) {
+    public Map<String, Object> createHazardCard(PortalSectionsService.HazardCardWrite req) {
         if (req.name() == null || req.name().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required");
         }
@@ -80,11 +57,9 @@ public class PortalSectionsAdminController {
         return Map.of("id", id, "message", "Hazard card added");
     }
 
-    @PutMapping("/hazard-cards/{id}")
-    @Operation(summary = "Update a hazard card")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> updateHazardCard(@PathVariable long id, @RequestBody HazardCardWrite req) {
+    public Map<String, Object> updateHazardCard(long id, PortalSectionsService.HazardCardWrite req) {
         int n = jdbc.update("update public.portal_hazard_cards set name=coalesce(?,name), name_sw=coalesce(?,name_sw), icon=coalesce(?,icon),"
                         + " color=coalesce(?,color), description_en=coalesce(?,description_en),"
                         + " description_sw=coalesce(?,description_sw), link=coalesce(?,link),"
@@ -98,11 +73,9 @@ public class PortalSectionsAdminController {
         return Map.of("id", id, "message", "Updated");
     }
 
-    @DeleteMapping("/hazard-cards/{id}")
-    @Operation(summary = "Delete a hazard card")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> deleteHazardCard(@PathVariable long id) {
+    public Map<String, Object> deleteHazardCard(long id) {
         jdbc.update("delete from public.portal_hazard_cards where id=?", id);
         return Map.of("id", id, "message", "Deleted");
     }
@@ -110,9 +83,7 @@ public class PortalSectionsAdminController {
     // ----------------------------------------- capabilities + emergency numbers
 
     /** Both JSON-list settings, returned parsed for the editors. */
-    @GetMapping("/json-settings")
-    @Operation(summary = "Capability cards + emergency numbers (parsed JSON settings)")
-    @PreAuthorize("isAuthenticated()")
+    @Override
     public Map<String, Object> jsonSettings() {
         return Map.of("capabilities", readJsonSetting("capabilities.items"),
                 "emergencyNumbers", readJsonSetting("emergency.numbers"),
@@ -120,11 +91,9 @@ public class PortalSectionsAdminController {
     }
 
     /** Replaces one JSON-list setting wholesale (the editors submit the full list). */
-    @PutMapping("/json-settings/{key}")
-    @Operation(summary = "Save capabilities.items or emergency.numbers")
-    @PreAuthorize("hasAuthority('content_management.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> saveJsonSetting(@PathVariable String key, @RequestBody List<Map<String, Object>> items) {
+    public Map<String, Object> saveJsonSetting(String key, List<Map<String, Object>> items) {
         if (!List.of("capabilities.items", "emergency.numbers", "unsubscribe.reasons").contains(key)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown setting key");
         }
@@ -154,4 +123,5 @@ public class PortalSectionsAdminController {
     private static String nz(String v, String dflt) {
         return (v == null || v.isBlank()) ? dflt : v;
     }
+
 }

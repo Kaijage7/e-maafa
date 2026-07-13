@@ -6,7 +6,7 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 56 thin eGA controllers (+4 recovery), matching service + impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 63 thin eGA controllers (+7 portal CMS), matching service + impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
 | Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
 | Response support engines | **eGA-aligned** | Under `service.support` (workflow, dispatch, activation, simulation) |
@@ -148,7 +148,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 32. ~~eGA migrate **Hazards**~~ — **DONE** (first mitigation master).
 33. ~~eGA migrate **Mitigation remainder**~~ — **DONE**.
 34. ~~eGA migrate **Recovery (4 leaves)**~~ — **DONE**.
-35. Next fat domains: portal / One Health / finance / M&E / remaining reports. 
+35. ~~eGA migrate **Portal CMS admins (7 leaves)**~~ — **DONE**.
+36. Next: portal public + threats; then One Health / finance / M&E / remaining reports. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -258,4 +259,19 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 | Strategic projects | `/v1/recovery/strategic-projects` | SA baseline exact; status/sector/search productive; list filters (global stats preserved as legacy); create→Stopped→SQL delete net-zero |
 | Knowledge repository | `/v1/recovery/knowledge` | SA baseline exact; type=NOPE → 0 entries; JSON create→approve→SQL delete net-zero; multipart `document`/`attachment` contract preserved |
 
-**Recovery controllers: complete** (no `*Controller` under `recovery/`). Next fat domains: portal, One Health, finance, M&E, remaining reports, notification, stakeholder admin, ops/IAM.
+**Recovery controllers: complete** (no `*Controller` under `recovery/`).
+
+## 11. Portal CMS eGA batch (2026-07-13)
+
+| Leaf | Path | Verified |
+|------|------|----------|
+| Portal management | `/v1/content/portal` | SA baseline exact; unauth **401**; setting put net-zero |
+| Content upload | `/v1/content/upload` | unauth **401**; missing file **400** |
+| Portal news | `/v1/content/news` | SA baseline exact; create **201** + delete net-zero; empty title **400** |
+| Educational content | `/v1/content/education` | SA baseline exact; unauth **401** |
+| Education materials | `/v1/content/education-materials` | SA baseline exact |
+| Portal sections | `/v1/content/sections/*` | hazard cards + json-settings baseline exact |
+| Agency admin | `/v1/settings/agencies` | SA baseline exact (887 items); empty name **400** |
+
+Public portal regressions exact: landing, threats, regions, education, shelters, publications, i18n.  
+**Residual under `portal/`:** `PortalPublicController` + `PortalPublicService`, `ThreatAdminController` + `ThreatService`.
