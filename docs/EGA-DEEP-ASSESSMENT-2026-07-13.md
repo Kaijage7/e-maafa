@@ -32,6 +32,7 @@
 | Support Pledges | National donor queue; accept funds training; Dist accept **403**; validation **422** |
 | Declarations | Full statutory chain; Dist/Reg **403**; stage/role rules; drill net-zero |
 | Anticipatory Plans | Reg area scope; OOA show **404**; OOA create **422**; CP readiness still has `anticipatory_plans` |
+| Tasks | Reg stats area-scoped; OOA show/create **404**; status/assign **200**; drill net-zero |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -57,7 +58,8 @@
 - ~~Contingency Plans eGA extract~~ — **DONE** (no Response workflow coupling; `CurrentUserResolver` only).  
 - ~~Support Pledges eGA extract~~ — **DONE** (NotificationService retained; national donor queue by design).  
 - ~~Declarations eGA extract~~ — **DONE** (statutory chain; `CurrentUserResolver` + NotificationService; no workflow coupling).  
-- ~~Anticipatory Plans eGA extract~~ — **DONE** (`matchingPlans` on service; CommandCenter rewired off fat controller).
+- ~~Anticipatory Plans eGA extract~~ — **DONE** (`matchingPlans` on service; CommandCenter rewired off fat controller).  
+- ~~Tasks eGA extract~~ — **DONE** (NotificationService retained; area scope on board/calendar/form-data/show).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -72,7 +74,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 4. ~~eGA migrate **Support Pledges**~~ — **DONE**.  
 5. ~~eGA migrate **Declarations**~~ — **DONE**.  
 6. ~~eGA migrate **Anticipatory Plans**~~ — **DONE**.  
-7. Next: Tasks (never engine/dispatch/allocation first).  
-8. Keep logistics in place; extract services only when touching heavily.  
-9. Stamp area on temp warehouses + agency stock data hygiene.  
-10. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+7. ~~eGA migrate **Tasks**~~ — **DONE**.  
+8. Next: Assessments or Communication (never engine/dispatch/allocation first).  
+9. Keep logistics in place; extract services only when touching heavily.  
+10. Stamp area on temp warehouses + agency stock data hygiene.  
+11. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.

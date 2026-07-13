@@ -193,8 +193,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Support Pledges (map R4) | Done | `/v1/response/support` | Thin controller + service.impl; needs/pledges; staff-on-behalf + donor scope; accept funds training/measure; decline; validation **422**; Dist accept **403**; drills net-zero |
 | Declarations (map R6) | Done | `/v1/response/declarations` | Thin controller + service.impl; propose→review→endorse→declare→extend→revoke; Dist/Reg **403**; stage **422**; SA break-glass declare; drill net-zero |
 | Anticipatory Plans | Done | `/v1/response/anticipatory-plans` | Thin controller + service.impl; area scope + OOA show **404**; Reg OOA create **422**; lifecycle drill net-zero; CommandCenter uses `AnticipatoryPlansService.matchingPlans` |
+| Tasks | Done | `/v1/response/tasks` | Thin controller + service.impl; board/calendar/form-data; Reg stats area-scoped; OOA show/create **404**; status/assign; drill net-zero |
 
-20. ~~**Anticipatory Plans**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
+21. ~~**Tasks**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
 
 ---
 
