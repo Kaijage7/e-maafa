@@ -180,6 +180,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Roles & permissions | Done | `/v1/settings/roles` | Index/catalogue/show, create/update/delete net-zero, dup 409, held-role delete 409; **Super Admin guards**: no rename, no delete, matrix save always re-applies full catalogue (closes prior 91/97 gap); auto `.view` on matrix save; FE proxy + regressions |
 | User management | Done | `/v1/settings/users` | Index filters/groups, create/update/roles/password/delete net-zero; last Super Admin strip/delete 409; **unknown role 400** (was silent skip); bad password policy; FE proxy + roles/locations/institutions regressions |
 | Stakeholder coordination | Done | `/v1/response/stakeholder-coordination` | Index + show 360°; not-found; FE proxy; preparedness/settings/response regressions; first Response eGA leaf |
+| Executive Watch (Response R2) | Done | `/v1/response/executive` | Thin controller + service.impl; national tier only (area → 403); JSON unchanged; multi-persona verify |
+
+15. ~~Response remaining (executive → … → never engine/dispatch/allocation first)~~ — **Executive Watch DONE**; remaining Response leaves next (public reports preferred; never engine/dispatch first)
 
 ---
 

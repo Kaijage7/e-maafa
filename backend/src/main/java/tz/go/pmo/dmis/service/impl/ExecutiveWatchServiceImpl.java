@@ -1,54 +1,33 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.service.ExecutiveWatchService;
 
 /**
- * Executive Watch — the national situation picture for the highest level (PM / PS / Director /
- * President): a standing common-operating-picture for national leadership. Modelled on the DHS
- * National Operations Center common-operating-picture doctrine
- * with FEMA Community Lifelines, and the two operating states it describes:
- *
- *   • NORMAL/MONITORING — no active disaster: the national watch picture (hazard feeds, open
- *     incidents, every activation's posture, today's alert dispatch). "We see how monitoring and
- *     national situation."
- *   • ACTIVATED — ≥1 disaster: the incident common operating picture plus the Lifelines status
- *     board and a DECISIONS-PENDING queue (declarations awaiting the executive's signature).
- *
- * Read-only aggregation across the whole Response module; multi-hazard (cyclone, flood, epidemic,
- * earthquake, tsunami) since it reads the same activation machinery regardless of trigger.
+ * National Executive Watch aggregation. Logic moved unchanged from the former response package
+ * controller so Angular JSON stays identical.
  */
-@RestController
-@RequestMapping("/v1/response/executive")
-public class ExecutiveWatchController {
-
-    /** The 7 FEMA Community Lifelines (the executive-consumable green/yellow/red rollup). */
-    private static final List<String> LIFELINES = List.of(
-            "Safety & Security", "Food, Water & Shelter", "Health & Medical",
-            "Energy", "Communications", "Transportation", "Hazardous Materials");
+@Service
+@RequiredArgsConstructor
+public class ExecutiveWatchServiceImpl implements ExecutiveWatchService {
 
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
 
-    public ExecutiveWatchController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
-        this.jdbc = jdbc;
-        this.jurisdiction = jurisdiction;
-    }
-
-    @GetMapping
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> watch() {
-        // The Executive Watch is the NATIONAL leadership common-operating-picture (PM/PS/Director/President):
-        // an inherently whole-country view, not an area report. Restrict it to the national tier; an area
-        // officer (region/district) gets 403 Forbidden (not 404 — that looks like a missing route).
+        // National leadership COP only — area seats get 403 (not 404, which looks like a missing route).
         if (jurisdiction.currentTier() != JurisdictionScope.Tier.NATIONAL) {
             throw new AccessDeniedException(
                     "Executive Watch is a national leadership surface; your area seat cannot open it.");
@@ -138,7 +117,6 @@ public class ExecutiveWatchController {
      * disaster-posture activations, infrastructure damage). Each lifeline = green/yellow/red + basis.
      */
     private List<Map<String, Object>> lifelines() {
-        // Lifelines reflect the REAL national picture only — simulations never colour them.
         long activeCritical = count("select count(*) from public.incidents where severity_level='Critical' and status='Active Response' and coalesce(is_simulation,false)=false");
         long activeResponse = count("select count(*) from public.incidents where status='Active Response' and coalesce(is_simulation,false)=false");
         long disasterPosture = count("select count(*) from public.response_activations where status='active' and posture='disaster' and is_simulation=false");
@@ -149,10 +127,7 @@ public class ExecutiveWatchController {
                     where ac.assessment_id = da.id and ac.category = 'Infrastructure')
                   and not exists (select 1 from public.incidents s where s.id = da.incident_id and s.is_simulation)
                 """);
-        // HazMat lifeline signal — EXACT match on the Technological hazard class (Industrial Accident,
-        // Building Collapse), NOT a fuzzy name regex (which could false-flag the national leadership board
-        // on stray words like "gas"/"oil"). The taxonomy has no dedicated "hazardous materials" hazard, so
-        // this maps the Technological class to the FEMA HazMat/technological lifeline — exact and defensible.
+        // Exact Technological hazard class only — no fuzzy name regex on the national board.
         long technologicalActive = count("""
                 select count(*) from public.incidents i
                 join public.hazards h on h.id = i.hazard_id
@@ -174,9 +149,6 @@ public class ExecutiveWatchController {
                 activeCritical > 0 ? "yellow" : "green",
                 activeCritical > 0 ? "Casualty risk in active critical incident(s)" : "Routine",
                 "Ministry of Health · DRF 6"));
-        // Was hardcoded "green". Now grounded in REPORTED infrastructure damage (evidence, not inference) —
-        // power systems are part of assessed infrastructure damage, like Transportation. We do not assert a
-        // power problem the data doesn't show.
         out.add(lifeline("Energy",
                 infraDamage > 0 ? "yellow" : "green",
                 infraDamage > 0 ? "Infrastructure damage reported in assessments — power systems may be affected"
@@ -190,7 +162,6 @@ public class ExecutiveWatchController {
                 infraDamage > 0 ? "yellow" : "green",
                 infraDamage > 0 ? "Infrastructure damage reported in assessments" : "Routes open",
                 "TANROADS/TARURA · DRF 3"));
-        // Was hardcoded "green". Now driven by EXACT active Technological-class incidents (no fuzzy regex).
         out.add(lifeline("Hazardous Materials",
                 technologicalActive > 0 ? "red" : "green",
                 technologicalActive > 0 ? technologicalActive + " active technological/industrial incident(s) — HazMat exposure risk"
