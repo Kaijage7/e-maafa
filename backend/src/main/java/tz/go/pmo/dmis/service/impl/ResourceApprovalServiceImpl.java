@@ -1,22 +1,19 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.response.ApprovalWorkflowEngine;
+import tz.go.pmo.dmis.service.ResourceApprovalService;
 
 /**
  * Port of Response\ResourceApprovalController + the PMO bulk action from
@@ -28,21 +25,22 @@ import tz.go.pmo.dmis.common.security.Authz;
  * Role/jurisdiction scoping (the source's position-based filtering) is the IAM
  * phase's concern; local sessions act as Super Admin, who sees and may action
  * every queue in the source as well.
+ * <p>Logic lives in service.impl (eGA); paths/JSON unchanged. Acting user via
+ * {@link CurrentUserResolver}; engine retained as transitional response hub.
  */
-@RestController
-@RequestMapping("/v1/response/approvals")
-public class ResourceApprovalController {
+@Service
+public class ResourceApprovalServiceImpl implements ResourceApprovalService {
 
     private final JdbcTemplate jdbc;
     private final ApprovalWorkflowEngine engine;
-    private final IncidentWorkflowService users;
-    private final tz.go.pmo.dmis.common.security.JurisdictionScope jurisdiction;
-    private final tz.go.pmo.dmis.common.security.AreaGuard areaGuard;
+    private final CurrentUserResolver users;
+    private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
 
-    public ResourceApprovalController(JdbcTemplate jdbc, ApprovalWorkflowEngine engine,
-                                      IncidentWorkflowService users,
-                                      tz.go.pmo.dmis.common.security.JurisdictionScope jurisdiction,
-                                      tz.go.pmo.dmis.common.security.AreaGuard areaGuard) {
+    public ResourceApprovalServiceImpl(JdbcTemplate jdbc, ApprovalWorkflowEngine engine,
+                                       CurrentUserResolver users,
+                                       JurisdictionScope jurisdiction,
+                                       AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.engine = engine;
         this.users = users;
@@ -52,8 +50,8 @@ public class ResourceApprovalController {
 
     // ─── Queues ───
 
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) String search) {
+    @Override
+    public Map<String, Object> index(String search) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("pending_approvals", list("""
                 ar.status in ('Requested','Pending Approval') and ar.workflow_status = 'pending_approval'
@@ -62,8 +60,8 @@ public class ResourceApprovalController {
         return out;
     }
 
-    @GetMapping("/my-requests")
-    public Map<String, Object> myRequests(@RequestParam(required = false) String search) {
+    @Override
+    public Map<String, Object> myRequests(String search) {
         Long userId = users.actingUserId();
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("my_requests", list("ar.requested_by = " + userId, search, "ar.created_at desc"));
@@ -108,8 +106,8 @@ public class ResourceApprovalController {
 
     // ─── Show + timeline ───
 
-    @GetMapping("/{id}")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    public Map<String, Object> show(long id) {
         Map<String, Object> allocation = findOr404(id);
         Map<String, Object> out = new LinkedHashMap<>(jdbc.queryForMap("""
                 select ar.*, i.title as incident_title, i.id as incident_pk, r.name as resource_name,
@@ -134,9 +132,8 @@ public class ResourceApprovalController {
 
     // ─── Actions ───
 
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
-    @PostMapping("/{id}/approve")
-    public Map<String, Object> approve(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> approve(long id, Map<String, Object> body) {
         findOr404(id);
         Map<String, Object> result = engine.approve(id, remarks(body));
         boolean complete = "approved".equals(result.get("workflow_status"));
@@ -145,62 +142,56 @@ public class ResourceApprovalController {
                 "workflow_status", result.get("workflow_status"));
     }
 
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
-    @PostMapping("/{id}/fast-track")
-    public Map<String, Object> fastTrack(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> fastTrack(long id, Map<String, Object> body) {
         findOr404(id);
         engine.fastTrack(id, remarks(body));
         return Map.of("success", true,
                 "message", "Request fully approved via fast track! The requestor has been notified.");
     }
 
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
-    @PostMapping("/{id}/reject")
-    public ResponseEntity<Map<String, Object>> reject(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> reject(long id, Map<String, Object> body) {
         findOr404(id);
         String reason = strOf(body.get("rejection_reason"));
         if (reason == null || reason.length() > 500) {
-            return ResponseEntity.unprocessableEntity().body(Map.of("success", false, "message", "Validation failed.",
-                    "errors", Map.of("rejection_reason", List.of("The rejection reason field is required."))));
+            // FE validates client-side; server still enforces. ProblemDetail message is enough for Swal.
+            throw new BusinessRuleException("The rejection reason field is required.");
         }
         engine.reject(id, reason);
-        return ResponseEntity.ok(Map.of("success", true, "message", "Request rejected. The requestor has been notified."));
+        return Map.of("success", true, "message", "Request rejected. The requestor has been notified.");
     }
 
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
-    @PostMapping("/{id}/rollback")
-    public ResponseEntity<Map<String, Object>> rollback(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> rollback(long id, Map<String, Object> body) {
         findOr404(id);
         String reason = strOf(body.get("rollback_reason"));
         if (reason == null || reason.length() > 500) {
-            return ResponseEntity.unprocessableEntity().body(Map.of("success", false, "message", "Validation failed.",
-                    "errors", Map.of("rollback_reason", List.of("The rollback reason field is required."))));
+            throw new BusinessRuleException("The rollback reason field is required.");
         }
         engine.rollback(id, reason);
-        return ResponseEntity.ok(Map.of("success", true, "message", "Request rolled back to requestor for revision."));
+        return Map.of("success", true, "message", "Request rolled back to requestor for revision.");
     }
 
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
-    @PostMapping("/{id}/resubmit")
-    public Map<String, Object> resubmit(@PathVariable long id) {
+    @Override
+    public Map<String, Object> resubmit(long id) {
         findOr404(id);
         engine.resubmit(id);
         return Map.of("success", true, "message", "Request resubmitted successfully and sent for approval.");
     }
 
     /** Approvers may redirect the fulfilment source (warehouse/agency/procurement). */
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
-    @PostMapping("/{id}/update-source")
+    @Override
     @Transactional
-    public Map<String, Object> updateSource(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> updateSource(long id, Map<String, Object> body) {
         Map<String, Object> allocation = findOr404(id);
         if (!"pending_approval".equals(allocation.get("workflow_status"))) {
-            throw new tz.go.pmo.dmis.common.error.BusinessRuleException(
+            throw new BusinessRuleException(
                     "Only requests pending approval can have their fulfilment source changed.");
         }
         String source = strOf(body.get("source"));
         if (source == null || !List.of("warehouse", "agency", "procurement").contains(source)) {
-            throw new tz.go.pmo.dmis.common.error.BusinessRuleException("The selected source is invalid.");
+            throw new BusinessRuleException("The selected source is invalid.");
         }
         Long warehouseId = body.get("warehouse_id") == null ? null
                 : (long) Double.parseDouble(String.valueOf(body.get("warehouse_id")));
@@ -224,12 +215,11 @@ public class ResourceApprovalController {
     }
 
     /** PMO bulk approve (PMOApprovalController::bulkApprove) — fast-tracks each id. */
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
-    @PostMapping("/bulk-approve")
-    public Map<String, Object> bulkApprove(@RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> bulkApprove(Map<String, Object> body) {
         Object raw = body.get("ids");
         if (!(raw instanceof List<?> ids) || ids.isEmpty()) {
-            throw new tz.go.pmo.dmis.common.error.BusinessRuleException("Select at least one request to approve.");
+            throw new BusinessRuleException("Select at least one request to approve.");
         }
         int done = 0;
         List<String> failures = new ArrayList<>();

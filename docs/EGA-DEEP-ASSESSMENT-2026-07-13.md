@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 28 thin eGA controllers, 28 service + 28 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 29 thin eGA controllers, 29 service + 29 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, Response Settings, Exercise Scenarios, Ops Timeline, DLNA, **Dashboard + EOCC** |
-| Response remaining | **Legacy fat** | ~7 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k, WarehouseOps, Allocations, ResourceApproval) |
+| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, Response Settings, Exercise Scenarios, Ops Timeline, DLNA, Dashboard + EOCC, **Resource Approvals** |
+| Response remaining | **Legacy fat** | ~6 controllers under `response/` (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k, WarehouseOps, Allocations) |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Dashboard + EOCC**~~ **DONE** | Next: logistics spine still last (dispatch/warehouse/allocations); ResourceApproval couples ApprovalWorkflowEngine — defer |
+| Next eGA leaf (binding order) | ~~**Resource Approvals**~~ **DONE** | Next: logistics spine still last (dispatch/warehouse/allocations/bidding); hubs last |
 
-**Honest score:** Master data + fifteen Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
+**Honest score:** Master data + sixteen Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -40,6 +40,7 @@
 | Ops Timeline | SA/Reg **200**; Dist OOA **404**; `source=dispatch` productive; bad source **422** |
 | DLNA | Index/show **200**; Dist **403**; create/header/section drill net-zero |
 | Dashboard + EOCC | SA/DED/RAS/DAS **200**; area stats match pre-extract baseline; unauth **401**; activate empty **422**; DAS activate **403** |
+| Resource Approvals | SA/DED/RAS/DAS list match; DED show OOA **404**; RAS show in-region **200**; reject empty **422** net-zero; Partner/DLO approve **403**; pending unchanged |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -74,6 +75,7 @@
 - ~~Incident Ops Timeline eGA extract~~ — **DONE** (read-only; shared `/v1/response/incidents` base with fat IncidentController).  
 - ~~DLNA eGA extract~~ — **DONE** (PDF + NotificationService retained; request records on service interface).
 - ~~Dashboard + EOCC eGA extract~~ — **DONE** (`CurrentUserResolver` + `ActivationService` + JurisdictionScope; multi-persona baseline match).
+- ~~Resource Approvals eGA extract~~ — **DONE** (`ApprovalWorkflowEngine` retained; `CurrentUserResolver`; reject validation → BusinessRuleException; multi-persona baseline match).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -96,7 +98,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 12. ~~eGA migrate **Ops Timeline**~~ — **DONE**.  
 13. ~~eGA migrate **DLNA**~~ — **DONE**.  
 14. ~~eGA migrate **Dashboard + EOCC**~~ — **DONE**.  
-15. Next: logistics spine still last (dispatch / warehouse-ops / allocations / approvals / bidding).  
-16. Keep logistics in place; extract services only when touching heavily.  
-17. Stamp area on temp warehouses + agency stock data hygiene.  
-18. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+15. ~~eGA migrate **Resource Approvals**~~ — **DONE**.  
+16. Next: logistics spine still last (dispatch / warehouse-ops / allocations / bidding).  
+17. Keep logistics in place; extract services only when touching heavily.  
+18. Stamp area on temp warehouses + agency stock data hygiene.  
+19. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.

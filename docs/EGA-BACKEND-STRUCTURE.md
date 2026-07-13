@@ -172,7 +172,8 @@ Suggested migration order:
 26. ~~**Incident Ops Timeline**~~ — **DONE** (read-only merge; shared incidents path)  
 27. ~~**DLNA**~~ — **DONE** (Annex 1/2; PDF + NotificationService retained)  
 28. ~~**Dashboard + EOCC**~~ — **DONE** (overview + live board + activate; ActivationService retained)  
-29. Response remaining (never engine/dispatch/allocation first) then EW  
+29. ~~**Resource Approvals**~~ — **DONE** (queues + actions; ApprovalWorkflowEngine retained)  
+30. Response remaining (never dispatch/warehouse/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -208,8 +209,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Incident Ops Timeline | Done | `/v1/response/incidents/{id}/ops-timeline` | Thin controller + service.impl; read-only; area 404; source filter; IncidentController co-exists on same base |
 | DLNA | Done | `/v1/response/dlna` | Thin controller + service.impl; request records on service; create/header/section; Dist **403**; drill net-zero |
 | Dashboard + EOCC | Done | `/v1/response/dashboard`, `/eocc`, `/eocc/activate` | Thin controller + service.impl; JurisdictionScope isolation; SA/DED/RAS/DAS baseline match; unauth **401**; empty activate **422**; DAS activate **403**; ActivationService retained |
+| Resource Approvals | Done | `/v1/response/approvals` | Thin controller + service.impl; engine retained; SA/DED/RAS/DAS list+show isolation; unauth **401**; reject empty **422** (net-zero); Partner/DLO approve **403**; bulk empty **422**; pending count unchanged |
 
-28. ~~**Dashboard + EOCC**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
+29. ~~**Resource Approvals**~~ — **DONE**; remaining Response leaves next (never dispatch/warehouse/allocation first)
 
 ---
 

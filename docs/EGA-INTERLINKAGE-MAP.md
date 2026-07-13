@@ -249,7 +249,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R4 | Support pledges | `/v1/response/support` | ~260 | Writes + NotificationService; SQL to training_plans / mitigation_measures | **DONE** |
 | R5 | Public reports | `/v1/response/public-reports` | ~278 | **Java type** → `IncidentWorkflowService` (helpers made public for eGA service.impl) | **DONE** |
 | R6 | Declarations | `/v1/response/declarations` | ~294 | Executive/activation SQL consumers (SQL-only; controller eGA) | **DONE** |
-| R7 | Resource approvals | `/v1/response/approvals` | ~285 | **ApprovalWorkflowEngine** + warehouses | pending |
+| R7 | Resource approvals | `/v1/response/approvals` | ~285 | **ApprovalWorkflowEngine** retained in service.impl + warehouses scope | **DONE** |
 | R8 | Anticipatory plans | `/v1/response/anticipatory-plans` | ~372 | Area scope; `matchingPlans` consumed by CommandCenter (now via service) | **DONE** |
 | R9 | Tasks | `/v1/response/tasks` | ~429 | Area scope + NotificationService; no Java type importers | **DONE** |
 | R10 | Assessments | `/v1/response/assessments` | ~541 | Multipart + AreaGuard + ApprovalWorkflowEngine.initialize | **DONE** |
@@ -259,7 +259,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R14 | Incident Ops Timeline | `/v1/response/incidents/{id}/ops-timeline` | ~519 | Read-only trail merge; shares base with fat IncidentController | **DONE** |
 | R15 | DLNA | `/v1/response/dlna` | ~715 | PDF + NotificationService + AreaGuard; Annex 1/2 | **DONE** |
 | R16 | Dashboard + EOCC | `/v1/response/dashboard`, `/eocc`, `/eocc/activate` | ~542 | JurisdictionScope + AreaGuard + ActivationService; CurrentUserResolver | **DONE** |
-| R8+ | Warehouse-ops, dispatch, allocations, bidding, incidents, command center, resource approvals | various | large | High SQL + engine + shared bases — last | pending |
+| R8+ | Warehouse-ops, dispatch, allocations, bidding, incidents, command center | various | large | High SQL + stock + shared bases — last | pending |
 
 ### 10.5 Do **not** start with
 
