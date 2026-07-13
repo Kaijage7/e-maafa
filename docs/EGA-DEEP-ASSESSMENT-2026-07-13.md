@@ -26,9 +26,10 @@
 | Allocations / track / dispatch board / approvals / procurement | Area walls hold |
 | Multi-channel logistics | warehouse, temp, agency, agency-request, procurement, stakeholder (prior commits) |
 | Task create/show area | OOA **404**; same-district create **200** |
-| eGA thin APIs | users, roles, locations, institutions, inventory, training, SC, executive, public-reports, **contingency-plans** all **200** |
+| eGA thin APIs | users, roles, locations, institutions, inventory, training, SC, executive, public-reports, contingency-plans, **support** all **200** |
 | Public Reports scopes | Dist/Reg walls hold; OOA mutations **404**; convert lands `waiting_ded` |
 | Contingency Plans | Filters productive; lifecycle + 422 rules; Dist/DLO **403**; national list by design |
+| Support Pledges | National donor queue; accept funds training; Dist accept **403**; validation **422** |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -51,7 +52,8 @@
 - Dual resource catalogue paths remain.  
 - ~~Next large eGA move: Executive Watch~~ — **DONE** (`d9fdb79`).  
 - ~~Public Reports eGA extract~~ — **DONE** (`f8e7d7c`; convert still couples to `IncidentWorkflowService`).  
-- ~~Contingency Plans eGA extract~~ — **DONE** (no Response workflow coupling; `CurrentUserResolver` only).
+- ~~Contingency Plans eGA extract~~ — **DONE** (no Response workflow coupling; `CurrentUserResolver` only).  
+- ~~Support Pledges eGA extract~~ — **DONE** (NotificationService retained; national donor queue by design).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -63,7 +65,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 1. ~~eGA migrate **ExecutiveWatch**~~ — **DONE**.  
 2. ~~eGA migrate **Public Reports**~~ — **DONE**.  
 3. ~~eGA migrate **Contingency Plans**~~ — **DONE**.  
-4. Next: Support pledges or Declarations (never engine/dispatch/allocation first).  
-5. Keep logistics in place; extract services only when touching heavily.  
-6. Stamp area on temp warehouses + agency stock data hygiene.  
-7. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+4. ~~eGA migrate **Support Pledges**~~ — **DONE**.  
+5. Next: Declarations (never engine/dispatch/allocation first).  
+6. Keep logistics in place; extract services only when touching heavily.  
+7. Stamp area on temp warehouses + agency stock data hygiene.  
+8. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
