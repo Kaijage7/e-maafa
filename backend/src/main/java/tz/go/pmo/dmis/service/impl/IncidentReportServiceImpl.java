@@ -1,4 +1,7 @@
-package tz.go.pmo.dmis.reports;
+package tz.go.pmo.dmis.service.impl;
+
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.IncidentReportService;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -6,42 +9,35 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
- * Incident Reports — the comprehensive, analytical reporting view of incidents for Reports &
+ * Incident Reports service — the comprehensive, analytical reporting view of incidents for Reports &
  * Analytics (distinct from the operational "Active Incidents" registry in the Response module).
  * A date-ranged, filterable report: summary tiles + human-loss totals, breakdowns by status /
  * severity / type / region / month, and the incident records table. Real incidents only
  * (is_simulation = false) so drills never distort the reported national picture — the same
  * simulation-isolation contract honoured by the Executive Watch.
  */
-@RestController
-@RequestMapping("/v1/reports/incidents")
-public class IncidentReportController {
+@Service
+public class IncidentReportServiceImpl implements IncidentReportService {
 
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
 
-    public IncidentReportController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
+    public IncidentReportServiceImpl(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
     }
 
-    @GetMapping
-    @PreAuthorize("hasAuthority('incidents.view')")
-    public Map<String, Object> index(@RequestParam(required = false) String start_date,
-                                     @RequestParam(required = false) String end_date,
-                                     @RequestParam(required = false) String status,
-                                     @RequestParam(required = false) String severity,
-                                     @RequestParam(required = false) String region) {
+    @Override
+    public Map<String, Object> index(String start_date,
+                                     String end_date,
+                                     String status,
+                                     String severity,
+                                     String region) {
         // National analytics is a staff/leadership report — a donor/partner account must not read it.
         if (jurisdiction.currentStakeholderId() != null) {
             throw new ResourceNotFoundException("Not found.");

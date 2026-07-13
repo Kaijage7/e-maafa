@@ -1,4 +1,7 @@
-package tz.go.pmo.dmis.reports;
+package tz.go.pmo.dmis.service.impl;
+
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.ResourceReportService;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -6,16 +9,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
- * Resource Allocation Report — faithful port of
+ * Resource Allocation Report service — faithful port of
  * {@code ResourceAllocationController@generateReport} + {@code response/resource-allocation/report.blade.php}.
  * A date-ranged report of resource requests: the four summary tiles (total / approved / rejected /
  * deployed), the total allocated value (Σ quantity_allocated × unit_cost), and the allocation
@@ -27,22 +25,19 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  * An area officer reports only on allocations whose incident is in their own district/LGA or region;
  * the national tier keeps the whole-country roll-up. No cross-region leakage via null-area rows.
  */
-@RestController
-@RequestMapping("/v1/reports/resource-allocations")
-public class ResourceReportController {
+@Service
+public class ResourceReportServiceImpl implements ResourceReportService {
 
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
 
-    public ResourceReportController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
+    public ResourceReportServiceImpl(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
     }
 
-    @GetMapping
-    @PreAuthorize("hasAuthority('resource_allocation.view')")
-    public Map<String, Object> index(@RequestParam(required = false) String start_date,
-                                     @RequestParam(required = false) String end_date) {
+    @Override
+    public Map<String, Object> index(String start_date, String end_date) {
         // National resource-allocation analytics is staff-only — a donor/partner account must not read it.
         if (jurisdiction.currentStakeholderId() != null) {
             throw new tz.go.pmo.dmis.common.error.ResourceNotFoundException("Not found.");
