@@ -466,18 +466,34 @@ public class BudgetServiceImpl implements BudgetService {
     }
 
     // ─── Tier approval thresholds (configurable ceilings; not hardcoded) ───
+
+    /** Only the three budget tiers used by {@link #approveCommitment} / {@link #tierCeiling}. */
+    private static final java.util.Set<String> THRESHOLD_SCOPES = java.util.Set.of("district", "region", "national");
+
     @Override
 
     public Map<String, Object> thresholds() {
         return Map.of("thresholds", jdbc.queryForList(
-                "select scope_level, max_amount from public.budget_approval_thresholds order by max_amount nulls last"));
+                "select scope_level, max_amount from public.budget_approval_thresholds"
+                        + " where scope_level in ('district','region','national')"
+                        + " order by case scope_level when 'district' then 1 when 'region' then 2 else 3 end"));
     }
     @Override
 
     @Transactional
     public Map<String, Object> setThreshold(Map<String, Object> b) {
-        String scope = req(b, "scope_level");
+        // Controlled vocabulary — never invent tiers (e.g. "village") that the engine cannot apply.
+        String scope = req(b, "scope_level").toLowerCase(Locale.ROOT);
+        if (!THRESHOLD_SCOPES.contains(scope)) {
+            throw new BusinessRuleException(
+                    "scope_level must be district, region or national.");
+        }
         BigDecimal max = dec(b.get("max_amount"));   // null = unlimited
+        // null clears the ceiling (unlimited); a posted number must be strictly positive.
+        if (max != null && max.signum() <= 0) {
+            throw new BusinessRuleException(
+                    "max_amount must be a positive figure, or omit/null for unlimited.");
+        }
         jdbc.update("""
                 insert into public.budget_approval_thresholds(scope_level, max_amount, created_at, updated_at)
                 values (?,?, now(), now())

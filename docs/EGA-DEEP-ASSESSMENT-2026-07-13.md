@@ -456,3 +456,49 @@ User direction: **more careful on finance — very crucial**. Residual SoD/money
 - `FinanceWorkflowIntegrationTest` setUp — budget approve by DIRECTOR (not creator DED)
 
 **Verdict:** Finance money paths are fail-closed on identity, maker≠checker, expenditure ceiling, and concurrent state. Ledger restored. Ready for next domain only after product sign-off.
+
+
+## 17. System settings + formulas E2E (2026-07-13)
+
+User: *make sure things are well automated and controlled in the system settings and formulas flow well and work end to end.*
+
+### Surfaces exercised
+
+| Surface | Settings → runtime control |
+|---------|---------------------------|
+| Incident approval automation | `portal_settings` (`incident_approval.*`) → `IncidentWorkflowService.settleStage` |
+| Resource allocation chains | `approval_workflow_configurations` → `ApprovalWorkflowEngine.initialize` |
+| Budget approval ceilings | `budget_approval_thresholds` → `BudgetServiceImpl.approveCommitment` |
+| Economics formulas | live recompute `economics-v3-formula-engine` (24 formulaAudit steps, `ai:false`) |
+
+### Controls hardened
+
+| Gap | Fix |
+|-----|-----|
+| Thresholds accepted `village` / negative / zero | scope ∈ {district,region,national}; max_amount > 0 or null (unlimited) |
+| Automation empty / partial-invalid body | empty **422**; validate whole payload before any write |
+| Chain `order` gaps after delete / history | compact `1..n` on delete; one-time normalize live chain |
+| Settings `can_skip` ignored by engine | `initialize` omits level when `can_skip` and no officer holds the role |
+
+### Live E2E results (net-zero)
+
+| Drill | Result |
+|-------|--------|
+| Set automation → read back | **200** / modes match |
+| Invalid mode / unknown stage | **422** |
+| Empty automation body | **422** |
+| Lower district ceiling → approve overspend | **422** ceiling (settings drive money path) |
+| Restore ceiling + delete drill commitment | ledger = historical only |
+| Set DDMC/DED/RDMC=`auto` → submit incident | lands **waiting_ras** with 3× `auto_advanced` history |
+| Restore automation defaults | skip_if_unstaffed ×3 + manual RAS/national |
+| Economics GET | modelVersion + 24 formulaAudit steps + coefficients |
+| Partner write automation/thresholds | **403** |
+| Resource chain order after normalize | 1..6 contiguous |
+
+### FE
+
+- Approval Workflows page: automation tiers + resource_allocation levels (live save)
+- Budget & Finance → Approval Ceilings: rejects non-positive client-side; surfaces BE errors
+- Economics of Disaster: formula workbook + recompute
+
+**Verdict:** System settings automation and formula paths are controlled, wired into runtime engines, and proven end-to-end with net-zero cleanup.

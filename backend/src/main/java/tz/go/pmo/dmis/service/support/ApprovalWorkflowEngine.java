@@ -63,7 +63,7 @@ public class ApprovalWorkflowEngine {
             return;
         }
         List<Map<String, Object>> configs = jdbc.queryForList("""
-                select name, role_required, "order" from public.approval_workflow_configurations
+                select name, role_required, "order", can_skip from public.approval_workflow_configurations
                 where module_id = ? and is_active = true order by "order", level
                 """, moduleId);
         if (configs.isEmpty()) {
@@ -72,15 +72,23 @@ public class ApprovalWorkflowEngine {
         }
         int step = 1;
         for (Map<String, Object> config : configs) {
-            if (requesterRole != null && requesterRole.equals(config.get("role_required"))) {
+            String roleRequired = config.get("role_required") == null ? null : String.valueOf(config.get("role_required"));
+            if (requesterRole != null && requesterRole.equals(roleRequired)) {
                 continue; // requester never approves their own request
+            }
+            // Settings "skippable" flag: when true and no living officer holds that role, omit the step
+            // so a dead desk cannot stall the allocation chain (mirrors incident skip_if_unstaffed).
+            if (Boolean.TRUE.equals(config.get("can_skip")) && !roleStaffedAnywhere(roleRequired)) {
+                log.info("Skipping approval level '{}' (role {}) — can_skip and no officer holds the role",
+                        config.get("name"), roleRequired);
+                continue;
             }
             jdbc.update("""
                     insert into public.approval_workflows(module_id, approvable_type, approvable_id,
                         step_number, step_name, approver_role, status, "order", created_at, updated_at)
                     values (?,?,?,?,?,?,'pending',?,now(),now())
                     """, moduleId, ALLOCATION_TYPE, allocationId, step,
-                    config.get("name"), config.get("role_required"), config.get("order"));
+                    config.get("name"), roleRequired, config.get("order"));
             step++;
         }
         jdbc.update("""
@@ -309,5 +317,19 @@ public class ApprovalWorkflowEngine {
         notifications.notifyUser(requester.get(0),
                 NotificationService.Notice.inApp(type, title, message,
                         "/m/response/approvals", "allocation", allocationId, "info"));
+    }
+
+    /** True when at least one user holds the given role (any area) — used for can_skip levels. */
+    private boolean roleStaffedAnywhere(String role) {
+        if (role == null || role.isBlank()) {
+            return true;
+        }
+        Long n = jdbc.queryForObject("""
+                select count(*) from public.users u
+                join public.model_has_roles mhr on mhr.model_id = u.id
+                join public.roles r on r.id = mhr.role_id
+                where r.name = ?
+                """, Long.class, role);
+        return n != null && n > 0;
     }
 }

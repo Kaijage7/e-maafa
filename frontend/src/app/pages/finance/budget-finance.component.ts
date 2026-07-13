@@ -371,9 +371,16 @@ export class BudgetFinanceComponent implements OnInit {
       t.max_amount == null ? '' : String(t.max_amount));
     if (raw === null) { return; }
     const max = raw.trim() === '' ? null : Number(raw.trim());
-    if (max !== null && (isNaN(max) || max < 0)) { return; }
+    // Align with BE: blank = unlimited; posted amount must be strictly positive (not zero/negative).
+    if (max !== null && (isNaN(max) || max <= 0)) {
+      this.err.set('Ceiling must be a positive amount, or leave blank for unlimited.');
+      return;
+    }
     this.http.post<any>('/api/v1/finance/thresholds', { scope_level: t.scope_level, max_amount: max })
-      .subscribe(() => this.http.get<any>('/api/v1/finance/thresholds').subscribe(d => this.thresholds.set(d.thresholds ?? [])));
+      .subscribe({
+        next: () => this.http.get<any>('/api/v1/finance/thresholds').subscribe(d => this.thresholds.set(d.thresholds ?? [])),
+        error: e => this.err.set(this.msg(e)),
+      });
   }
 
   private msg(e: any): string { return e?.error?.detail ?? e?.error?.message ?? 'Action failed.'; }

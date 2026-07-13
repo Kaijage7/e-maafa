@@ -130,7 +130,24 @@ public class ApprovalWorkflowConfigServiceImpl implements ApprovalWorkflowConfig
     @Override
     @Transactional
     public void deleteLevel(long levelId) {
+        Map<String, Object> row;
+        try {
+            row = jdbc.queryForMap(
+                    "select id, module_id from public.approval_workflow_configurations where id = ?", levelId);
+        } catch (org.springframework.dao.EmptyResultDataAccessException missing) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Level not found");
+        }
+        long moduleId = ((Number) row.get("module_id")).longValue();
         jdbc.update("delete from public.approval_workflow_configurations where id = ?", levelId);
+        // Compact "order" to 1..n so the engine sequence stays contiguous after removals / historical gaps.
+        List<Long> remaining = jdbc.queryForList(
+                "select id from public.approval_workflow_configurations where module_id = ? order by \"order\", level",
+                Long.class, moduleId);
+        int order = 1;
+        for (Long id : remaining) {
+            jdbc.update("update public.approval_workflow_configurations set \"order\" = ?, updated_at = now() where id = ?",
+                    order++, id);
+        }
     }
 
     private void requireModule(long id) {

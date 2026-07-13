@@ -277,9 +277,14 @@ public class ResponseSettingsServiceImpl implements ResponseSettingsService {
     @Transactional
     @Override
     public Map<String, Object> saveApprovalAutomation(Map<String, Object> body) {
+        if (body == null || body.isEmpty()) {
+            throw new BusinessRuleException(
+                    "At least one stage mode is required (e.g. {\"waiting_ras\":\"manual\"}).");
+        }
         java.util.Set<String> validStages = new java.util.HashSet<>();
         AUTOMATION_TIERS.forEach(t -> validStages.add(t.get("stage")));
-        int saved = 0;
+        // Validate the whole payload first so a bad key cannot partially apply earlier stages.
+        Map<String, String> updates = new LinkedHashMap<>();
         for (Map.Entry<String, Object> e : body.entrySet()) {
             String stage = e.getKey();
             String mode = str(e.getValue());
@@ -289,7 +294,13 @@ public class ResponseSettingsServiceImpl implements ResponseSettingsService {
             if (mode == null || !AUTOMATION_MODES.contains(mode)) {
                 throw new BusinessRuleException("Invalid mode for " + stage + " (use manual, auto or skip_if_unstaffed).");
             }
-            // Upsert without relying on a unique constraint: update, else insert.
+            updates.put(stage, mode);
+        }
+        int saved = 0;
+        for (Map.Entry<String, String> e : updates.entrySet()) {
+            String stage = e.getKey();
+            String mode = e.getValue();
+            // key is UNIQUE on portal_settings; group filter keeps the incident_approval namespace honest.
             int updated = jdbc.update(
                     "update public.portal_settings set value = ?, updated_at = now() where \"group\" = 'incident_approval' and key = ?",
                     mode, stage);
