@@ -61,11 +61,25 @@ INCIDENT (approved or Active Response)
 | Alloc 59 | Sourcing | Stakeholder bid accepted |
 | Prep stock | WH11=15, WH17=8, T23=5 (resource 1) | Peacetime stocking still on ledger |
 
+## Dispatch source visibility (careful follow-up)
+
+| Check | Result |
+|-------|--------|
+| Super Admin sources for alloc 57 | Dodoma-region stocked WHs (1, 11, 17) |
+| Reg DC Dodoma sources | **no Arusha WH 4/12/14**; temp **23** only |
+| Reg DC POST dispatch Arusha WH4 body | **404** `assertWarehouseVisible` |
+| Reg DC POST dispatch WH11 (in scope) | **200** manager gate |
+| Dist DC 101 sources on alloc 57 (district 1967) | **404** allocation area wall |
+| Stakeholder bid **21** receive → WH1 | **Received**; alloc **59** Partially Fulfilled; intake +12 blankets |
+| Alloc 57 status In Transit → Deployed | Productive; field consumption (no second ledger) |
+
+**Code:** `DispatchSupportService.availableSources` uses `appendWarehouseScope`; `DispatchController.dispatch` re-checks warehouse/temp visibility on the body.
+
 ## Remaining honest limits
 
-- `availableSources` lists stocked stores **network-wide** (not only caller warehouses); action still requires allocation visibility + dispatch perms.  
 - Warehouse dispatch-manager gate has **no separate maker≠checker** (same logistic seat may request and approve stock leave) — only the resource multi-step chain enforces SoD.  
-- Dual catalogue surfaces remain (`/v1/settings/resources` eGA + response settings) — both productive.
+- Dual catalogue surfaces remain (`/v1/settings/resources` eGA + response settings) — both productive.  
+- Agency stock list is still national (agency table is not area-keyed the same way).
 
 ## Seats used (proof matrix)
 

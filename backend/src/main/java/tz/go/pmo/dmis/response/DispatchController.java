@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
@@ -58,16 +59,18 @@ public class DispatchController {
     private final IncidentWorkflowService users;
     private final tz.go.pmo.dmis.notification.NotificationService notifications; // the ONE dispatcher
     private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
     private final SimulationGuard simulationGuard; // table-top drills never move real stock
 
     public DispatchController(JdbcTemplate jdbc, DispatchSupportService sources, IncidentWorkflowService users,
                               tz.go.pmo.dmis.notification.NotificationService notifications, JurisdictionScope jurisdiction,
-                              SimulationGuard simulationGuard) {
+                              AreaGuard areaGuard, SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.sources = sources;
         this.users = users;
         this.notifications = notifications;
         this.jurisdiction = jurisdiction;
+        this.areaGuard = areaGuard;
         this.simulationGuard = simulationGuard;
     }
 
@@ -227,6 +230,13 @@ public class DispatchController {
         Map<String, Object> allocation = findOr404(id);
         if (!List.of("Approved", "Sourcing", "Requested to Stakeholders").contains((String) allocation.get("status"))) {
             throw new BusinessRuleException("This allocation cannot be dispatched. Current status: " + allocation.get("status"));
+        }
+        // Warehouse/temp sources must be visible under the caller's warehouse matrix — picker is scoped;
+        // body.source_id must not bypass it (no cross-region stock draw via raw API).
+        if ("warehouse".equals(sourceType)) {
+            areaGuard.assertWarehouseVisible("public.warehouses", sourceId);
+        } else if ("temporary_warehouse".equals(sourceType)) {
+            areaGuard.assertWarehouseVisible("public.temporary_warehouses", sourceId);
         }
         // Validate against the REMAINING need, not the gross allocation: subtract what is already
         // journalled as dispatched AND what is already sitting in pending dispatch-approvals (procurement

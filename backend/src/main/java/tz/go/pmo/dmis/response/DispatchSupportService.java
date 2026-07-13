@@ -8,6 +8,7 @@ import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Port of App\Services\DispatchSourceService + the stock arithmetic from
@@ -35,9 +36,11 @@ public class DispatchSupportService {
     private static final List<String> TEMP_WAREHOUSE_AVAILABLE_STATUSES = List.of("active");
 
     private final JdbcTemplate jdbc;
+    private final JurisdictionScope jurisdiction;
 
-    public DispatchSupportService(JdbcTemplate jdbc) {
+    public DispatchSupportService(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
+        this.jurisdiction = jurisdiction;
     }
 
     // ─── Source discovery ───
@@ -46,8 +49,11 @@ public class DispatchSupportService {
      * Every place a resource can be fulfilled from, sorted nearest-first:
      * zonal warehouses and temporary warehouses with stock, agency-held stock,
      * plus the three always-available channels (request agency, publish to
-     * stakeholders, procurement). Local sessions act as Super Admin, so the
-     * source's level-based visibility filtering resolves to "see everything".
+     * stakeholders, procurement).
+     *
+     * <p>Zonal/temporary stock sources follow {@link JurisdictionScope#appendWarehouseScope}
+     * so a district officer is not offered Arusha stock for a Dodoma incident (the always-on
+     * national channels remain: agency request, stakeholder publish, procurement).
      */
     public List<Map<String, Object>> availableSources(long resourceId, long incidentId) {
         Map<String, Object> incident = jdbc.queryForMap(
@@ -57,8 +63,8 @@ public class DispatchSupportService {
 
         List<Map<String, Object>> sources = new ArrayList<>();
 
-        // Zonal warehouses holding stock for this resource
-        for (Map<String, Object> row : jdbc.queryForList("""
+        // Zonal warehouses holding stock for this resource (own area / national-shared per matrix)
+        StringBuilder wSql = new StringBuilder("""
                 select w.id, w.name, w.zone, coalesce(w.city_or_region, w.location_address) as location_name,
                        w.latitude, w.longitude, sum(ii.quantity) as available
                 from public.inventory_items ii
@@ -66,23 +72,33 @@ public class DispatchSupportService {
                 where ii.resource_id = ? and ii.quantity > 0 and ii.temporary_warehouse_id is null
                   and (ii.warehouse_type is null or ii.warehouse_type <> 'temporary')
                   and lower(w.operational_status) = any (?)
-                group by w.id
-                """, resourceId, WAREHOUSE_AVAILABLE_STATUSES.toArray(new String[0]))) {
+                """);
+        List<Object> wParams = new ArrayList<>();
+        wParams.add(resourceId);
+        wParams.add(WAREHOUSE_AVAILABLE_STATUSES.toArray(new String[0]));
+        jurisdiction.appendWarehouseScope("w", wSql, wParams);
+        wSql.append(" group by w.id");
+        for (Map<String, Object> row : jdbc.queryForList(wSql.toString(), wParams.toArray())) {
             sources.add(source("warehouse", row.get("id"), row.get("name"), row.get("location_name"),
                     str(row.get("zone"), "Unknown Zone"), row.get("available"), "Zonal Warehouse",
                     true, distanceKm(incLat, incLng, row.get("latitude"), row.get("longitude"))));
         }
 
-        // Temporary warehouses (district/regional/national stores stood up for an operation)
-        for (Map<String, Object> row : jdbc.queryForList("""
+        // Temporary warehouses — same warehouse visibility matrix as zonal stores
+        StringBuilder tSql = new StringBuilder("""
                 select tw.id, tw.name, tw.level, tw.location_description as location_name,
                        tw.latitude, tw.longitude, sum(ii.quantity) as available
                 from public.inventory_items ii
                 join public.temporary_warehouses tw on tw.id = ii.temporary_warehouse_id
                 where ii.resource_id = ? and ii.quantity > 0
                   and lower(tw.operational_status) = any (?) and tw.is_active = true
-                group by tw.id
-                """, resourceId, TEMP_WAREHOUSE_AVAILABLE_STATUSES.toArray(new String[0]))) {
+                """);
+        List<Object> tParams = new ArrayList<>();
+        tParams.add(resourceId);
+        tParams.add(TEMP_WAREHOUSE_AVAILABLE_STATUSES.toArray(new String[0]));
+        jurisdiction.appendWarehouseScope("tw", tSql, tParams);
+        tSql.append(" group by tw.id");
+        for (Map<String, Object> row : jdbc.queryForList(tSql.toString(), tParams.toArray())) {
             sources.add(source("temporary_warehouse", row.get("id"), row.get("name"), row.get("location_name"),
                     str(row.get("level"), "district"), row.get("available"), "Temporary Warehouse",
                     true, distanceKm(incLat, incLng, row.get("latitude"), row.get("longitude"))));
