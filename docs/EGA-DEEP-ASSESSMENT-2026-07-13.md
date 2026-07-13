@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 36 thin eGA controllers, 36 service + 36 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 37 thin eGA controllers, 37 service + 37 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
 | Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
-| Response remaining | **Support hubs only** | Transitional services in `response/` (`IncidentWorkflowService`, `ApprovalWorkflowEngine`, `DispatchSupportService`, `ActivationService`, `SimulationGuard`) |
-| EW | **In progress** | First leaf **Boundary** done; remaining: lifecycle, products, agency, bulletin ingest, scanner (+ query service) |
+| Response remaining | **Support hubs only** | Transitional services in `response/` |
+| EW | **In progress** | **Boundary** + **Warnings index** done; remaining: lifecycle, products, agency, bulletin ingest, scanner |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**EW Boundary**~~ **DONE** | Next EW: smallest/safest remaining (`EwController`+query, or bulletin ingest) — never lifecycle engine first |
+| Next eGA leaf (binding order) | ~~**EW Warnings index**~~ **DONE** | Next EW: bulletin ingest or products — lifecycle later (shared path + writes) |
 
-**Honest score:** Master data + full Response controllers + first EW leaf are eGA-shaped. Residual debt is EW fat controllers and Response support services.
+**Honest score:** Master data + Response controllers + two EW leaves eGA-shaped. Residual: EW write/lifecycle controllers + Response support services.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -122,6 +122,7 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 20. ~~eGA migrate **Incidents**~~ — **DONE**.  
 21. ~~eGA migrate **Command Center**~~ — **DONE**.  
 22. ~~eGA migrate **EW Boundary**~~ — **DONE**.  
-23. Next EW leaves: read registry (`EwController`/`EwQueryService`), then bulletin ingest, products, agency, lifecycle, scanner.  
-24. Stamp area on temp warehouses + agency stock data hygiene.  
-25. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+23. ~~eGA migrate **EW Warnings index**~~ — **DONE**.  
+24. Next EW: bulletin ingest → products → agency → lifecycle → scanner (writes last).  
+25. Stamp area on temp warehouses + agency stock data hygiene.  
+26. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
