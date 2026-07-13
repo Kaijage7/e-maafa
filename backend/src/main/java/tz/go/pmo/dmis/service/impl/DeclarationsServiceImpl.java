@@ -1,54 +1,36 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.notification.NotificationService;
+import tz.go.pmo.dmis.service.DeclarationsService;
 
 /**
- * Formal disaster declarations under the Disaster Management Act No. 6 of 2022 —
- * the headline legal instruments absent from the Laravel source:
- *
- *   • Disaster Area (s.32) — declared by the MINISTER by Government Gazette notice;
- *     directs the NDPRP in the area for up to 3 months (extendable); unlocks s.6 powers.
- *   • State of Emergency (s.33) — proclaimed by the PRESIDENT via the National Steering
- *     Committee under the Emergency Powers Act (Cap 221).
- *
- * The escalation chain is faithful to the Act (it is statutory, not reconfigurable like the
- * resource-approval engine): propose → National Technical Committee review (s.10) → National
- * Steering Committee endorsement (s.8(1)(d) "advise the declaring authority") → the authority
- * declares. Every step is journaled in declaration_events.
+ * Disaster Area (s.32) / State of Emergency (s.33) statutory chain.
+ * Logic moved from the former response package controller; Angular paths/JSON unchanged.
+ * Acting user via {@link CurrentUserResolver} (no incident-workflow coupling).
  */
-@RestController
-@RequestMapping("/v1/response/declarations")
-public class DeclarationController {
+@Service
+@RequiredArgsConstructor
+public class DeclarationsServiceImpl implements DeclarationsService {
 
     private final JdbcTemplate jdbc;
-    private final IncidentWorkflowService users;
+    private final CurrentUserResolver users;
     private final NotificationService notifications;
 
-    public DeclarationController(JdbcTemplate jdbc, IncidentWorkflowService users,
-                                 NotificationService notifications) {
-        this.jdbc = jdbc;
-        this.users = users;
-        this.notifications = notifications;
-    }
-
-    @GetMapping
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> index() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("declarations", jdbc.queryForList("""
@@ -74,8 +56,9 @@ public class DeclarationController {
         return out;
     }
 
-    @GetMapping("/{id}")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> show(long id) {
         Map<String, Object> out = new LinkedHashMap<>(findOr404(id));
         out.put("events", jdbc.queryForList("""
                 select e.*, u.name as user_name from public.declaration_events e
@@ -85,11 +68,9 @@ public class DeclarationController {
         return Map.of("declaration", out);
     }
 
-    /** Propose a declaration — usually from a disaster-posture activation. */
-    @PreAuthorize("hasAuthority('disaster_declarations.propose')")
-    @PostMapping
+    @Override
     @Transactional
-    public Map<String, Object> propose(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> propose(Map<String, Object> body) {
         String type = require(body.get("declaration_type"), "declaration_type");
         if (!List.of("disaster_area", "state_of_emergency").contains(type)) {
             throw new BusinessRuleException("declaration_type must be disaster_area or state_of_emergency.");
@@ -113,41 +94,32 @@ public class DeclarationController {
                 "message", (disasterArea ? "Disaster Area" : "State of Emergency") + " declaration proposed.");
     }
 
-    /** National Technical Committee review (s.10) — proposed → technical_review. */
-    @PreAuthorize("hasAuthority('disaster_declarations.review')")
-    @PostMapping("/{id}/technical-review")
+    @Override
     @Transactional
-    public Map<String, Object> technicalReview(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> technicalReview(long id, Map<String, Object> body) {
         advance(id, "proposed", "technical_review", "technical_reviewed",
                 "National Disaster Management Technical Committee", note(body));
         return ok("Reviewed by the National Technical Committee; advanced for steering endorsement.");
     }
 
-    /** National Steering Committee endorsement (s.8(1)(d)) — technical_review → steering_endorsed. */
-    @PreAuthorize("hasAuthority('disaster_declarations.endorse')")
-    @PostMapping("/{id}/endorse")
+    @Override
     @Transactional
-    public Map<String, Object> endorse(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> endorse(long id, Map<String, Object> body) {
         advance(id, "technical_review", "steering_endorsed", "steering_endorsed",
                 "National Disaster Management Steering Committee", note(body));
         return ok("Endorsed by the National Steering Committee; the declaring authority may now declare.");
     }
 
-    /**
-     * The authority declares: Minister gazettes the Disaster Area (s.32) / President proclaims the
-     * State of Emergency (s.33). Sets the effective window (disaster area defaults to 3 months).
-     */
-    @PreAuthorize("hasAuthority('disaster_declarations.declare')")
-    @PostMapping("/{id}/declare")
+    @Override
     @Transactional
-    public Map<String, Object> declare(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> declare(long id, Map<String, Object> body) {
         Map<String, Object> d = findOr404(id);
         if (!"steering_endorsed".equals(d.get("status"))) {
             throw new BusinessRuleException("Only a steering-endorsed declaration can be declared.");
         }
         boolean disasterArea = "disaster_area".equals(d.get("declaration_type"));
-        // s.32 / s.33: the Minister declares a Disaster Area; the President proclaims a State of Emergency.
-        // Super Admin is the break-glass actor; the @PreAuthorize above already excluded the command/proposer tier.
+        // s.32 / s.33: Minister declares Disaster Area; President proclaims State of Emergency.
+        // Super Admin is the break-glass actor; @PreAuthorize already gates the declare permission.
         if (!actorHasRole(Authz.SUPER_ADMIN)) {
             String required = disasterArea ? Authz.MINISTER : Authz.PRESIDENT;
             if (!actorHasRole(required)) {
@@ -185,11 +157,9 @@ public class DeclarationController {
                 : "State of Emergency proclaimed (s.33)."));
     }
 
-    /** Extend a Disaster Area declaration (s.32 — "or such other extended period"). */
-    @PreAuthorize("hasAuthority('disaster_declarations.declare')")
-    @PostMapping("/{id}/extend")
+    @Override
     @Transactional
-    public Map<String, Object> extend(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> extend(long id, Map<String, Object> body) {
         Map<String, Object> d = findOr404(id);
         if (!"declared".equals(d.get("status"))) {
             throw new BusinessRuleException("Only an active declaration can be extended.");
@@ -206,11 +176,9 @@ public class DeclarationController {
         return ok("Declaration extended to " + until + ".");
     }
 
-    /** Revoke / lift a declaration. */
-    @PreAuthorize("hasAuthority('disaster_declarations.declare')")
-    @PostMapping("/{id}/revoke")
+    @Override
     @Transactional
-    public Map<String, Object> revoke(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> revoke(long id, Map<String, Object> body) {
         Map<String, Object> d = findOr404(id);
         if (List.of("revoked", "expired").contains(String.valueOf(d.get("status")))) {
             throw new BusinessRuleException("This declaration is already ended.");
@@ -224,14 +192,12 @@ public class DeclarationController {
         return ok("Declaration revoked.");
     }
 
-    /** The statutory committee hierarchy (reference data for assignment + the s.35 donation chain). */
-    @GetMapping("/committees")
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> committees() {
         return Map.of("committees", jdbc.queryForList(
                 "select * from public.disaster_committees order by sort_order"));
     }
-
-    // ── internals ──
 
     private void advance(long id, String fromStatus, String toStatus, String action, String actorRole, String note) {
         Map<String, Object> d = findOr404(id);

@@ -162,7 +162,8 @@ Suggested migration order:
 16. ~~**Public Reports (Response R3)**~~ — **DONE** (triage + convert; service.impl + thin controller; workflow helpers public for convert)  
 17. ~~**Contingency Plans (Response R4 / map R3)**~~ — **DONE** (lifecycle; thin controller + service.impl; no workflow coupling)  
 18. ~~**Support Pledges (map R4)**~~ — **DONE** (needs + pledge + accept/decline; NotificationService retained)  
-19. Response remaining (never engine/dispatch/allocation first) then EW  
+19. ~~**Declarations (map R6)**~~ — **DONE** (statutory s.32/s.33 chain; thin controller + service.impl)  
+20. Response remaining (never engine/dispatch/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 

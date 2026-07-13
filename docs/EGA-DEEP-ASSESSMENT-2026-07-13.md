@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 18 thin eGA controllers, 18 service + 18 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 19 thin eGA controllers, 19 service + 19 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, **Support Pledges** |
-| Response remaining | **Legacy fat** | ~17 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
+| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, **Declarations** |
+| Response remaining | **Legacy fat** | ~16 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Support Pledges**~~ **DONE** | Next: Declarations (never engine/dispatch first) |
+| Next eGA leaf (binding order) | ~~**Declarations**~~ **DONE** | Next: Tasks or Anticipatory (never engine/dispatch first) |
 
-**Honest score:** Master data + five Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
+**Honest score:** Master data + six Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -26,10 +26,11 @@
 | Allocations / track / dispatch board / approvals / procurement | Area walls hold |
 | Multi-channel logistics | warehouse, temp, agency, agency-request, procurement, stakeholder (prior commits) |
 | Task create/show area | OOA **404**; same-district create **200** |
-| eGA thin APIs | users, roles, locations, institutions, inventory, training, SC, executive, public-reports, contingency-plans, **support** all **200** |
+| eGA thin APIs | users, roles, locations, institutions, inventory, training, SC, executive, public-reports, contingency-plans, support, **declarations** all **200** |
 | Public Reports scopes | Dist/Reg walls hold; OOA mutations **404**; convert lands `waiting_ded` |
 | Contingency Plans | Filters productive; lifecycle + 422 rules; Dist/DLO **403**; national list by design |
 | Support Pledges | National donor queue; accept funds training; Dist accept **403**; validation **422** |
+| Declarations | Full statutory chain; Dist/Reg **403**; stage/role rules; drill net-zero |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
