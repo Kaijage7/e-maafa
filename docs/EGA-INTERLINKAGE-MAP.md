@@ -260,7 +260,8 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R15 | DLNA | `/v1/response/dlna` | ~715 | PDF + NotificationService + AreaGuard; Annex 1/2 | **DONE** |
 | R16 | Dashboard + EOCC | `/v1/response/dashboard`, `/eocc`, `/eocc/activate` | ~542 | JurisdictionScope + AreaGuard + ActivationService; CurrentUserResolver | **DONE** |
 | R17 | Resource allocations | `/v1/response/allocations` | ~719 | ApprovalWorkflowEngine + DispatchSupportService (returns) + SimulationGuard | **DONE** |
-| R8+ | Warehouse-ops, dispatch, bidding, incidents, command center | various | large | High SQL + stock + shared bases — last | pending |
+| R18 | Warehouse Ops | `/v1/response/warehouse-ops` | ~856 | DispatchSupportService + SimulationGuard + NotificationService | **DONE** |
+| R8+ | Dispatch, bidding, incidents, command center | various | large | High SQL + stock + shared bases — last | pending |
 
 ### 10.5 Do **not** start with
 

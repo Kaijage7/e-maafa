@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 30 thin eGA controllers, 30 service + 30 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 31 thin eGA controllers, 31 service + 31 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, Response Settings, Exercise Scenarios, Ops Timeline, DLNA, Dashboard + EOCC, Resource Approvals, **Resource Allocations** |
-| Response remaining | **Legacy fat** | ~5 controllers under `response/` (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k, WarehouseOps) |
+| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, Response Settings, Exercise Scenarios, Ops Timeline, DLNA, Dashboard + EOCC, Resource Approvals, Resource Allocations, **Warehouse Ops** |
+| Response remaining | **Legacy fat** | ~4 controllers under `response/` (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Resource Allocations**~~ **DONE** | Next: dispatch / warehouse-ops / bidding still last; hubs last |
+| Next eGA leaf (binding order) | ~~**Warehouse Ops**~~ **DONE** | Next: dispatch / bidding still last; hubs last |
 
-**Honest score:** Master data + seventeen Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
+**Honest score:** Master data + eighteen Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
 
 ## 2. Deep multi-persona E2E (what is solid)
 

@@ -1,24 +1,21 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.notification.NotificationService;
+import tz.go.pmo.dmis.response.DispatchSupportService;
+import tz.go.pmo.dmis.response.SimulationGuard;
+import tz.go.pmo.dmis.service.WarehouseOpsService;
 
 /**
  * Warehouse operations on the inventory_items ledger — the stocking, restocking
@@ -32,10 +29,11 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  * (zonal + temporary warehouses via warehouse_type) and stock_movements is the
  * single journal (the source's parallel inventory_transactions writes are folded
  * into it).
+ * <p>Logic lives in service.impl (eGA); paths/JSON unchanged. Acting user via
+ * {@link CurrentUserResolver}; stock via transitional {@link DispatchSupportService}.
  */
-@RestController
-@RequestMapping("/v1/response/warehouse-ops")
-public class WarehouseOpsController {
+@Service
+public class WarehouseOpsServiceImpl implements WarehouseOpsService {
 
     /** Verbatim removal reason map from WarehouseController::removeStock. */
     private static final Map<String, String> REMOVAL_REASONS = new LinkedHashMap<>();
@@ -52,15 +50,15 @@ public class WarehouseOpsController {
 
     private final JdbcTemplate jdbc;
     private final DispatchSupportService stock;
-    private final IncidentWorkflowService users;
+    private final CurrentUserResolver users;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
     private final SimulationGuard simulationGuard;
-    private final tz.go.pmo.dmis.notification.NotificationService notifications;
+    private final NotificationService notifications;
 
-    public WarehouseOpsController(JdbcTemplate jdbc, DispatchSupportService stock, IncidentWorkflowService users,
-                                  JurisdictionScope jurisdiction, AreaGuard areaGuard, SimulationGuard simulationGuard,
-                                  tz.go.pmo.dmis.notification.NotificationService notifications) {
+    public WarehouseOpsServiceImpl(JdbcTemplate jdbc, DispatchSupportService stock, CurrentUserResolver users,
+                                   JurisdictionScope jurisdiction, AreaGuard areaGuard, SimulationGuard simulationGuard,
+                                   NotificationService notifications) {
         this.jdbc = jdbc;
         this.stock = stock;
         this.users = users;
@@ -73,7 +71,7 @@ public class WarehouseOpsController {
     // ─── Stock dashboard ───
 
     /** Per-warehouse stock totals + the alert strips (low / expired / expiring ≤30 days). */
-    @GetMapping
+    @Override
     public Map<String, Object> index() {
         Map<String, Object> out = new LinkedHashMap<>();
         // Area officers see only warehouses in their own district/region (or shared/national); national +
@@ -144,8 +142,8 @@ public class WarehouseOpsController {
     }
 
     /** Ledger lines for one store (the warehouse stock sheet). */
-    @GetMapping("/stock")
-    public Map<String, Object> stockFor(@RequestParam String warehouse_type, @RequestParam long warehouse_id) {
+    @Override
+    public Map<String, Object> stockFor(String warehouse_type, long warehouse_id) {
         // Reject unknown warehouse_type instead of silently treating it as temporary.
         warehouseType(warehouse_type);
         requireStore(warehouse_type, warehouse_id);   // own-area / national-shared store only (404 otherwise)
@@ -162,10 +160,9 @@ public class WarehouseOpsController {
     // ─── Intake / removal / transfer ───
 
     /** Stock intake (new batch or restock), journalled as an 'Intake' movement. */
-    @PostMapping("/intake")
-    @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> intake(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> intake(Map<String, Object> body) {
         Long linkedIncidentId = incidentId(body);
         simulationGuard.assertNotSimulationIncident(linkedIncidentId, "booking real warehouse stock");
         String warehouseType = warehouseType(body.get("warehouse_type"));
@@ -213,10 +210,9 @@ public class WarehouseOpsController {
     }
 
     /** Stock removal with the source's reason list; FIFO across the store's batches. */
-    @PostMapping("/remove")
-    @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> remove(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> remove(Map<String, Object> body) {
         Long linkedIncidentId = incidentId(body);
         simulationGuard.assertNotSimulationIncident(linkedIncidentId, "removing real warehouse stock");
         String warehouseType = warehouseType(body.get("warehouse_type"));
@@ -247,10 +243,9 @@ public class WarehouseOpsController {
     }
 
     /** Transfer between stores: deduct at origin, intake at destination, one 'Transfer' journal row. */
-    @PostMapping("/transfer")
-    @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> transfer(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> transfer(Map<String, Object> body) {
         Long linkedIncidentId = incidentId(body);
         simulationGuard.assertNotSimulationIncident(linkedIncidentId, "transferring real warehouse stock");
         String fromType = warehouseType(body.get("from_type"));
@@ -283,11 +278,11 @@ public class WarehouseOpsController {
 
     // ─── Movements journal ───
 
-    @GetMapping("/movements")
-    public Map<String, Object> movements(@RequestParam(required = false) String movement_type,
-                                         @RequestParam(required = false) Long resource_id,
-                                         @RequestParam(required = false) String warehouse_type,
-                                         @RequestParam(required = false) Long warehouse_id) {
+    @Override
+    public Map<String, Object> movements(String movement_type,
+                                         Long resource_id,
+                                         String warehouse_type,
+                                         Long warehouse_id) {
         StringBuilder where = new StringBuilder();
         List<Object> params = new ArrayList<>();
         if (movement_type != null && !movement_type.isBlank()) {
@@ -340,8 +335,8 @@ public class WarehouseOpsController {
     // ─── Stock taking ───
 
     /** Count sheet for a zonal warehouse (the source limits stock-taking to zonal stores). */
-    @GetMapping("/stock-taking")
-    public Map<String, Object> stockTakingSheet(@RequestParam long warehouse_id) {
+    @Override
+    public Map<String, Object> stockTakingSheet(long warehouse_id) {
         requireStore("zonal", warehouse_id);   // own-area / national-shared store only
         return Map.of(
                 "items", jdbc.queryForList("""
@@ -363,10 +358,9 @@ public class WarehouseOpsController {
      * Process a physical count: write a record per line; where counted differs from
      * book quantity, post an adjustment movement and correct the ledger row.
      */
-    @PostMapping("/stock-taking")
-    @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> processStockTaking(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> processStockTaking(Map<String, Object> body) {
         long warehouseId = lng(body.get("warehouse_id"), "warehouse_id");
         requireStore("zonal", warehouseId);   // cannot post a count against another region's store
         if (!(body.get("items") instanceof List<?> items) || items.isEmpty()) {
@@ -436,7 +430,7 @@ public class WarehouseOpsController {
      * storage_capacity_sqm — plus space-pressure flags, network roll-up, and a stockout forecast
      * derived from the last 30 days of out-movements (dispatch/removal/borrow velocity).
      */
-    @GetMapping("/capacity")
+    @Override
     public Map<String, Object> capacity() {
         List<Map<String, Object>> warehouses = new ArrayList<>();
         StringBuilder capSql = new StringBuilder("""
@@ -547,10 +541,9 @@ public class WarehouseOpsController {
     // ─── Borrowing (inter-warehouse loans) ───
 
     /** Borrow stock from a lender store to a borrower store: moves stock + records an outstanding loan. */
-    @PostMapping("/borrow")
-    @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> borrow(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> borrow(Map<String, Object> body) {
         Long linkedIncidentId = incidentId(body);
         String fromType = warehouseType(body.get("from_type"));
         String toType = warehouseType(body.get("to_type"));
@@ -596,8 +589,8 @@ public class WarehouseOpsController {
     }
 
     /** Outstanding / historical loans, with derived overdue flag and remaining quantity. */
-    @GetMapping("/loans")
-    public Map<String, Object> loans(@RequestParam(required = false) String status) {
+    @Override
+    public Map<String, Object> loans(String status) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
         if (status != null && !status.isBlank()) {
@@ -636,10 +629,9 @@ public class WarehouseOpsController {
     }
 
     /** Record a (full or partial) return of a loan: moves stock back to the lender, closes the loan. */
-    @PostMapping("/loans/{id}/return")
-    @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> returnLoan(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> returnLoan(long id, Map<String, Object> body) {
         Map<String, Object> b = body == null ? Map.of() : body;
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select * from public.warehouse_loans where id = ? for update", id);
