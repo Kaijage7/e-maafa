@@ -572,3 +572,38 @@ Controls retained: simulation exclusion on incident/resource reports; partner/st
 | Partner all three | module **403** |
 
 **Verdict:** Reports domain eGA complete with productive filters and security walls. Next carefully: notification.
+
+
+## 20. Notification HTTP eGA (2026-07-13, careful)
+
+**Blast-radius choice:** only HTTP controllers moved. Cross-domain engines (`NotificationService`, `MailService`, `AudienceService`, `ExternalDeliveryService`, `DeliveryRetryScheduler`, `AsyncConfig`) stay in `notification/` so dozens of service.impl consumers are not churned.
+
+### Structure
+
+| Path | After |
+|------|--------|
+| `/v1/notifications/*` | Thin `NotificationController` + `UserNotificationServiceImpl` |
+| `/v1/communication/*` | Thin `CommunicationOverviewController` + `CommunicationOverviewServiceImpl` |
+| `/v1/notifications/test/*` | Thin `ChannelTestController` + `ChannelTestServiceImpl` |
+| `/v1/webhooks/*` DLR | Thin `DeliveryStatusController` + `DeliveryStatusServiceImpl` |
+| Shared engines | Remain `notification/*` |
+
+Paths/JSON unchanged. Unit test `DeliveryStatusMappingTest` retargeted to service impl.
+
+### Live validation
+
+| Surface | Result |
+|---------|--------|
+| Feed `limit=5` | **200**, items + unread_count |
+| unread-count | **200** |
+| preferences GET/POST | **200** |
+| mark-all-read | **200**, updated count |
+| overview `month` / `today` | **200**, sms/email/inapp/alerts + breakdowns |
+| audiences | **200**, 4 audiences / 24 roles |
+| test SMS empty / email invalid | soft `success:false` (unchanged contract) |
+| DLR local empty secret | **200** updated 0; empty body **400** |
+| unauth feed | **401** |
+| Partner overview / test SMS | module / method **403** |
+| DeliveryStatusMappingTest | **pass** |
+
+**Verdict:** Notification HTTP surface is eGA-layered without breaking the shared delivery spine. Next carefully: stakeholder / ops-IAM.

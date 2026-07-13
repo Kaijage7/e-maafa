@@ -208,7 +208,8 @@ Suggested migration order:
 62. ~~**Finance (budget + economics)**~~ — **DONE** (maker-checker SoD hardened; eGA layered)
 63. ~~**Monitoring & Evaluation**~~ — **DONE** (thin controller + dashboard/entry service.impl; `monitoring/` package empty)
 64. ~~**Reports (incident / resource / generated)**~~ — **DONE** (thin controllers + service.impl; `reports/` package empty; EW management already eGA)
-65. Remaining fat domains: notification / stakeholder / ops-IAM
+65. ~~**Notification HTTP surface**~~ — **DONE** (thin controllers + service.impl; shared delivery engines stay in `notification/`)
+66. Remaining fat domains: stakeholder / ops-IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
