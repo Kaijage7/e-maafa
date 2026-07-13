@@ -37,6 +37,23 @@
    own region or fully national). Dist DC Dodoma now **2** warehouses (was 10).  
 5. **Backfill** `users.region_id` from district when missing (V202).
 
+## Allocation write-path drill (careful pass, 2026-07-13)
+
+Reversible drill (incident **37** temporarily `approved` + `Active Response`, then restored).
+
+| Step | Dist DC Dodoma (user 4) | Result |
+|------|-------------------------|--------|
+| form-data before eligibility | 0 pickable incidents | OK (none approved/active) |
+| form-data after eligibility | **[37]** only (not Dar #1) | OK |
+| POST alloc against Dar #1 | **404** | OK area wall |
+| POST alloc against #37 + WH 11 | **200** created id 54 | OK |
+| Dist pending queue | sees **54** | OK |
+| Track #54 Dist | **200** | OK |
+| Track #54 Arusha Dist DC | **404** | OK |
+| Cleanup | deleted 54; incident 37 restored `waiting_ded`/`Reported` | OK |
+
+**No code change required** for write path — `assertOwn` on store + queue scope hold.
+
 ## Warehouse-ops re-check (careful pass)
 
 | Check | Dist DC Dodoma | Reg DC Dodoma | National |
