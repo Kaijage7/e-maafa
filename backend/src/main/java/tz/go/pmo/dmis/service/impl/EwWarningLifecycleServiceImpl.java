@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.ew;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
@@ -9,42 +9,33 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.notification.NotificationService;
+import tz.go.pmo.dmis.service.EwWarningLifecycleService;
 
 /**
- * EW warning lifecycle — approve + publish. FAITHFUL port of Laravel Admin\EarlyWarningController@approve
- * and @publish: a pending bulletin (ingested from PMO-DMD) is approved, then PUBLISHED — which clones each
- * WarningHazard into the public {@code early_warnings} table with {@code show_on_map=true} so it reaches
- * the public portal map. Improvement over the Laravel source (which left coords null → defaulted to Dar):
- * a warned region with no point gets its real centroid (ew/region_centroids.json) so the portal map plots it.
+ * EW warning lifecycle — approve + publish + map + manual bulletin.
+ * Logic in service.impl (eGA). Paths under {@code /v1/ew/warnings/{id}/...} unchanged.
+ * NotificationService afterCommit broadcast retained on publish.
  */
-@RestController
-@RequestMapping("/v1/ew/warnings")
-// Approve + publish are the critical pending→public-map gate: oversight tier only (maker-checker on the
-// public alert), so the operator who ingests/drafts a warning is not the one who releases it. Was isAuthenticated().
-@PreAuthorize("hasAuthority('early_warning.approve')")
-public class EwWarningLifecycleController {
+@Service
+public class EwWarningLifecycleServiceImpl implements EwWarningLifecycleService {
+
+
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final int MIN_PDF_BYTES = 1024;     // a real bulletin PDF is never a few bytes
     private static final int MAX_DESC_LEN = 1000;      // public-facing hazard description cap (mirrors the UI)
     private final JdbcTemplate jdbc;
     private final Map<String, Map<String, Object>> centroids;
-    private final tz.go.pmo.dmis.notification.NotificationService notifications;
+    private final NotificationService notifications;
     private final String publicRoot;
 
-    public EwWarningLifecycleController(JdbcTemplate jdbc, tz.go.pmo.dmis.notification.NotificationService notifications,
+    public EwWarningLifecycleServiceImpl(JdbcTemplate jdbc, NotificationService notifications,
             @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
         this.jdbc = jdbc;
         this.notifications = notifications;
@@ -54,17 +45,17 @@ public class EwWarningLifecycleController {
 
     @SuppressWarnings("unchecked")
     private static Map<String, Map<String, Object>> loadCentroids() {
-        try (var in = EwWarningLifecycleController.class.getResourceAsStream("/ew/region_centroids.json")) {
+        try (var in = EwWarningLifecycleServiceImpl.class.getResourceAsStream("/ew/region_centroids.json")) {
             return in == null ? Map.of() : JSON.readValue(in, Map.class);
         } catch (Exception e) {
             return Map.of();
         }
     }
 
-    // ── POST /{id}/approve — pending → approved (EarlyWarningController@approve) ──
-    @PostMapping("/{id}/approve")
+    // ── approve — pending → approved (EarlyWarningController@approve) ──
+    @Override
     @Transactional
-    public Map<String, Object> approve(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> approve(long id, Map<String, Object> body) {
         int n = jdbc.update(
             "update public.warnings set status='approved', is_approved=true, approved_at=now(), " +
             "approval_notes=?, updated_by=? where id=? and status='pending'",
@@ -75,10 +66,10 @@ public class EwWarningLifecycleController {
         return Map.of("success", "Warning approved successfully.");
     }
 
-    // ── POST /{id}/map — add/remove a published warning on the public portal map (early_warnings.show_on_map) ──
-    @PostMapping("/{id}/map")
+    // ── map — add/remove a published warning on the public portal map (early_warnings.show_on_map) ──
+    @Override
     @Transactional
-    public Map<String, Object> setOnMap(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> setOnMap(long id, Map<String, Object> body) {
         Object showRaw = body == null ? null : body.get("show");
         boolean show = Boolean.TRUE.equals(showRaw) || "true".equalsIgnoreCase(String.valueOf(showRaw));
         List<Map<String, Object>> wrows = jdbc.queryForList(
@@ -96,12 +87,10 @@ public class EwWarningLifecycleController {
             "message", show ? "Added to the portal map." : "Removed from the portal map.");
     }
 
-    // ── POST /{id}/bulletin — MANUAL contingency: upload a bulletin PDF for a warning when the EW engine
-    //    isn't auto-generating. Stamped with the warning's code so it auto-links to the EOCC Bulletin + portal. ──
-    @PostMapping("/{id}/bulletin")
+    // ── bulletin — MANUAL contingency: upload a bulletin PDF when the EW engine isn't auto-generating. ──
+    @Override
     @Transactional
-    public Map<String, Object> uploadBulletin(@PathVariable long id, @RequestParam("pdf") MultipartFile pdf,
-            @RequestParam(value = "description", required = false) String description) throws Exception {
+    public Map<String, Object> uploadBulletin(long id, MultipartFile pdf, String description) throws Exception {
         // 1) The file must be present AND be a real PDF (not just a .pdf name) — it is served on the public
         //    portal, so a non-PDF / HTML-polyglot must never be stored. Read the bytes once, reuse for write.
         if (pdf == null || pdf.isEmpty()) {
@@ -216,10 +205,10 @@ public class EwWarningLifecycleController {
         return cleaned.length() > 200 ? cleaned.substring(0, 200) : cleaned;
     }
 
-    // ── POST /{id}/publish — approved → published + clone to early_warnings (EarlyWarningController@publish) ──
-    @PostMapping("/{id}/publish")
+    // ── publish — approved → published + clone to early_warnings (EarlyWarningController@publish) ──
+    @Override
     @Transactional
-    public Map<String, Object> publish(@PathVariable long id) {
+    public Map<String, Object> publish(long id) {
         List<Map<String, Object>> wrows = jdbc.queryForList(
             "select id, warning_code, status from public.warnings where id=?", id);
         if (wrows.isEmpty()) throw new ResourceNotFoundException("Warning not found.");
@@ -306,7 +295,7 @@ public class EwWarningLifecycleController {
                 // they see issued alerts for their district/region, not the whole national catalogue.
                 // Link goes to Response dashboard (alerts strip), not the EW workbench module.
                 notifications.notifyAreaCoordinators(affectedAreas,
-                        tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
+                        NotificationService.Notice.inApp(
                                 "early_warning_published", "Early warning for your area", pubMessage,
                                 "/m/response/issued-alerts", "early_warning", id, "warning"));
             } catch (Exception ignored) { }
@@ -321,7 +310,7 @@ public class EwWarningLifecycleController {
             try {
                 // Public subscribers (alert_subscriptions): SMS+email when channel + area + hazard + priority match.
                 notifications.notifyAlertSubscribers(
-                        tz.go.pmo.dmis.notification.NotificationService.Notice.all(
+                        NotificationService.Notice.all(
                                 "early_warning_subscriber", "Early warning: " + code, pubMessage,
                                 "/public", "early_warning", id, "warning"),
                         regionSummary, hazardSummary, severitySummary);
@@ -331,7 +320,7 @@ public class EwWarningLifecycleController {
                 // SMS is OFF by default on this auto-path to avoid unsolicited bulk SMS to registry
                 // phones; operators still use Communication Center / EW disseminate for SMS policy.
                 notifications.notifyStakeholders(
-                        new tz.go.pmo.dmis.notification.NotificationService.Notice(
+                        new NotificationService.Notice(
                                 "early_warning_stakeholder", "Early warning: " + code, pubMessage,
                                 "/m/stakeholder-portal/issued-alerts", "early_warning", id, "warning",
                                 false, true),

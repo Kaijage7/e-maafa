@@ -270,6 +270,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | E3 | EW Products | `/v1/ew/products` | ~533 | severity/type filters + stats; SMS/email disseminate retained | **DONE** |
 | E4 | EW Agency bus | `/v1/ew/agency/*`, `/v1/ew/dmd/*` | ~650 | JurisdictionScope agency isolation; DmdImpactSupport + ActionGuide; submit supersede + withdraw; productive filters | **DONE** |
 | E5 | EW Bulletin Ingest | `POST /ew/bulletins/ingest` | ~339 | NotificationService afterCommit; pending Warning + hazards; tma/dmd parsers; 1h duplicate | **DONE** |
+| E6 | EW Warning Lifecycle | `POST /v1/ew/warnings/{id}/approve\|publish\|map\|bulletin` | ~462 | early_warning.approve SoD; clone to early_warnings; NotificationService broadcast; OH kick | **DONE** |
 
 ### 10.5 Do **not** start with
 

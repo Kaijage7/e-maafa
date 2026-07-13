@@ -185,7 +185,8 @@ Suggested migration order:
 39. ~~**EW Products (bulletins)**~~ — **DONE** (severity/type filters + aligned stats; disseminate retained)  
 40. ~~**EW Agency bus**~~ — **DONE** (submit/update/withdraw/latest/history/updates/DMD; agency isolation productive)  
 41. ~~**EW Bulletin Ingest**~~ — **DONE** (PMO-DMD push → pending warnings; productive params + net-zero drill)  
-42. Remaining EW (lifecycle, scanner) then other modules  
+42. ~~**EW Warning Lifecycle**~~ — **DONE** (approve/publish/map/bulletin; SoD + net-zero drill)  
+43. Remaining EW (scanner) then other modules  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -233,8 +234,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | EW Products | Done | `/v1/ew/products` | Thin controller + service.impl; `severity`/`type` productive; **stats use same WHERE as list**; show **404**; missing PDF **400**; publish missing **404**; Partner **403** |
 | EW Agency bus | Done | `/v1/ew/agency/*`, `/v1/ew/dmd/*` | Thin controller + service.impl; JurisdictionScope agency isolation; productive `agency`/`warning_code`/`limit`/`exclude`/`days`/`hazardFocus`; empty/no-geo submit **422** (no supersede); MoH→TMA **403**; Partner **403**; JSON baselines identical post-extract |
 | EW Bulletin Ingest | Done | `POST /ew/bulletins/ingest` | Thin controller + service.impl; `bulletin_type` tma\|dmd; missing params **400**; bad type/payload **422**; zero hazards **422** (rollback); success **201** + hazard_count; 1h duplicate **200**; Partner/DAS **403**; net-zero drill |
+| EW Warning Lifecycle | Done | `POST /v1/ew/warnings/{id}/approve\|publish\|map\|bulletin` | Thin controller + service.impl; coexists with GET index; `early_warning.approve` SoD (MDA/Partner **403**); pending/approved gates **422**; missing PDF **400**; invalid PDF **422**; map missing **404**; full approve→bulletin→publish→map net-zero |
 
-41. ~~**EW Bulletin Ingest**~~ — **DONE**; remaining EW: lifecycle, scanner
+42. ~~**EW Warning Lifecycle**~~ — **DONE**; remaining EW: scanner
 
 ---
 
