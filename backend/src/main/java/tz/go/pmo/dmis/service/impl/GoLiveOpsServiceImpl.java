@@ -1,4 +1,7 @@
-package tz.go.pmo.dmis.ops;
+package tz.go.pmo.dmis.service.impl;
+
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.GoLiveOpsService;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -13,24 +16,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.geo.GeoAliasService;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.integration.IfmisCommitmentExportService;
 
 /**
- * space02 go-live / DBA ops surfaces — honesty board only.
+ * Go-live ops service — honesty board only.
  * Never invents green lights for missing external integrations or secrets.
  */
-@RestController
-@RequestMapping("/v1/ops")
-@PreAuthorize("isAuthenticated()")
-public class GoLiveOpsController {
+@Service
+public class GoLiveOpsServiceImpl implements GoLiveOpsService {
 
     private final JdbcTemplate jdbc;
     private final Environment env;
@@ -73,7 +68,7 @@ public class GoLiveOpsController {
     @Value("${dmis.ew.pdf-health-url:http://127.0.0.1:8600/health}")
     private String ewPdfHealthUrl;
 
-    public GoLiveOpsController(JdbcTemplate jdbc, Environment env,
+    public GoLiveOpsServiceImpl(JdbcTemplate jdbc, Environment env,
                                IfmisCommitmentExportService ifmisExport,
                                GeoAliasService geoAliases,
                                CurrentUserResolver users) {
@@ -112,9 +107,7 @@ public class GoLiveOpsController {
      * Does not invent NIDA/LATRA/NAPA/IFMIS live status. Careful certificate only when
      * prod profile + JWT + Flyway + seats + (SMS live or accepted) + (email live or accepted).
      */
-    @GetMapping("/go-live-readiness")
-    @PreAuthorize("hasAnyAuthority('roles_and_permissions.view','user_management.view','roles_and_permissions.manage') "
-            + "or hasAuthority('early_warning.view')")
+    @Override
     public Map<String, Object> readiness() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("document", "docs/space02-go-live-assessment.md + docs/GO-LIVE-RUNBOOK.md");
@@ -543,8 +536,7 @@ public class GoLiveOpsController {
         return Boolean.TRUE.equals(db.get("ok"));
     }
 
-    @GetMapping("/integration-registry")
-    @PreAuthorize("hasAnyAuthority('roles_and_permissions.view','user_management.view','user_management.manage')")
+    @Override
     public Map<String, Object> integrationRegistry() {
         Map<String, Object> out = new LinkedHashMap<>();
         try {
@@ -571,8 +563,7 @@ public class GoLiveOpsController {
         return out;
     }
 
-    @GetMapping("/integrity-summary")
-    @PreAuthorize("hasAnyAuthority('roles_and_permissions.view','user_management.view','user_management.manage')")
+    @Override
     public Map<String, Object> integritySummary() {
         Map<String, Object> out = new LinkedHashMap<>();
         try {
@@ -589,19 +580,14 @@ public class GoLiveOpsController {
      * INT-FIN-01 — export budget commitments for national finance handoff.
      * Records integration_messages; does not call live IFMIS.
      */
-    @PostMapping("/integrations/ifmis/export-commitments")
-    @PreAuthorize("hasAnyAuthority('resource_allocation.view','roles_and_permissions.manage','user_management.manage') "
-            + "or hasAuthority('monitoring_evaluation.view')")
-    public Map<String, Object> exportIfmisCommitments(
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer days) {
+    @Override
+    public Map<String, Object> exportIfmisCommitments(String status, Integer days) {
         return ifmisExport.exportCommitments(status, days, users.actingUserId());
     }
 
     /** DBA-1.2 — resolve a free-text place name via geo_name_aliases. */
-    @GetMapping("/geo/resolve")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> resolveGeo(@RequestParam String name) {
+    @Override
+    public Map<String, Object> resolveGeo(String name) {
         return geoAliases.resolve(name);
     }
 

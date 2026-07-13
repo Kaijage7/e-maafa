@@ -160,7 +160,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 44. ~~eGA migrate **Reports** (incident / resource / generated)~~ — **DONE** (see §19).
 45. ~~eGA migrate **Notification HTTP surface**~~ — **DONE** (see §20; shared engines retained in `notification/`).
 46. ~~eGA migrate **Stakeholder admin**~~ — **DONE** (see §22).
-47. Next fat domains: ops/IAM. 
+47. ~~eGA migrate **ops/IAM** (auth + go-live)~~ — **DONE** (see §24).
+48. Primary fat-domain eGA arc complete. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -750,3 +751,38 @@ Full live re-pass after recent eGA; net-zero cleanup; **no code changes required
 5. **Net-zero:** 1 historical budget commitment; 0 leftover settings-drill incidents; automation defaults intact.
 
 **Verdict:** System settings automation and formulas remain controlled, FE-wired, and proven end-to-end.
+
+
+## 24. ops/IAM eGA (2026-07-13, careful)
+
+High-risk surface extracted last. **Paths/JSON and security annotations unchanged.**
+
+### Structure
+
+| Before | After |
+|--------|--------|
+| `iam/AuthController` + `TotpService` | Thin `controller/AuthController` + `service/AuthService` + `AuthServiceImpl` |
+| | `service.support/TotpService` (pure RFC 6238 helper) |
+| `ops/GoLiveOpsController` | Thin `controller/GoLiveOpsController` + `GoLiveOpsService` + impl |
+| packages `iam/`, `ops/` | **empty / removed** |
+
+Hazard-area context under `/v1/ops/hazard-area-context` was already eGA (unchanged).
+
+### Live validation (local)
+
+| Drill | Result |
+|-------|--------|
+| Login bad password | **401** |
+| Login empty body | **401** |
+| Login local admin (test password) | **200** `status=OK`, JWT issued, Super Admin |
+| `GET /v1/auth/2fa/status` with JWT | **200** `enabled=false` |
+| Forgot password | **200** (no enumeration) |
+| Ops go-live readiness | **200**, localProfile true, honesty note (no AI/NIDA live claims) |
+| Integration registry | **200**, 12 planned endpoints |
+| Integrity summary | **200** |
+| Geo resolve `Dodoma` | **200**, resolved district 101 |
+| Hazard-area context | **200** |
+| Unauth / Partner readiness | **401** / **403** |
+| Finance budgets (local headers) | **200** (no regression) |
+
+**Verdict:** Auth and go-live ops are eGA-layered without changing public contracts. Primary progressive eGA of fat domains is complete.

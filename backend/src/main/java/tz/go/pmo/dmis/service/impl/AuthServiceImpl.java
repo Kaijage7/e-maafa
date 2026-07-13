@@ -1,7 +1,18 @@
-package tz.go.pmo.dmis.iam;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.AuthService;
+import tz.go.pmo.dmis.service.AuthService.ChangePasswordRequest;
+import tz.go.pmo.dmis.service.AuthService.ForgotPasswordRequest;
+import tz.go.pmo.dmis.service.AuthService.LoginRequest;
+import tz.go.pmo.dmis.service.AuthService.LoginResponse;
+import tz.go.pmo.dmis.service.AuthService.MfaVerifyRequest;
+import tz.go.pmo.dmis.service.AuthService.ResetPasswordRequest;
+import tz.go.pmo.dmis.service.AuthService.TotpDisableRequest;
+import tz.go.pmo.dmis.service.AuthService.TotpEnableRequest;
+import tz.go.pmo.dmis.service.AuthService.UserDto;
+import tz.go.pmo.dmis.service.support.TotpService;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,13 +24,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JwtTokenService;
@@ -34,13 +39,11 @@ import tz.go.pmo.dmis.notification.MailService;
  * and mandatory password change after admin-set secrets. Login never returns a full session until
  * password-change and (when enabled) TOTP steps succeed.
  */
-@RestController
-@RequestMapping("/v1/auth")
+@Service
 @RequiredArgsConstructor
-@Tag(name = "Identity", description = "Login, password lifecycle, optional TOTP 2FA")
-public class AuthController {
+public class AuthServiceImpl implements AuthService {
 
-    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+    private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     private final JdbcTemplate jdbc;
     private final JwtTokenService tokens;
@@ -72,42 +75,11 @@ public class AuthController {
     @Value("${dmis.auth.force-2fa-roles:}")
     private String force2faRoles;
 
-    // ─── records ───────────────────────────────────────────────────────────────
-
-    public record LoginRequest(String email, String password) {}
-
-    public record UserDto(String name, String email, List<String> roles, List<String> permissions,
-                          String agency, boolean totpEnabled, boolean mustChangePassword) {}
-
-    /**
-     * Unified login result.
-     * <ul>
-     *   <li>{@code OK} — full JWT in {@code token}</li>
-     *   <li>{@code MFA_REQUIRED} — password ok, need TOTP via {@code challengeToken}</li>
-     *   <li>{@code MFA_ENROLL_REQUIRED} — password ok; role is in {@code dmis.auth.force-2fa-roles}
-     *       and TOTP is not yet enabled (JWT issued so client can call setup/enable)</li>
-     *   <li>{@code PASSWORD_CHANGE_REQUIRED} — limited JWT that only unlocks change-password</li>
-     * </ul>
-     */
-    public record LoginResponse(String status, String token, String challengeToken, UserDto user, String message) {}
-
-    public record MfaVerifyRequest(String challengeToken, String code) {}
-
-    public record TotpEnableRequest(String code) {}
-
-    public record TotpDisableRequest(String password, String code) {}
-
-    public record ForgotPasswordRequest(String email) {}
-
-    public record ResetPasswordRequest(String token, String newPassword) {}
-
-    public record ChangePasswordRequest(String currentPassword, String newPassword) {}
-
     // ─── login ─────────────────────────────────────────────────────────────────
 
-    @PostMapping("/login")
-    @Operation(summary = "Authenticate with email + password; may require TOTP or password change")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+
+    @Override
+    public ResponseEntity<LoginResponse> login(LoginRequest request) {
         if (request.email() == null || request.password() == null) {
             return ResponseEntity.status(401).build();
         }
@@ -178,9 +150,8 @@ public class AuthController {
         return false;
     }
 
-    @PostMapping("/2fa/verify")
-    @Operation(summary = "Complete login with TOTP after MFA_REQUIRED")
-    public ResponseEntity<LoginResponse> verifyMfa(@RequestBody MfaVerifyRequest req) {
+    @Override
+    public ResponseEntity<LoginResponse> verifyMfa(MfaVerifyRequest req) {
         if (req.challengeToken() == null || req.code() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "challengeToken and code are required.");
         }
@@ -205,9 +176,7 @@ public class AuthController {
 
     // ─── TOTP enrollment (authenticated) ───────────────────────────────────────
 
-    @GetMapping("/2fa/status")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Whether 2FA is enabled for the current user")
+    @Override
     public Map<String, Object> twoFaStatus() {
         Long id = requireUserId();
         Map<String, Object> row = loadUser(id);
@@ -218,9 +187,7 @@ public class AuthController {
         return out;
     }
 
-    @PostMapping("/2fa/setup")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Begin TOTP enrollment — returns secret + otpauth URI (not yet active)")
+    @Override
     public Map<String, Object> setupTotp() {
         Long id = requireUserId();
         Map<String, Object> row = loadUser(id);
@@ -241,10 +208,8 @@ public class AuthController {
                 "message", "Scan the otpauth URI (or enter the secret) in your authenticator app, then call /2fa/enable with a code.");
     }
 
-    @PostMapping("/2fa/enable")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Confirm TOTP enrollment with a live code")
-    public Map<String, Object> enableTotp(@RequestBody TotpEnableRequest req) {
+    @Override
+    public Map<String, Object> enableTotp(TotpEnableRequest req) {
         Long id = requireUserId();
         Map<String, Object> row = loadUser(id);
         if (row == null) {
@@ -276,10 +241,8 @@ public class AuthController {
         return out;
     }
 
-    @PostMapping("/2fa/disable")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Disable TOTP (requires password + current code)")
-    public Map<String, Object> disableTotp(@RequestBody TotpDisableRequest req) {
+    @Override
+    public Map<String, Object> disableTotp(TotpDisableRequest req) {
         Long id = requireUserId();
         Map<String, Object> row = loadUser(id);
         if (row == null) {
@@ -305,9 +268,8 @@ public class AuthController {
 
     // ─── password reset / change ───────────────────────────────────────────────
 
-    @PostMapping("/forgot-password")
-    @Operation(summary = "Request a password-reset link by email (uniform response, rate-limited)")
-    public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody ForgotPasswordRequest req) {
+    @Override
+    public ResponseEntity<Map<String, Object>> forgotPassword(ForgotPasswordRequest req) {
         String email = req.email() == null ? "" : req.email().trim();
         boolean mailConfigured = mail.isConfigured();
         if (!email.isBlank()) {
@@ -374,9 +336,8 @@ public class AuthController {
         return false;
     }
 
-    @PostMapping("/reset-password")
-    @Operation(summary = "Set a new password using an emailed reset token (single-use, expiring)")
-    public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody ResetPasswordRequest req) {
+    @Override
+    public ResponseEntity<Map<String, Object>> resetPassword(ResetPasswordRequest req) {
         if (req.token() == null || req.token().isBlank() || req.newPassword() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "token and newPassword are required.");
         }
@@ -412,9 +373,7 @@ public class AuthController {
                 "message", "Password reset successfully — you can now sign in with the new password."));
     }
 
-    @PostMapping("/logout")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "End this session (server-side JWT denylist by jti until natural expiry)")
+    @Override
     public ResponseEntity<Map<String, Object>> logout() {
         var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwtAuth
@@ -428,10 +387,8 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Signed out."));
     }
 
-    @PostMapping("/change-password")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Change your own password (verifies current + policy); clears must_change_password")
-    public ResponseEntity<Map<String, Object>> changePassword(@RequestBody ChangePasswordRequest req) {
+    @Override
+    public ResponseEntity<Map<String, Object>> changePassword(ChangePasswordRequest req) {
         Long id = currentUser.currentUserDbId();
         if (id == null) {
             return ResponseEntity.status(401).build();

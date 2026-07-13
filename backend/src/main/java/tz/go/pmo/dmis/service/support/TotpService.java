@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.iam;
+package tz.go.pmo.dmis.service.support;
 
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
