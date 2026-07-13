@@ -87,6 +87,7 @@
 - ~~Dispatch eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; APPROVAL_REQUIRED_SOURCES public; multi-persona baseline; no stock mutation in verify).
 - ~~Stakeholder Bidding eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; multi-persona baseline; no stock/donation mutation in verify).
 - ~~Incidents eGA extract~~ — **DONE** (IncidentWorkflowService retained; findOr404 public; multipart store/update; coexists with ops-timeline; multi-persona baseline; no workflow mutation in verify).
+- ~~Command Center eGA extract~~ — **DONE** (ActivationService + AnticipatoryPlansService retained; coexists with scenarios; multi-persona baseline; no posture mutation in verify).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -115,6 +116,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 18. ~~eGA migrate **Dispatch**~~ — **DONE**.  
 19. ~~eGA migrate **Stakeholder Bidding**~~ — **DONE**.  
 20. ~~eGA migrate **Incidents**~~ — **DONE**.  
-21. Next: CommandCenter hub last.  
-22. Stamp area on temp warehouses + agency stock data hygiene.  
-23. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+21. ~~eGA migrate **Command Center**~~ — **DONE**.  
+22. Response fat controllers complete; optional later: extract support services when heavily touched.  
+23. Stamp area on temp warehouses + agency stock data hygiene.  
+24. EW package eGA migration (next major module surface).  
+25. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
