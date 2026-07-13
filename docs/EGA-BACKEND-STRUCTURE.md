@@ -197,8 +197,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Anticipatory Plans | Done | `/v1/response/anticipatory-plans` | Thin controller + service.impl; area scope + OOA show **404**; Reg OOA create **422**; lifecycle drill net-zero; CommandCenter uses `AnticipatoryPlansService.matchingPlans` |
 | Tasks | Done | `/v1/response/tasks` | Thin controller + service.impl; board/calendar/form-data; Reg stats area-scoped; OOA show/create **404**; status/assign; drill net-zero |
 | Assessments | Done | `/v1/response/assessments` | Thin controller + service.impl; multipart create; form-data; status filter; Reg OOA show **404**; Dist **403**; submit/verify lifecycle; drill net-zero |
+| Communication | Done | `/v1/response/communication` | Thin controller + service.impl; dash/form-data/alerts/analytics; templates CRUD; send (app-only drill); Dist **403**; @Scheduled retained on impl |
 
-22. ~~**Assessments**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
+23. ~~**Communication**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
 
 ---
 
