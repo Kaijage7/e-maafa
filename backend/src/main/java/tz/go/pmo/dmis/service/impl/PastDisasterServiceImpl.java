@@ -1,4 +1,13 @@
-package tz.go.pmo.dmis.mitigation;
+package tz.go.pmo.dmis.service.impl;
+
+import tz.go.pmo.dmis.mitigation.MitHazard;
+import tz.go.pmo.dmis.mitigation.MitHazardRepository;
+import tz.go.pmo.dmis.mitigation.PastDisaster;
+import tz.go.pmo.dmis.mitigation.PastDisasterRepository;
+import tz.go.pmo.dmis.mitigation.PastDisasterResponses;
+import tz.go.pmo.dmis.mitigation.PastDisasterWriteRequest;
+
+import tz.go.pmo.dmis.service.PastDisasterService;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -35,7 +44,7 @@ import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
  */
 @Service
 @RequiredArgsConstructor
-public class PastDisasterService {
+public class PastDisasterServiceImpl implements PastDisasterService {
 
     private static final int PER_PAGE = 15;
     private static final ZoneId ZONE = ZoneId.of("Africa/Dar_es_Salaam");
@@ -51,6 +60,7 @@ public class PastDisasterService {
     @Value("${dmis.storage.public-root:${user.dir}/storage/public}")
     private String publicRoot;
 
+    @Override
     @Transactional(readOnly = true)
     public PastDisasterResponses.Index index(int page) {
         Page<PastDisaster> result = disasters.findAllByOrderByEventDateDesc(PageRequest.of(Math.max(page, 1) - 1, PER_PAGE));
@@ -81,11 +91,13 @@ public class PastDisasterService {
         return new PastDisasterResponses.Index(rows, pagination, stats, hazardOptions, byHazardType, byYear);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public PastDisasterResponses.Detail show(Long id) {
         return toDetail(find(id));
     }
 
+    @Override
     @Transactional
     public PastDisasterResponses.Detail store(PastDisasterWriteRequest request) {
         if (disasters.existsByEventName(request.getEventName())) {
@@ -100,6 +112,7 @@ public class PastDisasterService {
         return toDetail(disasters.save(disaster));
     }
 
+    @Override
     @Transactional
     public PastDisasterResponses.Detail update(Long id, PastDisasterWriteRequest request) {
         PastDisaster disaster = find(id);
@@ -117,6 +130,7 @@ public class PastDisasterService {
         return toDetail(disasters.save(disaster));
     }
 
+    @Override
     @Transactional
     public void destroy(Long id) {
         PastDisaster disaster = find(id);

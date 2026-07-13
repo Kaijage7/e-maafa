@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-interface MitigationMeasureRepository extends JpaRepository<MitigationMeasure, Long> {
+public interface MitigationMeasureRepository extends JpaRepository<MitigationMeasure, Long> {
 
     /** measuresIndex: MitigationMeasure::latest()->paginate(15). */
     Page<MitigationMeasure> findAllByOrderByCreatedAtDesc(Pageable pageable);

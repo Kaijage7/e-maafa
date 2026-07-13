@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-interface PastDisasterRepository extends JpaRepository<PastDisaster, Long> {
+public interface PastDisasterRepository extends JpaRepository<PastDisaster, Long> {
 
     /** PastDisasterController@index: with('hazard')->latest('event_date')->paginate(15). */
     @EntityGraph(attributePaths = "hazard")

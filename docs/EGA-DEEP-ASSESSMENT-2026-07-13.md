@@ -6,7 +6,7 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 46 thin eGA controllers, 46 service + 46 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 49 thin eGA controllers, 49 service + 49 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
 | Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
 | Response support engines | **eGA-aligned** | Under `service.support` (workflow, dispatch, activation, simulation) |
@@ -238,4 +238,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 | Frameworks | `/v1/frameworks` | page productive; stats/pagination baseline; show 404; Partner/DAS 403; create 400 |
 | Hazards | `/v1/hazards` | page productive; stats baseline match; show 404; unauth 401; frameworks co-live |
 
-Remaining fat mitigation controllers: measures, infrastructure, past disasters, risk assessments, GIS map, dashboard.
+| Mitigation measures | `/v1/mitigation-measures` | stats total 9; page=999 empty; show 404; unauth 401 |
+| Infrastructure items | `/v1/infrastructure-items` | stats total 5; mapItems 5; page empty; show 404 |
+| Past disasters | `/v1/past-disasters` | stats total 11; page empty; show 404 |
+
+Remaining fat mitigation: risk assessments, GIS map, dashboard (+ RegionDataBuilder helper).

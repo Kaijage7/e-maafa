@@ -1,4 +1,11 @@
-package tz.go.pmo.dmis.mitigation;
+package tz.go.pmo.dmis.service.impl;
+
+import tz.go.pmo.dmis.mitigation.InfrastructureItem;
+import tz.go.pmo.dmis.mitigation.InfrastructureItemRepository;
+import tz.go.pmo.dmis.mitigation.InfrastructureItemResponses;
+import tz.go.pmo.dmis.mitigation.InfrastructureItemWriteRequest;
+
+import tz.go.pmo.dmis.service.InfrastructureItemService;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -20,7 +27,7 @@ import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
  */
 @Service
 @RequiredArgsConstructor
-public class InfrastructureItemService {
+public class InfrastructureItemServiceImpl implements InfrastructureItemService {
 
     private static final int PER_PAGE = 15;
 
@@ -42,6 +49,7 @@ public class InfrastructureItemService {
 
     private final InfrastructureItemRepository items;
 
+    @Override
     @Transactional(readOnly = true)
     public InfrastructureItemResponses.Index index(int page) {
         Page<InfrastructureItem> result = items.findAllByOrderByCreatedAtDesc(PageRequest.of(Math.max(page, 1) - 1, PER_PAGE));
@@ -65,11 +73,13 @@ public class InfrastructureItemService {
         return new InfrastructureItemResponses.Index(rows, pagination, stats, mapItems, TYPE_GROUPS, STATUS_OPTIONS);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public InfrastructureItemResponses.Detail show(Long id) {
         return toDetail(find(id));
     }
 
+    @Override
     @Transactional
     public InfrastructureItemResponses.Detail store(InfrastructureItemWriteRequest request) {
         validateOptions(request);
@@ -79,6 +89,7 @@ public class InfrastructureItemService {
         return toDetail(items.save(item));
     }
 
+    @Override
     @Transactional
     public InfrastructureItemResponses.Detail update(Long id, InfrastructureItemWriteRequest request) {
         validateOptions(request);
@@ -87,6 +98,7 @@ public class InfrastructureItemService {
         return toDetail(items.save(item));
     }
 
+    @Override
     @Transactional
     public void destroy(Long id) {
         items.delete(find(id));

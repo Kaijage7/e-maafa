@@ -5,7 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-interface InfrastructureItemRepository extends JpaRepository<InfrastructureItem, Long> {
+public interface InfrastructureItemRepository extends JpaRepository<InfrastructureItem, Long> {
 
     /** index: InfrastructureItem::latest()->paginate(15). */
     Page<InfrastructureItem> findAllByOrderByCreatedAtDesc(Pageable pageable);

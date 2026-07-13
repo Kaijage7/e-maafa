@@ -1,4 +1,11 @@
-package tz.go.pmo.dmis.mitigation;
+package tz.go.pmo.dmis.service.impl;
+
+import tz.go.pmo.dmis.mitigation.MitigationMeasure;
+import tz.go.pmo.dmis.mitigation.MitigationMeasureRepository;
+import tz.go.pmo.dmis.mitigation.MitigationMeasureResponses;
+import tz.go.pmo.dmis.mitigation.MitigationMeasureWriteRequest;
+
+import tz.go.pmo.dmis.service.MitigationMeasureService;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,7 +35,7 @@ import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
  */
 @Service
 @RequiredArgsConstructor
-public class MitigationMeasureService {
+public class MitigationMeasureServiceImpl implements MitigationMeasureService {
 
     private static final int PER_PAGE = 15;
     private static final DateTimeFormatter M_Y = DateTimeFormatter.ofPattern("MMM yyyy", Locale.ENGLISH);
@@ -38,6 +45,7 @@ public class MitigationMeasureService {
     private final MitigationMeasureRepository measures;
     private final ObjectMapper objectMapper;
 
+    @Override
     @Transactional(readOnly = true)
     public MitigationMeasureResponses.Index index(int page) {
         Page<MitigationMeasure> result = measures.findAllByOrderByCreatedAtDesc(PageRequest.of(Math.max(page, 1) - 1, PER_PAGE));
@@ -61,11 +69,13 @@ public class MitigationMeasureService {
         return new MitigationMeasureResponses.Index(rows, pagination, stats, byPriority);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public MitigationMeasureResponses.Detail show(Long id) {
         return toDetail(find(id));
     }
 
+    @Override
     @Transactional
     public MitigationMeasureResponses.Detail store(MitigationMeasureWriteRequest r) {
         validate(r);
@@ -75,6 +85,7 @@ public class MitigationMeasureService {
         return toDetail(measures.save(m));
     }
 
+    @Override
     @Transactional
     public MitigationMeasureResponses.Detail update(Long id, MitigationMeasureWriteRequest r) {
         validate(r);
@@ -83,6 +94,7 @@ public class MitigationMeasureService {
         return toDetail(measures.save(m));
     }
 
+    @Override
     @Transactional
     public void destroy(Long id) {
         measures.delete(find(id));

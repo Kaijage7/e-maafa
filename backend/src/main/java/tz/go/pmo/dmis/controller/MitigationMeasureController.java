@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.mitigation;
+package tz.go.pmo.dmis.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.service.MitigationMeasureService;
+import tz.go.pmo.dmis.mitigation.MitigationMeasureResponses;
+import tz.go.pmo.dmis.mitigation.MitigationMeasureWriteRequest;
 
 /**
  * v2 Mitigation Measures API over the existing {@code mitigation_measures} table. Deliberately only

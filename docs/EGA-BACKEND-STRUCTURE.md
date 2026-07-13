@@ -248,6 +248,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Hazard Area Context | Done | `GET /v1/ops/hazard-area-context` | Thin controller + service.impl; lat/lng/districtId/regionId/areaName productive; bad geo **404**; **fixed** warningId/code join to warning_hazards (was always null); submission uses hazard_types/top_alert; Partner **403** |
 | Frameworks | Done | `/v1/frameworks` | Thin controller + service.impl; entity/repo remain mitigation package; productive `page`; show **404**; Partner/DAS **403**; create validation **400** |
 | Hazards | Done | `/v1/hazards` | Thin controller + service.impl; productive `page`; show **404**; unauth **401**; baselines match; EW/response regressions |
+| Mitigation measures | Done | `/v1/mitigation-measures` | Thin controller + service.impl; page productive; show **404**; unauth **401** |
+| Infrastructure items | Done | `/v1/infrastructure-items` | Thin controller + service.impl; page + mapItems; show **404** |
+| Past disasters | Done | `/v1/past-disasters` | Thin controller + service.impl; page + hazard/year charts; show **404** |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 
