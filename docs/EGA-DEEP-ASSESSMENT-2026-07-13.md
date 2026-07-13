@@ -156,7 +156,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 40. ~~eGA migrate **One Health events**~~ — **DONE**.
 41. ~~eGA migrate **One Health dissemination**~~ — **DONE** (OH complete).
 42. ~~eGA migrate **Finance (budget + economics)**~~ — **DONE** (+ reject SoD fix).
-43. Next fat domains: M&E / reports / notification. 
+43. ~~eGA migrate **Monitoring & Evaluation**~~ — **DONE** (see §18).
+44. Next fat domains: reports / notification / stakeholder / ops-IAM. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 

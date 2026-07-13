@@ -1,4 +1,6 @@
-package tz.go.pmo.dmis.monitoring;
+package tz.go.pmo.dmis.service.impl;
+
+import tz.go.pmo.dmis.service.MonitoringEvaluationService;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -25,7 +27,7 @@ import tz.go.pmo.dmis.mitigation.RegionDataBuilder;
  */
 @Service
 @RequiredArgsConstructor
-public class MonitoringEvaluationService {
+public class MonitoringEvaluationServiceImpl implements MonitoringEvaluationService {
 
     private static final String[] REGIONAL_TEAM_ROLES = {
             "Reg DC", "RAS", "RC", "Regional Planning Officer", "Regional Logistic Officer"
@@ -39,6 +41,7 @@ public class MonitoringEvaluationService {
     private final RegionDataBuilder regionDataBuilder;
 
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> dashboard() {
         Scope scope = currentScope();
         // Framework aims first (independent of operational SQL) so a later soft-fail cannot empty them.
@@ -83,6 +86,7 @@ public class MonitoringEvaluationService {
      * Original M&E module aims with live indicator counts (how many catalogue rows exist per aim).
      */
     @Transactional(readOnly = true)
+    @Override
     public List<Map<String, Object>> frameworkAimsPublic() {
         return frameworkAims();
     }

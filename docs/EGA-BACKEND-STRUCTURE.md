@@ -132,7 +132,7 @@ Optional later: subpackages under layers for readability only, e.g. `controller.
 
 ## 7. Transition rules (existing code)
 
-Legacy fat packages under `ew/`, `recovery/`, `portal/`, `onehealth/`, and `finance/` controllers are gone. Shared Response engines live in `service.support/`. Other domains (M&E, remaining reports, notification, stakeholder, ops/IAM …) may still host controllers until migrated.
+Legacy fat packages under `ew/`, `recovery/`, `portal/`, `onehealth/`, `finance/`, and `monitoring/` controllers are gone. Shared Response engines live in `service.support/`. Other domains (remaining reports, notification, stakeholder, ops/IAM …) may still host controllers until migrated.
 
 | Rule | |
 |------|---|

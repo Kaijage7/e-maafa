@@ -1,4 +1,7 @@
-package tz.go.pmo.dmis.monitoring;
+package tz.go.pmo.dmis.controller;
+
+import tz.go.pmo.dmis.service.MonitoringEvaluationEntryService;
+import tz.go.pmo.dmis.service.MonitoringEvaluationService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +20,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
+ * Monitoring &amp; Evaluation — thin eGA controller. Paths/JSON unchanged.
+ * Logic in {@link tz.go.pmo.dmis.service.MonitoringEvaluationService} and
+ * {@link tz.go.pmo.dmis.service.MonitoringEvaluationEntryService}.
+ *
  * Monitoring & Evaluation command dashboard. The payload is assembled from live operational tables so PMO-DMD
  * can monitor budgets, readiness, cycle activities, institutions, incidents and resources without a parallel
  * manual reporting spreadsheet.

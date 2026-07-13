@@ -1,4 +1,6 @@
-package tz.go.pmo.dmis.monitoring;
+package tz.go.pmo.dmis.service.impl;
+
+import tz.go.pmo.dmis.service.MonitoringEvaluationEntryService;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -25,7 +27,7 @@ import tz.go.pmo.dmis.common.security.SecurityUtils;
  */
 @Service
 @RequiredArgsConstructor
-public class MonitoringEvaluationEntryService {
+public class MonitoringEvaluationEntryServiceImpl implements MonitoringEvaluationEntryService {
 
     private static final List<String> LEVELS = List.of(
             "national", "region", "district", "council", "agency", "stakeholder", "incident", "warning");
@@ -35,11 +37,13 @@ public class MonitoringEvaluationEntryService {
     private final CurrentUserResolver currentUser;
 
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> workbench(String requestedLevel, String period, String domain, String search) {
         return workbench(requestedLevel, period, domain, search, null);
     }
 
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> workbench(String requestedLevel, String period, String domain, String search,
                                          String institutionClass) {
         String level = contextLevel(cleanLevel(requestedLevel, defaultLevel()));
@@ -77,6 +81,7 @@ public class MonitoringEvaluationEntryService {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public List<Map<String, Object>> indicators(String requestedLevel, String domain, String search, boolean activeOnly) {
         String level = contextLevel(cleanLevel(requestedLevel, null));
         List<Object> args = new ArrayList<>();
@@ -115,11 +120,13 @@ public class MonitoringEvaluationEntryService {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public List<Map<String, Object>> targets(String requestedLevel, String search) {
         return targets(requestedLevel, search, null);
     }
 
     @Transactional(readOnly = true)
+    @Override
     public List<Map<String, Object>> targets(String requestedLevel, String search, String institutionClass) {
         String level = contextLevel(cleanLevel(requestedLevel, defaultLevel()));
         String cls = cleanInstitutionClass(institutionClass);
@@ -138,6 +145,7 @@ public class MonitoringEvaluationEntryService {
     }
 
     @Transactional
+    @Override
     public Map<String, Object> createIndicator(Map<String, Object> req) {
         Long uid = currentUser.actingUserId();
         String code = req(req, "code").toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9_]+", "_");
@@ -166,6 +174,7 @@ public class MonitoringEvaluationEntryService {
     }
 
     @Transactional
+    @Override
     public Map<String, Object> updateIndicator(long id, Map<String, Object> req) {
         String level = cleanLevel(str(req.get("level")), null);
         String valueType = oneOf(str(req.get("valueType")), List.of("number", "count", "currency", "percent", "boolean", "text"),
@@ -206,6 +215,7 @@ public class MonitoringEvaluationEntryService {
     }
 
     @Transactional
+    @Override
     public Map<String, Object> saveValue(Map<String, Object> req) {
         if (!canEnter()) {
             throw new AccessDeniedException("You do not have permission to enter M&E values.");
@@ -284,6 +294,7 @@ public class MonitoringEvaluationEntryService {
 
     @Transactional
     @SuppressWarnings("unchecked")
+    @Override
     public Map<String, Object> saveBatch(Map<String, Object> req) {
         List<?> rows = req.get("values") instanceof List<?> list ? list : List.of();
         int saved = 0;
@@ -319,6 +330,7 @@ public class MonitoringEvaluationEntryService {
     // ── Organization ↔ indicator assignment ─────────────────────────────────
 
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> organizationIndicators(Long agencyId, Long stakeholderId) {
         if ((agencyId == null) == (stakeholderId == null)) {
             throw bad("Provide exactly one of agencyId or stakeholderId.");
@@ -370,6 +382,7 @@ public class MonitoringEvaluationEntryService {
      * current period from an automated source_module link (in-platform tables only).
      */
     @Transactional
+    @Override
     public Map<String, Object> assignIndicatorToOrganization(Map<String, Object> req) {
         if (!SecurityUtils.hasAuthority("monitoring_evaluation.manage")
                 && !SecurityUtils.hasAuthority("monitoring_evaluation.enter")) {
@@ -424,6 +437,7 @@ public class MonitoringEvaluationEntryService {
 
     /** Soft-delete: remove indicator from organization reporting set (values retained for audit). */
     @Transactional
+    @Override
     public Map<String, Object> removeIndicatorFromOrganization(long assignmentId) {
         if (!SecurityUtils.hasAuthority("monitoring_evaluation.manage")
                 && !SecurityUtils.hasAuthority("monitoring_evaluation.enter")) {
@@ -447,6 +461,7 @@ public class MonitoringEvaluationEntryService {
      * Re-run auto-capture for all auto_capture assignments of an organization (current period).
      */
     @Transactional
+    @Override
     public Map<String, Object> captureOrganizationValues(Long agencyId, Long stakeholderId, String period) {
         if ((agencyId == null) == (stakeholderId == null)) {
             throw bad("Provide exactly one of agencyId or stakeholderId.");
