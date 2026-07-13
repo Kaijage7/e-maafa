@@ -1,7 +1,5 @@
-package tz.go.pmo.dmis.settings;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,45 +7,26 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.service.RolePermissionService;
+import tz.go.pmo.dmis.settings.RoleCatalogue;
 
 /**
- * System Settings → Roles &amp; Permissions. Captures the access model that ties everything together:
- * users hold roles ({@code model_has_roles}); roles hold permissions ({@code role_has_permissions})
- * across the system's functional areas (V44 catalogue). The matrix here is the single place the
- * who-can-do-what policy is governed.
- *
- * <p>The Spring backend consumes those permission grants as authorities for module and action gates
- * ({@code hasAuthority('module.action')}). Named roles still matter for workflow ladders and area
- * attachment, but the operational capability surface is this matrix. Guard rails keep the Super Admin
- * role intact and stop deletion of a role still held by users.</p>
+ * JDBC admin for roles, the permission catalogue, and the role↔permission matrix.
+ * Paths/JSON unchanged from the former settings package controller. Runtime module gates still
+ * read {@code role_has_permissions} via security filters (SQL coupling only).
  */
-@RestController
-@RequestMapping("/v1/settings/roles")
-@Tag(name = "Settings: Roles & Permissions", description = "Roles, the permission catalogue and the matrix")
+@Service
 @RequiredArgsConstructor
-public class RolePermissionController {
-
-    private static final String CAN_WRITE = "hasAuthority('roles_and_permissions.manage')";
+public class RolePermissionServiceImpl implements RolePermissionService {
 
     private final JdbcTemplate jdbc;
 
     /** Roles with user + permission counts (the registry). */
-    @GetMapping
-    @Operation(summary = "Roles + user/permission counts + stats")
-    @PreAuthorize("isAuthenticated()")
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> index() {
         List<Map<String, Object>> roles = jdbc.queryForList(
                 "select r.id, r.name, r.description,"
@@ -72,9 +51,8 @@ public class RolePermissionController {
     }
 
     /** The permission catalogue grouped by functional area — the matrix columns. */
-    @GetMapping("/catalogue")
-    @Operation(summary = "Permission catalogue grouped by module")
-    @PreAuthorize("isAuthenticated()")
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> catalogue() {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select id, name, module, action, label from public.permissions order by module, id");
@@ -107,21 +85,17 @@ public class RolePermissionController {
     }
 
     /** One role with the set of permission ids it holds (drives the matrix checkboxes). */
-    @GetMapping("/{id}")
-    @Operation(summary = "Role + its permission ids")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> show(long id) {
         Map<String, Object> role = role(id);
         role.put("permissionIds", jdbc.queryForList(
                 "select permission_id from public.role_has_permissions where role_id = ?", Long.class, id));
         return Map.of("role", role);
     }
-
-    @PostMapping
-    @Operation(summary = "Create a role")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> create(@RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> create(Map<String, Object> req) {
         String name = req(req, "name");
         Long dup = jdbc.queryForObject("select count(*) from public.roles where name = ?", Long.class, name);
         if (dup != null && dup > 0) {
@@ -141,12 +115,16 @@ public class RolePermissionController {
                 bool(req.get("isAreaScoped")));
         return Map.of("id", id, "message", "Role created");
     }
-
-    @PutMapping("/{id}")
-    @Operation(summary = "Rename a role / edit its metadata")
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> update(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> update(long id, Map<String, Object> req) {
         Map<String, Object> current = role(id);
+        // Super Admin is matched by name in delete guards and local-role break-glass — do not rename it.
+        String newName = str(req.get("name"));
+        if ("Super Admin".equals(current.get("name")) && newName != null && !"Super Admin".equals(newName)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "The Super Admin role cannot be renamed.");
+        }
         String category = req.containsKey("category") ? roleCategory(req) : str(current.get("category"));
         String scope = req.containsKey("scopeLevel") ? roleScope(req) : str(current.get("scopeLevel"));
         Integer sortOrder = req.containsKey("sortOrder")
@@ -174,14 +152,20 @@ public class RolePermissionController {
     }
 
     /** Replace a role's permissions (the matrix save). */
-    @PutMapping("/{id}/permissions")
-    @Operation(summary = "Set a role's permissions")
+    @Override
     @Transactional
-    @PreAuthorize(CAN_WRITE)
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> setPermissions(@PathVariable long id, @RequestBody Map<String, Object> req) {
-        role(id);
+    public Map<String, Object> setPermissions(long id, Map<String, Object> req) {
+        Map<String, Object> current = role(id);
         List<Object> ids = req.get("permissionIds") instanceof List<?> list ? (List<Object>) list : List.of();
+        // Super Admin is break-glass full access — a partial/empty matrix save must not undercut it.
+        // Always re-apply the full permission catalogue for that role (client payload is ignored).
+        if ("Super Admin".equals(current.get("name"))) {
+            ids = new ArrayList<>(jdbc.queryForList("select id from public.permissions order by id", Object.class));
+            if (ids.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Super Admin cannot be saved without a permission catalogue.");
+            }
+        }
         jdbc.update("delete from public.role_has_permissions where role_id = ?", id);
         for (Object pid : ids) {
             jdbc.update("insert into public.role_has_permissions(permission_id, role_id) values (?,?)"
@@ -198,13 +182,9 @@ public class RolePermissionController {
         Long count = jdbc.queryForObject("select count(*) from public.role_has_permissions where role_id = ?", Long.class, id);
         return Map.of("message", "Permissions updated", "count", count == null ? ids.size() : count);
     }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a role (not Super Admin, not while held by users)")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Override
     @Transactional
-    @PreAuthorize(CAN_WRITE)
-    public void delete(@PathVariable long id) {
+    public void delete(long id) {
         Map<String, Object> role = role(id);
         if ("Super Admin".equals(role.get("name"))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "The Super Admin role cannot be deleted.");
