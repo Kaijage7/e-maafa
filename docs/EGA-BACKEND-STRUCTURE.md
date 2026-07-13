@@ -132,7 +132,7 @@ Optional later: subpackages under layers for readability only, e.g. `controller.
 
 ## 7. Transition rules (existing code)
 
-Legacy fat packages under `ew/` controllers are gone. Shared Response engines live in `service.support/` (not fat controllers). Other domains (`mitigation/`, `portal/`, …) may still host controllers until migrated.
+Legacy fat packages under `ew/` and `recovery/` controllers are gone. Shared Response engines live in `service.support/` (not fat controllers). Other domains (`portal/`, One Health, finance, M&E, remaining reports, …) may still host controllers until migrated.
 
 | Rule | |
 |------|---|
@@ -193,8 +193,13 @@ Suggested migration order:
 47. ~~**Publish `show_on_map` + PDF live probe**~~ — **DONE** (excellence: one-step portal map; go-live GL-09)  
 48. ~~**Frameworks (content)**~~ — **DONE** (first content/mitigation eGA leaf; page productive)
 49. ~~**Hazards (mitigation master)**~~ — **DONE** (registry + status/delete guards; page productive)
-50. Remaining mitigation (measures, infrastructure, past disasters, risk assessments, GIS, dashboard) then portal/recovery
-  
+50. ~~**Mitigation remainder**~~ — **DONE** (measures, infrastructure, past disasters, risk assessments, GIS, dashboard)
+51. ~~**Recovery programs**~~ — **DONE** (area-scoped list/stats; status lifecycle)
+52. ~~**Relief distributions**~~ — **DONE** (stock + AreaGuard; confirm path)
+53. ~~**Strategic projects**~~ — **DONE** (reconstruction tracking; paths unchanged)
+54. ~~**Knowledge repository**~~ — **DONE** (multipart document/attachment; approve)
+55. Remaining fat domains: portal, One Health, finance, M&E, remaining reports, notification, stakeholder admin, ops/IAM
+
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -254,6 +259,10 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Risk assessments | Done | `/v1/risk-assessments` | Thin controller + service.impl; page productive; approve/publish SoD; show **404** |
 | GIS map | Done | `/v1/gis-map` | Thin controller + service.impl; 5 layers + stats + regionData; JurisdictionScope on incidents |
 | Mitigation dashboard | Done | `/v1/mitigation/dashboard` | Thin controller + service.impl; counts/charts/recent tables |
+| Recovery programs | Done | `/v1/recovery/recovery-programs` | Thin controller + service.impl; F97 filter-aligned stats; AreaGuard writes; unauth **401**; status=NOPE → 0 |
+| Relief distributions | Done | `/v1/recovery/relief-distributions` | Thin controller + service.impl; stock support + SimulationGuard; filter-aligned stats; empty store **422**; confirm missing **404** |
+| Strategic projects | Done | `/v1/recovery/strategic-projects` | Thin controller + service.impl; productive status/sector/search; index open (legacy); manage on writes; list filters; global stats preserved |
+| Knowledge repository | Done | `/v1/recovery/knowledge` | Thin controller + service.impl; JSON + multipart (`document`/`attachment`); approve; download; type filter productive |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 

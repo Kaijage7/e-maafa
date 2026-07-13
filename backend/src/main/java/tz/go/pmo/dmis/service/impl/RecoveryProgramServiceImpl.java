@@ -1,23 +1,17 @@
-package tz.go.pmo.dmis.recovery;
+package tz.go.pmo.dmis.service.impl;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.service.RecoveryProgramService;
 
 /**
  * Recovery Programs (Recovery) — long-term recovery/reconstruction initiatives with a
@@ -26,9 +20,8 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  * <p>F97: list rows, stats, breakdowns and form-data incidents share the same area predicate.
  * Mutations resolve the target program/incident and run {@link AreaGuard} before write.
  */
-@RestController
-@RequestMapping("/v1/recovery/recovery-programs")
-public class RecoveryProgramController {
+@Service
+public class RecoveryProgramServiceImpl implements RecoveryProgramService {
 
     private static final List<String> STATUSES = List.of("Planning", "Ongoing", "Completed", "Suspended", "Cancelled");
 
@@ -36,16 +29,15 @@ public class RecoveryProgramController {
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
 
-    public RecoveryProgramController(JdbcTemplate jdbc, JurisdictionScope jurisdiction, AreaGuard areaGuard) {
+    public RecoveryProgramServiceImpl(JdbcTemplate jdbc, JurisdictionScope jurisdiction, AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
         this.areaGuard = areaGuard;
     }
 
-    @GetMapping
-    @PreAuthorize("hasAuthority('recovery.view')")
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false) String search) {
+    @Override
+    public Map<String, Object> index(String status,
+                                     String search) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
         if (status != null && !status.isBlank()) {
@@ -107,10 +99,9 @@ public class RecoveryProgramController {
         return out;
     }
 
-    @PreAuthorize("hasAuthority('recovery.manage')")
-    @PostMapping
     @Transactional
-    public Map<String, Object> store(@RequestBody Map<String, Object> b) {
+    @Override
+    public Map<String, Object> store(Map<String, Object> b) {
         String name = require(b.get("program_name"), "program_name");
         Boolean exists = jdbc.queryForObject(
                 "select exists(select 1 from public.recovery_programs where program_name = ?)",
@@ -140,10 +131,9 @@ public class RecoveryProgramController {
         return Map.of("success", true, "id", id, "message", "Recovery program created.");
     }
 
-    @PreAuthorize("hasAuthority('recovery.manage')")
-    @PostMapping("/{id}/status")
     @Transactional
-    public Map<String, Object> setStatus(@PathVariable long id, @RequestBody Map<String, Object> b) {
+    @Override
+    public Map<String, Object> setStatus(long id, Map<String, Object> b) {
         String status = statusOr(b.get("status"), null);
         if (status == null) {
             throw new BusinessRuleException("A valid status is required.");

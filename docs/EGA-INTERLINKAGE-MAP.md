@@ -77,9 +77,9 @@ Warehouse ◄──── Java type ──── InventoryService  (HARD LINK)
     ├── response.WarehouseOpsController
     ├── response.DispatchController / DispatchSupportService
     ├── response.ResourceAllocationController / ResourceApprovalController
-    ├── recovery.ReliefDistributionController
+    ├── service.impl.ReliefDistributionServiceImpl (eGA; was recovery.ReliefDistributionController)
     ├── finance.EconomicsOfDisasterService
-    ├── monitoring.*, mitigation.GisMapController
+    ├── monitoring.*, controller.GisMapController (eGA)
     └── local.LocalDataSeeder
 
 TemporaryWarehouse ── parallel pattern to Warehouse (SQL + inventory stock)
@@ -130,7 +130,7 @@ Inventory ── Java: WarehouseRepository, Resource (package-private)
 | `response/CommandCenterController` | readiness warehouses |
 | `response/IncidentTimelineController` | timeline signals |
 | `response/StakeholderBiddingController` | warehouse lists |
-| `recovery/ReliefDistributionController` | source labels |
+| `service.impl.ReliefDistributionServiceImpl` | source labels |
 | `finance/EconomicsOfDisasterService` | stock value |
 | `monitoring/MonitoringEvaluationService` | indicators |
 | `mitigation/GisMapController` | map layers |
@@ -224,8 +224,8 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 
 | Type | Imported by (outside response/) | Risk |
 |------|----------------------------------|------|
-| `DispatchSupportService` | `recovery/ReliefDistributionController` | **Hard** — must update import if package changes |
-| `SimulationGuard` | `recovery/ReliefDistributionController` | **Hard** — same commit |
+| `DispatchSupportService` | `service.impl.ReliefDistributionServiceImpl` | **Hard** — now under eGA impl (import from `service.support`) |
+| `SimulationGuard` | `service.impl.ReliefDistributionServiceImpl` | **Hard** — same; package already eGA |
 | All controllers | none found | Package move of controller alone is compile-safe |
 
 **Internal hubs (stay in response/ until all callers moved):**  
@@ -275,6 +275,10 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | E8 | EW Management Report | `GET /v1/reports/early-warnings` | ~388 | from/to window; area isolation; warned↔incident effectiveness + DRR coverage | **DONE** |
 | O1 | Hazard Area Context | `GET /v1/ops/hazard-area-context` | ~337 | Context links only (no AI); geo + warning/submission resolve productive | **DONE** |
 | M1–M8 | Mitigation full set | hazards/measures/infra/past/RA/GIS/dashboard/frameworks | — | All mitigation *Controller* eGA | **DONE** |
+| RC1 | Recovery programs | `/v1/recovery/recovery-programs` | — | Area scope F97; status lifecycle | **DONE** |
+| RC2 | Relief distributions | `/v1/recovery/relief-distributions` | — | DispatchSupportService + SimulationGuard + AreaGuard | **DONE** |
+| RC3 | Strategic projects | `/v1/recovery/strategic-projects` | — | Reconstruction tracking; paths unchanged | **DONE** |
+| RC4 | Knowledge repository | `/v1/recovery/knowledge` | — | Multipart document/attachment; approve | **DONE** |
 
 ### 10.5 Do **not** start with
 

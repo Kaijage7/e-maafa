@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.recovery;
+package tz.go.pmo.dmis.service.impl;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,20 +17,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import org.springframework.security.access.prepost.PreAuthorize;
+import tz.go.pmo.dmis.service.KnowledgeRepositoryService;
 
 /**
  * Lessons Learned / Knowledge Repository (Recovery) — port of the Laravel
@@ -38,9 +31,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
  * lessons learned and technical guides captured after disasters, with a Pending → Approved review.
  * Closes the recovery loop: what we learned feeds the next mitigation/preparedness cycle.
  */
-@RestController
-@RequestMapping("/v1/recovery/knowledge")
-public class KnowledgeRepositoryController {
+@Service
+public class KnowledgeRepositoryServiceImpl implements KnowledgeRepositoryService {
 
     private static final List<String> TYPES = List.of("Case Study", "Best Practice", "Lesson Learned",
             "Research Report", "Technical Guide", "Guideline", "Bulletin");
@@ -48,17 +40,16 @@ public class KnowledgeRepositoryController {
     private final JdbcTemplate jdbc;
     private final Path storageRoot;
 
-    public KnowledgeRepositoryController(JdbcTemplate jdbc,
+    public KnowledgeRepositoryServiceImpl(JdbcTemplate jdbc,
                                          @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
         this.jdbc = jdbc;
         this.storageRoot = Path.of(publicRoot).toAbsolutePath().normalize();
     }
 
-    @PreAuthorize("hasAuthority('recovery.view')")
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) String type,
-                                     @RequestParam(required = false) String approval,
-                                     @RequestParam(required = false) String search) {
+    @Override
+    public Map<String, Object> index(String type,
+                                     String approval,
+                                     String search) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> p = new ArrayList<>();
         if (type != null && !type.isBlank()) { where.append(" and coalesce(k.content_type, k.document_type) = ?"); p.add(type); }
@@ -105,19 +96,17 @@ public class KnowledgeRepositoryController {
         return out;
     }
 
-    @PreAuthorize("hasAuthority('recovery.manage')")
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @Transactional
-    public Map<String, Object> store(@RequestBody Map<String, Object> b) {
+    @Override
+    public Map<String, Object> store(Map<String, Object> b) {
         return createEntry(b, null);
     }
 
-    @PreAuthorize("hasAuthority('recovery.manage')")
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Transactional
-    public Map<String, Object> storeMultipart(@RequestParam Map<String, String> b,
-                                              @RequestPart(name = "document", required = false) MultipartFile document,
-                                              @RequestPart(name = "attachment", required = false) MultipartFile attachment) {
+    @Override
+    public Map<String, Object> storeMultipart(Map<String, String> b,
+                                              MultipartFile document,
+                                              MultipartFile attachment) {
         return createEntry(b, hasFile(document) ? document : attachment);
     }
 
@@ -144,10 +133,9 @@ public class KnowledgeRepositoryController {
         return Map.of("success", true, "id", id, "message", "Knowledge entry submitted for review.");
     }
 
-    @PreAuthorize("hasAuthority('recovery.view')")
-    @GetMapping("/{id}/download")
     @Transactional
-    public ResponseEntity<ByteArrayResource> download(@PathVariable long id) {
+    @Override
+    public ResponseEntity<ByteArrayResource> download(long id) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select file_path, file_name, file_content_type
                 from public.disaster_knowledge_repositories where id = ?
@@ -182,10 +170,9 @@ public class KnowledgeRepositoryController {
         }
     }
 
-    @PreAuthorize("hasAuthority('recovery.manage')")
-    @PostMapping("/{id}/approve")
     @Transactional
-    public Map<String, Object> approve(@PathVariable long id) {
+    @Override
+    public Map<String, Object> approve(long id) {
         if (jdbc.update("update public.disaster_knowledge_repositories set approval_status='Approved', status='approved', approval_date=now(), updated_at=now() where id=?", id) == 0) {
             throw new ResourceNotFoundException("Entry not found.");
         }

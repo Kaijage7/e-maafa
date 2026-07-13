@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.recovery;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -6,26 +6,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
-import org.springframework.security.access.prepost.PreAuthorize;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.service.StrategicProjectService;
 
 /**
  * Reconstruction / Strategic Projects (Recovery) — port of the Laravel strategic_projects module:
  * the risk-managed infrastructure projects (category, sector, location, status, associated hazards
  * and management plan). The "build back better" reconstruction tracking of the Recovery phase.
  */
-@RestController
-@RequestMapping("/v1/recovery/strategic-projects")
-public class StrategicProjectController {
+@Service
+public class StrategicProjectServiceImpl implements StrategicProjectService {
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final List<String> STATUSES = List.of("Mobilization", "Construction", "Operational",
@@ -33,14 +25,14 @@ public class StrategicProjectController {
 
     private final JdbcTemplate jdbc;
 
-    public StrategicProjectController(JdbcTemplate jdbc) {
+    public StrategicProjectServiceImpl(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false) String sector,
-                                     @RequestParam(required = false) String search) {
+    @Override
+    public Map<String, Object> index(String status,
+                                     String sector,
+                                     String search) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> p = new ArrayList<>();
         if (status != null && !status.isBlank()) { where.append(" and project_status = ?"); p.add(status); }
@@ -68,10 +60,9 @@ public class StrategicProjectController {
         return out;
     }
 
-    @PreAuthorize("hasAuthority('recovery.manage')")
-    @PostMapping
     @Transactional
-    public Map<String, Object> store(@RequestBody Map<String, Object> b) throws Exception {
+    @Override
+    public Map<String, Object> store(Map<String, Object> b) throws Exception {
         // F98: derive entry_id from inserted id (not max(id)+1 race). Placeholder entry_id then update.
         String provisional = "SP-TMP-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Long id = jdbc.queryForObject("""
@@ -92,10 +83,9 @@ public class StrategicProjectController {
         return Map.of("success", true, "id", id, "entry_id", entryId, "message", "Project " + entryId + " registered.");
     }
 
-    @PreAuthorize("hasAuthority('recovery.manage')")
-    @PostMapping("/{id}/status")
     @Transactional
-    public Map<String, Object> setStatus(@PathVariable long id, @RequestBody Map<String, Object> b) {
+    @Override
+    public Map<String, Object> setStatus(long id, Map<String, Object> b) {
         String s = str(b.get("status"));
         if (s == null || !STATUSES.contains(s)) {
             throw new BusinessRuleException("A valid project status is required.");

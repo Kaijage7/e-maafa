@@ -1,24 +1,18 @@
-package tz.go.pmo.dmis.recovery;
+package tz.go.pmo.dmis.service.impl;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.service.ReliefDistributionService;
 import tz.go.pmo.dmis.service.support.DispatchSupportService;
 import tz.go.pmo.dmis.service.support.SimulationGuard;
 
@@ -28,9 +22,8 @@ import tz.go.pmo.dmis.service.support.SimulationGuard;
  * agency, with a Pending Verification → Confirmed status. The recovery counterpart of the response
  * dispatch chain.
  */
-@RestController
-@RequestMapping("/v1/recovery/relief-distributions")
-public class ReliefDistributionController {
+@Service
+public class ReliefDistributionServiceImpl implements ReliefDistributionService {
 
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
@@ -39,7 +32,7 @@ public class ReliefDistributionController {
     private final CurrentUserResolver users;
     private final SimulationGuard simulationGuard;
 
-    public ReliefDistributionController(JdbcTemplate jdbc, JurisdictionScope jurisdiction,
+    public ReliefDistributionServiceImpl(JdbcTemplate jdbc, JurisdictionScope jurisdiction,
                                         AreaGuard areaGuard, DispatchSupportService stock,
                                         CurrentUserResolver users, SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
@@ -50,10 +43,9 @@ public class ReliefDistributionController {
         this.simulationGuard = simulationGuard;
     }
 
-    @GetMapping
-    @PreAuthorize("hasAuthority('recovery.view')")
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false) String search) {
+    @Override
+    public Map<String, Object> index(String status,
+                                     String search) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
         if (status != null && !status.isBlank()) {
@@ -135,10 +127,9 @@ public class ReliefDistributionController {
         return out;
     }
 
-    @PreAuthorize("hasAuthority('recovery.manage')")
-    @PostMapping
     @Transactional
-    public Map<String, Object> store(@RequestBody Map<String, Object> b) {
+    @Override
+    public Map<String, Object> store(Map<String, Object> b) {
         long incidentId = requiredLong(b.get("incident_id"), "incident_id");
         areaGuard.assertOwn("public.incidents", incidentId);
         simulationGuard.assertNotSimulationIncident(incidentId, "recording a relief distribution");
@@ -177,10 +168,9 @@ public class ReliefDistributionController {
         return Map.of("success", true, "id", id, "message", "Relief distribution recorded.");
     }
 
-    @PreAuthorize("hasAuthority('recovery.manage')")
-    @PostMapping("/{id}/confirm")
     @Transactional
-    public Map<String, Object> confirm(@PathVariable long id) {
+    @Override
+    public Map<String, Object> confirm(long id) {
         Map<String, Object> d = findForUpdate(id);
         if ("Confirmed".equals(str(d.get("confirmation_status")))) {
             return Map.of("success", true, "message", "Distribution already confirmed.");

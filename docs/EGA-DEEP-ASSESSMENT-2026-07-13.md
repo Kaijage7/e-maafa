@@ -6,7 +6,7 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 52 thin eGA controllers, 52 service + 52 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 56 thin eGA controllers (+4 recovery), matching service + impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
 | Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
 | Response support engines | **eGA-aligned** | Under `service.support` (workflow, dispatch, activation, simulation) |
@@ -146,8 +146,9 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 30. ~~eGA migrate **Hazard Area Context**~~ — **DONE**.  
 31. ~~eGA migrate **Frameworks**~~ — **DONE**.
 32. ~~eGA migrate **Hazards**~~ — **DONE** (first mitigation master).
-33. Next mitigation: measures → infrastructure → past disasters → risk assessments → GIS/dashboard.
-34. Then portal / recovery / One Health.  
+33. ~~eGA migrate **Mitigation remainder**~~ — **DONE**.
+34. ~~eGA migrate **Recovery (4 leaves)**~~ — **DONE**.
+35. Next fat domains: portal / One Health / finance / M&E / remaining reports. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -246,4 +247,15 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 | GIS map | `/v1/gis-map` | layer counts + regionData match baseline; Partner 403; DAS 200 |
 | Mitigation dashboard | `/v1/mitigation/dashboard` | six counts match baseline |
 
-**Mitigation controllers: complete** (helpers `RegionDataBuilder` remain under `mitigation/`). Next fat domains: portal, recovery, One Health, finance, M&E, remaining reports.
+**Mitigation controllers: complete** (helpers `RegionDataBuilder` remain under `mitigation/`).
+
+## 10. Recovery eGA (2026-07-13)
+
+| Leaf | Path | Verified |
+|------|------|----------|
+| Recovery programs | `/v1/recovery/recovery-programs` | SA baseline exact; status=NOPE → 0 + filter-aligned stats; status=Ongoing productive; create→Cancelled→SQL delete net-zero; unauth **401** |
+| Relief distributions | `/v1/recovery/relief-distributions` | SA baseline exact; status=NOPE → 0; empty store **422**; confirm missing **404**; unauth **401** (stock write path retained, not mutated in verify) |
+| Strategic projects | `/v1/recovery/strategic-projects` | SA baseline exact; status/sector/search productive; list filters (global stats preserved as legacy); create→Stopped→SQL delete net-zero |
+| Knowledge repository | `/v1/recovery/knowledge` | SA baseline exact; type=NOPE → 0 entries; JSON create→approve→SQL delete net-zero; multipart `document`/`attachment` contract preserved |
+
+**Recovery controllers: complete** (no `*Controller` under `recovery/`). Next fat domains: portal, One Health, finance, M&E, remaining reports, notification, stakeholder admin, ops/IAM.
