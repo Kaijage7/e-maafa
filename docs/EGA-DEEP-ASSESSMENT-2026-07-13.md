@@ -152,7 +152,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 36. ~~eGA migrate **Portal public + threats**~~ — **DONE** (no `portal/` package left).
 37. ~~eGA migrate **One Health dashboard**~~ — **DONE** (first OH leaf).
 38. ~~eGA migrate **One Health action tracking**~~ — **DONE**.
-39. Next OH leaves: events → directives → dissemination; then finance / M&E / reports. 
+39. ~~eGA migrate **One Health directives**~~ — **DONE**.
+40. Next OH leaves: events → dissemination; then finance / M&E / reports. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -317,4 +318,7 @@ Public portal regressions exact: landing, threats, regions, education, shelters,
 
 | Leaf | Path | Notes |
 |------|------|-------|
-| One Health dashboard | `/v1/onehealth/dashboard` | Thin controller + `OneHealthDashboardServiceImpl`; `statusLabel` made public for service.impl; residual fat: events, directives, dissemination, actions + `OneHealthEventService` helpers in `onehealth/` |
+| One Health dashboard | `/v1/onehealth/dashboard` | Thin controller + `OneHealthDashboardServiceImpl`; `statusLabel` public for service.impl |
+| One Health action tracking | `/v1/onehealth/events/{id}/actions` (+ progress, close, archive) | Thin controller + `OneHealthActionTrackingServiceImpl`; AreaGuard; index baseline exact; empty store **422**; create → progress → SQL delete net-zero; helpers (`findEventOr404`, `formatDate`, `strOf`, …) public for eGA |
+
+**OH residual fat:** events, directives, dissemination (+ `OhEventWriteRequest`, `OneHealthEventService` in `onehealth/`).

@@ -202,7 +202,8 @@ Suggested migration order:
 56. ~~**Portal public + threats**~~ — **DONE** (public facade + ThreatService + threat admin; no `portal/` package left)
 57. ~~**One Health dashboard**~~ — **DONE** (first OH eGA leaf; national KPIs + area-scoped recent)
 58. ~~**One Health action tracking**~~ — **DONE** (actions + progress rollup + close/archive; AreaGuard)
-59. Remaining OH (events, directives, dissemination) then finance / M&E / reports / notification / stakeholder / ops-IAM
+59. ~~**One Health directives**~~ — **DONE** (filters productive; escalate SMS/email retained)
+60. Remaining OH (events, dissemination) then finance / M&E / reports / notification / stakeholder / ops-IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
@@ -277,6 +278,7 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Portal public | Done | `/v1/portal/**` | Thin controller + PortalPublicServiceImpl + ThreatServiceImpl; unauth by design; size baselines exact |
 | Threat admin | Done | `/v1/content/threats` | Thin controller + service.impl; graphic multipart; create **201**/delete net-zero; empty name **400**; Partner **403** |
 | One Health dashboard | Done | `/v1/onehealth/dashboard` | Thin controller + service.impl; national aggregates; recent_events area-scoped; baseline exact; unauth **401** |
+| One Health action tracking | Done | `/v1/onehealth/events/{id}/actions`, `/actions/{id}`, close/archive | Thin controller + service.impl; AreaGuard; empty store **422**; progress rollup; create+delete net-zero |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 

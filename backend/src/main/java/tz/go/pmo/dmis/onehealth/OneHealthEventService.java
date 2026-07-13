@@ -483,7 +483,8 @@ public class OneHealthEventService {
 
     // ── helpers ──
 
-    static Long currentUserDbId() {
+    /** Public for eGA service.impl (directives filter=mine, etc.). */
+    public static Long currentUserDbId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
             try {

@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.onehealth;
+package tz.go.pmo.dmis.service.impl;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -11,19 +11,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import org.springframework.security.access.prepost.PreAuthorize;
-import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.ew.MgovSmsService;
+import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.notification.MailService;
+import tz.go.pmo.dmis.onehealth.OneHealthEventService;
+import tz.go.pmo.dmis.service.OneHealthDirectiveService;
 
 /**
  * Port of OneHealth\OneHealthDirectiveController: registry with filters and KPI
@@ -32,11 +25,10 @@ import tz.go.pmo.dmis.notification.MailService;
  * unacknowledged stakeholders via the M-Gov gateway / SMTP), implementation responses with
  * audit trail, and the grouped implementation history.
  */
-@RestController
-@RequestMapping("/v1/onehealth/directives")
-public class OneHealthDirectiveController {
+@Service
+public class OneHealthDirectiveServiceImpl implements OneHealthDirectiveService {
 
-    private static final Logger log = LoggerFactory.getLogger(OneHealthDirectiveController.class);
+    private static final Logger log = LoggerFactory.getLogger(OneHealthDirectiveServiceImpl.class);
 
     private final JdbcTemplate jdbc;
     private final OneHealthEventService service;
@@ -44,7 +36,7 @@ public class OneHealthDirectiveController {
     private final MgovSmsService sms;
     private final MailService mail;
 
-    public OneHealthDirectiveController(JdbcTemplate jdbc, OneHealthEventService service,
+    public OneHealthDirectiveServiceImpl(JdbcTemplate jdbc, OneHealthEventService service,
                                         tz.go.pmo.dmis.common.security.AreaGuard areaGuard,
                                         MgovSmsService sms, MailService mail) {
         this.jdbc = jdbc;
@@ -55,17 +47,16 @@ public class OneHealthDirectiveController {
     }
 
     // ─── Index ───  (directives are a PMO-DMD function — non-PMO must not even see them)
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.directive')")
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false) String priority,
-                                     @RequestParam(name = "event_id", required = false) Long eventId,
-                                     @RequestParam(name = "date_from", required = false) String dateFrom,
-                                     @RequestParam(name = "date_to", required = false) String dateTo,
-                                     @RequestParam(required = false) String search,
-                                     @RequestParam(required = false) String filter,
-                                     @RequestParam(defaultValue = "1") int page) {
+    public Map<String, Object> index(String status,
+                                     String priority,
+                                     Long eventId,
+                                     String dateFrom,
+                                     String dateTo,
+                                     String search,
+                                     String filter,
+                                     int page) {
         StringBuilder where = new StringBuilder("d.deleted_at is null");
         List<Object> params = new ArrayList<>();
         if (notBlank(status)) {
@@ -172,10 +163,9 @@ public class OneHealthDirectiveController {
     }
 
     // ─── Show ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.directive')")
-    @GetMapping("/{id}")
-    public Map<String, Object> show(@PathVariable long id) {
+    public Map<String, Object> show(long id) {
         Map<String, Object> d = findOr404(id);
         long eventId = ((Number) d.get("event_id")).longValue();
 
@@ -268,12 +258,11 @@ public class OneHealthDirectiveController {
     }
 
     // ─── Update (edit modal) — PMO-DMD function ───
-
-    @PreAuthorize("hasAuthority('one_health.directive')")
-    @PutMapping("/{id}")
     @Transactional
     @SuppressWarnings("unchecked")
-    public ResponseEntity<Map<String, Object>> update(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    @Override
+
+    public ResponseEntity<Map<String, Object>> update(long id, Map<String, Object> body) {
         findOr404(id);
         Map<String, List<String>> errors = new LinkedHashMap<>();
         String title = OneHealthEventService.strOf(body.get("directive_title"));
@@ -347,12 +336,11 @@ public class OneHealthDirectiveController {
     }
 
     // ─── Acknowledge (stakeholder action) ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.manage')")
-    @PostMapping("/{id}/acknowledge")
     @Transactional
-    public ResponseEntity<Map<String, Object>> acknowledge(@PathVariable long id,
-                                                           @RequestBody(required = false) Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> acknowledge(long id,
+                                                           Map<String, Object> body) {
         findOr404(id);
         // PMO/admin sessions carry no stakeholder link — exact source response
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -360,10 +348,9 @@ public class OneHealthDirectiveController {
     }
 
     // ─── Escalate (reminders to unacknowledged) ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.directive')")
-    @PostMapping("/{id}/escalate")
-    public Map<String, Object> escalate(@PathVariable long id) {
+    public Map<String, Object> escalate(long id) {
         Map<String, Object> d = findOr404(id);
         List<Map<String, Object>> unacknowledged = jdbc.queryForList("""
                 select s.id, s.organization, s.phone, s.email
@@ -423,11 +410,10 @@ public class OneHealthDirectiveController {
     }
 
     // ─── Submit implementation response ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.manage')")
-    @PostMapping("/{id}/respond")
     @Transactional
-    public ResponseEntity<Map<String, Object>> respond(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> respond(long id, Map<String, Object> body) {
         findOr404(id);
         // Scope by the directive's event area (STRICT) — a cross-area directive 404s.
         areaGuard.assertParentOwn("public.oh_directives", "event_id", "public.oh_events", id);
@@ -501,10 +487,9 @@ public class OneHealthDirectiveController {
     }
 
     // ─── Implementation history (grouped by stakeholder) ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.directive')")
-    @GetMapping("/{id}/implementation-history")
-    public Map<String, Object> implementationHistory(@PathVariable long id) {
+    public Map<String, Object> implementationHistory(long id) {
         findOr404(id);
         Map<String, List<Map<String, Object>>> grouped = new LinkedHashMap<>();
         jdbc.query("""
