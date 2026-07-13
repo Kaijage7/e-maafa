@@ -12,7 +12,7 @@
 | Response remaining | **Legacy fat** | 21 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | **Executive Watch** | Read-only; then other Response leaves — **never** engine/dispatch/allocation first |
+| Next eGA leaf (binding order) | ~~**Executive Watch**~~ **DONE** | Thin controller + service.impl; next: public reports (never engine/dispatch first) |
 
 **Honest score:** Master data + first Response leaf are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
 
