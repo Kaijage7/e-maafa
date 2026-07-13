@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.portal;
+package tz.go.pmo.dmis.service.impl;
 
 import java.util.List;
 import java.util.Map;
@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.service.ThreatService;
 
 /**
  * THREAT MONITORING — the national threats DMD tracks beside live warnings
@@ -15,18 +16,19 @@ import org.springframework.web.server.ResponseStatusException;
  *
  * <p>Public reads: the threat strip (name, source, severity, trend), and the detail view —
  * DMD intervention timeline (NEW → ONGOING → COMPLETED) + stakeholder plan submissions
- * plotted by their geo info. Admin writes happen in {@link ThreatAdminController};
+ * plotted by their geo info. Admin writes happen in {@link tz.go.pmo.dmis.controller.ThreatAdminController};
  * stakeholder plan uploads arrive through the public submission endpoint and are tracked
  * for the disaster repository.</p>
  */
 @Service
 @RequiredArgsConstructor
-public class ThreatService {
+public class ThreatServiceImpl implements ThreatService {
 
     private final JdbcTemplate jdbc;
 
     /** Active threats for the public strip (beside LIVE MONITORING). */
     @Transactional(readOnly = true)
+    @Override
     public List<Map<String, Object>> activeThreats() {
         return jdbc.queryForList(
                 "select id, name, source_agency as \"sourceAgency\", trend_label as \"trendLabel\","
@@ -37,6 +39,7 @@ public class ThreatService {
 
     /** Full threat detail: interventions timeline + submitted plans (for the map) + past impacts. */
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> threatDetail(long id) {
         List<Map<String, Object>> threat = jdbc.queryForList(
                 "select id, name, source_agency as \"sourceAgency\", trend_label as \"trendLabel\","
@@ -66,6 +69,7 @@ public class ThreatService {
      * the row itself is the repository-tracking record.
      */
     @Transactional
+    @Override
     public Map<String, Object> submitPlan(long threatId, Map<String, Object> req) {
         String title = str(req.get("planTitle"));
         String stakeholderName = str(req.get("stakeholderName"));

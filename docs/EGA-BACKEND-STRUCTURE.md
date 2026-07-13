@@ -132,7 +132,7 @@ Optional later: subpackages under layers for readability only, e.g. `controller.
 
 ## 7. Transition rules (existing code)
 
-Legacy fat packages under `ew/` and `recovery/` controllers are gone. Portal CMS admins are eGA-layered; `portal/` still holds public facade + threats. Shared Response engines live in `service.support/`. Other domains (One Health, finance, M&E, remaining reports, …) may still host controllers until migrated.
+Legacy fat packages under `ew/`, `recovery/`, and `portal/` controllers are gone. Shared Response engines live in `service.support/`. Other domains (One Health, finance, M&E, remaining reports, …) may still host controllers until migrated.
 
 | Rule | |
 |------|---|
@@ -199,7 +199,8 @@ Suggested migration order:
 53. ~~**Strategic projects**~~ — **DONE** (reconstruction tracking; paths unchanged)
 54. ~~**Knowledge repository**~~ — **DONE** (multipart document/attachment; approve)
 55. ~~**Portal CMS admins (7 leaves)**~~ — **DONE** (management, upload, news, education, materials, sections, agencies)
-56. Portal residual: public facade + threat admin (then One Health / finance / M&E / reports / notification / stakeholder / ops-IAM)
+56. ~~**Portal public + threats**~~ — **DONE** (public facade + ThreatService + threat admin; no `portal/` package left)
+57. Remaining fat domains: One Health, finance, M&E, remaining reports, notification, stakeholder admin, ops/IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
@@ -271,6 +272,8 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Education materials | Done | `/v1/content/education-materials` | Thin controller + service.impl; audience/type vocab; baseline exact |
 | Portal sections | Done | `/v1/content/sections` | Thin controller + service.impl; hazard cards + JSON settings; baseline exact |
 | Agency admin | Done | `/v1/settings/agencies` | Thin controller + service.impl; empty name **400**; FK delete **409** retained |
+| Portal public | Done | `/v1/portal/**` | Thin controller + PortalPublicServiceImpl + ThreatServiceImpl; unauth by design; size baselines exact |
+| Threat admin | Done | `/v1/content/threats` | Thin controller + service.impl; graphic multipart; create **201**/delete net-zero; empty name **400**; Partner **403** |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 

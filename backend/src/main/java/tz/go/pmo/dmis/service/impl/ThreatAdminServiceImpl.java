@@ -1,7 +1,5 @@
-package tz.go.pmo.dmis.portal;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,23 +11,12 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.service.ThreatAdminService;
+import org.springframework.stereotype.Service;
 
 /**
  * Hazard Monitor / Threat Monitoring — DMD manages the national threats shown on the
@@ -37,11 +24,9 @@ import tz.go.pmo.dmis.common.security.Authz;
  * descriptions + past-impacts), its intervention timeline (UPCOMING/NEW → ONGOING → COMPLETED, or POSTPONED) and
  * the review status of stakeholder plan submissions.
  */
-@RestController
-@RequestMapping("/v1/content/threats")
 @RequiredArgsConstructor
-@Tag(name = "Hazards", description = "Threat monitoring (admin)")
-public class ThreatAdminController {
+@Service
+public class ThreatAdminServiceImpl implements ThreatAdminService {
 
     private static final List<String> SEVERITIES = List.of("Watch", "Warning", "Emergency");
     private static final List<String> UPDATE_STATUS = List.of("UPCOMING", "NEW", "ONGOING", "COMPLETED", "POSTPONED");
@@ -53,19 +38,7 @@ public class ThreatAdminController {
 
     @Value("${dmis.storage.public-root:${user.dir}/storage/public}")
     private String publicRoot;
-
-    public record ThreatWrite(String name, String sourceAgency, String trendLabel, String severity,
-                              String graphicPath, String descriptionEn, String descriptionSw,
-                              String pastImpactsEn, String pastImpactsSw, Boolean isActive) {
-    }
-
-    public record UpdateWrite(String title, String detail, String status, String startsOn,
-                              String endsOn, Integer sortOrder, Boolean isActive) {
-    }
-
-    @GetMapping
-    @Operation(summary = "All threats + their updates and plan counts (admin)")
-    @PreAuthorize("hasAuthority('hazards.view')")
+    @Override
     public Map<String, Object> index() {
         List<Map<String, Object>> threats = jdbc.queryForList(
                 "select t.id, t.name, t.source_agency as \"sourceAgency\", t.trend_label as \"trendLabel\","
@@ -75,11 +48,8 @@ public class ThreatAdminController {
                         + " from public.threats t order by t.id");
         return Map.of("threats", threats);
     }
-
-    @GetMapping("/{id}")
-    @Operation(summary = "One threat with full updates + plans (admin editing view)")
-    @PreAuthorize("hasAuthority('hazards.view')")
-    public Map<String, Object> detail(@PathVariable long id) {
+    @Override
+    public Map<String, Object> detail(long id) {
         Map<String, Object> threat = jdbc.queryForMap(
                 "select id, name, source_agency as \"sourceAgency\", trend_label as \"trendLabel\", severity,"
                         + " graphic_path as \"graphicPath\", description_en as \"descriptionEn\","
@@ -97,13 +67,9 @@ public class ThreatAdminController {
                         + " from public.threat_plans where threat_id = ? order by created_at desc", id);
         return Map.of("threat", threat, "updates", updates, "plans", plans);
     }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Register a threat")
-    @PreAuthorize("hasAuthority('hazards.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> create(@RequestBody ThreatWrite req) {
+    public Map<String, Object> create(ThreatAdminService.ThreatWrite req) {
         if (req.name() == null || req.name().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Threat name is required");
         }
@@ -117,12 +83,9 @@ public class ThreatAdminController {
                 req.pastImpactsEn(), req.pastImpactsSw(), req.isActive() == null || req.isActive());
         return Map.of("id", id, "message", "Threat registered");
     }
-
-    @PutMapping("/{id}")
-    @Operation(summary = "Update a threat")
-    @PreAuthorize("hasAuthority('hazards.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> update(@PathVariable long id, @RequestBody ThreatWrite req) {
+    public Map<String, Object> update(long id, ThreatAdminService.ThreatWrite req) {
         int n = jdbc.update("update public.threats set name=coalesce(?,name),"
                         + " source_agency=coalesce(?,source_agency), trend_label=coalesce(?,trend_label),"
                         + " severity=coalesce(?,severity), graphic_path=coalesce(?,graphic_path),"
@@ -138,12 +101,9 @@ public class ThreatAdminController {
         }
         return Map.of("id", id, "message", "Updated");
     }
-
-    @PostMapping(value = "/{id}/graphic", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Upload and attach the public graphic for a threat")
-    @PreAuthorize("hasAuthority('hazards.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> uploadGraphic(@PathVariable long id, @RequestParam("file") MultipartFile file) {
+    public Map<String, Object> uploadGraphic(long id, MultipartFile file) {
         String relativePath = storeGraphic(file);
         int n = jdbc.update("update public.threats set graphic_path=?, updated_at=now() where id=?", relativePath, id);
         if (n == 0) {
@@ -151,13 +111,9 @@ public class ThreatAdminController {
         }
         return Map.of("id", id, "path", relativePath, "url", "/api/storage/" + relativePath);
     }
-
-    @PostMapping("/{id}/updates")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Add a DMD intervention/update to the threat timeline")
-    @PreAuthorize("hasAuthority('hazards.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> addUpdate(@PathVariable long id, @RequestBody UpdateWrite req) {
+    public Map<String, Object> addUpdate(long id, ThreatAdminService.UpdateWrite req) {
         if (req.title() == null || req.title().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Update title is required");
         }
@@ -170,12 +126,9 @@ public class ThreatAdminController {
                 blank(req.startsOn()), blank(req.endsOn()), req.sortOrder() == null ? 0 : req.sortOrder());
         return Map.of("id", updateId, "message", "Update added to the timeline");
     }
-
-    @PutMapping("/updates/{updateId}")
-    @Operation(summary = "Edit a timeline entry (e.g. flip NEW → ONGOING → COMPLETED, or POSTPONED)")
-    @PreAuthorize("hasAuthority('hazards.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> editUpdate(@PathVariable long updateId, @RequestBody UpdateWrite req) {
+    public Map<String, Object> editUpdate(long updateId, ThreatAdminService.UpdateWrite req) {
         int n = jdbc.update("update public.threat_updates set title=coalesce(?,title), detail=coalesce(?,detail),"
                         + " status=coalesce(?,status), starts_on=coalesce(?::date,starts_on),"
                         + " ends_on=coalesce(?::date,ends_on), is_active=coalesce(?,is_active), updated_at=now()"
@@ -187,12 +140,9 @@ public class ThreatAdminController {
         }
         return Map.of("id", updateId, "message", "Timeline updated");
     }
-
-    @PutMapping("/plans/{planId}/status")
-    @Operation(summary = "Review a stakeholder plan (Submitted → Under review → Approved)")
-    @PreAuthorize("hasAuthority('hazards.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> reviewPlan(@PathVariable long planId, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> reviewPlan(long planId, Map<String, Object> req) {
         String status = String.valueOf(req.getOrDefault("status", "Under review"));
         if (!PLAN_STATUS.contains(status)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -201,12 +151,9 @@ public class ThreatAdminController {
         jdbc.update("update public.threat_plans set status=?, updated_at=now() where id=?", status, planId);
         return Map.of("id", planId, "status", status, "message", "Plan status updated");
     }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a threat (cascades its timeline + plans)")
-    @PreAuthorize("hasAuthority('hazards.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> delete(@PathVariable long id) {
+    public Map<String, Object> delete(long id) {
         jdbc.update("delete from public.threats where id=?", id);
         return Map.of("id", id, "message", "Deleted");
     }

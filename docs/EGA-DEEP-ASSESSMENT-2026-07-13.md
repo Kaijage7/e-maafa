@@ -6,7 +6,7 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 63 thin eGA controllers (+7 portal CMS), matching service + impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 65 thin eGA controllers (+2 portal public/threats), matching service + impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
 | Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
 | Response support engines | **eGA-aligned** | Under `service.support` (workflow, dispatch, activation, simulation) |
@@ -149,7 +149,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 33. ~~eGA migrate **Mitigation remainder**~~ — **DONE**.
 34. ~~eGA migrate **Recovery (4 leaves)**~~ — **DONE**.
 35. ~~eGA migrate **Portal CMS admins (7 leaves)**~~ — **DONE**.
-36. Next: portal public + threats; then One Health / finance / M&E / remaining reports. 
+36. ~~eGA migrate **Portal public + threats**~~ — **DONE** (no `portal/` package left).
+37. Next fat domains: One Health / finance / M&E / remaining reports. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -274,4 +275,13 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 | Agency admin | `/v1/settings/agencies` | SA baseline exact (887 items); empty name **400** |
 
 Public portal regressions exact: landing, threats, regions, education, shelters, publications, i18n.  
-**Residual under `portal/`:** `PortalPublicController` + `PortalPublicService`, `ThreatAdminController` + `ThreatService`.
+
+## 12. Portal public + threats eGA (2026-07-13)
+
+| Leaf | Path | Verified |
+|------|------|----------|
+| Portal public | `/v1/portal/**` | Size baselines exact vs pre-extract; threat detail **200**; missing threat **404**; empty plan submit **400** |
+| ThreatService | (public threats strip + detail + plan) | Active threats=2; public/admin co-live |
+| Threat admin | `/v1/content/threats` | Size baseline exact; unauth **401**; Partner **403**; create **201** → delete net-zero; empty name **400** |
+
+**Portal controllers: complete** (no `portal/` package). CMS admins still exact (news/portal/education sizes).

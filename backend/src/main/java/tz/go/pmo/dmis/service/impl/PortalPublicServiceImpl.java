@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.portal;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Year;
@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import tz.go.pmo.dmis.ew.MgovSmsService;
 import tz.go.pmo.dmis.notification.MailService;
+import tz.go.pmo.dmis.service.PortalPublicService;
 
 /**
  * Public portal data, reproducing PublicPortalController (Laravel) over the same tables:
@@ -33,7 +34,7 @@ import tz.go.pmo.dmis.notification.MailService;
  */
 @Service
 @RequiredArgsConstructor
-public class PortalPublicService {
+public class PortalPublicServiceImpl implements PortalPublicService {
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
@@ -44,6 +45,8 @@ public class PortalPublicService {
     // ---------------------------------------------------------------- landing
 
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> landing() {
         // Active warnings for the hero map (flat early_warnings table — EarlyWarning::onMap)
         List<Map<String, Object>> warnings = jdbc.queryForList(
@@ -155,6 +158,8 @@ public class PortalPublicService {
     // ------------------------------------------------------------------ news
 
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> newsArticle(String slug) {
         List<Map<String, Object>> found = jdbc.queryForList(
                 "select title, slug, excerpt, body, image, category,"
@@ -177,6 +182,8 @@ public class PortalPublicService {
 
     /** Frameworks by document type (Policy / Strategy / Act / Guideline …), as /publications/{type}. */
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> publications(String type) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select id, document_name as \"documentName\", document_type as \"documentType\","
@@ -197,6 +204,8 @@ public class PortalPublicService {
      * incidents are never exposed.
      */
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> incidentSnapshot(long id) {
         List<Map<String, Object>> found = jdbc.queryForList(
                 "select i.id, i.title, i.severity_level as \"severityLevel\", i.status,"
@@ -249,6 +258,8 @@ public class PortalPublicService {
      *  trusted official source: the report is auto-converted to an incident routed STRAIGHT to the EOCC stage
      *  (workflow_status='waiting_eocc'), skipping the district + region verification a public report climbs. */
     @Transactional
+    @Override
+
     public Map<String, Object> submitHazardReport(Map<String, Object> req) {
         String hazardType = str(req.get("hazardType"));
         String description = str(req.get("description"));
@@ -331,6 +342,8 @@ public class PortalPublicService {
      * published to the public portal.
      */
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> reportStatus(String rawCode) {
         String code = str(rawCode);
         if (code == null || !code.matches("(?i)^PHR-\\d{4}-\\d{5}$")) {
@@ -419,6 +432,8 @@ public class PortalPublicService {
 
     /** Public alert subscription (the /subscribe page) → alert_subscriptions, consent required. */
     @Transactional
+    @Override
+
     public Map<String, Object> subscribe(Map<String, Object> req) {
         String fullName = str(req.get("fullName"));
         String phone = str(req.get("phone"));
@@ -451,6 +466,8 @@ public class PortalPublicService {
      * deactivate nothing here — the caller proves ownership by confirming the code ({@link #confirmUnsubscribe}).
      */
     @Transactional
+    @Override
+
     public Map<String, Object> unsubscribe(Map<String, Object> req) {
         String contact = str(req.get("contact"));
         if (contact == null) {
@@ -476,6 +493,8 @@ public class PortalPublicService {
      * deactivates that contact's active subscriptions. A wrong, expired, or already-used code deactivates nothing.
      */
     @Transactional
+    @Override
+
     public Map<String, Object> confirmUnsubscribe(Map<String, Object> req) {
         String contact = str(req.get("contact"));
         String code = str(req.get("code"));
@@ -512,6 +531,8 @@ public class PortalPublicService {
 
     /** Public: the CMS-controlled list of unsubscribe reasons (managed in Content Management → Portal Management). */
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> unsubscribeReasons() {
         List<Map<String, Object>> reasons;
         try {
@@ -566,6 +587,8 @@ public class PortalPublicService {
 
     /** Public "Register as Stakeholder" (landing) → stakeholders row pending verification. */
     @Transactional
+    @Override
+
     public Map<String, Object> registerStakeholder(Map<String, Object> req) {
         String name = str(req.get("name"));
         String organization = str(req.get("organization"));
@@ -615,30 +638,40 @@ public class PortalPublicService {
 
     /** Public Tanzania regions for the stakeholder-registration cascade (reuses public.regions). */
     @Transactional(readOnly = true)
+    @Override
+
     public List<Map<String, Object>> regions() {
         return jdbc.queryForList("select id, name from public.regions order by name");
     }
 
     /** Public districts in a region for the registration cascade (reuses public.districts). */
     @Transactional(readOnly = true)
+    @Override
+
     public List<Map<String, Object>> districts(long regionId) {
         return jdbc.queryForList("select id, name from public.districts where region_id = ? order by name", regionId);
     }
 
     /** Public councils (LGAs) in a district for the location cascade (reuses public.councils). */
     @Transactional(readOnly = true)
+    @Override
+
     public List<Map<String, Object>> councils(long districtId) {
         return jdbc.queryForList("select id, name from public.councils where district_id = ? order by name", districtId);
     }
 
     /** Public wards in a council for the location cascade (reuses public.wards). */
     @Transactional(readOnly = true)
+    @Override
+
     public List<Map<String, Object>> wards(long councilId) {
         return jdbc.queryForList("select id, name from public.wards where council_id = ? order by name", councilId);
     }
 
     /** Published educational content for the public education portal. */
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> education() {
         return Map.of("contents", safeList("select id, title, content_type as \"contentType\", summary, author,"
                 + " title_sw as \"titleSw\", summary_sw as \"summarySw\","
@@ -648,6 +681,8 @@ public class PortalPublicService {
 
     /** Public evacuation-center finder (FEMA shelter-finder pattern) — public-safe columns only. */
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> shelters() {
         return Map.of("shelters", safeList(
                 "select centre_name as \"name\", region, district, capacity_people as \"capacity\","
@@ -661,6 +696,8 @@ public class PortalPublicService {
      * ordered by the card sort order then month so the frontend can lay out a hazard × 12-month grid.
      */
     @Transactional(readOnly = true)
+    @Override
+
     public List<Map<String, Object>> hazardCalendar() {
         return jdbc.queryForList(
                 "select hc.hazard_name as \"hazardName\", c.name_sw as \"hazardNameSw\", c.icon, c.color,"
@@ -676,6 +713,8 @@ public class PortalPublicService {
      * materials appear in every group) + related published articles by keyword.
      */
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> hazardHub(String hazardName) {
         List<Map<String, Object>> card = jdbc.queryForList(
                 "select name, name_sw as \"nameSw\", icon, color, description_en as \"descriptionEn\", description_sw as \"descriptionSw\""
@@ -708,6 +747,8 @@ public class PortalPublicService {
 
     /** One published educational item (full content) for the public show page. */
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> educationItem(long id) {
         List<Map<String, Object>> found = jdbc.queryForList(
                 "select id, title, content_type as \"contentType\", summary, full_content as \"fullContent\","
@@ -728,6 +769,8 @@ public class PortalPublicService {
      * Resilient: an empty/absent table just yields an empty map (the frontend keeps its defaults).
      */
     @Transactional(readOnly = true)
+    @Override
+
     public Map<String, Object> i18n() {
         Map<String, Object> dict = new LinkedHashMap<>();
         try {
