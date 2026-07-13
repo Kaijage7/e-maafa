@@ -607,3 +607,83 @@ Paths/JSON unchanged. Unit test `DeliveryStatusMappingTest` retargeted to servic
 | DeliveryStatusMappingTest | **pass** |
 
 **Verdict:** Notification HTTP surface is eGA-layered without breaking the shared delivery spine. Next carefully: stakeholder / ops-IAM.
+
+
+## 21. System validation — productive params, integration, honesty (2026-07-13)
+
+User direction: *keep validating; no fake codes; every functionality/param productive E2E; data integration well captured; FE organised; no AI footprints; presentable, secure, scalable, sustainable.*
+
+### AI / product honesty
+
+| Check | Result |
+|-------|--------|
+| Third-party LLM/AI SDKs (incl. agent frameworks) in `pom.xml` / `package.json` | **None** |
+| Runtime AI product toggles | **None** |
+| `sat_ai` | FE **out-of-scope** card only (not a live feature) |
+| Economics of Disaster | `automation.ai=false`, `economics-v3-formula-engine`, formulaAudit present |
+
+### Productive filters (nonsense → empty; real → match)
+
+| Surface | Param | Productive? |
+|---------|-------|-------------|
+| Incidents registry | `status_filter=Reported/Closed/NOPE` | **Yes** (11 / 1 / 0); FE sends `status_filter`/`workflow_filter`/`hazard_filter` |
+| Incidents | wrong names `status`/`search` ignored | Expected — not declared params (not FE fakes) |
+| One Health events | `event_type=NOPE` / `search=zzzz` / `event_type=ew_alert` | **0 / 0 / 3** |
+| M&E indicators | `search=zzzz` | **0** |
+| M&E workbench | `domain=NOPE` | indicators **0** |
+| M&E workbench | `institutionClass` | reduces set (50→7 on agency) |
+| Incident reports | `status=NOPE` | records **0** |
+| Resource reports | future window | **0** |
+| Generated reports | `type=NOPE` | **0** |
+| Finance budgets list | no query filters | **By design** — FE does not send fake list filters; detail/SoD/thresholds productive |
+| EW warnings index | no status query param | **By design** — full area-scoped catalogue; FE registry is load-all |
+| Finance thresholds write | `village` / negative | **422** controlled vocabulary |
+
+### Security walls
+
+| Path | Unauth | Partner |
+|------|--------|---------|
+| finance budgets / economics / reports / settings / OH / incidents | **401** | **403** (module) |
+| M&E dashboard | **401** | **200** (Partners have `monitoring_evaluation.view` by design) |
+| notifications feed | **401** | **200** (own bell) |
+| communication overview / channel test | **401** | **403** |
+
+### Data integration points (live DB + APIs)
+
+| Link | Evidence |
+|------|----------|
+| EW → One Health | **3** `oh_events.source_warning_id`; `event_type=ew_alert` total **3** |
+| Budget → commitments / NDMF | ledger live; economics cash pulls disbursed + NDMF |
+| Settings automation → incident ladder | 7 `incident_approval` portal_settings; settleStage proven earlier |
+| Approval chain → resource allocation engine | 6 active levels on `resource_allocation` |
+| M&E catalogue | **127** indicators; dashboard 10 framework aims from live ops |
+| Notifications spine | **6k+** in-app rows; feed/unread/preferences **200** |
+| Recovery spine | programs/projects/relief/knowledge all **200** with stats |
+| Public portal | landing/threats/regions **200** unauth |
+
+### Frontend organisation
+
+| Item | Status |
+|------|--------|
+| Module hub | **11** modules (prevention → stakeholder portal) |
+| Recovery FE bases | match `/v1/recovery/*` controllers exactly |
+| M&E workbench params | `level`, `period`, `domain`, `search`, `institutionClass` → BE |
+| Incidents filters | `status_filter` / `workflow_filter` / `hazard_filter` → BE |
+| Finance | budgets / NDMF / thresholds / economics wired; no phantom query filters |
+| Reports | incidents / resources / generated / EW mgmt paths live |
+
+### Scalability / sustainability posture (observed)
+
+- Layered eGA controllers for completed domains; shared engines isolated (`notification/`, `service.support/`)
+- Area isolation on reports/incidents/finance/OH
+- Fail-closed money/settings validation
+- Deterministic formulas (not ML) for economics
+- Residual fat packages only: **stakeholder**, **ops/IAM** (and shared notif engines intentionally kept)
+
+### Residual product notes (not defects)
+
+1. Budget **list** has no server status/search query — optional product enhancement if owners want list filters.
+2. EW **index** is catalogue-style (no status query) — filtering is area + client UI; lifecycle actions are separate productive endpoints.
+3. Partner M&E **view** is intentional RBAC, not a hole.
+
+**Verdict:** No fake filter contracts found on FE-wired params; security walls hold; integration links are live; AI product surface absent; system remains presentable and eGA-organised. Ready for residual stakeholder / ops-IAM when requested.
