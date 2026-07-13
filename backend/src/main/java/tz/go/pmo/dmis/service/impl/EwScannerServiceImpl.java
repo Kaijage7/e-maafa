@@ -1,47 +1,33 @@
-package tz.go.pmo.dmis.ew.scanner;
+package tz.go.pmo.dmis.service.impl;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.geo.RegionCentroids;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.ew.scanner.DisasterScannerService;
 import tz.go.pmo.dmis.notification.NotificationService;
 import tz.go.pmo.dmis.notification.NotificationService.Notice;
+import tz.go.pmo.dmis.service.EwScannerService;
 
 /**
- * OSINT disaster-scanner API. Read-authenticated list (stats ride embedded in /detections); triage (dismiss)
- * + dispatch are operator actions.
- *
- * <p>Dispatch is a REAL router (not the old stamp-only stub), matching the intended monitoring flow:
- * <ul>
- *   <li><b>incident</b> — create a draft Incident in the national pipeline (public.incidents, workflow_status=
- *       'draft'); a focal point/officer then submits it and it rides the DAS→RAS→AsstDir→Director approval chain.</li>
- *   <li><b>entity</b> — an online hazard NOT reported by an entity (earthquake, El&nbsp;Niño…) or an external
- *       SHOC/IGAD/AU alert is routed to the RELEVANT warning entity via the hazard→entity map: a tasking is
- *       created (public.scanner_entity_taskings) and the entity + EOCC are notified to verify + issue an official
- *       assessment. The entity then authors its normal bulletin (closing the loop).</li>
- *   <li><b>dismiss</b> — false alarm / not actionable.</li>
- * </ul>
+ * OSINT disaster-scanner / EW Monitoring — logic in service.impl (eGA).
+ * Dispatch is a real router (incident | entity | dismiss). Detections filters are productive AND;
+ * dual-layer stats: filtered {@code stats} + unfiltered {@code global}.
  */
-@RestController
-@RequestMapping("/v1/ew/scanner")
-@PreAuthorize("isAuthenticated()")
-public class ScannerController {
+@Service
+public class EwScannerServiceImpl implements EwScannerService {
+
+
 
     private final DisasterScannerService scanner;
     private final JdbcTemplate jdbc;
@@ -49,8 +35,8 @@ public class ScannerController {
     private final JurisdictionScope scope;
     private final RegionCentroids centroids;
 
-    public ScannerController(DisasterScannerService scanner, JdbcTemplate jdbc, NotificationService notifications,
-                            JurisdictionScope scope, RegionCentroids centroids) {
+    public EwScannerServiceImpl(DisasterScannerService scanner, JdbcTemplate jdbc, NotificationService notifications,
+                                JurisdictionScope scope, RegionCentroids centroids) {
         this.scanner = scanner;
         this.jdbc = jdbc;
         this.notifications = notifications;
@@ -101,32 +87,53 @@ public class ScannerController {
         "moh", "Ministry of Health", "moa", "Ministry of Agriculture", "nemc", "National Environment Management Council",
         "mlf", "Ministry of Livestock and Fisheries");
 
-    /** Trigger a live scan of all OSINT sources; returns how many were captured + how many were new. */
-    @PostMapping("/scan")
-    @PreAuthorize("hasAuthority('early_warning.create')")
-    public Map<String, Object> scan(@RequestParam(defaultValue = "7") int days) {
-        return scanner.scanAll(days);
+    /** Trigger a live scan. {@code days} clamped 1–60 (productive lookback window). */
+    @Override
+    public Map<String, Object> scan(int days) {
+        int d = Math.min(Math.max(days, 1), 60);
+        Map<String, Object> r = new LinkedHashMap<>(scanner.scanAll(d));
+        r.put("days", d);
+        return r;
     }
 
-    /** List detections, newest first, filterable by status / hazard_type / source. */
-    @GetMapping("/detections")
-    public Map<String, Object> detections(@RequestParam(required = false) String status,
-                                          @RequestParam(required = false) String hazard,
-                                          @RequestParam(required = false) String source,
-                                          @RequestParam(defaultValue = "200") int limit) {
-        StringBuilder where = new StringBuilder("1=1");
-        List<Object> args = new ArrayList<>();
-        if (status != null && !status.isBlank()) { where.append(" and status=?"); args.add(status); }
-        if (hazard != null && !hazard.isBlank()) { where.append(" and hazard_type=?"); args.add(hazard); }
-        if (source != null && !source.isBlank()) { where.append(" and source_id=?"); args.add(source); }
-        args.add(Math.min(Math.max(limit, 1), 500));
+    /**
+     * List detections. Productive AND filters; dual stats (filtered + global); matched count before limit.
+     */
+    @Override
+    public Map<String, Object> detections(String status, String hazard, String source, String severity,
+                                          String reliability, String region, String q, Integer days, int limit) {
+        Filter f = buildDetectionFilter(status, hazard, source, severity, reliability, region, q, days);
+        int lim = Math.min(Math.max(limit, 1), 500);
+        List<Object> listArgs = new ArrayList<>(f.args);
+        listArgs.add(lim);
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select id, source_id, title, summary, url, hazard_type, severity, reliability, region, district, "
                 + "latitude, longitude, published_at, detected_at, status, dispatched_as, dispatched_ref, "
                 + "assigned_entity, incident_id "
-                + "from public.scanner_detections where " + where + " order by detected_at desc limit ?",
-            args.toArray());
-        return Map.of("detections", rows, "stats", stats());
+                + "from public.scanner_detections where " + f.where + " order by detected_at desc limit ?",
+            listArgs.toArray());
+        Integer matched = jdbc.queryForObject(
+            "select count(*) from public.scanner_detections where " + f.where, Integer.class, f.args.toArray());
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("detections", rows);
+        out.put("matched", matched == null ? 0 : matched);
+        out.put("limit", lim);
+        out.put("stats", statsWhere(f.where, f.args));   // same WHERE as list
+        out.put("global", statsWhere("1=1", List.of())); // unfiltered dual layer
+        return out;
+    }
+
+    @Override
+    public Map<String, Object> showDetection(long id) {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+            "select id, source_id, title, summary, url, hazard_type, severity, reliability, region, district, "
+                + "latitude, longitude, published_at, detected_at, status, dispatched_as, dispatched_ref, "
+                + "assigned_entity, incident_id "
+                + "from public.scanner_detections where id=?", id);
+        if (rows.isEmpty()) {
+            throw new ResourceNotFoundException("Detection not found.");
+        }
+        return Map.of("detection", rows.get(0));
     }
 
     /**
@@ -134,10 +141,9 @@ public class ScannerController {
      * or a sector lead files a field report. It is stored as a detection (reliability='official') so it rides
      * the SAME triage as online detections — dispatch → entity (verify &amp; issue assessment) or → incident.
      */
-    @PostMapping("/report")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('early_warning.create')")
-    public Map<String, Object> manualReport(@RequestBody Map<String, Object> r) {
+    public Map<String, Object> manualReport(Map<String, Object> r) {
         String title = str(r.get("title"));
         if (title == null || title.isBlank()) {
             return Map.of("success", false, "message", "A report title is required.");
@@ -155,19 +161,21 @@ public class ScannerController {
     }
 
     /** Dismiss a detection (false alarm / not actionable). */
-    @PostMapping("/{id}/dismiss")
-    @PreAuthorize("hasAuthority('early_warning.create')")
-    public Map<String, Object> dismiss(@PathVariable long id) {
-        int n = jdbc.update("update public.scanner_detections set status='dismissed' where id=? and status not in ('dispatched')", id);
-        if (n == 0) throw new ResourceNotFoundException("Detection not found or already dispatched.");
+    @Override
+    public Map<String, Object> dismiss(long id) {
+        // Only actionable (new) detections dismiss; already-dismissed / dispatched must not soft-succeed.
+        int n = jdbc.update(
+            "update public.scanner_detections set status='dismissed' where id=? and status='new'", id);
+        if (n == 0) {
+            throw new ResourceNotFoundException("Detection not found, already dismissed, or already dispatched.");
+        }
         return Map.of("success", true, "id", id, "status", "dismissed");
     }
 
     /** Dispatch a detection: as ∈ {incident, entity, dismiss}. */
-    @PostMapping("/{id}/dispatch")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('early_warning.create')")
-    public Map<String, Object> dispatch(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> dispatch(long id, Map<String, Object> body) {
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select id, title, summary, url, hazard_type, severity, region, district, latitude, longitude, status "
                 + "from public.scanner_detections where id=?", id);
@@ -286,9 +294,8 @@ public class ScannerController {
      *  login sees ONLY its own inbox (an explicit {@code agency=} filter must match; a missing filter is
      *  forced to its own agency), while a national / admin / EOCC login (no agency) — the tier that runs
      *  the Disaster Scanner dispatch console — reads across all agencies. */
-    @GetMapping("/entity-taskings")
-    public Map<String, Object> entityTaskings(@RequestParam(required = false) String agency,
-                                              @RequestParam(required = false) String status) {
+    @Override
+    public Map<String, Object> entityTaskings(String agency, String status) {
         String requested = agency == null || agency.isBlank() ? null : agency.trim().toLowerCase(Locale.ROOT);
         String mine = scope.currentAgencyCode();
         if (mine != null) {
@@ -322,10 +329,9 @@ public class ScannerController {
     }
 
     /** Entity acknowledges receipt of a tasking (awaiting → acknowledged). */
-    @PostMapping("/taskings/{id}/acknowledge")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('early_warning.create')")
-    public Map<String, Object> acknowledgeTasking(@PathVariable long id) {
+    public Map<String, Object> acknowledgeTasking(long id) {
         assertOwnAgency(taskingAgency(id));
         int n = jdbc.update("update public.scanner_entity_taskings set status='acknowledged', acknowledged_at=now() "
             + "where id=? and status='awaiting'", id);
@@ -335,10 +341,9 @@ public class ScannerController {
 
     /** The entity submits its official ASSESSMENT and re-sends the tasking for EOCC review
      *  (awaiting/acknowledged/returned → responded). This is the "work on it & resend" leg. */
-    @PostMapping("/taskings/{id}/respond")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('early_warning.create')")
-    public Map<String, Object> respondTasking(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> respondTasking(long id, Map<String, Object> body) {
         assertOwnAgency(taskingAgency(id));
         Long submissionId = body != null ? parseLong(body.get("submission_id")) : null;
         String sev = body != null ? str(body.get("response_severity")) : null;
@@ -368,10 +373,9 @@ public class ScannerController {
 
     /** EOCC reviews an entity's response: accept (feeds Impact Analysis) or return for revision (entity reworks).
      *  responded → accepted | returned. */
-    @PostMapping("/taskings/{id}/review")
+    @Override
     @Transactional
-    @PreAuthorize("hasAuthority('early_warning.approve')")
-    public Map<String, Object> reviewTasking(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> reviewTasking(long id, Map<String, Object> body) {
         String outcome = body != null ? str(body.get("outcome")) : null;
         outcome = outcome == null ? "" : outcome.trim().toLowerCase(Locale.ROOT);
         if (!outcome.equals("accepted") && !outcome.equals("returned")) {
@@ -490,7 +494,52 @@ public class ScannerController {
         try { return o == null ? null : Long.parseLong(String.valueOf(o).trim()); } catch (Exception e) { return null; }
     }
 
-    private Map<String, Object> stats() {
+    private record Filter(String where, List<Object> args) {}
+
+    private Filter buildDetectionFilter(String status, String hazard, String source, String severity,
+                                        String reliability, String region, String q, Integer days) {
+        StringBuilder where = new StringBuilder("1=1");
+        List<Object> args = new ArrayList<>();
+        if (status != null && !status.isBlank()) {
+            where.append(" and status=?");
+            args.add(status.trim());
+        }
+        if (hazard != null && !hazard.isBlank()) {
+            where.append(" and hazard_type=?");
+            args.add(hazard.trim().toLowerCase(Locale.ROOT));
+        }
+        if (source != null && !source.isBlank()) {
+            where.append(" and source_id=?");
+            args.add(source.trim());
+        }
+        if (severity != null && !severity.isBlank()) {
+            where.append(" and lower(severity)=?");
+            args.add(severity.trim().toLowerCase(Locale.ROOT));
+        }
+        if (reliability != null && !reliability.isBlank()) {
+            where.append(" and lower(reliability)=?");
+            args.add(reliability.trim().toLowerCase(Locale.ROOT));
+        }
+        if (region != null && !region.isBlank()) {
+            where.append(" and lower(region)=?");
+            args.add(region.trim().toLowerCase(Locale.ROOT));
+        }
+        if (q != null && !q.isBlank()) {
+            where.append(" and (title ilike ? or summary ilike ?)");
+            String like = "%" + q.trim() + "%";
+            args.add(like);
+            args.add(like);
+        }
+        if (days != null && days > 0) {
+            int d = Math.min(days, 365);
+            where.append(" and detected_at >= now() - (? * interval '1 day')");
+            args.add(d);
+        }
+        return new Filter(where.toString(), args);
+    }
+
+    /** Stats under an arbitrary WHERE (same bind args as list filter). Productive with filters. */
+    private Map<String, Object> statsWhere(String where, List<Object> args) {
         return jdbc.queryForMap(
             "select count(*) as total, "
                 + "count(*) filter (where status='new') as new, "
@@ -498,6 +547,7 @@ public class ScannerController {
                 + "count(*) filter (where status='dismissed') as dismissed, "
                 + "count(*) filter (where severity in ('critical','high')) as high_severity, "
                 + "count(*) filter (where detected_at > now() - interval '24 hours') as last_24h "
-                + "from public.scanner_detections");
+                + "from public.scanner_detections where " + where,
+            args.toArray());
     }
 }

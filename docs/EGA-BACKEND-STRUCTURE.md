@@ -186,7 +186,8 @@ Suggested migration order:
 40. ~~**EW Agency bus**~~ — **DONE** (submit/update/withdraw/latest/history/updates/DMD; agency isolation productive)  
 41. ~~**EW Bulletin Ingest**~~ — **DONE** (PMO-DMD push → pending warnings; productive params + net-zero drill)  
 42. ~~**EW Warning Lifecycle**~~ — **DONE** (approve/publish/map/bulletin; SoD + net-zero drill)  
-43. Remaining EW (scanner) then other modules  
+43. ~~**EW Scanner / Monitoring**~~ — **DONE** (advanced dual stats + productive multi-filters; DisasterScannerService retained)  
+44. EW fat controllers complete; other modules next  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -235,8 +236,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | EW Agency bus | Done | `/v1/ew/agency/*`, `/v1/ew/dmd/*` | Thin controller + service.impl; JurisdictionScope agency isolation; productive `agency`/`warning_code`/`limit`/`exclude`/`days`/`hazardFocus`; empty/no-geo submit **422** (no supersede); MoH→TMA **403**; Partner **403**; JSON baselines identical post-extract |
 | EW Bulletin Ingest | Done | `POST /ew/bulletins/ingest` | Thin controller + service.impl; `bulletin_type` tma\|dmd; missing params **400**; bad type/payload **422**; zero hazards **422** (rollback); success **201** + hazard_count; 1h duplicate **200**; Partner/DAS **403**; net-zero drill |
 | EW Warning Lifecycle | Done | `POST /v1/ew/warnings/{id}/approve\|publish\|map\|bulletin` | Thin controller + service.impl; coexists with GET index; `early_warning.approve` SoD (MDA/Partner **403**); pending/approved gates **422**; missing PDF **400**; invalid PDF **422**; map missing **404**; full approve→bulletin→publish→map net-zero |
+| EW Scanner | Done | `/v1/ew/scanner/*` | Thin controller + service.impl; **dual stats** (`stats`=filtered WHERE, `global`=unfiltered); productive AND filters status/hazard/source/severity/reliability/region/q/days; `matched` before limit; show **404**; re-dismiss **404**; agency tasking isolation; Partner **403** |
 
-42. ~~**EW Warning Lifecycle**~~ — **DONE**; remaining EW: scanner
+43. ~~**EW Scanner**~~ — **DONE**; EW fat controllers complete
 
 ---
 
