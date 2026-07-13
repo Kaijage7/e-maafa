@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 35 thin eGA controllers, 35 service + 35 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 36 thin eGA controllers, 36 service + 36 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response leaves | **Migrated** | **All former fat Response controllers** (SC through Command Center) are eGA-layered |
-| Response remaining | **Support hubs only** | No fat controllers left under `response/`; transitional services remain (`IncidentWorkflowService`, `ApprovalWorkflowEngine`, `DispatchSupportService`, `ActivationService`, `SimulationGuard`) |
-| EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
+| Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
+| Response remaining | **Support hubs only** | Transitional services in `response/` (`IncidentWorkflowService`, `ApprovalWorkflowEngine`, `DispatchSupportService`, `ActivationService`, `SimulationGuard`) |
+| EW | **In progress** | First leaf **Boundary** done; remaining: lifecycle, products, agency, bulletin ingest, scanner (+ query service) |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Command Center**~~ **DONE** | Response controller eGA complete; next: EW or extract support services when touching them |
+| Next eGA leaf (binding order) | ~~**EW Boundary**~~ **DONE** | Next EW: smallest/safest remaining (`EwController`+query, or bulletin ingest) — never lifecycle engine first |
 
-**Honest score:** Master data + full Response controller surface are eGA-shaped. Residual debt is transitional support services in `response/` package (not fat controllers) plus EW/other modules.
+**Honest score:** Master data + full Response controllers + first EW leaf are eGA-shaped. Residual debt is EW fat controllers and Response support services.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -47,6 +47,7 @@
 | Stakeholder Bidding | SA/DED/RAS/DAS donations/open-needs/NDMF match; pool SA **200** Dist/Reg OOA **404**; empty bid/ndmf **422** net-zero; Partner module **403** |
 | Incidents | SA/DED/RAS/DAS index+form-data match; show OOA **404**; ops-timeline coexists **200**; empty store/update **422** with `errors`; Partner approve **403**; no workflow mutation |
 | Command Center | SA index/warnings/board/readiness/AAR match; scenarios coexists **200**; Dist/Reg board OOA **404**; Dist warnings **403**; bad posture/forecast **422** net-zero; Partner **403** |
+| EW Boundary | GET reports **200**; blank filters = full list; `warning_code` scopes; nonsense = **0**; AND filters productive; empty store **422** (`focal_point_name`); create+filter+delete net-zero; Partner **403**; DAS create **403** |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -88,6 +89,7 @@
 - ~~Stakeholder Bidding eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; multi-persona baseline; no stock/donation mutation in verify).
 - ~~Incidents eGA extract~~ — **DONE** (IncidentWorkflowService retained; findOr404 public; multipart store/update; coexists with ops-timeline; multi-persona baseline; no workflow mutation in verify).
 - ~~Command Center eGA extract~~ — **DONE** (ActivationService + AnticipatoryPlansService retained; coexists with scenarios; multi-persona baseline; no posture mutation in verify).
+- ~~EW Boundary eGA extract~~ — **DONE** (JdbcTemplate + CurrentUserResolver; productive bulletin/warning filters; store validation; create drill net-zero).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -117,7 +119,7 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 19. ~~eGA migrate **Stakeholder Bidding**~~ — **DONE**.  
 20. ~~eGA migrate **Incidents**~~ — **DONE**.  
 21. ~~eGA migrate **Command Center**~~ — **DONE**.  
-22. Response fat controllers complete; optional later: extract support services when heavily touched.  
-23. Stamp area on temp warehouses + agency stock data hygiene.  
-24. EW package eGA migration (next major module surface).  
+22. ~~eGA migrate **EW Boundary**~~ — **DONE**.  
+23. Next EW leaves: read registry (`EwController`/`EwQueryService`), then bulletin ingest, products, agency, lifecycle, scanner.  
+24. Stamp area on temp warehouses + agency stock data hygiene.  
 25. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.

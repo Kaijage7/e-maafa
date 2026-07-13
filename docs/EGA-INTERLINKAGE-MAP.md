@@ -265,6 +265,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R20 | Stakeholder Bidding | `/v1/response/bidding` | ~1037 | DispatchSupportService + SimulationGuard + NotificationService; NDMF cash | **DONE** |
 | R21 | Incidents | `/v1/response/incidents` | ~1283 | IncidentWorkflowService retained; multipart; coexists with ops-timeline | **DONE** |
 | R22 | Command Center | `/v1/response/coordination` | ~1883 | ActivationService + AnticipatoryPlansService; coexists with scenarios | **DONE** |
+| E1 | EW Boundary | `/ew/monitoring/reports` | ~99 | JdbcTemplate only; focal-point reports; productive filters | **DONE** |
 
 ### 10.5 Do **not** start with
 
