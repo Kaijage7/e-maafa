@@ -215,8 +215,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Resource Approvals | Done | `/v1/response/approvals` | Thin controller + service.impl; engine retained; SA/DED/RAS/DAS list+show isolation; unauth **401**; reject empty **422** (net-zero); Partner/DLO approve **403**; bulk empty **422**; pending count unchanged |
 | Resource Allocations | Done | `/v1/response/allocations` | Thin controller + service.impl; engine + DispatchSupportService + SimulationGuard retained; store validation **errors** map preserved; multi-persona baseline; Partner **403**; DED track/forward OOA **404**; reject empty net-zero |
 | Warehouse Ops | Done | `/v1/response/warehouse-ops` | Thin controller + service.impl; stock support retained; SA/DED/RAS/DAS isolation; Partner **403**; DED OOA stock **404**; bad remove/empty count **422** net-zero (no stock mutation) |
+| Dispatch | Done | `/v1/response/dispatch` | Thin controller + service.impl; stock support retained; SA/DED/RAS/DAS board stats match; sources OOA **404**; empty dispatch **422** net-zero; Partner **403** |
 
-31. ~~**Warehouse Ops**~~ — **DONE**; remaining Response leaves next (dispatch/bidding/hubs last)
+32. ~~**Dispatch**~~ — **DONE**; remaining Response leaves next (bidding/hubs last)
 
 ---
 

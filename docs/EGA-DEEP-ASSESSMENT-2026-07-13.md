@@ -43,6 +43,7 @@
 | Resource Approvals | SA/DED/RAS/DAS list match; DED show OOA **404**; RAS show in-region **200**; reject empty **422** net-zero; Partner/DLO approve **403**; pending unchanged |
 | Resource Allocations | SA/DED/RAS/DAS index+form-data match; track SA **200** / DED+RAS OOA **404**; store empty **422** with `errors`; Partner **403**; reject empty net-zero; pending unchanged |
 | Warehouse Ops | SA/DED/RAS/DAS warehouse counts match; movements/capacity/loans scoped; DED OOA stock **404**; Partner **403**; bad remove + empty stock-taking **422** (no ledger mutation) |
+| Dispatch | SA/DED/RAS/DAS board stats match; sources SA/RAS **200** DED OOA **404**; procurement track DED **404**; empty dispatch **422** net-zero; Partner **403** |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -80,6 +81,7 @@
 - ~~Resource Approvals eGA extract~~ — **DONE** (`ApprovalWorkflowEngine` retained; `CurrentUserResolver`; reject validation → BusinessRuleException; multi-persona baseline match).
 - ~~Resource Allocations eGA extract~~ — **DONE** (engine + DispatchSupportService + SimulationGuard retained; `ALLOCATION_TYPE` public; store `errors` map preserved; multi-persona baseline match).
 - ~~Warehouse Ops eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; multi-persona baseline; no stock mutation in verify).
+- ~~Dispatch eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; APPROVAL_REQUIRED_SOURCES public; multi-persona baseline; no stock mutation in verify).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -105,7 +107,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 15. ~~eGA migrate **Resource Approvals**~~ — **DONE**.  
 16. ~~eGA migrate **Resource Allocations**~~ — **DONE**.  
 17. ~~eGA migrate **Warehouse Ops**~~ — **DONE**.  
-18. Next: logistics spine still last (dispatch / bidding).  
-19. Keep logistics in place; extract services only when touching heavily.  
-20. Stamp area on temp warehouses + agency stock data hygiene.  
-21. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+18. ~~eGA migrate **Dispatch**~~ — **DONE**.  
+19. Next: logistics spine still last (bidding).  
+20. Keep logistics in place; extract services only when touching heavily.  
+21. Stamp area on temp warehouses + agency stock data hygiene.  
+22. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
