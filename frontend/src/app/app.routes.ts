@@ -157,6 +157,7 @@ export const routes: Routes = [
   { path: 'm/recovery/recovery-programs', canActivate: [authGuard], loadComponent: () => import('./pages/recovery/recovery-programs.component').then(m => m.RecoveryProgramsComponent) },
   { path: 'm/recovery/projects', canActivate: [authGuard], loadComponent: () => import('./pages/recovery/strategic-projects.component').then(m => m.StrategicProjectsComponent) },
   { path: 'm/recovery/lessons', canActivate: [authGuard], loadComponent: () => import('./pages/recovery/knowledge-repository.component').then(m => m.KnowledgeRepositoryComponent) },
+  { path: 'm/notifications', canActivate: [authGuard], loadComponent: () => import('./pages/notifications/notification-center.component').then(m => m.NotificationCenterComponent) },
   { path: 'm/content-management/communication-center', canActivate: [authGuard], loadComponent: () => import('./pages/content/communication-center.component').then(m => m.CommunicationCenterComponent) },
   { path: 'm/content-management/qr-outreach', canActivate: [authGuard], loadComponent: () => import('./pages/content/qr-outreach.component').then(m => m.QrOutreachComponent) },
   { path: 'm/content-management/action-guide', canActivate: [authGuard], loadComponent: () => import('./pages/content/action-guide.component').then(m => m.ActionGuideComponent) },

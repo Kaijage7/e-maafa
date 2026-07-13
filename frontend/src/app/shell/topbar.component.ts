@@ -39,12 +39,20 @@ import { FontScaleService } from '../core/font-scale.service';
           <div class="bell-dropdown" [class.show]="bellOpen()" (click)="$event.stopPropagation()">
             <div class="bell-head">
               <b>Notifications</b>
-              <span style="display:flex;align-items:center;gap:10px;">
-                <button type="button" class="bell-settings" (click)="togglePrefs()" title="Notification preferences" aria-label="Notification preferences">
+              <span style="display:flex;align-items:center;gap:8px;">
+                <button type="button" class="bell-settings" (click)="togglePrefs()" title="Channel preferences" aria-label="Channel preferences">
                   <i class="fas fa-sliders"></i>
                 </button>
                 @if (unread() > 0) { <a class="bell-readall" (click)="markAllRead()">Mark all read</a> }
+                <a class="bell-readall" routerLink="/m/notifications" (click)="bellOpen.set(false)">Centre</a>
               </span>
+            </div>
+            <div class="bell-chips">
+              <button type="button" class="bell-chip" [class.on]="bellFilter()===''" (click)="setBellFilter('')">All</button>
+              <button type="button" class="bell-chip" [class.on]="bellFilter()==='unread'" (click)="setBellFilter('unread')">Unread</button>
+              <button type="button" class="bell-chip" [class.on]="bellFilter()==='critical'" (click)="setBellFilter('critical')">Critical</button>
+              <button type="button" class="bell-chip" [class.on]="bellFilter()==='early_warning'" (click)="setBellFilter('early_warning')">EW</button>
+              <button type="button" class="bell-chip" [class.on]="bellFilter()==='approval'" (click)="setBellFilter('approval')">Approvals</button>
             </div>
             @if (prefsOpen()) {
               <form class="bell-prefs" (ngSubmit)="savePrefs()">
@@ -75,14 +83,20 @@ import { FontScaleService } from '../core/font-scale.service';
             <div class="bell-list">
               @for (n of notifs(); track n.id) {
                 <a class="bell-item" [class.unread]="!n.is_read" (click)="open(n)">
-                  <span class="bell-dot sev-{{ n.severity || 'info' }}"></span>
+                  <span class="bell-dot sev-{{ n.severity_norm || n.severity || 'info' }}"></span>
                   <span class="bell-body">
                     <span class="bell-title">{{ n.title }}</span>
                     <span class="bell-msg">{{ n.message }}</span>
-                    <span class="bell-time">{{ ago(n.created_at) }}</span>
+                    <span class="bell-time">
+                      @if (n.category_label) { <em class="bell-cat">{{ n.category_label }}</em> · }
+                      {{ ago(n.created_at) }}
+                    </span>
                   </span>
                 </a>
-              } @empty { <div class="bell-empty"><i class="fas fa-bell-slash"></i> No notifications yet</div> }
+              } @empty { <div class="bell-empty"><i class="fas fa-bell-slash"></i> No notifications match this filter</div> }
+            </div>
+            <div class="bell-foot">
+              <a routerLink="/m/notifications" (click)="bellOpen.set(false)"><i class="fas fa-inbox"></i> Open notification centre</a>
             </div>
           </div>
         </div>
@@ -195,12 +209,20 @@ import { FontScaleService } from '../core/font-scale.service';
     .bell-btn { position: relative; background: none; border: none; color: inherit; cursor: pointer; font-size: 1.05rem; padding: 6px 9px; opacity: 0.85; }
     .bell-btn:hover { opacity: 1; }
     .bell-badge { position: absolute; top: -3px; right: -2px; background: #dc2626; color: #fff; font-size: 0.75rem; font-weight: 700; min-width: 18px; height: 18px; line-height: 18px; border-radius: 10px; padding: 0 5px; text-align: center; }
-    .bell-dropdown { position: absolute; right: 0; top: calc(100% + 8px); width: 360px; max-width: 92vw; background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.16); display: none; z-index: 1200; overflow: hidden; }
+    .bell-dropdown { position: absolute; right: 0; top: calc(100% + 8px); width: 380px; max-width: 92vw; background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.16); display: none; z-index: 1200; overflow: hidden; }
     .bell-dropdown.show { display: block; }
     .bell-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid #eef1f5; color: #1f2937; font-size: 0.86rem; }
-    .bell-readall { font-size: 0.78rem; color: #2563eb; cursor: pointer; font-weight: 600; }
+    .bell-readall { font-size: 0.78rem; color: #2563eb; cursor: pointer; font-weight: 600; text-decoration: none; }
     .bell-settings { background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
     .bell-settings:hover { background: #eef2f7; color: #003366; }
+    .bell-chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px; border-bottom: 1px solid #eef1f5; background: #fbfdff; }
+    .bell-chip { border: 1px solid #e2e8f0; background: #fff; color: #475569; border-radius: 999px; padding: 3px 9px; font-size: 0.7rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .bell-chip.on { background: #0b3d6b; color: #fff; border-color: #0b3d6b; }
+    .bell-cat { font-style: normal; color: #64748b; font-weight: 600; }
+    .bell-foot { padding: 8px 12px; border-top: 1px solid #eef1f5; text-align: center; background: #f8fafc; }
+    .bell-foot a { font-size: 0.78rem; font-weight: 700; color: #0b3d6b; text-decoration: none; }
+    .bell-foot a:hover { text-decoration: underline; }
+    .bell-dot.sev-high { background: #ea580c; }
     .bell-prefs { padding: 10px 14px 12px; border-bottom: 1px solid #eef1f5; background: #fbfdff; color: #1f2937; display: grid; gap: 8px; }
     .pref-title { font-size: 0.82rem; font-weight: 800; color: #334155; display: flex; align-items: center; gap: 7px; }
     .pref-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 0.82rem; margin: 0; }
@@ -269,36 +291,61 @@ export class TopbarComponent implements OnInit, OnDestroy {
   tfaCode = '';
   tfaPwd = '';
 
-  // Notification bell — reads the per-user feed the one dispatcher writes (public.resource_notifications).
+  // Notification bell — unified feed (resource_notifications) with productive filters + smart poll.
   bellOpen = signal(false);
   notifs = signal<any[]>([]);
   unread = signal(0);
+  bellFilter = signal(''); // '' | unread | critical | early_warning | approval
   prefsOpen = signal(false);
   prefBusy = signal(false);
   prefErr = signal(false);
   prefMsg = signal('');
   pref = { notify_in_app: true, notify_email: true, notify_sms: false, phone: '', email: '' };
   private pollTimer: any;
+  private latestId: number | null = null;
 
   ngOnInit(): void {
     this.loadNotifs();
-    this.pollTimer = setInterval(() => this.refreshUnread(), 45_000);
+    this.pollTimer = setInterval(() => this.refreshUnread(), 30_000);
   }
 
   ngOnDestroy(): void {
     clearInterval(this.pollTimer);
   }
 
+  setBellFilter(f: string): void {
+    this.bellFilter.set(f);
+    this.loadNotifs();
+  }
+
   private loadNotifs(): void {
-    this.http.get<any>('/api/v1/notifications?limit=20').subscribe({
-      next: r => { this.notifs.set(r.items ?? []); this.unread.set(r.unread_count ?? 0); },
+    let url = '/api/v1/notifications?limit=25';
+    const f = this.bellFilter();
+    if (f === 'unread') url += '&unread=true';
+    else if (f === 'critical') url += '&severity=critical';
+    else if (f === 'early_warning' || f === 'approval') url += '&category=' + f;
+    this.http.get<any>(url).subscribe({
+      next: r => {
+        this.notifs.set(r.items ?? []);
+        this.unread.set(r.unread_count ?? 0);
+        if (r.latest_id != null) this.latestId = r.latest_id;
+      },
       error: () => { /* bell stays quiet if the feed is briefly unavailable */ },
     });
   }
 
   private refreshUnread(): void {
     this.http.get<any>('/api/v1/notifications/unread-count').subscribe({
-      next: r => this.unread.set(r.count ?? 0),
+      next: r => {
+        this.unread.set(r.count ?? 0);
+        const lid = r.latest_id ?? null;
+        if (lid != null && this.latestId != null && lid > this.latestId) {
+          this.latestId = lid;
+          if (this.bellOpen()) this.loadNotifs();
+        } else if (lid != null) {
+          this.latestId = lid;
+        }
+      },
       error: () => { },
     });
   }

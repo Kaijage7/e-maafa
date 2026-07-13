@@ -878,7 +878,10 @@ These are the endpoints that read/write the core data structures above. Full pat
 | GET/POST/PUT | `/api/v1/stakeholders` | read `isAuthenticated()`; write `Authz.STAKEHOLDER_ADMIN` | Stakeholder registry CRUD (`StakeholderAdminController`). |
 | PUT | `/api/v1/stakeholders/{id}/verify` | `Authz.STAKEHOLDER_VERIFY` | Verify a stakeholder. |
 | PUT | `/api/v1/stakeholders/{id}/link-user` | `Authz.STAKEHOLDER_ADMIN` | Bind a login to a stakeholder (`users.stakeholder_id`, V95). |
-| GET | `/api/v1/notifications` / `/unread-count` | (read) | The per-user bell feed (`resource_notifications`). |
+| GET | `/api/v1/notifications` | (read) | Per-user bell/centre feed with productive filters: `limit`, `unread`, `type`, `category`, `severity`, `q`, `before_id`. Returns items (enriched with category/severity_norm), unread_count, latest_id, categories chips, has_more. |
+| GET | `/api/v1/notifications/unread-count` | (read) | Lightweight badge poll: `count`, `latest_id`, `by_severity`. |
+| POST | `/api/v1/notifications/{id}/unread` | `Authz.AUTHENTICATED` | Mark one own notice unread. |
+| DELETE | `/api/v1/notifications/{id}` | `Authz.AUTHENTICATED` | Dismiss (delete) one own notice from the feed. |
 | POST | `/api/v1/notifications/preferences` | `Authz.AUTHENTICATED` | Set per-user channel prefs (`users.notify_*`). |
 | GET/POST/PUT | `/api/v1/alert-subscriptions` | read `isAuthenticated()`; write `Authz.PREPAREDNESS_MANAGE` | Citizen alert subscription management. |
 | POST | `/api/v1/onehealth/events` | `Authz.OH_REPORT_EVENT` | Submit a One Health event (`oh_events`). |
@@ -1063,11 +1066,13 @@ All paths are prefixed with the `/api` context path. `Authz.AUTHENTICATED` = `is
 
 | Method | Path | Gate | Purpose |
 |---|---|---|---|
-| GET | `/api/v1/notifications` | (authenticated session) | Bell feed: recent notices + unread count for the current user. |
-| GET | `/api/v1/notifications/unread-count` | (authenticated session) | Lightweight unread-badge poll. |
+| GET | `/api/v1/notifications` | (authenticated session) | Bell/centre feed: filters `unread`, `type`, `category` (derived bucket), `severity`, `q`, `before_id` cursor; items enriched with category + severity_norm; category chip counts. |
+| GET | `/api/v1/notifications/unread-count` | (authenticated session) | Badge poll: count + latest_id (smart client refresh) + by_severity breakdown. |
 | POST | `/api/v1/notifications/{id}/read` | `AUTHENTICATED` | Mark one notice read (scoped to current user). |
+| POST | `/api/v1/notifications/{id}/unread` | `AUTHENTICATED` | Mark one notice unread (scoped to current user). |
 | POST | `/api/v1/notifications/read-all` | `AUTHENTICATED` | Mark all current-user notices read. |
-| GET | `/api/v1/notifications/preferences` | (authenticated session) | The current user's contact + channel preferences. |
+| DELETE | `/api/v1/notifications/{id}` | `AUTHENTICATED` | Dismiss one own notice from the feed. |
+| GET | `/api/v1/notifications/preferences` | (authenticated session) | The current user's contact + channel preferences (+ channel catalogue). |
 | POST | `/api/v1/notifications/preferences` | `AUTHENTICATED` | Save own in-app/email/SMS toggles + phone. |
 | POST | `/api/v1/notifications/test/sms` | `CHANNEL_TEST_WRITE` | Send a real diagnostic SMS to one number. |
 | POST | `/api/v1/notifications/test/email` | `CHANNEL_TEST_WRITE` | Send a real diagnostic email to one address. |

@@ -209,6 +209,7 @@ Suggested migration order:
 63. ~~**Monitoring & Evaluation**~~ — **DONE** (thin controller + dashboard/entry service.impl; `monitoring/` package empty)
 64. ~~**Reports (incident / resource / generated)**~~ — **DONE** (thin controllers + service.impl; `reports/` package empty; EW management already eGA)
 65. ~~**Notification HTTP surface**~~ — **DONE** (thin controllers + service.impl; shared delivery engines stay in `notification/`)
+65b. ~~**Next-level personal feed**~~ — **DONE** (productive filters, category intelligence, mark-unread/dismiss, centre UI + smart poll; see EGA-DEEP §26)
 66. ~~**Stakeholder admin directory**~~ — **DONE** (thin controller + `StakeholderAdminServiceImpl`; `stakeholder/` package empty)
 67. ~~**ops/IAM (auth + go-live ops)**~~ — **DONE** (thin controllers + `AuthServiceImpl` / `GoLiveOpsServiceImpl`; `TotpService` in `service.support`; `iam/` + `ops/` packages empty)
 68. Progressive eGA of primary fat domains complete

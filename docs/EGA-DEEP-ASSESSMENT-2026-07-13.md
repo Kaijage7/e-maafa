@@ -819,3 +819,46 @@ Hazard-area context under `/v1/ops/hazard-area-context` was already eGA (unchang
 | Partner repo | **403** |
 
 **Verdict:** Residual HTTP surfaces eGA-layered with productive filters and walls. Platform controller layer is now consistently under `controller/`.
+
+
+## 26. Next-level personal notification feed (2026-07-13)
+
+User direction: *notification to be really of next level* — productive personal inbox (not AI). No schema change; categories derived from `type`.
+
+### Backend (`UserNotificationServiceImpl`)
+
+| Capability | Behaviour |
+|------------|-----------|
+| Feed filters | `unread`, `type`, `category`, `severity`, `q`, `before_id` (cursor), `limit` 1–100 |
+| Category intelligence | Derived: `workflow`, `early_warning`, `approval`, `logistics`, `training`, `scanner`, `system` — SQL `CASE` mirrors `deriveCategory()` (first match wins) |
+| Ordering | Unread first → critical/high/warning → newest |
+| Enrichment | `category`, `category_label`, `category_icon`, `severity_norm` |
+| Chips | `categories[]` with unread/total per bucket |
+| Badge poll | `GET /unread-count` → `count`, `latest_id`, `by_severity` |
+| Actions | mark read / mark **unread** / mark all / **dismiss** (DELETE own row only) |
+| Preferences | channel catalogue + TZ mobile validation when SMS on |
+| Bad category | **422** with allowed list; bad type/severity → empty list (0 rows) |
+
+### Frontend
+
+| Surface | Behaviour |
+|---------|-----------|
+| Bell (topbar) | Chips All / Unread / Critical / EW / Approvals; category labels; Centre link; smart poll via `latest_id` |
+| Notification Centre | `/m/notifications` — stats, category chips, severity, search, load-older cursor, mark read/unread, dismiss |
+| Module hub | Content Management → Notification Centre |
+
+### Live validation (SA, net-zero where mutating)
+
+| Check | Result |
+|-------|--------|
+| Feed + enrich | **200**, category/severity_norm present |
+| Category matrix (all 7) | **0 mismatches** (filter SQL = enrich category) |
+| `category=xyz` | **422** |
+| unread-count + by_severity + latest_id | **200** |
+| mark unread → count 1 critical → mark read → 0 | **200** net-zero |
+| dismiss probe row | **200**, row gone; user count restored |
+| bad dismiss id | **422** |
+| cursor `before_id` | page2 ids strictly older |
+| preferences GET/POST | **200** |
+
+**Verdict:** Personal notification surface is productively next-level — filters, categories, smart poll, full centre UI — without AI claims or schema churn. Delivery engines remain the single `notification/` spine.
