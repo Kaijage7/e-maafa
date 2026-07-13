@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 16 thin eGA controllers, 16 service + 16 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 17 thin eGA controllers, 17 service + 17 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response R1–R3 | **Migrated** | Stakeholder Coordination, Executive Watch, **Public Reports** |
-| Response remaining | **Legacy fat** | ~20 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
+| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, **Contingency Plans** |
+| Response remaining | **Legacy fat** | ~18 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Public Reports**~~ **DONE** | Next: other Response leaves (never engine/dispatch first) |
+| Next eGA leaf (binding order) | ~~**Contingency Plans**~~ **DONE** | Next: Support pledges or Declarations (never engine/dispatch first) |
 
-**Honest score:** Master data + three Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
+**Honest score:** Master data + four Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -26,8 +26,9 @@
 | Allocations / track / dispatch board / approvals / procurement | Area walls hold |
 | Multi-channel logistics | warehouse, temp, agency, agency-request, procurement, stakeholder (prior commits) |
 | Task create/show area | OOA **404**; same-district create **200** |
-| eGA thin APIs | users, roles, locations, institutions, inventory, training, SC, executive, **public-reports** all **200** |
+| eGA thin APIs | users, roles, locations, institutions, inventory, training, SC, executive, public-reports, **contingency-plans** all **200** |
 | Public Reports scopes | Dist/Reg walls hold; OOA mutations **404**; convert lands `waiting_ded` |
+| Contingency Plans | Filters productive; lifecycle + 422 rules; Dist/DLO **403**; national list by design |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -49,7 +50,8 @@
 - Untagged temp/agency stock still “shared” until stamped.  
 - Dual resource catalogue paths remain.  
 - ~~Next large eGA move: Executive Watch~~ — **DONE** (`d9fdb79`).  
-- ~~Public Reports eGA extract~~ — **DONE** (paths/JSON unchanged; convert still couples to `IncidentWorkflowService`).
+- ~~Public Reports eGA extract~~ — **DONE** (`f8e7d7c`; convert still couples to `IncidentWorkflowService`).  
+- ~~Contingency Plans eGA extract~~ — **DONE** (no Response workflow coupling; `CurrentUserResolver` only).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -60,7 +62,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 
 1. ~~eGA migrate **ExecutiveWatch**~~ — **DONE**.  
 2. ~~eGA migrate **Public Reports**~~ — **DONE**.  
-3. Next Response leaf (still never engine/dispatch/allocation first).  
-4. Keep logistics in place; extract services only when touching heavily.  
-5. Stamp area on temp warehouses + agency stock data hygiene.  
-6. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+3. ~~eGA migrate **Contingency Plans**~~ — **DONE**.  
+4. Next: Support pledges or Declarations (never engine/dispatch/allocation first).  
+5. Keep logistics in place; extract services only when touching heavily.  
+6. Stamp area on temp warehouses + agency stock data hygiene.  
+7. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.

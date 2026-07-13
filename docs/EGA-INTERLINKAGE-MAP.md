@@ -244,10 +244,10 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | # | Module | Path | Lines (approx) | Coupling notes | Status |
 |---|--------|------|----------------|----------------|--------|
 | R1 | **Stakeholder coordination** | `/v1/response/stakeholder-coordination` | ~138 | **Read-only**; SQL on stakeholders/tasks/bids/agency_resources; JurisdictionScope + AreaGuard; **no** response service imports | **DONE** |
-| R2 | Executive watch | `/v1/response/executive` | ~214 | Read-only national COP; many tables; NATIONAL tier gate only | pending |
-| R3 | Contingency plans | `/v1/response/contingency-plans` | ~209 | Own path; check FE + writes | pending |
+| R2 | Executive watch | `/v1/response/executive` | ~214 | Read-only national COP; many tables; NATIONAL tier gate only | **DONE** |
+| R3 | Contingency plans | `/v1/response/contingency-plans` | ~209 | Own path; FE lifecycle; no workflow coupling | **DONE** |
 | R4 | Support pledges | `/v1/response/support` | ~260 | Writes + NotificationService; SQL to training_plans / mitigation_measures | pending |
-| R5 | Public reports | `/v1/response/public-reports` | ~278 | **Java type** → `IncidentWorkflowService` (same package helper) | pending |
+| R5 | Public reports | `/v1/response/public-reports` | ~278 | **Java type** → `IncidentWorkflowService` (helpers made public for eGA service.impl) | **DONE** |
 | R6 | Declarations | `/v1/response/declarations` | ~294 | Executive/activation SQL consumers | pending |
 | R7 | Resource approvals | `/v1/response/approvals` | ~285 | **ApprovalWorkflowEngine** + warehouses | pending |
 | R8+ | Tasks, assessments, anticipatory, communication, settings, warehouse-ops, dispatch, allocations, bidding, DLNA, incidents, command center | various | large | High SQL + engine + shared bases — last | pending |

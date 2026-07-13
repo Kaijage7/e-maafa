@@ -160,7 +160,8 @@ Suggested migration order:
 14. ~~**Stakeholder coordination (Response R1)**~~ — **DONE** (read-only first Response leaf)  
 15. ~~**Executive Watch (Response R2)**~~ — **DONE** (read-only national COP; service.impl + thin controller)  
 16. ~~**Public Reports (Response R3)**~~ — **DONE** (triage + convert; service.impl + thin controller; workflow helpers public for convert)  
-17. Response remaining (never engine/dispatch/allocation first) then EW  
+17. ~~**Contingency Plans (Response R4 / map R3)**~~ — **DONE** (lifecycle; thin controller + service.impl; no workflow coupling)  
+18. Response remaining (never engine/dispatch/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -184,8 +185,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Stakeholder coordination | Done | `/v1/response/stakeholder-coordination` | Index + show 360°; not-found; FE proxy; preparedness/settings/response regressions; first Response eGA leaf |
 | Executive Watch (Response R2) | Done | `/v1/response/executive` | Thin controller + service.impl; national tier only (area → 403); JSON unchanged; multi-persona verify |
 | Public Reports (Response R3) | Done | `/v1/response/public-reports` | Thin controller + service.impl; paths/JSON/PreAuthorize unchanged; multi-persona list scopes; OOA review/dismiss/convert **404**; dismiss reason **422**; convert untagged/already-converted **422**; convert → waiting_ded + link integrity (drill reverted) |
+| Contingency Plans (map R3) | Done | `/v1/response/contingency-plans` | Thin controller + service.impl; filters productive; lifecycle create→submit→reject→approve→archive; perm walls (Dist **403**); show 404; drill net-zero |
 
-16. ~~**Public Reports**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
+17. ~~**Contingency Plans**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
 
 ---
 

@@ -1,50 +1,36 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
+import tz.go.pmo.dmis.service.ContingencyPlansService;
 
 /**
- * Contingency Plans — the strategic, sector-wide preparedness plans that sit alongside the
- * Anticipatory Action Plans (the risk-assessment plan_type was {anticipatory, contingency}).
- * Where an anticipatory plan is forecast-triggered and area-specific, a contingency plan is a
- * standing multi-region, multi-sector plan for a hazard over a timeframe. Port of the Laravel
- * ContingencyPlan model with the same draft→pending→active→archived lifecycle.
+ * Contingency plan registry and lifecycle. Logic moved from the former response package
+ * controller; Angular paths/JSON unchanged. Acting user via {@link CurrentUserResolver}
+ * (no Response workflow coupling — plans are strategic, not incident-ladder).
  */
-@RestController
-@RequestMapping("/v1/response/contingency-plans")
-public class ContingencyPlanController {
+@Service
+@RequiredArgsConstructor
+public class ContingencyPlansServiceImpl implements ContingencyPlansService {
 
-    private static final List<String> STATUSES = List.of("draft", "pending", "active", "archived");
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final JdbcTemplate jdbc;
-    private final IncidentWorkflowService users;
+    private final CurrentUserResolver users;
 
-    public ContingencyPlanController(JdbcTemplate jdbc, IncidentWorkflowService users) {
-        this.jdbc = jdbc;
-        this.users = users;
-    }
-
-    @GetMapping
-    @PreAuthorize("hasAuthority('contingency_plans.view')")
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false) String hazard) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> index(String status, String hazard) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
         if (status != null && !status.isBlank()) {
@@ -63,7 +49,10 @@ public class ContingencyPlanController {
                 order by case status when 'active' then 0 when 'pending' then 1 when 'draft' then 2 else 3 end,
                          created_at desc limit 200
                 """.formatted(where), params.toArray());
-        plans.forEach(p -> { parseJsonField(p, "coverage_regions"); parseJsonField(p, "sectors"); });
+        plans.forEach(p -> {
+            parseJsonField(p, "coverage_regions");
+            parseJsonField(p, "sectors");
+        });
         out.put("plans", plans);
         // Stats + by_hazard honour the same status/hazard filters as the list so query params are productive.
         out.put("stats", jdbc.queryForMap("""
@@ -80,19 +69,18 @@ public class ContingencyPlanController {
         return out;
     }
 
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('contingency_plans.view')")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> show(long id) {
         Map<String, Object> plan = findOr404(id);
         parseJsonField(plan, "coverage_regions");
         parseJsonField(plan, "sectors");
         return Map.of("plan", plan);
     }
 
-    @PostMapping
-    @PreAuthorize("hasAuthority('contingency_plans.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> store(@RequestBody Map<String, Object> body) throws Exception {
+    public Map<String, Object> store(Map<String, Object> body) throws Exception {
         Long id = jdbc.queryForObject("""
                 insert into public.contingency_plans(publication_date, hazard_type, timeframe, coverage_regions,
                     sectors, budget, description, status, created_by, created_at, updated_at)
@@ -103,10 +91,9 @@ public class ContingencyPlanController {
         return Map.of("success", true, "id", id, "message", "Contingency plan created.");
     }
 
-    @PostMapping("/{id}")
-    @PreAuthorize("hasAuthority('contingency_plans.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> update(@PathVariable long id, @RequestBody Map<String, Object> body) throws Exception {
+    public Map<String, Object> update(long id, Map<String, Object> body) throws Exception {
         findOr404(id);
         jdbc.update("""
                 update public.contingency_plans set hazard_type = ?, timeframe = ?, coverage_regions = ?::json,
@@ -117,10 +104,9 @@ public class ContingencyPlanController {
         return Map.of("success", true, "message", "Contingency plan updated.");
     }
 
-    @PostMapping("/{id}/submit")
-    @PreAuthorize("hasAuthority('contingency_plans.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> submit(@PathVariable long id) {
+    public Map<String, Object> submit(long id) {
         if (!"draft".equals(findOr404(id).get("status"))) {
             throw new BusinessRuleException("Only draft plans can be submitted.");
         }
@@ -128,10 +114,9 @@ public class ContingencyPlanController {
         return Map.of("success", true, "message", "Plan submitted for approval.");
     }
 
-    @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAuthority('contingency_plans.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> approve(@PathVariable long id) {
+    public Map<String, Object> approve(long id) {
         if (!"pending".equals(findOr404(id).get("status"))) {
             throw new BusinessRuleException("Only pending plans can be approved.");
         }
@@ -140,10 +125,9 @@ public class ContingencyPlanController {
         return Map.of("success", true, "message", "Contingency plan approved and active.");
     }
 
-    @PostMapping("/{id}/reject")
-    @PreAuthorize("hasAuthority('contingency_plans.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> reject(@PathVariable long id) {
+    public Map<String, Object> reject(long id) {
         if (!"pending".equals(findOr404(id).get("status"))) {
             throw new BusinessRuleException("Only pending plans can be rejected.");
         }
@@ -151,16 +135,13 @@ public class ContingencyPlanController {
         return Map.of("success", true, "message", "Plan returned to draft.");
     }
 
-    @PostMapping("/{id}/archive")
-    @PreAuthorize("hasAuthority('contingency_plans.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> archive(@PathVariable long id) {
+    public Map<String, Object> archive(long id) {
         findOr404(id);
         jdbc.update("update public.contingency_plans set status='archived', updated_at=now() where id=?", id);
         return Map.of("success", true, "message", "Plan archived.");
     }
-
-    // ── helpers ──
 
     private Map<String, Object> findOr404(long id) {
         List<Map<String, Object>> rows = jdbc.queryForList("select * from public.contingency_plans where id = ?", id);
