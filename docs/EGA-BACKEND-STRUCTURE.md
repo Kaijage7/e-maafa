@@ -153,8 +153,9 @@ Suggested migration order:
 7. ~~**Translations (Settings)**~~ — **DONE**  
 8. ~~**Resource catalogue (Settings)**~~ — **DONE** (named ResourceCatalogue* to avoid clash with inventory `entity.Resource`)  
 9. ~~**Approval workflows (Settings)**~~ — **DONE** (`RoleCatalogue` made public for service.impl reuse; engine remains SQL-coupled only)  
-10. Remaining Settings (locations, roles, users, institutions)  
-11. Response / EW (SQL-heavy)  
+10. ~~**Locations (Settings)**~~ — **DONE** (hierarchy CRUD + seat seeding; SQL consumers unchanged)  
+11. Remaining Settings (roles, users, institutions)  
+12. Response / EW (SQL-heavy)  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -171,6 +172,7 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Translations | Done | `/v1/settings/translations` | Index/filter, create, conflict 409, update, delete, bad group 400; portal i18n + proxy + preparedness regressions |
 | Resource catalogue | Done | `/v1/settings/resources` | CRUD + vocab guards + in-use delete 409; inventory/reference linkage; proxy + regressions |
 | Approval workflows | Done | `/v1/settings/approval-workflows` | Index + roles, add/edit/move/delete level, toggle module restore, bad-role 400; FE proxy; allocations/coordination regressions; `ApprovalWorkflowRoleVocabTest` |
+| Locations | Done | `/v1/settings/locations` | Index + cascade reads, region/district/council/ward lifecycle net-zero, delete-with-children 409; FE proxy; jurisdiction/user-mgmt regressions; location unit tests |
 
 ---
 

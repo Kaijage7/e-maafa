@@ -1,52 +1,28 @@
-package tz.go.pmo.dmis.settings;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.service.LocationService;
 
 /**
- * System Settings → Location Management. The Tanzania administrative hierarchy
- * (regions → districts → councils/LGAs → wards) that every operational module geo-references: incidents,
- * damage assessments, anticipatory action plans, declarations, early warnings and the
- * Sendai repository all record a region / district. This screen is the single place those
- * reference units are maintained. Councils/LGAs are also the operational level for Mainland
- * DDMC/DED/DC incident-flow seats.
- *
- * <p>Deletes are guarded by the hierarchy: a region with districts (or a district with councils/wards)
- * cannot be removed until its children are — the API says so rather than throwing an FK 500.</p>
+ * JDBC admin for regions / districts / councils / wards. Paths and JSON shapes are unchanged
+ * from the former settings package controller. Other modules read these tables via SQL only.
  */
-@RestController
-@RequestMapping("/v1/settings/locations")
-@Tag(name = "Settings: Location Management", description = "Regions / districts / councils / wards")
+@Service
 @RequiredArgsConstructor
-public class LocationController {
-
-    private static final String CAN_WRITE = "hasAuthority('location_management.manage')";
+public class LocationServiceImpl implements LocationService {
 
     private final JdbcTemplate jdbc;
 
-    /** Regions with their district + council + ward counts and population (the registry view). */
-    @GetMapping
-    @Operation(summary = "Regions with district/ward counts + stats")
-    @PreAuthorize("isAuthenticated()")
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> index() {
         List<Map<String, Object>> regions = jdbc.queryForList(
                 "select r.id, r.name, r.code, r.region_code as \"regionCode\","
@@ -71,11 +47,9 @@ public class LocationController {
         return out;
     }
 
-    /** The districts of one region, each with its ward count (lazy-loaded when a region opens). */
-    @GetMapping("/regions/{regionId}/districts")
-    @Operation(summary = "Districts of a region (+ ward counts)")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> districts(@PathVariable long regionId) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> districts(long regionId) {
         return Map.of("districts", jdbc.queryForList(
                 "select d.id, d.name, d.code, d.district_code as \"districtCode\","
                         + " coalesce(d.country_part, 'mainland') as \"countryPart\", d.population,"
@@ -84,11 +58,9 @@ public class LocationController {
                         + " from public.districts d where d.region_id = ? order by d.name", regionId));
     }
 
-    /** Councils/LGAs of one administrative district, each with its ward count. */
-    @GetMapping("/districts/{districtId}/councils")
-    @Operation(summary = "Councils/LGAs of a district (+ ward counts)")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> councils(@PathVariable long districtId) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> councils(long districtId) {
         return Map.of("councils", jdbc.queryForList(
                 "select c.id, c.name, c.council_code as \"councilCode\","
                         + " coalesce(c.country_part, 'mainland') as \"countryPart\","
@@ -98,31 +70,25 @@ public class LocationController {
                         + " from public.councils c where c.district_id = ? order by c.name", districtId));
     }
 
-    @GetMapping("/districts/{districtId}/wards")
-    @Operation(summary = "Wards of a district")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> wards(@PathVariable long districtId) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> wards(long districtId) {
         return Map.of("wards", jdbc.queryForList(
                 "select id, name, ward_code as \"wardCode\", coalesce(is_active, true) as \"isActive\""
                         + " from public.wards where district_id = ? order by name", districtId));
     }
 
-    @GetMapping("/councils/{councilId}/wards")
-    @Operation(summary = "Wards of a council/LGA")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> councilWards(@PathVariable long councilId) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> councilWards(long councilId) {
         return Map.of("wards", jdbc.queryForList(
                 "select id, name, ward_code as \"wardCode\", coalesce(is_active, true) as \"isActive\""
                         + " from public.wards where council_id = ? order by name", councilId));
     }
 
-    // ── regions ──
-
-    @PostMapping("/regions")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(CAN_WRITE)
+    @Override
     @Transactional
-    public Map<String, Object> createRegion(@RequestBody Map<String, Object> req) {
+    public Map<String, Object> createRegion(Map<String, Object> req) {
         heal("regions");
         Long id = jdbc.queryForObject(
                 "insert into public.regions(name, code, region_code, country_part, population, created_at, updated_at)"
@@ -133,10 +99,9 @@ public class LocationController {
         return Map.of("id", id, "message", "Region added");
     }
 
-    @PutMapping("/regions/{id}")
-    @PreAuthorize(CAN_WRITE)
+    @Override
     @Transactional
-    public Map<String, Object> updateRegion(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> updateRegion(long id, Map<String, Object> req) {
         // NB: `code` (the short VARCHAR(10)) is intentionally NOT written here. The form never sends it,
         // so writing `code = ?` previously nulled an authoritative column on every edit (silent data loss).
         must(jdbc.update("update public.regions set name = coalesce(?,name), region_code = ?, country_part = coalesce(?, country_part),"
@@ -151,10 +116,9 @@ public class LocationController {
         return Map.of("message", "Region updated");
     }
 
-    @DeleteMapping("/regions/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(CAN_WRITE)
-    public void deleteRegion(@PathVariable long id) {
+    @Override
+    @Transactional
+    public void deleteRegion(long id) {
         Long children = jdbc.queryForObject("select count(*) from public.districts where region_id = ?", Long.class, id);
         if (children != null && children > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -163,12 +127,9 @@ public class LocationController {
         jdbc.update("delete from public.regions where id = ?", id);
     }
 
-    // ── districts ──
-
-    @PostMapping("/regions/{regionId}/districts")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> createDistrict(@PathVariable long regionId, @RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> createDistrict(long regionId, Map<String, Object> req) {
         List<String> parts = jdbc.queryForList("select country_part from public.regions where id = ?", String.class, regionId);
         if (parts.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Region not found");
@@ -182,9 +143,9 @@ public class LocationController {
         return Map.of("id", id, "message", "District added");
     }
 
-    @PutMapping("/districts/{id}")
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> updateDistrict(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> updateDistrict(long id, Map<String, Object> req) {
         // NB: `code` (short VARCHAR(10)) intentionally NOT written — the form never sends it, so the old
         // `code = ?` nulled an authoritative column on every edit (silent data loss).
         must(jdbc.update("update public.districts set name = coalesce(?,name), district_code = ?,"
@@ -194,10 +155,9 @@ public class LocationController {
         return Map.of("message", "District updated");
     }
 
-    @DeleteMapping("/districts/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(CAN_WRITE)
-    public void deleteDistrict(@PathVariable long id) {
+    @Override
+    @Transactional
+    public void deleteDistrict(long id) {
         Long councils = jdbc.queryForObject("select count(*) from public.councils where district_id = ?", Long.class, id);
         if (councils != null && councils > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -211,13 +171,9 @@ public class LocationController {
         jdbc.update("delete from public.districts where id = ?", id);
     }
 
-    // ── councils / LGAs ──
-
-    @PostMapping("/districts/{districtId}/councils")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(CAN_WRITE)
+    @Override
     @Transactional
-    public Map<String, Object> createCouncil(@PathVariable long districtId, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> createCouncil(long districtId, Map<String, Object> req) {
         List<Map<String, Object>> parent = jdbc.queryForList(
                 "select d.region_id, coalesce(d.country_part, r.country_part, 'mainland') as country_part"
                         + " from public.districts d left join public.regions r on r.id = d.region_id where d.id = ?",
@@ -238,10 +194,9 @@ public class LocationController {
         return Map.of("id", id, "message", "Council/LGA added");
     }
 
-    @PutMapping("/councils/{id}")
-    @PreAuthorize(CAN_WRITE)
+    @Override
     @Transactional
-    public Map<String, Object> updateCouncil(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> updateCouncil(long id, Map<String, Object> req) {
         must(jdbc.update("update public.councils set name = coalesce(?,name), council_code = ?,"
                 + " population = ?, is_active = coalesce(?, is_active), updated_at = now() where id = ?",
                 str(req.get("name")), str(req.get("councilCode")),
@@ -250,11 +205,9 @@ public class LocationController {
         return Map.of("message", "Council/LGA updated");
     }
 
-    @DeleteMapping("/councils/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(CAN_WRITE)
+    @Override
     @Transactional
-    public void deleteCouncil(@PathVariable long id) {
+    public void deleteCouncil(long id) {
         Long wards = jdbc.queryForObject("select count(*) from public.wards where council_id = ?", Long.class, id);
         if (wards != null && wards > 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -283,12 +236,9 @@ public class LocationController {
         jdbc.update("delete from public.councils where id = ?", id);
     }
 
-    // ── wards ──
-
-    @PostMapping("/districts/{districtId}/wards")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> createWard(@PathVariable long districtId, @RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> createWard(long districtId, Map<String, Object> req) {
         Long exists = jdbc.queryForObject("select count(*) from public.districts where id = ?", Long.class, districtId);
         if (exists == null || exists == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "District not found");
@@ -301,10 +251,9 @@ public class LocationController {
         return Map.of("id", id, "message", "Ward added");
     }
 
-    @PostMapping("/councils/{councilId}/wards")
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> createCouncilWard(@PathVariable long councilId, @RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> createCouncilWard(long councilId, Map<String, Object> req) {
         List<Long> districts = jdbc.queryForList("select district_id from public.councils where id = ?", Long.class, councilId);
         if (districts.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Council/LGA not found");
@@ -317,23 +266,20 @@ public class LocationController {
         return Map.of("id", id, "message", "Ward added");
     }
 
-    @PutMapping("/wards/{id}")
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> updateWard(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> updateWard(long id, Map<String, Object> req) {
         must(jdbc.update("update public.wards set name = coalesce(?,name), ward_code = ?,"
                 + " is_active = coalesce(?, is_active), updated_at = now() where id = ?",
                 str(req.get("name")), str(req.get("wardCode")), bool(req.get("isActive")), id), "Ward not found");
         return Map.of("message", "Ward updated");
     }
 
-    @DeleteMapping("/wards/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(CAN_WRITE)
-    public void deleteWard(@PathVariable long id) {
+    @Override
+    @Transactional
+    public void deleteWard(long id) {
         jdbc.update("delete from public.wards where id = ?", id);
     }
-
-    // ── helpers ──
 
     /**
      * Self-heal an id sequence: the legacy seeder inserted reference rows with explicit ids without
