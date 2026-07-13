@@ -235,7 +235,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 
 | Base path | Controllers |
 |-----------|-------------|
-| `/v1/response/incidents` | `IncidentController` + `IncidentTimelineController` |
+| `/v1/response/incidents` | `controller.IncidentController` (eGA) + `IncidentTimelineController` |
 | `/v1/response/coordination` | `CommandCenterController` (+ scenarios under `/coordination/scenarios`) |
 | `/v1/response` | `controller.DashboardController` (dashboard + eocc + activate; eGA) |
 

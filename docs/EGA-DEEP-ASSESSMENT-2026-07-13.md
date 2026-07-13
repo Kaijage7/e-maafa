@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 33 thin eGA controllers, 33 service + 33 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 34 thin eGA controllers, 34 service + 34 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, Response Settings, Exercise Scenarios, Ops Timeline, DLNA, Dashboard + EOCC, Resource Approvals, Resource Allocations, Warehouse Ops, Dispatch, **Stakeholder Bidding** |
-| Response remaining | **Legacy fat** | ~2 hub controllers under `response/` (CommandCenter ~1.8k, Incident ~1.3k) |
+| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, Response Settings, Exercise Scenarios, Ops Timeline, DLNA, Dashboard + EOCC, Resource Approvals, Resource Allocations, Warehouse Ops, Dispatch, Stakeholder Bidding, **Incidents** |
+| Response remaining | **Legacy fat** | ~1 hub under `response/` (CommandCenter ~1.8k) + workflow engine/support services |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Stakeholder Bidding**~~ **DONE** | Next: Incident + CommandCenter hubs last (largest; shared paths) |
+| Next eGA leaf (binding order) | ~~**Incidents**~~ **DONE** | Next: CommandCenter hub last |
 
-**Honest score:** Master data + twenty Response leaves are eGA-shaped. Only Incident + CommandCenter remain fat under Response. That is documented hub debt, not pretend compliance.
+**Honest score:** Master data + twenty-one Response leaves are eGA-shaped. Only CommandCenter remains fat under Response. That is documented hub debt, not pretend compliance.
 
 ## 2. Deep multi-persona E2E (what is solid)
 

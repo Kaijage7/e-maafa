@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
@@ -15,44 +15,37 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.geo.RegionCentroids;
 import tz.go.pmo.dmis.common.security.AreaGuard;
-import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.response.IncidentOptions;
+import tz.go.pmo.dmis.response.IncidentWorkflowService;
+import tz.go.pmo.dmis.service.IncidentService;
 
 /**
  * Port of Admin\IncidentController (registry, full report form with photos/video,
  * situation updates) plus the workflow actions routes/response.php exposes.
  * Source gaps fixed and logged in issues/response.issues.md: escalate/verify/close
  * (bound to non-existent methods in the source) act on the operational status.
+ * <p>Logic lives in service.impl (eGA); paths/JSON unchanged. Workflow via transitional
+ * {@link IncidentWorkflowService}. Shares base path with ops-timeline controller.
  */
-@RestController
-@RequestMapping("/v1/response/incidents")
-public class IncidentController {
+@Service
+public class IncidentServiceImpl implements IncidentService {
 
-    private static final Logger log = LoggerFactory.getLogger(IncidentController.class);
+    private static final Logger log = LoggerFactory.getLogger(IncidentServiceImpl.class);
     private static final DateTimeFormatter D_M_Y_HI =
             DateTimeFormatter.ofPattern("dd MMM uuuu, HH:mm", Locale.ENGLISH);
     private static final Set<String> ASSIGNABLE_INCIDENT_PERMISSIONS = Set.of(
             "incidents.view", "incidents.create", "incidents.update", "incidents.approve", "incidents.close");
+
 
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService workflow;
@@ -62,9 +55,9 @@ public class IncidentController {
     private final AreaGuard areaGuard;
     private final RegionCentroids centroids;
 
-    public IncidentController(JdbcTemplate jdbc, IncidentWorkflowService workflow, ObjectMapper objectMapper,
-                              JurisdictionScope jurisdiction, AreaGuard areaGuard, RegionCentroids centroids,
-                              @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
+    public IncidentServiceImpl(JdbcTemplate jdbc, IncidentWorkflowService workflow, ObjectMapper objectMapper,
+                               JurisdictionScope jurisdiction, AreaGuard areaGuard, RegionCentroids centroids,
+                               @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
         this.jdbc = jdbc;
         this.workflow = workflow;
         this.objectMapper = objectMapper;
@@ -87,11 +80,11 @@ public class IncidentController {
 
     // ─── Registry ───
 
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(name = "status_filter", required = false) String statusFilter,
-                                     @RequestParam(name = "hazard_filter", required = false) Long hazardFilter,
-                                     @RequestParam(name = "workflow_filter", required = false) String workflowFilter,
-                                     @RequestParam(defaultValue = "1") int page) {
+    @Override
+    public Map<String, Object> index(String statusFilter,
+                                     Long hazardFilter,
+                                     String workflowFilter,
+                                     int page) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
         // Treat all/any/* as unfiltered — a literal status match of "all" yields zero rows (non-productive).
@@ -179,7 +172,7 @@ public class IncidentController {
     }
 
     /** Reference data for the registry filters and the report form. */
-    @GetMapping("/form-data")
+    @Override
     public Map<String, Object> formData() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("hazards", jdbc.queryForList("select id, name from public.hazards order by name"));
@@ -199,18 +192,16 @@ public class IncidentController {
 
     // ─── Store / Update ───
 
-    @PreAuthorize(Authz.PERM_INCIDENT_CREATE)
-    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE})
+    @Override
     @Transactional
-    public ResponseEntity<Map<String, Object>> store(@RequestParam Map<String, String> form,
-            @RequestParam(name = "infrastructure_damage", required = false) List<String> infrastructureDamage,
-            @RequestParam(name = "emergency_needs", required = false) List<String> emergencyNeeds,
-            @RequestPart(name = "photos", required = false) List<MultipartFile> photos,
-            @RequestPart(name = "video", required = false) MultipartFile video) {
+    public Map<String, Object> store(Map<String, String> form,
+            List<String> infrastructureDamage,
+            List<String> emergencyNeeds,
+            List<MultipartFile> photos,
+            MultipartFile video) {
         Map<String, List<String>> errors = validate(form, infrastructureDamage, emergencyNeeds, photos, video);
         if (!errors.isEmpty()) {
-            return ResponseEntity.unprocessableEntity()
-                    .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
+            return Map.of("success", false, "message", "Validation failed.", "errors", errors);
         }
 
         Long regionId = parseOptionalId(errors, form, "region_id", "region");
@@ -226,8 +217,7 @@ public class IncidentController {
         Long assignedToUserId = parseOptionalId(errors, form, "assigned_to_user_id", "assignee");
         validateAssignableUser(errors, assignedToUserId);
         if (!errors.isEmpty()) {
-            return ResponseEntity.unprocessableEntity()
-                    .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
+            return Map.of("success", false, "message", "Validation failed.", "errors", errors);
         }
 
         List<String> photoPaths = storePhotos(photos);
@@ -272,25 +262,23 @@ public class IncidentController {
                 parseLong(form.get("people_affected")), form.get("occurred_at"), form.get("ended_at"),
                 councilId, parseLong(form.get("ward_id")), id);
         workflow.logHistory(id, "created", null, "draft", "Incident reported");
-        return ResponseEntity.ok(Map.of("success", true, "message", "Incident logged successfully.", "id", id));
+        return Map.of("success", true, "message", "Incident logged successfully.", "id", id);
     }
 
-    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
-    @PutMapping(value = "/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE})
+    @Override
     @Transactional
-    public ResponseEntity<Map<String, Object>> update(@PathVariable long id,
-            @RequestParam Map<String, String> form,
-            @RequestParam(name = "infrastructure_damage", required = false) List<String> infrastructureDamage,
-            @RequestParam(name = "emergency_needs", required = false) List<String> emergencyNeeds,
-            @RequestParam(name = "remove_photos", required = false) List<String> removePhotos,
-            @RequestPart(name = "photos", required = false) List<MultipartFile> photos,
-            @RequestPart(name = "video", required = false) MultipartFile video) {
+    public Map<String, Object> update(long id,
+            Map<String, String> form,
+            List<String> infrastructureDamage,
+            List<String> emergencyNeeds,
+            List<String> removePhotos,
+            List<MultipartFile> photos,
+            MultipartFile video) {
         Map<String, Object> incident = workflow.findOr404(id);
         areaGuard.assertOwn("public.incidents", id);   // an area officer may edit only an incident in their own area
         Map<String, List<String>> errors = validate(form, infrastructureDamage, emergencyNeeds, photos, video);
         if (!errors.isEmpty()) {
-            return ResponseEntity.unprocessableEntity()
-                    .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
+            return Map.of("success", false, "message", "Validation failed.", "errors", errors);
         }
         Long updDistrictId = parseOptionalId(errors, form, "district_id", "district");
         Long updCouncilId = parseOptionalId(errors, form, "council_id", "council/LGA");
@@ -302,8 +290,7 @@ public class IncidentController {
         Long assignedToUserId = parseOptionalId(errors, form, "assigned_to_user_id", "assignee");
         validateAssignableUser(errors, assignedToUserId);
         if (!errors.isEmpty()) {
-            return ResponseEntity.unprocessableEntity()
-                    .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
+            return Map.of("success", false, "message", "Validation failed.", "errors", errors);
         }
 
         // Photo set = (existing − removed) + newly uploaded, as in the source update()
@@ -359,13 +346,13 @@ public class IncidentController {
                 updCouncilId, parseLong(form.get("ward_id")), id);
         workflow.logHistory(id, "edited", (String) incident.get("workflow_status"),
                 (String) incident.get("workflow_status"), "Incident details updated");
-        return ResponseEntity.ok(Map.of("success", true, "message", "Incident updated successfully."));
+        return Map.of("success", true, "message", "Incident updated successfully.");
     }
 
     // ─── Show hub ───
 
-    @GetMapping("/{id}")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    public Map<String, Object> show(long id) {
         workflow.findOr404(id);
         // Jurisdiction visibility: an area officer may open ONLY an incident in their own district/region
         // (or a shared/national one); national tier sees all. Mirrors the list scope so two districts never
@@ -532,10 +519,9 @@ public class IncidentController {
 
     // ─── Situation updates ───
 
-    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
-    @PostMapping("/{id}/updates")
+    @Override
     @Transactional
-    public ResponseEntity<Map<String, Object>> storeUpdate(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> storeUpdate(long id, Map<String, Object> body) {
         workflow.findOr404(id);
         areaGuard.assertOwn("public.incidents", id);   // only an in-area officer may log updates on this incident
         String details = strOf(body.get("update_details"));
@@ -550,28 +536,25 @@ public class IncidentController {
             errors.put("update_type", List.of("The selected update type is invalid."));
         }
         if (!errors.isEmpty()) {
-            return ResponseEntity.unprocessableEntity()
-                    .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
+            return Map.of("success", false, "message", "Validation failed.", "errors", errors);
         }
         jdbc.update("""
                 insert into public.incident_updates(incident_id, user_id, update_details, update_type, created_at, updated_at)
                 values (?,?,?,?,now(),now())
                 """, id, workflow.actingUserId(), details, type);
-        return ResponseEntity.ok(Map.of("success", true, "message", "Incident update logged successfully."));
+        return Map.of("success", true, "message", "Incident update logged successfully.");
     }
 
     // ─── Workflow actions ───
 
-    @PreAuthorize(Authz.PERM_INCIDENT_CREATE)
-    @PostMapping("/{id}/submit")
-    public Map<String, Object> submit(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> submit(long id, Map<String, Object> body) {
         String to = workflow.submit(id, comment(body));
         return Map.of("success", true, "message", "Incident submitted for approval.", "workflow_status", to);
     }
 
-    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
-    @PostMapping("/{id}/approve")
-    public Map<String, Object> approve(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> approve(long id, Map<String, Object> body) {
         Map<String, Object> b = body == null ? Map.of() : body;
         String to = workflow.approve(id, strOf(b.get("comments")), strOf(b.get("recommendation")));
         return Map.of("success", true,
@@ -579,32 +562,28 @@ public class IncidentController {
                 "workflow_status", to);
     }
 
-    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
-    @PostMapping("/{id}/rollback")
-    public Map<String, Object> rollback(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> rollback(long id, Map<String, Object> body) {
         String to = workflow.rollback(id, strOf(body.get("comments")), strOf(body.get("by_role")));
         return Map.of("success", true, "message", "Incident rolled back for corrections.", "workflow_status", to);
     }
 
-    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
-    @PostMapping("/{id}/resubmit")
-    public Map<String, Object> resubmit(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> resubmit(long id, Map<String, Object> body) {
         String to = workflow.resubmit(id, comment(body));
         return Map.of("success", true, "message", "Incident resubmitted after corrections.", "workflow_status", to);
     }
 
-    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
-    @PostMapping("/{id}/forward")
-    public Map<String, Object> forward(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> forward(long id, Map<String, Object> body) {
         String to = workflow.forward(id, strOf(body.get("to_role")), strOf(body.get("recommendation")));
         return Map.of("success", true, "message", "Incident forwarded.", "workflow_status", to);
     }
 
     /** Advisory/comment-only path for DC/RC/planning viewers and approvers; does not mutate incident fields. */
-    @PreAuthorize(Authz.PERM_INCIDENT_COMMENT)
-    @PostMapping("/{id}/comments")
+    @Override
     @Transactional
-    public Map<String, Object> addComment(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> addComment(long id, Map<String, Object> body) {
         Map<String, Object> incident = workflow.findOr404(id);
         areaGuard.assertOwn("public.incidents", id);   // comment visibility follows the same district/region boundary
         String text = comment(body);
@@ -618,42 +597,37 @@ public class IncidentController {
 
     // Operational actions bound by routes/response.php to methods missing in the source
 
-    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
-    @PostMapping("/{id}/escalate")
-    public Map<String, Object> escalate(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> escalate(long id, Map<String, Object> body) {
         areaGuard.assertOwn("public.incidents", id);   // only an in-area officer may escalate this incident
         workflow.setOperationalStatus(id, "Escalated", comment(body));
         return Map.of("success", true, "message", "Incident escalated.");
     }
 
-    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
-    @PostMapping("/{id}/verify")
-    public Map<String, Object> verify(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> verify(long id, Map<String, Object> body) {
         areaGuard.assertOwn("public.incidents", id);   // only an in-area officer may verify this incident
         workflow.setOperationalStatus(id, "Verified", comment(body));
         return Map.of("success", true, "message", "Incident verified.");
     }
 
-    @PreAuthorize(Authz.PERM_INCIDENT_CLOSE)
-    @PostMapping("/{id}/close")
-    public Map<String, Object> close(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> close(long id, Map<String, Object> body) {
         areaGuard.assertOwn("public.incidents", id);   // only an in-area officer may close this incident
         workflow.setOperationalStatus(id, "Closed", comment(body));
         return Map.of("success", true, "message", "Incident closed.");
     }
 
     /** DDMC gatekeeper: close an entry-stage incident as a rumour/normal case and inform DED + DAS. */
-    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
-    @PostMapping("/{id}/close-rumor")
-    public Map<String, Object> closeRumor(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> closeRumor(long id, Map<String, Object> body) {
         workflow.closeAsRumor(id, comment(body));
         return Map.of("success", true, "message", "Closed as rumour / normal case; district leadership (DED, DAS) informed.");
     }
 
     /** DED (district) / RAS (region) resolve the incident locally when resources sufficed — instead of escalating. */
-    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
-    @PostMapping("/{id}/resolve")
-    public Map<String, Object> resolve(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> resolve(long id, Map<String, Object> body) {
         String to = workflow.resolve(id, comment(body));
         return Map.of("success", true, "message", "Incident resolved locally; the levels above were informed.", "workflow_status", to);
     }
@@ -662,10 +636,9 @@ public class IncidentController {
 
     /** Pin (or unpin, {@code value:false}) the incident on the public portal map. The map marker opens the
      *  live snapshot at {@code GET /v1/portal/incidents/{id}} (situation + response + resources). */
-    @PreAuthorize("hasAuthority('incidents.publish')")
-    @PostMapping("/{id}/push-map")
+    @Override
     @Transactional
-    public Map<String, Object> pushMap(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> pushMap(long id, Map<String, Object> body) {
         workflow.findOr404(id);
         areaGuard.assertOwn("public.incidents", id);   // publish is national-tier work; an area-scoped grant reaches only own-area incidents
         boolean on = body == null || body.get("value") == null || Boolean.parseBoolean(String.valueOf(body.get("value")));
@@ -712,10 +685,9 @@ public class IncidentController {
 
     /** Publish (or re-publish) the incident as a portal News & Events item linking to its live snapshot.
      *  Idempotent: re-pushing updates the same article rather than creating a duplicate. */
-    @PreAuthorize("hasAuthority('incidents.publish')")
-    @PostMapping("/{id}/push-news")
+    @Override
     @Transactional
-    public Map<String, Object> pushNews(@PathVariable long id) {
+    public Map<String, Object> pushNews(long id) {
         workflow.findOr404(id);
         areaGuard.assertOwn("public.incidents", id);   // publish is national-tier work; an area-scoped grant reaches only own-area incidents
         Map<String, Object> i = jdbc.queryForMap("select id, title, severity_level, region_name, district_name, "
@@ -759,10 +731,9 @@ public class IncidentController {
     }
 
     /** Remove the incident's News & Events item (deactivates the article + clears the link). */
-    @PreAuthorize("hasAuthority('incidents.publish')")
-    @PostMapping("/{id}/remove-news")
+    @Override
     @Transactional
-    public Map<String, Object> removeNews(@PathVariable long id) {
+    public Map<String, Object> removeNews(long id) {
         workflow.findOr404(id);
         areaGuard.assertOwn("public.incidents", id);   // publish is national-tier work; an area-scoped grant reaches only own-area incidents
         Map<String, Object> i = jdbc.queryForMap("select portal_news_id from public.incidents where id = ?", id);
@@ -790,10 +761,9 @@ public class IncidentController {
 
     // ─── History reports (periodic situation figures) ───
 
-    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
-    @PostMapping("/{id}/history-reports")
+    @Override
     @Transactional
-    public ResponseEntity<Map<String, Object>> storeHistoryReport(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> storeHistoryReport(long id, Map<String, Object> body) {
         workflow.findOr404(id);
         areaGuard.assertOwn("public.incidents", id);   // only an in-area officer may write a situation report on this incident
         jdbc.update("""
@@ -812,7 +782,7 @@ public class IncidentController {
                 Boolean.TRUE.equals(body.get("government_property_loss")),
                 Boolean.TRUE.equals(body.get("private_property_loss")),
                 toJson(body.get("services_unavailable")), strOf(body.get("remarks")));
-        return ResponseEntity.ok(Map.of("success", true, "message", "Situation report recorded."));
+        return Map.of("success", true, "message", "Situation report recorded.");
     }
 
     // ─── helpers ───

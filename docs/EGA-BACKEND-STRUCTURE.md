@@ -177,7 +177,8 @@ Suggested migration order:
 31. ~~**Warehouse Ops**~~ — **DONE** (stock ledger ops; DispatchSupportService + SimulationGuard retained)  
 32. ~~**Dispatch**~~ — **DONE** (board + sources + dispatch gate + procurement; DispatchSupportService retained)  
 33. ~~**Stakeholder Bidding**~~ — **DONE** (bids/donations/NDMF; DispatchSupportService retained)  
-34. Response remaining (Incident + CommandCenter hubs last) then EW  
+34. ~~**Incidents**~~ — **DONE** (registry/show/workflow/multipart; IncidentWorkflowService retained)  
+35. Response remaining (CommandCenter hub last) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -218,8 +219,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Warehouse Ops | Done | `/v1/response/warehouse-ops` | Thin controller + service.impl; stock support retained; SA/DED/RAS/DAS isolation; Partner **403**; DED OOA stock **404**; bad remove/empty count **422** net-zero (no stock mutation) |
 | Dispatch | Done | `/v1/response/dispatch` | Thin controller + service.impl; stock support retained; SA/DED/RAS/DAS board stats match; sources OOA **404**; empty dispatch **422** net-zero; Partner **403** |
 | Stakeholder Bidding | Done | `/v1/response/bidding` | Thin controller + service.impl; stock + NotificationService retained; donations/open-needs/NDMF multi-persona match; pool OOA **404**; empty bid/ndmf **422** net-zero; Partner **403** |
+| Incidents | Done | `/v1/response/incidents` | Thin controller + service.impl; workflow hub retained; multipart store/update; coexists with ops-timeline; multi-persona index/show; empty store/update **422**; Partner approve **403** |
 
-33. ~~**Stakeholder Bidding**~~ — **DONE**; remaining Response leaves next (Incident + CommandCenter hubs last)
+34. ~~**Incidents**~~ — **DONE**; remaining Response leaves next (CommandCenter hub last)
 
 ---
 

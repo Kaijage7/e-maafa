@@ -613,7 +613,8 @@ public class IncidentWorkflowService {
                 """, incidentId, userId, from, to, action, role, comments);
     }
 
-    Map<String, Object> findOr404(long id) {
+    /** Public for eGA service.impl (incident registry + show). */
+    public Map<String, Object> findOr404(long id) {
         List<Map<String, Object>> rows = jdbc.queryForList("select * from public.incidents where id = ?", id);
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Incident not found.");
