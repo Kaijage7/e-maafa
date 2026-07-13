@@ -1,7 +1,10 @@
-package tz.go.pmo.dmis.stakeholder;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.StakeholderAdminService;
+import tz.go.pmo.dmis.service.StakeholderAdminService.StakeholderWriteRequest;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -12,34 +15,21 @@ import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.notification.MailService;
 
 /**
- * Stakeholder Portal — directory + verification workflow over the shared `stakeholders` table,
+ * Stakeholder Portal service — directory + verification workflow over the shared `stakeholders` table,
  * reproducing Admin/StakeholderController (list w/ filters + stats, create, update, verify).
  * The table's operational writes belong to the Response module; this admin surface
  * is additive (no schema change).
  */
-@RestController
-@RequestMapping("/v1/stakeholders")
+@Service
 @RequiredArgsConstructor
-@Tag(name = "Stakeholder Portal", description = "Partner directory + verification")
-public class StakeholderAdminController {
+public class StakeholderAdminServiceImpl implements StakeholderAdminService {
 
     private static final String MODEL_TYPE = "App\\Models\\User";
 
@@ -57,15 +47,7 @@ public class StakeholderAdminController {
     @Value("${dmis.auth.reset-token-ttl-minutes:60}")
     private long resetTtlMinutes;
 
-    public record StakeholderWriteRequest(String name, String organization, String type, String sector,
-                                          String email, String phone, String region, String district,
-                                          String contactPersonName, String contactPersonTitle,
-                                          Boolean isActive) {
-    }
-
-    @GetMapping
-    @Operation(summary = "Stakeholder directory + stats")
-    @PreAuthorize("hasAuthority('stakeholders.view')")
+    @Override
     public Map<String, Object> index() {
         // jurisdiction visibility: region/district officer sees their own area + shared (null-area) partners;
         // national tier + non-area roles see all. Stats are derived from the returned rows, so they auto-scope.
@@ -96,12 +78,9 @@ public class StakeholderAdminController {
                         "pending", rows.size() - verified));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Register a stakeholder (admin)")
-    @PreAuthorize("hasAuthority('stakeholders.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> create(@RequestBody StakeholderWriteRequest req) {
+    public Map<String, Object> create(StakeholderWriteRequest req) {
         if (req.name() == null || req.name().isBlank() || req.organization() == null || req.organization().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name and organization are required");
         }
@@ -119,11 +98,9 @@ public class StakeholderAdminController {
         return Map.of("id", id, "message", "Stakeholder registered");
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Update a stakeholder")
-    @PreAuthorize("hasAuthority('stakeholders.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> update(@PathVariable long id, @RequestBody StakeholderWriteRequest req) {
+    public Map<String, Object> update(long id, StakeholderWriteRequest req) {
         // resolve picker names to FK ids; null (e.g. toggleActive sends only isActive) leaves the area unchanged
         Long regionId = areaLookup.regionId(req.region());
         Long districtId = areaLookup.districtId(req.district(), regionId);
@@ -144,11 +121,9 @@ public class StakeholderAdminController {
         return Map.of("id", id, "message", "Updated");
     }
 
-    @PutMapping("/{id}/verify")
-    @Operation(summary = "Verify / unverify a partner and provision partner login when possible")
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> verify(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> verify(long id, Map<String, Object> req) {
         boolean verified = Boolean.parseBoolean(String.valueOf(req.getOrDefault("verified", "true")));
         Map<String, Object> stakeholder = stakeholderForApproval(id);
         jdbc.update("update public.stakeholders set is_verified=?,"
@@ -338,11 +313,9 @@ public class StakeholderAdminController {
      * themselves from the partner-facing donation/support pages. One login maps to one partner; passing a
      * blank email unlinks.
      */
-    @PutMapping("/{id}/link-user")
-    @Operation(summary = "Link a login account to this partner (enables self-service donations)")
-    @PreAuthorize("hasAuthority('stakeholders.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> linkUser(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> linkUser(long id, Map<String, Object> req) {
         find(id);
         String email = req.get("email") == null ? null : String.valueOf(req.get("email")).trim();
         // The link lives in TWO mirror columns: stakeholders.user_id (directory side) and

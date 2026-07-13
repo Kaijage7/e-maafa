@@ -159,7 +159,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 43. ~~eGA migrate **Monitoring & Evaluation**~~ — **DONE** (see §18).
 44. ~~eGA migrate **Reports** (incident / resource / generated)~~ — **DONE** (see §19).
 45. ~~eGA migrate **Notification HTTP surface**~~ — **DONE** (see §20; shared engines retained in `notification/`).
-46. Next fat domains: stakeholder / ops-IAM. 
+46. ~~eGA migrate **Stakeholder admin**~~ — **DONE** (see §22).
+47. Next fat domains: ops/IAM. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -687,3 +688,38 @@ User direction: *keep validating; no fake codes; every functionality/param produ
 3. Partner M&E **view** is intentional RBAC, not a hole.
 
 **Verdict:** No fake filter contracts found on FE-wired params; security walls hold; integration links are live; AI product surface absent; system remains presentable and eGA-organised. Ready for residual stakeholder / ops-IAM when requested.
+
+
+## 22. Stakeholder admin eGA (2026-07-13, careful)
+
+Single residual fat controller `stakeholder/StakeholderAdminController` (~403 lines). **Paths/JSON unchanged** (`/v1/stakeholders`).
+
+### Structure
+
+| Before | After |
+|--------|--------|
+| fat controller in `stakeholder/` | Thin `controller/StakeholderAdminController` |
+| | `service/StakeholderAdminService` (+ write request record) |
+| | `service.impl/StakeholderAdminServiceImpl` |
+| | `stakeholder/` package **removed** |
+
+Controls retained: area scope + partner self-isolation in `index()`; verify provisions Partners role + set-password email; link-user dual-column sync.
+
+### Live validation (net-zero)
+
+| Drill | Result |
+|-------|--------|
+| Directory SA | **200**, n=**335**, stats total/verified/active/pending |
+| Empty create | **400** name/organization required |
+| Create E2E partner | **201** id |
+| Toggle isActive | **200** Updated |
+| Verify | **200**, `accountProvisioned=true` (login + pending email log) |
+| Unverify | **200** revoked message |
+| link-user missing email | **404** |
+| Unauth list | **401** |
+| Partner manage create | **403** |
+| Cleanup | e2e stakeholder + provisioned user removed; directory back to **335** |
+
+FE: `/m/stakeholder-portal/directory` → `/api/v1/stakeholders` (list/create/update/verify/link-user).
+
+**Verdict:** Stakeholder admin is eGA-layered with isolation and verification flows intact. Residual fat: **ops/IAM** only.

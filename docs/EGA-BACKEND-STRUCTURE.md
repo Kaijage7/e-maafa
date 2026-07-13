@@ -132,7 +132,7 @@ Optional later: subpackages under layers for readability only, e.g. `controller.
 
 ## 7. Transition rules (existing code)
 
-Legacy fat packages under `ew/`, `recovery/`, `portal/`, `onehealth/`, `finance/`, `monitoring/`, and `reports/` controllers are gone. Notification HTTP controllers are eGA-layered; shared delivery engines (`NotificationService`, `MailService`, `AudienceService`, `ExternalDeliveryService`, schedulers) remain in `notification/` as cross-domain infrastructure (like `service.support/`). Other domains (stakeholder, ops/IAM …) may still host controllers until migrated.
+Legacy fat packages under `ew/`, `recovery/`, `portal/`, `onehealth/`, `finance/`, `monitoring/`, `reports/`, and `stakeholder/` controllers are gone. Notification HTTP controllers are eGA-layered; shared delivery engines remain in `notification/` as cross-domain infrastructure (like `service.support/`). Residual fat packages: ops/IAM.
 
 | Rule | |
 |------|---|
@@ -209,7 +209,8 @@ Suggested migration order:
 63. ~~**Monitoring & Evaluation**~~ — **DONE** (thin controller + dashboard/entry service.impl; `monitoring/` package empty)
 64. ~~**Reports (incident / resource / generated)**~~ — **DONE** (thin controllers + service.impl; `reports/` package empty; EW management already eGA)
 65. ~~**Notification HTTP surface**~~ — **DONE** (thin controllers + service.impl; shared delivery engines stay in `notification/`)
-66. Remaining fat domains: stakeholder / ops-IAM
+66. ~~**Stakeholder admin directory**~~ — **DONE** (thin controller + `StakeholderAdminServiceImpl`; `stakeholder/` package empty)
+67. Remaining fat domains: ops/IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
