@@ -894,3 +894,31 @@ User direction: *keep validating; no fake codes; every functionality/param produ
 | Unauth notif / comm / incidents | **401** |
 
 **Verdict:** Detected fake-filter behaviours fixed; productive params work end-to-end; isolation and walls hold.
+
+
+## 28. Careful multi-module productive audit (2026-07-14)
+
+User direction: *proceed very carefully.*
+
+### Method
+Read-only inventory first; mutate only proven silent-accept defects. No package moves, no schema.
+
+### False alarms (filters already productive)
+| Surface | Param | Primary list | Notes |
+|---------|-------|--------------|-------|
+| Relief distributions | `status=NOPE` | `distributions` **n=0** | Form catalogues (`resources`/`agencies`) stay full by design |
+| Knowledge | `type`/`approval=NOPE` | `entries` **n=0** | Picklists unchanged |
+| Dispatch | `incident_id=999…` | `grouped` **n=0** | Incident picker list still present |
+| Scanner / EW products / recovery programs | nonsense | **n=0** | OK |
+| Finance endpoints | — | **200** + unauth **401** | List filters intentionally absent |
+
+### Real defects fixed
+| Param | Before | After |
+|-------|--------|-------|
+| Scanner `days=0`/`-1` | Silently ignored → full list | **422** (valid 1–365; omit = all-time) |
+| Scanner `days=400` | Clamped silently | **422** |
+| DMD `days=-5`/`0`/`99` | Empty or odd 200 | **422** (valid 1–14) |
+| Impact `day=0` or `day>days` | Silent fallback to day 1 | **422** |
+
+### Regression
+Prior notification severity/cursor and communication `range` contracts still hold.

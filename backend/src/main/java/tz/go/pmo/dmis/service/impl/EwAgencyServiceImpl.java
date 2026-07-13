@@ -378,6 +378,10 @@ public class EwAgencyServiceImpl implements EwAgencyService {
     @Override
     @SuppressWarnings("unchecked")
     public Map<String, Object> consolidated(int days) {
+        // Productive forecast horizon (FE uses 5); never silently accept 0/negative as empty overlay.
+        if (days < 1 || days > 14) {
+            throw new BusinessRuleException("days must be between 1 and 14.");
+        }
         // PMO-DMD consolidation overlays every entity; an agency-bound login only sees its own contribution.
         String mine = myAgencyOrNull();
         List<Map<String, Object>> rows = mine == null
@@ -454,6 +458,10 @@ public class EwAgencyServiceImpl implements EwAgencyService {
     @Override
     @SuppressWarnings("unchecked")
     public Map<String, Object> impactSupport(int day, int days, String hazardFocus) {
+        // consolidated() already validates days 1–14.
+        if (day < 1 || day > days) {
+            throw new BusinessRuleException("day must be between 1 and " + days + ".");
+        }
         Map<String, Object> cons = consolidated(days);
         List<Map<String, Object>> dayList = (List<Map<String, Object>>) cons.get("days");
         Map<String, Object> dayRow = null;
@@ -463,8 +471,8 @@ public class EwAgencyServiceImpl implements EwAgencyService {
                 break;
             }
         }
-        if (dayRow == null && !dayList.isEmpty()) {
-            dayRow = dayList.get(0);
+        if (dayRow == null) {
+            throw new BusinessRuleException("No consolidation data for day " + day + ".");
         }
         Map<String, String> levels = new LinkedHashMap<>();
         Map<String, String> sources = new LinkedHashMap<>();

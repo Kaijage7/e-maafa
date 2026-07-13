@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.geo.RegionCentroids;
 import tz.go.pmo.dmis.common.security.Authz;
@@ -530,10 +531,13 @@ public class EwScannerServiceImpl implements EwScannerService {
             args.add(like);
             args.add(like);
         }
-        if (days != null && days > 0) {
-            int d = Math.min(days, 365);
+        // Optional lookback: omit = all time; provided value must be productive 1–365 (never silently ignore 0/-1).
+        if (days != null) {
+            if (days < 1 || days > 365) {
+                throw new BusinessRuleException("days must be between 1 and 365 (omit the param for all-time).");
+            }
             where.append(" and detected_at >= now() - (? * interval '1 day')");
-            args.add(d);
+            args.add(days);
         }
         return new Filter(where.toString(), args);
     }
