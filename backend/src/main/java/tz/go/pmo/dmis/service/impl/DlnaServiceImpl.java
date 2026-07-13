@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -7,19 +7,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.service.DlnaService;
+import tz.go.pmo.dmis.service.DlnaService.CreateRequest;
+import tz.go.pmo.dmis.service.DlnaService.FileReportRequest;
+import tz.go.pmo.dmis.service.DlnaService.HeaderRequest;
+import tz.go.pmo.dmis.service.DlnaService.PlanRequest;
+import tz.go.pmo.dmis.service.DlnaService.SectionRequest;
 
 /**
  * NDRF 2026 Annex 1 — the official Damage, Loss and Needs Assessment (DLNA) instrument —
@@ -33,10 +33,10 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  *
  * Section answers live as JSON keyed by the frontend schema (single source of truth for
  * form AND generated output) — the instrument is a checklist, not typed analytics.
+ * <p>Logic lives in service.impl (eGA); paths/JSON unchanged. Acting user via CurrentUserResolver.
  */
-@RestController
-@RequestMapping("/v1/response/dlna")
-public class DlnaController {
+@Service
+public class DlnaServiceImpl implements DlnaService {
 
     /** The Annex-1 sections in document order, with the NDRF Table-1 sector attribution. */
     private static final Map<String, String> SECTIONS = new LinkedHashMap<>();
@@ -83,14 +83,14 @@ public class DlnaController {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final JdbcTemplate jdbc;
-    private final IncidentWorkflowService users;
+    private final CurrentUserResolver users;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
     private final tz.go.pmo.dmis.common.pdf.HtmlPdfService pdf;
     private final tz.go.pmo.dmis.notification.NotificationService notifications;
     private final java.nio.file.Path storageRoot;
 
-    public DlnaController(JdbcTemplate jdbc, IncidentWorkflowService users,
+    public DlnaServiceImpl(JdbcTemplate jdbc, CurrentUserResolver users,
                           JurisdictionScope jurisdiction, AreaGuard areaGuard,
                           tz.go.pmo.dmis.common.pdf.HtmlPdfService pdf,
                           tz.go.pmo.dmis.notification.NotificationService notifications,
@@ -106,8 +106,8 @@ public class DlnaController {
 
     // ─── Registry ───
 
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) Long incident_id) {
+    @Override
+    public Map<String, Object> index(Long incidentId) {
         StringBuilder sql = new StringBuilder("""
                 select d.id, d.ref_no, d.incident_id, d.scope, d.status, d.date_of_visit, d.region, d.district,
                        d.disaster_type, d.created_at, i.title as incident_title,
@@ -123,10 +123,10 @@ public class DlnaController {
                 where 1=1
                 """);
         List<Object> params = new ArrayList<>();
-        if (incident_id != null) {
+        if (incidentId != null) {
             // Matches through the COVERAGE, so a combined DLNA appears on every incident it covers.
             sql.append(" and exists (select 1 from public.dlna_incidents di where di.assessment_id = d.id and di.incident_id = ?)");
-            params.add(incident_id);
+            params.add(incidentId);
         }
         // Area visibility ALSO rides the coverage: a combined DLNA is visible to the officers of
         // EVERY covered incident's area (a Kyela DED must see the flood DLNA led by an Ilala
@@ -162,17 +162,9 @@ public class DlnaController {
     /** DLNA coverage: one incident, several incidents of the same hazard, or a multi-hazard compound event. */
     private static final List<String> SCOPES = List.of("SINGLE", "SAME_HAZARD", "MULTI_HAZARD");
 
-    public record CreateRequest(Long incident_id, String scope, List<Long> additional_incident_ids,
-                                String date_of_visit, String region, String district,
-                                String ward, String village, String gps_coordinates, String disaster_type,
-                                String disaster_type_other, String affected_villages,
-                                List<Map<String, Object>> team_members, List<Map<String, Object>> interviewees) {
-    }
-
-    @PostMapping
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
     @Transactional
-    public Map<String, Object> create(@RequestBody CreateRequest req) throws Exception {
+    @Override
+    public Map<String, Object> create(CreateRequest req) throws Exception {
         if (req.incident_id() == null) {
             throw new BusinessRuleException("A lead incident is required — the DLNA is keyed per incident.");
         }
@@ -270,8 +262,8 @@ public class DlnaController {
         }
     }
 
-    @GetMapping("/{id:\\d+}")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    public Map<String, Object> show(long id) {
         Map<String, Object> assessment = findOr404(id);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("assessment", assessment);
@@ -309,15 +301,8 @@ public class DlnaController {
 
     // ─── Keying ───
 
-    public record HeaderRequest(String date_of_visit, String region, String district, String ward,
-                                String village, String gps_coordinates, String disaster_type,
-                                String disaster_type_other, String affected_villages,
-                                List<Map<String, Object>> team_members, List<Map<String, Object>> interviewees) {
-    }
-
-    @PostMapping("/{id:\\d+}/header")
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
-    public Map<String, Object> saveHeader(@PathVariable long id, @RequestBody HeaderRequest req) throws Exception {
+    @Override
+    public Map<String, Object> saveHeader(long id, HeaderRequest req) throws Exception {
         assertEditable(findOr404(id));
         if (req.disaster_type() != null && !req.disaster_type().isBlank()
                 && !DISASTER_TYPES.contains(req.disaster_type())) {
@@ -341,13 +326,8 @@ public class DlnaController {
         return Map.of("success", true, "message", "General information saved.");
     }
 
-    public record SectionRequest(JsonNode data, Boolean submit) {
-    }
-
-    @PostMapping("/{id:\\d+}/sections/{key}")
-    @PreAuthorize("hasAnyAuthority('damage_assessment.create','damage_assessment.key_section')")
-    public Map<String, Object> saveSection(@PathVariable long id, @PathVariable String key,
-                                           @RequestBody SectionRequest req) throws Exception {
+    @Override
+    public Map<String, Object> saveSection(long id, String key, SectionRequest req) throws Exception {
         assertEditable(findOr404(id));
         if (!SECTIONS.containsKey(key)) {
             throw new ResourceNotFoundException("Unknown DLNA section.");
@@ -386,9 +366,8 @@ public class DlnaController {
                 "message", submit ? "Section submitted." : "Section saved (still open for keying).");
     }
 
-    @PostMapping("/{id:\\d+}/sections/{key}/reopen")
-    @PreAuthorize("hasAnyAuthority('damage_assessment.create','damage_assessment.key_section')")
-    public Map<String, Object> reopenSection(@PathVariable long id, @PathVariable String key) {
+    @Override
+    public Map<String, Object> reopenSection(long id, String key) {
         assertEditable(findOr404(id));
         assertSectorMayKey(key);
         int updated = jdbc.update("""
@@ -404,10 +383,9 @@ public class DlnaController {
 
     // ─── Finalize ───
 
-    @PostMapping("/{id:\\d+}/finalize")
-    @PreAuthorize("hasAuthority('damage_assessment.verify')")
     @Transactional
-    public Map<String, Object> finalize(@PathVariable long id) {
+    @Override
+    public Map<String, Object> finalize(long id) {
         Map<String, Object> assessment = findOr404(id);
         if ("Final".equals(assessment.get("status"))) {
             throw new BusinessRuleException("This DLNA is already final.");
@@ -429,9 +407,8 @@ public class DlnaController {
         return Map.of("success", true, "message", "DLNA finalized — the Annex 1 output is now the official record.");
     }
 
-    @PostMapping("/{id:\\d+}/reopen")
-    @PreAuthorize("hasAuthority('damage_assessment.verify')")
-    public Map<String, Object> reopen(@PathVariable long id) {
+    @Override
+    public Map<String, Object> reopen(long id) {
         findOr404(id);
         jdbc.update("update public.dlna_assessments set status = 'In Progress', finalized_by = null, finalized_at = null, updated_at = now() where id = ?", id);
         return Map.of("success", true, "message", "DLNA reopened for corrections.");
@@ -439,8 +416,8 @@ public class DlnaController {
 
     // ─── Annex 2: Recovery Implementation Plan (one per incident) ───
 
-    @GetMapping("/plan/by-incident/{incidentId:\\d+}")
-    public Map<String, Object> planByIncident(@PathVariable long incidentId) {
+    @Override
+    public Map<String, Object> planByIncident(long incidentId) {
         areaGuard.assertOwnOrShared("public.incidents", incidentId);
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select id, incident_id, dlna_id, status, chapters::text as chapters,
@@ -463,13 +440,9 @@ public class DlnaController {
         return out;
     }
 
-    public record PlanRequest(JsonNode chapters, Long dlna_id) {
-    }
-
-    @PostMapping("/plan/by-incident/{incidentId:\\d+}")
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
     @Transactional
-    public Map<String, Object> savePlan(@PathVariable long incidentId, @RequestBody PlanRequest req) throws Exception {
+    @Override
+    public Map<String, Object> savePlan(long incidentId, PlanRequest req) throws Exception {
         areaGuard.assertOwnOrShared("public.incidents", incidentId);
         if (req.chapters() == null || !req.chapters().isObject()) {
             throw new BusinessRuleException("Plan chapters must be a JSON object.");
@@ -541,8 +514,7 @@ public class DlnaController {
      * logged-in user's agency (empty for non-agency logins). This is how the sectors FEED the
      * DLNA — each row links straight into the section keying screen.
      */
-    @GetMapping("/my-sections")
-    @PreAuthorize("hasAnyAuthority('damage_assessment.create','damage_assessment.key_section')")
+    @Override
     public Map<String, Object> mySections() {
         String agency = jurisdiction.currentAgencyCode();
         List<String> keys = new ArrayList<>();
@@ -606,18 +578,14 @@ public class DlnaController {
 
     // ─── PDF filing → Reports & Analytics ───
 
-    public record FileReportRequest(String html) {
-    }
-
     /**
      * Renders the FINAL Annex-1 document to PDF and files it in the Reports & Analytics
      * registry. Final-only: an in-progress DLNA is a working copy, not an official record.
      * Each filing is a new versioned file — never an overwrite.
      */
-    @PostMapping("/{id:\\d+}/file-report")
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
     @Transactional
-    public Map<String, Object> fileAnnex1Report(@PathVariable long id, @RequestBody FileReportRequest req) throws Exception {
+    @Override
+    public Map<String, Object> fileAnnex1Report(long id, FileReportRequest req) throws Exception {
         Map<String, Object> assessment = findOr404(id);
         if (!"Final".equals(assessment.get("status"))) {
             throw new BusinessRuleException("Only a FINAL DLNA can be filed as an official Annex 1 report — finalize it first.");
@@ -630,10 +598,9 @@ public class DlnaController {
 
     /** Files the Recovery Implementation Plan (Annex 2) PDF — the plan is a living document,
      *  so every filing is a dated version in the registry. */
-    @PostMapping("/plan/by-incident/{incidentId:\\d+}/file-report")
-    @PreAuthorize("hasAuthority('damage_assessment.create')")
     @Transactional
-    public Map<String, Object> filePlanReport(@PathVariable long incidentId, @RequestBody FileReportRequest req) throws Exception {
+    @Override
+    public Map<String, Object> filePlanReport(long incidentId, FileReportRequest req) throws Exception {
         areaGuard.assertOwnOrShared("public.incidents", incidentId);
         List<Long> planIds = jdbc.queryForList(
                 "select id from public.recovery_plans where incident_id = ?", Long.class, incidentId);

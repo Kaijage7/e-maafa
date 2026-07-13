@@ -170,7 +170,8 @@ Suggested migration order:
 24. ~~**Response Settings**~~ — **DONE** (approval chains, catalogue, types, ladder automation)  
 25. ~~**Exercise Scenarios**~~ — **DONE** (create/show; launch via ActivationService)  
 26. ~~**Incident Ops Timeline**~~ — **DONE** (read-only merge; shared incidents path)  
-27. Response remaining (never engine/dispatch/allocation first) then EW  
+27. ~~**DLNA**~~ — **DONE** (Annex 1/2; PDF + NotificationService retained)  
+28. Response remaining (never engine/dispatch/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -204,8 +205,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Response Settings | Done | `/v1/response/settings` | Thin controller + service.impl; approval-chains/resources/incident-types/approval-automation; Dist **403**; type+resource drills net-zero |
 | Exercise Scenarios | Done | `/v1/response/coordination/scenarios` | Thin controller + service.impl; index/show/create; Dist **403**; create drill net-zero (no launch); CP coordination still **200** |
 | Incident Ops Timeline | Done | `/v1/response/incidents/{id}/ops-timeline` | Thin controller + service.impl; read-only; area 404; source filter; IncidentController co-exists on same base |
+| DLNA | Done | `/v1/response/dlna` | Thin controller + service.impl; request records on service; create/header/section; Dist **403**; drill net-zero |
 
-26. ~~**Incident Ops Timeline**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
+27. ~~**DLNA**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
 
 ---
 
