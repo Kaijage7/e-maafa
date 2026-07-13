@@ -286,6 +286,8 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | OH3 | One Health directives | `/v1/onehealth/directives` | — | Filters productive; SMS/email escalate; MgovSms + Mail retained | **DONE** |
 | OH4 | One Health events | `/v1/onehealth/events` | — | Full registry + cascades; OneHealthEventService retained | **DONE** |
 | OH5 | One Health dissemination | `/v1/onehealth/disseminations` | — | Dual-track; ExternalDeliveryService; OH complete | **DONE** |
+| F1 | Finance budgets | `/v1/finance/*` | — | Maker-checker SoD; AreaGuard; SimulationGuard | **DONE** |
+| F2 | Economics of disaster | `/v1/finance/economics` | — | Deterministic model; not ML/AI | **DONE** |
 
 ### 10.5 Do **not** start with
 

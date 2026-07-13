@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.finance;
+package tz.go.pmo.dmis.service.impl;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -7,19 +7,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
+import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.service.BudgetService;
 
 /**
  * Disaster Budget &amp; Finance (full budgeting) — the cash side of the resource-mobilization flow
@@ -29,9 +24,8 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  * path: donor/stakeholder cash disbursed to a specific incident. Budgets are area-scoped — a district
  * executive sees their own district's budgets (or shared/national); the national tier sees all.
  */
-@RestController
-@RequestMapping("/v1/finance")
-public class BudgetController {
+@Service
+public class BudgetServiceImpl implements BudgetService {
 
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
@@ -39,7 +33,7 @@ public class BudgetController {
     private final AreaGuard areaGuard;
     private final tz.go.pmo.dmis.service.support.SimulationGuard simulationGuard; // no real money against table-top drills
 
-    public BudgetController(JdbcTemplate jdbc, JurisdictionScope jurisdiction, CurrentUserResolver currentUser,
+    public BudgetServiceImpl(JdbcTemplate jdbc, JurisdictionScope jurisdiction, CurrentUserResolver currentUser,
             AreaGuard areaGuard, tz.go.pmo.dmis.service.support.SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
@@ -49,18 +43,16 @@ public class BudgetController {
     }
 
     // ─── Periods ───
+    @Override
 
-    @GetMapping("/periods")
-    @PreAuthorize("hasAuthority('budget_and_finance.view')")
     public Map<String, Object> periods() {
         return Map.of("periods", jdbc.queryForList(
                 "select id, name, fiscal_year, start_date, end_date, status, is_active from public.budget_periods order by start_date desc nulls last, id desc"));
     }
+    @Override
 
-    @PostMapping("/periods")
-    @PreAuthorize("hasAuthority('budget_and_finance.manage')")
     @Transactional
-    public Map<String, Object> createPeriod(@RequestBody Map<String, Object> b) {
+    public Map<String, Object> createPeriod(Map<String, Object> b) {
         String name = req(b, "name");
         Long id = jdbc.queryForObject("""
                 insert into public.budget_periods(name, fiscal_year, start_date, end_date, status, is_active, created_at, updated_at)
@@ -72,8 +64,8 @@ public class BudgetController {
     // ─── Budgets ───
 
     /** Area-scoped budgets + a roll-up (allocated / committed / disbursed). */
-    @GetMapping("/budgets")
-    @PreAuthorize("hasAuthority('budget_and_finance.view')")
+    @Override
+
     public Map<String, Object> budgets() {
         StringBuilder sql = new StringBuilder("""
                 select db.id, db.title, db.scope_level, db.district_id, db.region_id, db.total_amount, db.currency,
@@ -95,11 +87,10 @@ public class BudgetController {
         sql.append(" order by db.created_at desc");
         return Map.of("budgets", jdbc.queryForList(sql.toString(), params.toArray()));
     }
+    @Override
 
-    @PostMapping("/budgets")
-    @PreAuthorize("hasAuthority('budget_and_finance.manage')")
     @Transactional
-    public Map<String, Object> createBudget(@RequestBody Map<String, Object> b) {
+    public Map<String, Object> createBudget(Map<String, Object> b) {
         Long periodId = lng(req(b, "period_id"));
         BudgetScope target = resolveBudgetScope(b);
         Long id = jdbc.queryForObject("""
@@ -110,10 +101,9 @@ public class BudgetController {
                 str(b.get("title")), dec(b.get("total_amount")), str(b.get("currency")), me());
         return Map.of("success", true, "id", id);
     }
+    @Override
 
-    @GetMapping("/budgets/{id}")
-    @PreAuthorize("hasAuthority('budget_and_finance.view')")
-    public Map<String, Object> budget(@PathVariable long id) {
+    public Map<String, Object> budget(long id) {
         areaGuard.assertOwnOrShared("public.disaster_budgets", id);   // 404 if cross-area
         Map<String, Object> budget = one("select db.*, p.name as period_name from public.disaster_budgets db "
                 + "join public.budget_periods p on p.id = db.period_id where db.id = ?", id);
@@ -152,11 +142,10 @@ public class BudgetController {
                 """, id));
         return out;
     }
+    @Override
 
-    @PostMapping("/budgets/{id}/approve")
-    @PreAuthorize("hasAuthority('budget_and_finance.approve')")
     @Transactional
-    public Map<String, Object> approveBudget(@PathVariable long id) {
+    public Map<String, Object> approveBudget(long id) {
         areaGuard.assertOwnOrShared("public.disaster_budgets", id);   // 404 if cross-area
         if (jdbc.update("update public.disaster_budgets set status='active', approved_by=?, approved_at=now(), updated_at=now() "
                 + "where id=? and status in ('draft','approved')", me(), id) == 0) {
@@ -164,11 +153,10 @@ public class BudgetController {
         }
         return Map.of("success", true, "message", "Budget approved and active.");
     }
+    @Override
 
-    @PostMapping("/budgets/{id}/lines")
-    @PreAuthorize("hasAuthority('budget_and_finance.manage')")
     @Transactional
-    public Map<String, Object> addLine(@PathVariable long id, @RequestBody Map<String, Object> b) {
+    public Map<String, Object> addLine(long id, Map<String, Object> b) {
         areaGuard.assertOwnOrShared("public.disaster_budgets", id);   // 404 if missing or cross-area
         Long lineId = jdbc.queryForObject("""
                 insert into public.budget_lines(disaster_budget_id, category, description, allocated_amount, created_at, updated_at)
@@ -180,10 +168,10 @@ public class BudgetController {
     // ─── Commitments (maker-checker) ───
 
     /** Planning Officer REQUESTS a spend against a line for an incident. Blocked if it overspends the line. */
-    @PostMapping("/commitments")
-    @PreAuthorize("hasAuthority('budget_and_finance.manage')")
+    @Override
+
     @Transactional
-    public Map<String, Object> request(@RequestBody Map<String, Object> b) {
+    public Map<String, Object> request(Map<String, Object> b) {
         // Drill isolation: real money is never committed against a table-top simulation incident.
         simulationGuard.assertNotSimulationIncident(lng(b.get("incident_id")), "committing budget funds");
         Long lineId = lng(req(b, "budget_line_id"));
@@ -217,10 +205,10 @@ public class BudgetController {
      * DED / RAS APPROVES (authorises) the commitment. Maker-checker: cannot approve one you requested.
      * Tier ceiling: an amount above the configured threshold for the budget's tier must escalate higher.
      */
-    @PostMapping("/commitments/{id}/approve")
-    @PreAuthorize("hasAuthority('budget_and_finance.approve')")
+    @Override
+
     @Transactional
-    public Map<String, Object> approveCommitment(@PathVariable long id) {
+    public Map<String, Object> approveCommitment(long id) {
         Map<String, Object> c = one("""
                 select c.status, c.requested_by, c.amount, db.scope_level, db.id as budget_id
                 from public.budget_commitments c
@@ -250,10 +238,10 @@ public class BudgetController {
      * Logistic Officer COMMITS (obligates / encumbers) the approved funds — the distinct commitment stage
      * (IMF/PEFA/IPSAS 24) that reserves the budget before any cash moves. SoD: cannot be the approver.
      */
-    @PostMapping("/commitments/{id}/commit")
-    @PreAuthorize("hasAuthority('budget_and_finance.disburse')")
+    @Override
+
     @Transactional
-    public Map<String, Object> commit(@PathVariable long id) {
+    public Map<String, Object> commit(long id) {
         assertCommitmentInArea(id);   // 404 if cross-area
         Map<String, Object> c = one("select status, requested_by, approved_by from public.budget_commitments where id = ?", id);
         if (!"approved".equals(c.get("status"))) {
@@ -271,10 +259,10 @@ public class BudgetController {
      * Logistic Officer DISBURSES (pays out) — the actual expenditure, recorded distinctly from the
      * obligation. Optional 'expended_amount' captures a payment that differs from the committed amount.
      */
-    @PostMapping("/commitments/{id}/disburse")
-    @PreAuthorize("hasAuthority('budget_and_finance.disburse')")
+    @Override
+
     @Transactional
-    public Map<String, Object> disburse(@PathVariable long id, @RequestBody(required = false) Map<String, Object> b) {
+    public Map<String, Object> disburse(long id, Map<String, Object> b) {
         assertCommitmentInArea(id);   // 404 if cross-area
         simulationGuard.assertNotSimulationIncident(jdbc.queryForObject(
                 "select incident_id from public.budget_commitments where id = ?", Long.class, id), "disbursing funds");
@@ -294,26 +282,30 @@ public class BudgetController {
                 expended, me(), id);
         return Map.of("success", true, "message", "Commitment disbursed (paid).");
     }
+    @Override
 
-    @PostMapping("/commitments/{id}/reject")
-    @PreAuthorize("hasAuthority('budget_and_finance.approve')")
     @Transactional
-    public Map<String, Object> reject(@PathVariable long id, @RequestBody Map<String, Object> b) {
+    public Map<String, Object> reject(long id, Map<String, Object> b) {
         assertCommitmentInArea(id);   // 404 if cross-area
-        if (jdbc.update("update public.budget_commitments set status='rejected', reject_reason=?, approved_by=?, approved_at=now(), updated_at=now() "
-                + "where id=? and status='requested'", req(b, "reason"), me(), id) == 0) {
+        Map<String, Object> c = one("select status, requested_by from public.budget_commitments where id = ?", id);
+        if (!"requested".equals(c.get("status"))) {
             throw new BusinessRuleException("Only a requested commitment can be rejected.");
         }
+        if (me() != null && me().equals(lng(c.get("requested_by")))) {
+            throw new BusinessRuleException("Separation of duties: you cannot reject a spend you requested.");
+        }
+        jdbc.update("update public.budget_commitments set status='rejected', reject_reason=?, approved_by=?, approved_at=now(), updated_at=now() where id=?",
+                req(b, "reason"), me(), id);
         return Map.of("success", true, "message", "Commitment rejected.");
     }
 
     // ─── Virement (reallocation between budget lines) — an authorized budget change (IPSAS 24) ───
 
     /** Planning Officer REQUESTS moving allocation from one line to another (same budget). */
-    @PostMapping("/virements")
-    @PreAuthorize("hasAuthority('budget_and_finance.manage')")
+    @Override
+
     @Transactional
-    public Map<String, Object> requestVirement(@RequestBody Map<String, Object> b) {
+    public Map<String, Object> requestVirement(Map<String, Object> b) {
         Long fromLine = lng(req(b, "from_line_id"));
         Long toLine = lng(req(b, "to_line_id"));
         BigDecimal amount = dec(req(b, "amount"));
@@ -344,10 +336,10 @@ public class BudgetController {
     }
 
     /** Approver authorises the virement; the allocation moves and the record stands as the disclosure. */
-    @PostMapping("/virements/{id}/approve")
-    @PreAuthorize("hasAuthority('budget_and_finance.approve')")
+    @Override
+
     @Transactional
-    public Map<String, Object> approveVirement(@PathVariable long id) {
+    public Map<String, Object> approveVirement(long id) {
         // Scope via the virement's budget (budget_virements.disaster_budget_id); 404 if cross-area.
         areaGuard.assertParentOwnOrShared("public.budget_virements", "disaster_budget_id",
                 "public.disaster_budgets", id);
@@ -370,34 +362,36 @@ public class BudgetController {
         jdbc.update("update public.budget_virements set status='approved', approved_by=?, approved_at=now(), updated_at=now() where id=?", me(), id);
         return Map.of("success", true, "message", "Virement approved — allocation reallocated.");
     }
+    @Override
 
-    @PostMapping("/virements/{id}/reject")
-    @PreAuthorize("hasAuthority('budget_and_finance.approve')")
     @Transactional
-    public Map<String, Object> rejectVirement(@PathVariable long id, @RequestBody Map<String, Object> b) {
+    public Map<String, Object> rejectVirement(long id, Map<String, Object> b) {
         // Scope via the virement's budget (budget_virements.disaster_budget_id); 404 if cross-area.
         areaGuard.assertParentOwnOrShared("public.budget_virements", "disaster_budget_id",
                 "public.disaster_budgets", id);
-        if (jdbc.update("update public.budget_virements set status='rejected', reject_reason=?, approved_by=?, approved_at=now(), updated_at=now() where id=? and status='requested'",
-                req(b, "reason"), me(), id) == 0) {
+        Map<String, Object> v = one("select status, requested_by from public.budget_virements where id = ?", id);
+        if (!"requested".equals(v.get("status"))) {
             throw new BusinessRuleException("Only a requested virement can be rejected.");
         }
+        if (me() != null && me().equals(lng(v.get("requested_by")))) {
+            throw new BusinessRuleException("Separation of duties: you cannot reject a virement you requested.");
+        }
+        jdbc.update("update public.budget_virements set status='rejected', reject_reason=?, approved_by=?, approved_at=now(), updated_at=now() where id=?",
+                req(b, "reason"), me(), id);
         return Map.of("success", true, "message", "Virement rejected.");
     }
 
     // ─── Tier approval thresholds (configurable ceilings; not hardcoded) ───
+    @Override
 
-    @GetMapping("/thresholds")
-    @PreAuthorize("hasAuthority('budget_and_finance.view')")
     public Map<String, Object> thresholds() {
         return Map.of("thresholds", jdbc.queryForList(
                 "select scope_level, max_amount from public.budget_approval_thresholds order by max_amount nulls last"));
     }
+    @Override
 
-    @PostMapping("/thresholds")
-    @PreAuthorize("hasAuthority('budget_and_finance.approve')")
     @Transactional
-    public Map<String, Object> setThreshold(@RequestBody Map<String, Object> b) {
+    public Map<String, Object> setThreshold(Map<String, Object> b) {
         String scope = req(b, "scope_level");
         BigDecimal max = dec(b.get("max_amount"));   // null = unlimited
         jdbc.update("""
@@ -411,8 +405,8 @@ public class BudgetController {
     // ─── NDMF: donor/stakeholder cash, earmarked (ring-fenced) and disbursed to a specific incident ───
 
     /** Donations with their earmark + remaining ring-fence balance, and the fund-level reconciliation summary. */
-    @GetMapping("/ndmf/donations")
-    @PreAuthorize("hasAuthority('budget_and_finance.view')")
+    @Override
+
     public Map<String, Object> ndmfDonations() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("donations", jdbc.queryForList("""
@@ -431,11 +425,10 @@ public class BudgetController {
         out.put("summary", Map.of("received", received, "disbursed", disbursed, "balance", fundBalance()));
         return out;
     }
+    @Override
 
-    @PostMapping("/ndmf/disburse")
-    @PreAuthorize("hasAuthority('budget_and_finance.disburse')")
     @Transactional
-    public Map<String, Object> ndmfDisburse(@RequestBody Map<String, Object> b) {
+    public Map<String, Object> ndmfDisburse(Map<String, Object> b) {
         Long incidentId = lng(req(b, "incident_id"));
         if (incidentId == null) {
             throw new BusinessRuleException("A valid incident is required.");

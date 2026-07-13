@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.finance;
+package tz.go.pmo.dmis.service.impl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.EconomicsOfDisasterService;
 
 /**
  * Economics of Disaster — <b>formula-automated</b> economics from live DMIS tables only.
@@ -31,7 +32,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @RequiredArgsConstructor
-public class EconomicsOfDisasterService {
+public class EconomicsOfDisasterServiceImpl implements EconomicsOfDisasterService {
 
     private final JdbcTemplate jdbc;
 
@@ -46,6 +47,8 @@ public class EconomicsOfDisasterService {
     public static final double K_OPEN_INC_WEIGHT = 5.0;
     public static final double K_SEASONAL_MIN = 0.5;
     public static final double K_SEASONAL_MAX = 2.0;
+
+    @Override
 
     public Map<String, Object> model() {
         List<Map<String, Object>> audit = new ArrayList<>();

@@ -132,7 +132,7 @@ Optional later: subpackages under layers for readability only, e.g. `controller.
 
 ## 7. Transition rules (existing code)
 
-Legacy fat packages under `ew/`, `recovery/`, `portal/`, and `onehealth/` controllers are gone. Shared Response engines live in `service.support/`. Other domains (finance, M&E, remaining reports, notification, …) may still host controllers until migrated.
+Legacy fat packages under `ew/`, `recovery/`, `portal/`, `onehealth/`, and `finance/` controllers are gone. Shared Response engines live in `service.support/`. Other domains (M&E, remaining reports, notification, stakeholder, ops/IAM …) may still host controllers until migrated.
 
 | Rule | |
 |------|---|
@@ -205,7 +205,8 @@ Suggested migration order:
 59. ~~**One Health directives**~~ — **DONE** (filters productive; escalate SMS/email retained)
 60. ~~**One Health events**~~ — **DONE** (list filters, store, show, review, directives, cascades)
 61. ~~**One Health dissemination**~~ — **DONE** (dual-track create, approve, recipients; OH controllers complete)
-62. Remaining fat domains: finance / M&E / reports / notification / stakeholder / ops-IAM
+62. ~~**Finance (budget + economics)**~~ — **DONE** (maker-checker SoD hardened; eGA layered)
+63. Remaining fat domains: M&E / reports / notification / stakeholder / ops-IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
@@ -284,6 +285,8 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | One Health directives | Done | `/v1/onehealth/directives` | Thin controller + service.impl; productive status/search; show/history baselines exact; empty update **422**; escalate soft-fail without gateway |
 | One Health events | Done | `/v1/onehealth/events` | Thin controller + `OneHealthEventApiServiceImpl`; index/show/form/qv/comments exact; productive filters; empty store **422**; review bad priority **422** |
 | One Health dissemination | Done | `/v1/onehealth/disseminations` (+ event create tracks) | Thin controller + service.impl; filters productive; multipart create; approve invalid **200** success=false; empty store **422** |
+| Finance budgets | Done | `/v1/finance/*` | Thin controller + `BudgetServiceImpl`; maker≠checker request/approve/commit/disburse; reject self-SoD **422**; area scope |
+| Economics of disaster | Done | `/v1/finance/economics` | Thin controller + service.impl; deterministic (not ML/AI) |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 

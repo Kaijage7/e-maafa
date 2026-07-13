@@ -155,7 +155,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 39. ~~eGA migrate **One Health directives**~~ — **DONE**.
 40. ~~eGA migrate **One Health events**~~ — **DONE**.
 41. ~~eGA migrate **One Health dissemination**~~ — **DONE** (OH complete).
-42. Next fat domains: finance / M&E / reports. 
+42. ~~eGA migrate **Finance (budget + economics)**~~ — **DONE** (+ reject SoD fix).
+43. Next fat domains: M&E / reports / notification. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -382,3 +383,31 @@ Public portal regressions exact: landing, threats, regions, education, shelters,
 | Recovery programs | **200**, stats total **6** |
 
 **Verdict:** OH is production-grade for productive filters, security walls, EW integration, and FE wiring. No AI product surface. Next carefully: finance eGA + optional productive budget filters if product owners want list query params.
+
+
+## 15. Finance maker≠checker SoD + eGA (2026-07-13)
+
+### Live SoD drills (Dodoma Urban budget line 1; net-zero cleanup)
+
+| Drill | Personas | Result |
+|-------|----------|--------|
+| Self-approve commitment | SA request + SA approve (same user id) | **422** maker≠checker |
+| Self-approve via elevated role | DPO request; same user id + Super Admin role approve | **422** |
+| RBAC walls | DPO cannot approve (**403**); DED cannot commit/disburse (**403**) | pass |
+| Happy path | DPO request → DED approve → DLO commit → DLO disburse | all **200** |
+| Virement self-approve | DPO request; same user + SA role | **422**; DED approve **200** |
+| Partner | any finance write | module **403** |
+| **Self-reject (gap fixed)** | Requester with approve authority rejects own request | was **200**; now **422** *you cannot reject a spend you requested* |
+| Self-reject virement | same pattern | **422** (paired fix) |
+| Checker reject | DED rejects DPO request | **200** |
+
+**Design note:** Commit and disburse both require `budget_and_finance.disburse` — same logistic officer may perform both stages (three authority classes: manage / approve / disburse), not four distinct people.
+
+### eGA
+
+| Leaf | Path | Notes |
+|------|------|-------|
+| BudgetService | `/v1/finance/*` | Thin `BudgetController` + `BudgetServiceImpl`; empty finance package |
+| Economics | `/v1/finance/economics` | Thin controller + `EconomicsOfDisasterServiceImpl`; deterministic formula (not AI) |
+
+Post-eGA: GETs **200**, unauth **401**, SoD self-approve/reject **422**, happy path **200**, ledger cleaned to original commitment only.
