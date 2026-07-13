@@ -54,7 +54,8 @@
 - ~~Next large eGA move: Executive Watch~~ — **DONE** (`d9fdb79`).  
 - ~~Public Reports eGA extract~~ — **DONE** (`f8e7d7c`; convert still couples to `IncidentWorkflowService`).  
 - ~~Contingency Plans eGA extract~~ — **DONE** (no Response workflow coupling; `CurrentUserResolver` only).  
-- ~~Support Pledges eGA extract~~ — **DONE** (NotificationService retained; national donor queue by design).
+- ~~Support Pledges eGA extract~~ — **DONE** (NotificationService retained; national donor queue by design).  
+- ~~Declarations eGA extract~~ — **DONE** (statutory chain; `CurrentUserResolver` + NotificationService; no workflow coupling).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -67,7 +68,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 2. ~~eGA migrate **Public Reports**~~ — **DONE**.  
 3. ~~eGA migrate **Contingency Plans**~~ — **DONE**.  
 4. ~~eGA migrate **Support Pledges**~~ — **DONE**.  
-5. Next: Declarations (never engine/dispatch/allocation first).  
-6. Keep logistics in place; extract services only when touching heavily.  
-7. Stamp area on temp warehouses + agency stock data hygiene.  
-8. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+5. ~~eGA migrate **Declarations**~~ — **DONE**.  
+6. Next: Tasks or Anticipatory Plans (never engine/dispatch/allocation first).  
+7. Keep logistics in place; extract services only when touching heavily.  
+8. Stamp area on temp warehouses + agency stock data hygiene.  
+9. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.

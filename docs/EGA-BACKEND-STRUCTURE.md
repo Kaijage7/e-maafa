@@ -189,8 +189,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Public Reports (Response R3) | Done | `/v1/response/public-reports` | Thin controller + service.impl; paths/JSON/PreAuthorize unchanged; multi-persona list scopes; OOA review/dismiss/convert **404**; dismiss reason **422**; convert untagged/already-converted **422**; convert → waiting_ded + link integrity (drill reverted) |
 | Contingency Plans (map R3) | Done | `/v1/response/contingency-plans` | Thin controller + service.impl; filters productive; lifecycle create→submit→reject→approve→archive; perm walls (Dist **403**); show 404; drill net-zero |
 | Support Pledges (map R4) | Done | `/v1/response/support` | Thin controller + service.impl; needs/pledges; staff-on-behalf + donor scope; accept funds training/measure; decline; validation **422**; Dist accept **403**; drills net-zero |
+| Declarations (map R6) | Done | `/v1/response/declarations` | Thin controller + service.impl; propose→review→endorse→declare→extend→revoke; Dist/Reg **403**; stage **422**; SA break-glass declare; drill net-zero |
 
-18. ~~**Support Pledges**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
+19. ~~**Declarations**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
 
 ---
 
