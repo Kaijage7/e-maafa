@@ -94,7 +94,9 @@ public class IncidentController {
                                      @RequestParam(defaultValue = "1") int page) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
-        if (statusFilter != null && !statusFilter.isBlank()) {
+        // Treat all/any/* as unfiltered — a literal status match of "all" yields zero rows (non-productive).
+        if (statusFilter != null && !statusFilter.isBlank()
+                && !List.of("all", "any", "*").contains(statusFilter.trim().toLowerCase())) {
             where.append(" and i.status = ?");
             params.add(statusFilter);
         }

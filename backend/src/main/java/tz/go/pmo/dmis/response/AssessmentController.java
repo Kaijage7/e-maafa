@@ -93,15 +93,17 @@ public class AssessmentController {
     @GetMapping
     public Map<String, Object> index(@RequestParam(required = false) String status,
                                      @RequestParam(required = false) Long incident_id) {
-        StringBuilder where = new StringBuilder("1=1");
-        List<Object> params = new ArrayList<>();
+        // Filter clause + params only (area scope is applied separately per query — never copy
+        // a params list that already contains area bind values or area seats get SQL/arg mismatch → 409).
+        StringBuilder filter = new StringBuilder("1=1");
+        List<Object> filterParams = new ArrayList<>();
         if (status != null && !status.isBlank()) {
-            where.append(" and da.status = ?");
-            params.add(status);
+            filter.append(" and da.status = ?");
+            filterParams.add(status);
         }
         if (incident_id != null) {
-            where.append(" and da.incident_id = ?");
-            params.add(incident_id);
+            filter.append(" and da.incident_id = ?");
+            filterParams.add(incident_id);
         }
         Map<String, Object> out = new LinkedHashMap<>();
         // Area officers see only assessments on incidents in their own district/region (or shared/unlinked);
@@ -116,20 +118,18 @@ public class AssessmentController {
                 left join public.incidents i on i.id = da.incident_id
                 left join public.users u on u.id = da.assessor_id
                 where """);
-        sql.append(' ').append(where);
-        jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
+        sql.append(' ').append(filter);
+        List<Object> listParams = new ArrayList<>(filterParams);
+        jurisdiction.appendAreaScopeWithCouncil("i", sql, listParams);
         sql.append(" order by da.created_at desc limit 200");
-        out.put("assessments", jdbc.queryForList(sql.toString(), params.toArray()));
-        // Stats + charts: same area wall AND the same status/incident_id filters as the table —
-        // otherwise ?status= / ?incident_id= look productive on the list while the dashboard
-        // still rolls up every assessment in scope (non-productive params).
+        out.put("assessments", jdbc.queryForList(sql.toString(), listParams.toArray()));
+        // Stats + charts: same filters + area wall as the table (fresh param list each time).
         StringBuilder scopeFrom = new StringBuilder("""
                 from public.damage_assessments da
                 left join public.incidents i on i.id = da.incident_id
                 where """);
-        // Space required: text-block "where" + "1=1..." must not become "where1=1".
-        scopeFrom.append(' ').append(where);
-        List<Object> scopeParams = new ArrayList<>(params);
+        scopeFrom.append(' ').append(filter);
+        List<Object> scopeParams = new ArrayList<>(filterParams);
         jurisdiction.appendAreaScopeWithCouncil("i", scopeFrom, scopeParams);
         out.put("stats", jdbc.queryForMap("""
                 select count(*) as total,
@@ -154,11 +154,16 @@ public class AssessmentController {
     @GetMapping("/form-data")
     public Map<String, Object> formData() {
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("incidents", jdbc.queryForList("""
-                select id, title, status, severity_level from public.incidents
-                where status not in ('closed','resolved') and coalesce(is_simulation, false) = false
-                order by reported_at desc limit 100
-                """));
+        // Same incident-area wall as dispatch/allocations pickers — never offer foreign incidents.
+        StringBuilder isql = new StringBuilder("""
+                select i.id, i.title, i.status, i.severity_level from public.incidents i
+                where i.status not in ('closed','resolved','Closed','Resolved')
+                  and coalesce(i.is_simulation, false) = false
+                """);
+        List<Object> iparams = new ArrayList<>();
+        jurisdiction.appendAreaScopeWithCouncil("i", isql, iparams);
+        isql.append(" order by i.reported_at desc limit 100");
+        out.put("incidents", jdbc.queryForList(isql.toString(), iparams.toArray()));
         out.put("category_tree", CATEGORY_TREE);
         out.put("assessment_types", ASSESSMENT_TYPES);
         out.put("damage_levels", DAMAGE_LEVELS);

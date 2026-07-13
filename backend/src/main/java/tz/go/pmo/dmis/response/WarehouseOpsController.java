@@ -285,7 +285,9 @@ public class WarehouseOpsController {
 
     @GetMapping("/movements")
     public Map<String, Object> movements(@RequestParam(required = false) String movement_type,
-                                         @RequestParam(required = false) Long resource_id) {
+                                         @RequestParam(required = false) Long resource_id,
+                                         @RequestParam(required = false) String warehouse_type,
+                                         @RequestParam(required = false) Long warehouse_id) {
         StringBuilder where = new StringBuilder();
         List<Object> params = new ArrayList<>();
         if (movement_type != null && !movement_type.isBlank()) {
@@ -295,6 +297,20 @@ public class WarehouseOpsController {
         if (resource_id != null) {
             where.append(" and sm.resource_id = ?");
             params.add(resource_id);
+        }
+        // Productive store filter: touch from/to for zonal or temporary as declared.
+        if (warehouse_id != null) {
+            String wt = warehouse_type == null ? "zonal" : warehouseType(warehouse_type);
+            requireStore(wt, warehouse_id);   // OOA store → 404 (same wall as stock sheet)
+            if ("zonal".equals(wt)) {
+                where.append(" and (sm.from_warehouse_id = ? or sm.to_warehouse_id = ?)");
+                params.add(warehouse_id);
+                params.add(warehouse_id);
+            } else {
+                where.append(" and (sm.from_temporary_warehouse_id = ? or sm.to_temporary_warehouse_id = ?)");
+                params.add(warehouse_id);
+                params.add(warehouse_id);
+            }
         }
         appendStoreVisibility(where, params,
                 new String[]{"sm.from_warehouse_id", "sm.to_warehouse_id"},
@@ -584,12 +600,24 @@ public class WarehouseOpsController {
     public Map<String, Object> loans(@RequestParam(required = false) String status) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
-        if ("outstanding".equalsIgnoreCase(status)) {
-            where.append(" and wl.status in ('Outstanding','Partially_Returned')");
+        if (status != null && !status.isBlank()) {
+            if ("outstanding".equalsIgnoreCase(status)) {
+                where.append(" and wl.status in ('Outstanding','Partially_Returned')");
+            } else if (List.of("Outstanding", "Partially_Returned", "Returned").contains(status)) {
+                where.append(" and wl.status = ?");
+                params.add(status);
+            } else if ("returned".equalsIgnoreCase(status)) {
+                where.append(" and wl.status = 'Returned'");
+            } else {
+                throw new BusinessRuleException(
+                        "status must be outstanding, Outstanding, Partially_Returned, Returned, or returned.");
+            }
         }
-        appendStoreVisibility(where, params,
+        // Both ends of the loan must be visible — otherwise a Dodoma officer sees a Dar borrower via an
+        // in-region lender (soft cross-region logistics metadata leak).
+        appendStoreVisibilityBothEnds(where, params,
                 new String[]{"wl.from_warehouse_id", "wl.to_warehouse_id"},
-                new String[]{"wl.from_temporary_warehouse_id", "wl.to_temporary_warehouse_id"}, false);
+                new String[]{"wl.from_temporary_warehouse_id", "wl.to_temporary_warehouse_id"});
         String sql = "select wl.*, r.name as resource_name, "
                 + "coalesce(fw.name, ftw.name) as lender_name, "
                 + "coalesce(tw.name, ttw.name) as borrower_name, "
@@ -747,6 +775,36 @@ public class WarehouseOpsController {
         }
         if (!ors.isEmpty()) {
             where.append(" and (").append(String.join(" or ", ors)).append(")");
+        }
+    }
+
+    /**
+     * Loan visibility: BOTH lender and borrower ends must be stores the caller may see (or NULL).
+     * Unlike {@link #appendStoreVisibility} (ANY end), this blocks cross-region metadata leaks
+     * where only one end is in-area.
+     */
+    private void appendStoreVisibilityBothEnds(StringBuilder where, List<Object> params,
+                                               String[] zonalCols, String[] tempCols) {
+        JurisdictionScope.Tier tier = jurisdiction.currentTier();
+        if (tier != JurisdictionScope.Tier.REGION && tier != JurisdictionScope.Tier.DISTRICT) {
+            return;
+        }
+        // zonal pair: from/to warehouse columns; temp pair similarly
+        if (zonalCols.length >= 2) {
+            for (String col : zonalCols) {
+                StringBuilder s = new StringBuilder("(" + col + " is null or exists (select 1 from public.warehouses w2 where w2.id = " + col);
+                jurisdiction.appendWarehouseScope("w2", s, params);
+                s.append("))");
+                where.append(" and ").append(s);
+            }
+        }
+        if (tempCols.length >= 2) {
+            for (String col : tempCols) {
+                StringBuilder s = new StringBuilder("(" + col + " is null or exists (select 1 from public.temporary_warehouses t2 where t2.id = " + col);
+                jurisdiction.appendWarehouseScope("t2", s, params);
+                s.append("))");
+                where.append(" and ").append(s);
+            }
         }
     }
 

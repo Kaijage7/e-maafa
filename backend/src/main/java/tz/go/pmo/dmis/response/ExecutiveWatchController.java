@@ -6,10 +6,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
@@ -48,9 +48,10 @@ public class ExecutiveWatchController {
     public Map<String, Object> watch() {
         // The Executive Watch is the NATIONAL leadership common-operating-picture (PM/PS/Director/President):
         // an inherently whole-country view, not an area report. Restrict it to the national tier; an area
-        // officer (region/district) gets 404 rather than the national picture.
+        // officer (region/district) gets 403 Forbidden (not 404 — that looks like a missing route).
         if (jurisdiction.currentTier() != JurisdictionScope.Tier.NATIONAL) {
-            throw new ResourceNotFoundException("Not found.");
+            throw new AccessDeniedException(
+                    "Executive Watch is a national leadership surface; your area seat cannot open it.");
         }
         Map<String, Object> out = new LinkedHashMap<>();
 
