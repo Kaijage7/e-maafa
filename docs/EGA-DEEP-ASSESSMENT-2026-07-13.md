@@ -35,6 +35,7 @@
 | Tasks | Reg stats area-scoped; OOA show/create **404**; status/assign **200**; drill net-zero |
 | Assessments | Multipart create; Reg OOA **404**; Dist **403**; submit/verify; stats filter productive (no 409) |
 | Communication | Dash/alerts/analytics **200**; Dist **403**; template CRUD; app-only send drill net-zero |
+| Response Settings | Chains/resources/types/automation **200**; Dist **403**; resource in-use delete **422** |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -63,7 +64,8 @@
 - ~~Anticipatory Plans eGA extract~~ — **DONE** (`matchingPlans` on service; CommandCenter rewired off fat controller).  
 - ~~Tasks eGA extract~~ — **DONE** (NotificationService retained; area scope on board/calendar/form-data/show).  
 - ~~Assessments eGA extract~~ — **DONE** (multipart + ApprovalWorkflowEngine.initialize for resource lines).  
-- ~~Communication eGA extract~~ — **DONE** (`@Scheduled` dispatch on service.impl; ExternalDeliveryService + NotificationService retained).
+- ~~Communication eGA extract~~ — **DONE** (`@Scheduled` dispatch on service.impl; ExternalDeliveryService + NotificationService retained).  
+- ~~Response Settings eGA extract~~ — **DONE** (JdbcTemplate only; `IncidentOptions` vocabulary helper retained).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -81,7 +83,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 7. ~~eGA migrate **Tasks**~~ — **DONE**.  
 8. ~~eGA migrate **Assessments**~~ — **DONE**.  
 9. ~~eGA migrate **Communication**~~ — **DONE**.  
-10. Next: Response settings / DLNA / bidding (never engine/dispatch/allocation first).  
-11. Keep logistics in place; extract services only when touching heavily.  
-12. Stamp area on temp warehouses + agency stock data hygiene.  
-13. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+10. ~~eGA migrate **Response Settings**~~ — **DONE**.  
+11. Next: DLNA or Exercise scenarios (never engine/dispatch/allocation first).  
+12. Keep logistics in place; extract services only when touching heavily.  
+13. Stamp area on temp warehouses + agency stock data hygiene.  
+14. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.

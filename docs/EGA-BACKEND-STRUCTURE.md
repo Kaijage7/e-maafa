@@ -199,8 +199,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Tasks | Done | `/v1/response/tasks` | Thin controller + service.impl; board/calendar/form-data; Reg stats area-scoped; OOA show/create **404**; status/assign; drill net-zero |
 | Assessments | Done | `/v1/response/assessments` | Thin controller + service.impl; multipart create; form-data; status filter; Reg OOA show **404**; Dist **403**; submit/verify lifecycle; drill net-zero |
 | Communication | Done | `/v1/response/communication` | Thin controller + service.impl; dash/form-data/alerts/analytics; templates CRUD; send (app-only drill); Dist **403**; @Scheduled retained on impl |
+| Response Settings | Done | `/v1/response/settings` | Thin controller + service.impl; approval-chains/resources/incident-types/approval-automation; Dist **403**; type+resource drills net-zero |
 
-23. ~~**Communication**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
+24. ~~**Response Settings**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
 
 ---
 
