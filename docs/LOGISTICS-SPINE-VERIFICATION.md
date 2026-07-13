@@ -103,11 +103,21 @@ INCIDENT (approved or Active Response)
 
 **Code:** `procurement-requests` uses `appendAreaScopeWithCouncil`; deliver re-checks destination warehouse visibility.
 
+## Agency-request channel (careful follow-up)
+
+| Check | Result |
+|-------|--------|
+| Options on sources payload | Shared-or-own scoped (same as agency stock sources) |
+| Status gate (Deployed alloc) | **422** |
+| Body OOA tagged agency | **404** |
+| Qty > available | **422** |
+| Happy path (Reg DC, alloc **63**) | **200**, notified≥0, status **Sourcing**, journal `request_agency` |
+
 ## Remaining honest limits
 
 - Dual catalogue surfaces remain (`/v1/settings/resources` eGA + response settings) — both productive.  
 - Live agency stock corpus is small and mostly **untagged** (NULL area → national shared until operators stamp region/district).  
-- Support pledges list is a **national PMO review queue** for any staff with `resource_allocation.view` (not area-scoped by training/measure geography).
+- Support needs/pledges are a **national donor/PMO queue** by design (donors may fund any area; staff review all).
 
 ## Seats used (proof matrix)
 

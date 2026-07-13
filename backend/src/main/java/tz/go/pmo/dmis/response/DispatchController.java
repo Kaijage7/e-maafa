@@ -198,14 +198,19 @@ public class DispatchController {
         out.put("sources", sources.availableSources(
                 ((Number) allocation.get("resource_id")).longValue(),
                 ((Number) allocation.get("incident_id")).longValue()));
-        out.put("agency_request_options", jdbc.queryForList("""
+        // Same shared-or-own wall as availableSources agency channel (no foreign tagged agency lines).
+        StringBuilder agencySql = new StringBuilder("""
                 select ar.id, ar.agency_id, a.name as agency_name, ar.quantity as available_quantity,
                        ar.condition_status, ar.location_description
                 from public.agency_resources ar
                 join public.agencies a on a.id = ar.agency_id
                 where ar.resource_id = ? and ar.quantity > 0
-                order by a.name, ar.quantity desc
-                """, allocation.get("resource_id")));
+                """);
+        List<Object> agencyParams = new ArrayList<>();
+        agencyParams.add(allocation.get("resource_id"));
+        jurisdiction.appendAreaScopeSharedOrOwn("ar", agencySql, agencyParams);
+        agencySql.append(" order by a.name, ar.quantity desc");
+        out.put("agency_request_options", jdbc.queryForList(agencySql.toString(), agencyParams.toArray()));
         return out;
     }
 
@@ -633,8 +638,15 @@ public class DispatchController {
         long agencyResourceId = lng(body.get("agency_resource_id"), "agency_resource_id");
         double quantity = positive(body.get("quantity"));
         Map<String, Object> allocation = findOr404(id);
+        // Same operational gate as warehouse/procurement dispatch — only approved (or already sourcing) needs.
+        if (!List.of("Approved", "Sourcing", "Requested to Stakeholders").contains(String.valueOf(allocation.get("status")))) {
+            throw new BusinessRuleException("This allocation cannot request agency stock. Current status: "
+                    + allocation.get("status"));
+        }
+        // Shared-or-own: body.agency_resource_id must not reach a foreign-area tagged agency line.
+        areaGuard.assertOwnOrShared("public.agency_resources", agencyResourceId);
         List<Map<String, Object>> agencyRows = jdbc.queryForList("""
-                select ar.id, ar.agency_id, a.name as agency_name, r.name as resource_name
+                select ar.id, ar.agency_id, ar.quantity, a.name as agency_name, r.name as resource_name
                 from public.agency_resources ar
                 join public.agencies a on a.id = ar.agency_id
                 join public.resources r on r.id = ar.resource_id
@@ -644,6 +656,10 @@ public class DispatchController {
             throw new BusinessRuleException("Select an agency stock line for this allocated resource.");
         }
         Map<String, Object> agency = agencyRows.get(0);
+        if (dbl(agency.get("quantity")) + 1e-9 < quantity) {
+            throw new BusinessRuleException("Requested quantity exceeds the agency stock line ("
+                    + fmt(dbl(agency.get("quantity"))) + " available).");
+        }
         List<Map<String, Object>> journal = journal(allocation.get("source_details"));
         Map<String, Object> entry = new LinkedHashMap<>();
         entry.put("source_type", "request_agency");
