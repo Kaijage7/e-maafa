@@ -203,7 +203,8 @@ Suggested migration order:
 57. ~~**One Health dashboard**~~ — **DONE** (first OH eGA leaf; national KPIs + area-scoped recent)
 58. ~~**One Health action tracking**~~ — **DONE** (actions + progress rollup + close/archive; AreaGuard)
 59. ~~**One Health directives**~~ — **DONE** (filters productive; escalate SMS/email retained)
-60. Remaining OH (events, dissemination) then finance / M&E / reports / notification / stakeholder / ops-IAM
+60. ~~**One Health events**~~ — **DONE** (list filters, store, show, review, directives, cascades)
+61. Remaining OH (dissemination) then finance / M&E / reports / notification / stakeholder / ops-IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
@@ -279,6 +280,8 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Threat admin | Done | `/v1/content/threats` | Thin controller + service.impl; graphic multipart; create **201**/delete net-zero; empty name **400**; Partner **403** |
 | One Health dashboard | Done | `/v1/onehealth/dashboard` | Thin controller + service.impl; national aggregates; recent_events area-scoped; baseline exact; unauth **401** |
 | One Health action tracking | Done | `/v1/onehealth/events/{id}/actions`, `/actions/{id}`, close/archive | Thin controller + service.impl; AreaGuard; empty store **422**; progress rollup; create+delete net-zero |
+| One Health directives | Done | `/v1/onehealth/directives` | Thin controller + service.impl; productive status/search; show/history baselines exact; empty update **422**; escalate soft-fail without gateway |
+| One Health events | Done | `/v1/onehealth/events` | Thin controller + `OneHealthEventApiServiceImpl`; index/show/form/qv/comments exact; productive filters; empty store **422**; review bad priority **422** |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 

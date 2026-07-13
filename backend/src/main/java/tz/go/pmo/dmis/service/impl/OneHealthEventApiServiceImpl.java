@@ -1,5 +1,11 @@
-package tz.go.pmo.dmis.onehealth;
+package tz.go.pmo.dmis.service.impl;
 
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.onehealth.OhEventWriteRequest;
+import tz.go.pmo.dmis.onehealth.OneHealthEventService;
+import tz.go.pmo.dmis.service.OneHealthEventApiService;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -8,18 +14,6 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.security.access.prepost.PreAuthorize;
-import tz.go.pmo.dmis.common.security.Authz;
-import tz.go.pmo.dmis.common.security.AreaGuard;
-import tz.go.pmo.dmis.common.security.JurisdictionScope;
 
 /**
  * Port of OneHealth\OneHealthEventController (index/store/review/quickView +
@@ -29,16 +23,15 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  * Authorization invariants from the source kept: events are locked after
  * submission (edit/update → 403), visibility is read-all.
  */
-@RestController
-@RequestMapping("/v1/onehealth/events")
-public class OneHealthEventController {
+@Service
+public class OneHealthEventApiServiceImpl implements OneHealthEventApiService {
 
     private final JdbcTemplate jdbc;
     private final OneHealthEventService service;
     private final AreaGuard areaGuard;
     private final JurisdictionScope jurisdiction;
 
-    public OneHealthEventController(JdbcTemplate jdbc, OneHealthEventService service,
+    public OneHealthEventApiServiceImpl(JdbcTemplate jdbc, OneHealthEventService service,
                                    AreaGuard areaGuard, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
         this.service = service;
@@ -47,18 +40,18 @@ public class OneHealthEventController {
     }
 
     // ─── Index: filters + pagination + KPI stats ───
+    @Override
 
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(name = "area_of_concern_id", required = false) Long areaOfConcernId,
-                                     @RequestParam(name = "region_id", required = false) Long regionId,
-                                     @RequestParam(name = "stakeholder_id", required = false) Long stakeholderId,
-                                     @RequestParam(name = "date_from", required = false) String dateFrom,
-                                     @RequestParam(name = "date_to", required = false) String dateTo,
-                                     @RequestParam(name = "event_type", required = false) String eventType,
-                                     @RequestParam(name = "priority_level", required = false) String priorityLevel,
-                                     @RequestParam(required = false) String search,
-                                     @RequestParam(defaultValue = "1") int page) {
+    public Map<String, Object> index(String status,
+                                     Long areaOfConcernId,
+                                     Long regionId,
+                                     Long stakeholderId,
+                                     String dateFrom,
+                                     String dateTo,
+                                     String eventType,
+                                     String priorityLevel,
+                                     String search,
+                                     int page) {
         StringBuilder where = new StringBuilder("e.deleted_at is null");
         List<Object> params = new ArrayList<>();
         // 'active' is a KPI pseudo-status (all but closed/archived), not a column value
@@ -201,7 +194,8 @@ public class OneHealthEventController {
     }
 
     /** Reference data for the index screen: areas, regions, statuses, institutions, hazards. */
-    @GetMapping("/form-data")
+    @Override
+
     public Map<String, Object> formData() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("areas", jdbc.queryForList(
@@ -219,10 +213,9 @@ public class OneHealthEventController {
     }
 
     // ─── Store ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.manage')")
-    @PostMapping
-    public ResponseEntity<Map<String, Object>> store(@RequestBody OhEventWriteRequest r) {
+    public ResponseEntity<Map<String, Object>> store(OhEventWriteRequest r) {
         // Bind the event's area to the caller: an area officer's event is created in their OWN area,
         // ignoring any body-supplied region (anti-spoofing). National tier may use the body.
         JurisdictionScope.Tier tier = jurisdiction.currentTier();
@@ -328,9 +321,9 @@ public class OneHealthEventController {
     }
 
     // ─── Show (full detail — used by the show hub and quick links) ───
+    @Override
 
-    @GetMapping("/{id}")
-    public Map<String, Object> show(@PathVariable long id) {
+    public Map<String, Object> show(long id) {
         service.findEventOr404(id);
         areaGuard.assertOwnOrShared("public.oh_events", id);
         List<Map<String, Object>> rows = jdbc.queryForList("""
@@ -479,16 +472,16 @@ public class OneHealthEventController {
      * F58 — discussion thread on oh_event_comments (schema since V15; was never ported).
      * Read follows event area guard; write requires a One Health action permission.
      */
-    @GetMapping("/{id}/comments")
-    public Map<String, Object> comments(@PathVariable long id) {
+    @Override
+
+    public Map<String, Object> comments(long id) {
         service.findEventOr404(id);
         areaGuard.assertOwnOrShared("public.oh_events", id);
         return Map.of("comments", listComments(id));
     }
+    @Override
 
-    @PostMapping("/{id}/comments")
-    @PreAuthorize("hasAnyAuthority('one_health.view','one_health.manage','one_health.approve','one_health.directive')")
-    public Map<String, Object> addComment(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> addComment(long id, Map<String, Object> body) {
         service.findEventOr404(id);
         areaGuard.assertOwnOrShared("public.oh_events", id);
         String text = body == null ? null : OneHealthEventService.strOf(body.get("comment_text"));
@@ -559,27 +552,25 @@ public class OneHealthEventController {
     }
 
     // ─── Edit / Update: locked after submission (source invariant) ───
+    @Override
 
-    @GetMapping("/{id}/edit")
-    public ResponseEntity<Map<String, Object>> edit(@PathVariable long id) {
+    public ResponseEntity<Map<String, Object>> edit(long id) {
         service.findEventOr404(id);
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("success", false, "message", "You are not authorized to edit this event."));
     }
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.manage')")
-    @PutMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> update(@PathVariable long id) {
+    public ResponseEntity<Map<String, Object>> update(long id) {
         service.findEventOr404(id);
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("success", false, "message", "You are not authorized to edit this event."));
     }
 
     // ─── Review ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.approve')")
-    @PostMapping("/{id}/review")
-    public ResponseEntity<Map<String, Object>> review(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> review(long id, Map<String, Object> body) {
         areaGuard.assertOwnOrShared("public.oh_events", id);
         Map<String, Object> b = body == null ? Map.of() : body;
         Map<String, List<String>> errors = new LinkedHashMap<>();
@@ -600,19 +591,17 @@ public class OneHealthEventController {
     }
 
     // ─── Quick View ───
+    @Override
 
-    @GetMapping("/{id}/quick-view")
-    public Map<String, Object> quickView(@PathVariable long id) {
+    public Map<String, Object> quickView(long id) {
         areaGuard.assertOwnOrShared("public.oh_events", id);
         return service.quickView(id);
     }
 
     // ─── Issue Directive (OneHealthDirectiveController::store) — PMO-DMD function ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.directive')")
-    @PostMapping("/{id}/directives")
-    @SuppressWarnings("unchecked")
-    public ResponseEntity<Map<String, Object>> storeDirective(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> storeDirective(long id, Map<String, Object> body) {
         service.findEventOr404(id);
         areaGuard.assertOwnOrShared("public.oh_events", id);
         Map<String, List<String>> errors = new LinkedHashMap<>();
@@ -672,27 +661,27 @@ public class OneHealthEventController {
     }
 
     // ─── AJAX cascades ───
+    @Override
 
-    @GetMapping("/districts/{regionId}")
-    public List<Map<String, Object>> districts(@PathVariable long regionId) {
+    public List<Map<String, Object>> districts(long regionId) {
         return jdbc.queryForList("select id, name from public.districts where region_id = ? order by name", regionId);
     }
+    @Override
 
-    @GetMapping("/wards/{districtId}")
-    public List<Map<String, Object>> wards(@PathVariable long districtId) {
+    public List<Map<String, Object>> wards(long districtId) {
         return jdbc.queryForList("select id, name from public.wards where district_id = ? order by name", districtId);
     }
+    @Override
 
-    @GetMapping("/concern-items/{areaId}")
-    public List<Map<String, Object>> concernItems(@PathVariable long areaId) {
+    public List<Map<String, Object>> concernItems(long areaId) {
         return jdbc.queryForList("""
                 select id, name from public.oh_concern_items
                 where area_of_concern_id = ? and is_active = true order by sort_order
                 """, areaId);
     }
+    @Override
 
-    @GetMapping("/area-stakeholders/{areaId}")
-    public List<Map<String, Object>> areaStakeholders(@PathVariable long areaId) {
+    public List<Map<String, Object>> areaStakeholders(long areaId) {
         return jdbc.queryForList("""
                 select s.id, s.organization, s.name, s.email, s.phone
                 from public.stakeholders s

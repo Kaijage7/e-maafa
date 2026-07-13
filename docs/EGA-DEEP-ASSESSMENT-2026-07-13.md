@@ -153,7 +153,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 37. ~~eGA migrate **One Health dashboard**~~ — **DONE** (first OH leaf).
 38. ~~eGA migrate **One Health action tracking**~~ — **DONE**.
 39. ~~eGA migrate **One Health directives**~~ — **DONE**.
-40. Next OH leaves: events → dissemination; then finance / M&E / reports. 
+40. ~~eGA migrate **One Health events**~~ — **DONE**.
+41. Next OH leaf: dissemination; then finance / M&E / reports. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -320,5 +321,7 @@ Public portal regressions exact: landing, threats, regions, education, shelters,
 |------|------|-------|
 | One Health dashboard | `/v1/onehealth/dashboard` | Thin controller + `OneHealthDashboardServiceImpl`; `statusLabel` public for service.impl |
 | One Health action tracking | `/v1/onehealth/events/{id}/actions` (+ progress, close, archive) | Thin controller + `OneHealthActionTrackingServiceImpl`; AreaGuard; index baseline exact; empty store **422**; create → progress → SQL delete net-zero; helpers (`findEventOr404`, `formatDate`, `strOf`, …) public for eGA |
+| One Health directives | `/v1/onehealth/directives` | Thin controller + `OneHealthDirectiveServiceImpl`; index/show/history **exact**; status/search nonsense → 0; unauth **401**; show **404**; empty PUT **422**; escalate **200** soft-fail if gateway unconfigured (no data mutation); `currentUserDbId` public |
+| One Health events | `/v1/onehealth/events` | Thin controller + `OneHealthEventApiServiceImpl` (named to avoid clash with domain `OneHealthEventService`); index/show/form/qv/comments **exact**; status NOPE / ew_alert productive; empty store **422**; empty comment **422**; bad review priority **422**; siblings 200 |
 
-**OH residual fat:** events, directives, dissemination (+ `OhEventWriteRequest`, `OneHealthEventService` in `onehealth/`).
+**OH residual fat:** dissemination only (+ `OhEventWriteRequest`, `OneHealthEventService` helpers in `onehealth/`).

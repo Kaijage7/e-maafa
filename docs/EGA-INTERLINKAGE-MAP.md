@@ -284,6 +284,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | OH1 | One Health dashboard | `/v1/onehealth/dashboard` | — | National KPIs; recent_events area-scoped; productive E2E validated | **DONE** |
 | OH2 | One Health action tracking | `/v1/onehealth/.../actions`, close/archive | — | AreaGuard + progress rollup; net-zero verified | **DONE** |
 | OH3 | One Health directives | `/v1/onehealth/directives` | — | Filters productive; SMS/email escalate; MgovSms + Mail retained | **DONE** |
+| OH4 | One Health events | `/v1/onehealth/events` | — | Full registry + cascades; OneHealthEventService retained | **DONE** |
 
 ### 10.5 Do **not** start with
 

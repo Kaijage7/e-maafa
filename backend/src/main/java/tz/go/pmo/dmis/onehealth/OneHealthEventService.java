@@ -28,8 +28,8 @@ import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 @Service
 public class OneHealthEventService {
 
-    /** OhEvent::getStatuses() verbatim. */
-    static final Map<String, String> STATUSES = new LinkedHashMap<>();
+    /** OhEvent::getStatuses() verbatim. Public for eGA form-data. */
+    public static final Map<String, String> STATUSES = new LinkedHashMap<>();
     static {
         STATUSES.put("submitted", "Submitted");
         STATUSES.put("under_review", "Under Review");
@@ -50,7 +50,7 @@ public class OneHealthEventService {
     }
 
     /** OhEventWorkflowHistory::getActionLabelAttribute() verbatim. */
-    static String actionLabel(String action) {
+    public static String actionLabel(String action) {
         return switch (action == null ? "" : action) {
             case "created" -> "Event Created";
             case "submitted" -> "Event Submitted";
@@ -77,7 +77,7 @@ public class OneHealthEventService {
         };
     }
 
-    static String actionIcon(String action) {
+    public static String actionIcon(String action) {
         return switch (action == null ? "" : action) {
             case "created" -> "fas fa-plus-circle";
             case "submitted" -> "fas fa-paper-plane";
@@ -550,7 +550,7 @@ public class OneHealthEventService {
         return s == null ? null : new java.math.BigDecimal(s);
     }
 
-    static String limit(String s, int max) {
+    public static String limit(String s, int max) {
         if (s == null) {
             return null;
         }
