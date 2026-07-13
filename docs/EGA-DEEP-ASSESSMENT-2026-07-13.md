@@ -147,3 +147,70 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 31. Next: mitigation / portal / recovery leaves.  
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+
+## 7. System validation pass (2026-07-13) — productive E2E, no AI product claims
+
+**Stance:** Every listed param must narrow or reject; empty public maps must be *gate*, not failure; AI is honesty-deferred only.
+
+### 7.1 Integration points (live, verified)
+
+| Chain | Status | Evidence |
+|-------|--------|----------|
+| Agency bus → DMD consolidate → impact-support | **Live** | `agency/latest` → `dmd/consolidated` sources; impact-support `ai:false` deterministic |
+| Ingest → pending warnings → approve → publish → early_warnings | **Live** | lifecycle eGA; publish clones rows `show_on_map=false` by design |
+| Publish → portal map | **Productive gate** | Portal `warnings` requires `early_warnings.show_on_map=true AND status=active`. Drill: map on → portal **3** rows; map off → **0** (net-zero). Empty portal ≠ broken integration |
+| Products → portal bulletins | **Live** | landing `bulletins` count **2** (`is_published` + `show_on_map`) |
+| Dashboard / Issued Alerts strip | **Live** | `area_early_warnings` **10** (published workbench view, area-scoped) |
+| Scanner detections → entity taskings | **Live** | dual stats; taskings awaiting **11** |
+| EW management report | **Live** | bus submissions + effectiveness summary |
+| Hazard-area-context + warningCode | **Live (fixed)** | joins `warning_hazards` (was always null) |
+| Communication overview | **Live** | stats / by_channel / recent_alerts |
+
+### 7.2 Productive params (no decorative filters)
+
+| Surface | Productive | Notes |
+|---------|------------|-------|
+| `/v1/ew/warnings` | Area isolation only | Unknown query params **ignored** (no fake status/severity filter) |
+| `/v1/ew/products` | `severity`, `type` | Stats same WHERE as list |
+| `/v1/ew/scanner/detections` | status, hazard, source, severity, reliability, region, q, days | Dual `stats` + `global`; `matched` before limit |
+| `/v1/ew/agency/*` | agency, warning_code, limit, exclude, days | Agency-bound isolation |
+| `/v1/reports/early-warnings` | `from`, `to` | Invalid dates → full-range fallback |
+| `/v1/ops/hazard-area-context` | areaName, regionId, districtId, lat/lng, warning*, submissionId | Bad geo **404** |
+
+### 7.3 AI / presentation honesty
+
+| Item | Position |
+|------|----------|
+| Impact-support / Action Guide | `ai: false`, formula/`modelVersion` labels only |
+| Economics of disaster | `ai: false`, formula engine |
+| Hazard area context | Explicit “no satellite AI”; external EO links for human review |
+| DMD roadmap `sat_ai` | **Out of scope** card (deferred, not toggleable) — not a product feature |
+| No third-party LLM/AI SDKs in FE/BE source | Confirmed by scan |
+
+### 7.4 Security (local profile posture)
+
+| Check | Result |
+|-------|--------|
+| Unauth protected EW/response/report APIs | **401** |
+| Partner without authority | **403** |
+| Maker≠checker (MDA create vs approve lifecycle) | **403** on approve |
+| Local god-mode default | **OFF** (header persona required) |
+
+### 7.5 Frontend organisation (EW / alerts)
+
+| Surface | Route | Backend |
+|---------|-------|---------|
+| EW workbench | `/m/preparedness/early-warnings` | `/v1/ew/warnings` |
+| Entity consoles + DMD | `/m/preparedness/early-warnings/{tma,mow,…,consolidated}` | agency + dmd |
+| New bulletin (722E_4) | `…/new-bulletin` | EW PDF engine + products store |
+| Scanner / monitoring | `…/scanner` | `/v1/ew/scanner/*` |
+| EOCC bulletins | `…/eocc-bulletin` | `/v1/ew/products` |
+| Issued alerts (response + stakeholder) | `/m/response/issued-alerts`, stakeholder portal | dashboard strip + warnings + products + portal |
+| EW effectiveness report | `/m/reports-analytics/early-warning-management` | `/v1/reports/early-warnings` |
+
+### 7.6 Residual honest limits
+
+- Portal public map empty until operators use **Publish to map** (`POST …/map`) — intentional PMO control, not a missing endpoint.
+- Response support hubs remain transitional packages (not controllers).
+- Dual resource catalogue paths remain elsewhere.
+- Bulletin PDF engine is external (`:8600`); FE now fails closed with clear message when down.

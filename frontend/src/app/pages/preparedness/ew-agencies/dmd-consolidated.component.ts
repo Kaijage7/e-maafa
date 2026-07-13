@@ -1218,8 +1218,8 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
       source: 'e-IDSR / MoH — planned', status: 'planned', toggleable: false, enabled: false,
     },
     {
-      id: 'sat_ai', title: 'Satellite damage AI classification',
-      detail: 'Explicitly NOT in scope until dual-proved model + legal review. Use EO Browser for human review.',
+      id: 'sat_ai', title: 'Satellite damage AI — out of scope',
+      detail: 'Not a DMIS feature. Explicitly deferred until dual-proved model + legal review. Use EO Browser / Worldview links for human review only.',
       source: 'F105/F114 deferred — never green-lit without proof', status: 'deferred', toggleable: false, enabled: false,
     },
   ]);

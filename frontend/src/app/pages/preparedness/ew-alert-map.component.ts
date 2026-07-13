@@ -612,16 +612,63 @@ export class EwAlertMapComponent {
     if (!payload.days.some((d: any) => d.hazards.length)) { this.flash('Paint at least one area for a hazard first.', true); return; }
     this.generating.set(true);
     this.flash('Generating the 722E_4 bulletin…', false);
-    this.http.post('/ew-api/generate/722e4', payload, { responseType: 'blob' }).subscribe({
-      next: (blob) => {
+    // Health-check the PDF engine first so operators get a clear message if :8600 is down.
+    this.http.get('/ew-api/health').subscribe({
+      next: () => this.postGenerate(payload),
+      error: () => {
+        this.generating.set(false);
+        this.flash(
+          'Bulletin engine is not running (port 8600). Start it with start-all.sh or: cd extracted/maafa.pmo.go.tz/ew && EWS_PDF_PORT=8600 python pdf_service.py',
+          true,
+        );
+      },
+    });
+  }
+
+  private postGenerate(payload: any): void {
+    this.http.post('/ew-api/generate/722e4', payload, { responseType: 'blob', observe: 'response' }).subscribe({
+      next: (res) => {
+        const blob = res.body!;
+        // Engine returns JSON error bodies as application/json — never treat those as a PDF.
+        const ctype = res.headers.get('Content-Type') || blob.type || '';
+        if (ctype.includes('json') || blob.type.includes('json')) {
+          this.generating.set(false);
+          blob.text().then(t => {
+            let msg = 'Generation failed — check the bulletin and try again.';
+            try { msg = JSON.parse(t)?.error || msg; } catch { /* keep default */ }
+            this.flash(msg, true);
+          });
+          return;
+        }
         this.generating.set(false);
         const url = URL.createObjectURL(blob);
         this.previewRaw.set(url);
-        this.previewUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(url));   // inline preview (no popup blocker)
+        this.previewUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(url));
         this.storeProduct(blob);
         this.flash('Preview ready — review it, edit and regenerate as needed, then push to the EOCC. Saved to Dissemination.', false);
       },
-      error: () => { this.generating.set(false); this.flash('Generation failed — check the bulletin and try again.', true); },
+      error: (err) => {
+        this.generating.set(false);
+        const body = err?.error;
+        if (body instanceof Blob) {
+          body.text().then(t => {
+            let msg = 'Generation failed — check the bulletin and try again.';
+            try {
+              const j = JSON.parse(t);
+              if (j?.error) { msg = String(j.error).slice(0, 400); }
+            } catch { /* keep default */ }
+            if (err?.status === 0) {
+              msg = 'Cannot reach the bulletin engine (port 8600). Ensure the EW PDF service is running.';
+            }
+            this.flash(msg, true);
+          });
+          return;
+        }
+        const msg = err?.status === 0
+          ? 'Cannot reach the bulletin engine (port 8600). Ensure the EW PDF service is running.'
+          : (err?.error?.error || err?.message || 'Generation failed — check the bulletin and try again.');
+        this.flash(msg, true);
+      },
     });
   }
   pushFromPreview(): void { this.previewUrl.set(null); this.pushToEocc(); }
