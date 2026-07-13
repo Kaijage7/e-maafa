@@ -507,8 +507,12 @@ public class IncidentWorkflowService {
         return stage;
     }
 
-    /** Convenience overload: settle from a freshly-created incident (loads its row for the area check + notify). */
-    String settleStage(long incidentId, String landedStage) {
+    /**
+     * Convenience overload: settle from a freshly-created incident (loads its row for the area check + notify).
+     * Public so eGA service layers (e.g. Public Reports convert) can land on the same ladder without living
+     * in the response package.
+     */
+    public String settleStage(long incidentId, String landedStage) {
         return settleStage(incidentId, findOr404(incidentId), landedStage);
     }
 
@@ -594,7 +598,8 @@ public class IncidentWorkflowService {
                 .formatted(byCol, atCol, commentsCol), to, userId, comments, incidentId);
     }
 
-    void logHistory(long incidentId, String action, String from, String to, String comments) {
+    /** Workflow audit row — public for eGA service layers that create/transition incidents outside response/. */
+    public void logHistory(long incidentId, String action, String from, String to, String comments) {
         Long userId = actingUserId();
         String role = jdbc.query("""
                 select r.name from public.roles r
@@ -617,7 +622,7 @@ public class IncidentWorkflowService {
     }
 
     /** users.id of the acting user — honest JWT / Super Admin / configured system actor only. */
-    Long actingUserId() {
+    public Long actingUserId() {
         return users.actingUserId();
     }
 

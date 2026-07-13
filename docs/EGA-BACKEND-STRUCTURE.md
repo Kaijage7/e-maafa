@@ -158,7 +158,9 @@ Suggested migration order:
 12. ~~**Roles & permissions (Settings)**~~ — **DONE** (matrix + Super Admin rename/empty-matrix guards)  
 13. ~~**User management (Settings)**~~ — **DONE** (last Super Admin guard; unknown role names rejected; RoleCatalogue remains shared helper)  
 14. ~~**Stakeholder coordination (Response R1)**~~ — **DONE** (read-only first Response leaf)  
-15. Response remaining (executive → … → never engine/dispatch/allocation first) then EW  
+15. ~~**Executive Watch (Response R2)**~~ — **DONE** (read-only national COP; service.impl + thin controller)  
+16. ~~**Public Reports (Response R3)**~~ — **DONE** (triage + convert; service.impl + thin controller; workflow helpers public for convert)  
+17. Response remaining (never engine/dispatch/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -181,8 +183,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | User management | Done | `/v1/settings/users` | Index filters/groups, create/update/roles/password/delete net-zero; last Super Admin strip/delete 409; **unknown role 400** (was silent skip); bad password policy; FE proxy + roles/locations/institutions regressions |
 | Stakeholder coordination | Done | `/v1/response/stakeholder-coordination` | Index + show 360°; not-found; FE proxy; preparedness/settings/response regressions; first Response eGA leaf |
 | Executive Watch (Response R2) | Done | `/v1/response/executive` | Thin controller + service.impl; national tier only (area → 403); JSON unchanged; multi-persona verify |
+| Public Reports (Response R3) | Done | `/v1/response/public-reports` | Thin controller + service.impl; paths/JSON/PreAuthorize unchanged; multi-persona list scopes; OOA review/dismiss/convert **404**; dismiss reason **422**; convert untagged/already-converted **422**; convert → waiting_ded + link integrity (drill reverted) |
 
-15. ~~Response remaining (executive → … → never engine/dispatch/allocation first)~~ — **Executive Watch DONE**; remaining Response leaves next (public reports preferred; never engine/dispatch first)
+16. ~~**Public Reports**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
 
 ---
 

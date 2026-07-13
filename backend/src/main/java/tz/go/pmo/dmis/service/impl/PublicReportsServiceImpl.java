@@ -1,53 +1,38 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
-import tz.go.pmo.dmis.common.security.AreaGuard;
-import tz.go.pmo.dmis.common.security.Authz;
-import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.response.IncidentOptions;
+import tz.go.pmo.dmis.response.IncidentWorkflowService;
+import tz.go.pmo.dmis.service.PublicReportsService;
 
 /**
- * Public hazard reports — the triage desk that closes the loop from the citizen "Report Hazard"
- * wizard (public portal writes public_hazard_reports) into the Response module. Responders see
- * incoming citizen reports, mark them reviewing/dismissed, or CONVERT a credible report into a
- * formal incident (which then enters the incident workflow). Previously this sidebar item had no
- * screen — citizen reports came in but could not be actioned.
+ * Citizen public-hazard-report triage. Logic moved from the former response package controller;
+ * Angular paths/JSON unchanged. Convert still settles the incident ladder via
+ * {@link IncidentWorkflowService} (transitional Response coupling).
  */
-@RestController
-@RequestMapping("/v1/response/public-reports")
-public class PublicReportsController {
+@Service
+@RequiredArgsConstructor
+public class PublicReportsServiceImpl implements PublicReportsService {
 
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService users;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
 
-    public PublicReportsController(JdbcTemplate jdbc, IncidentWorkflowService users, JurisdictionScope jurisdiction,
-            AreaGuard areaGuard) {
-        this.jdbc = jdbc;
-        this.users = users;
-        this.jurisdiction = jurisdiction;
-        this.areaGuard = areaGuard;
-    }
-
-    @GetMapping
-    @PreAuthorize("hasAuthority('incidents.view')")
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false) String search) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> index(String status, String search) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
         if (status != null && !status.isBlank()) {
@@ -60,8 +45,8 @@ public class PublicReportsController {
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
-        // STRICT area scope for citizen reports: district/LGA sees only own district; region sees own region;
-        // national sees all. Untagged (null area) reports stay national triage only — not every district queue.
+        // STRICT area scope: district sees own district; region own region; national all.
+        // Untagged (null area) reports stay national triage only.
         jurisdiction.appendAreaScope("r", where, params);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("reports", jdbc.queryForList("""
@@ -80,6 +65,7 @@ public class PublicReportsController {
                 order by case r.status when 'new' then 0 when 'reviewing' then 1 else 2 end,
                          r.created_at desc limit 200
                 """.formatted(where), params.toArray()));
+        // Stats use the same area + status/search filters as the list (productive chips).
         out.put("stats", jdbc.queryForMap("""
                 select count(*) as total,
                        count(*) filter (where r.status = 'new') as new_reports,
@@ -92,12 +78,10 @@ public class PublicReportsController {
         return out;
     }
 
-    /** Mark a report under review. */
-    @PostMapping("/{id}/review")
-    @PreAuthorize(Authz.PERM_INCIDENT_UPDATE)
+    @Override
     @Transactional
-    public Map<String, Object> review(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
-        requireNew(id, "reviewing");
+    public Map<String, Object> review(long id, Map<String, Object> body) {
+        requireNew(id);
         jdbc.update("""
                 update public.public_hazard_reports set status = 'reviewing', reviewed_by = ?, reviewed_at = now(),
                     review_notes = ?, updated_at = now() where id = ?
@@ -105,16 +89,14 @@ public class PublicReportsController {
         return Map.of("success", true, "message", "Report marked under review.");
     }
 
-    /** Dismiss a non-credible / duplicate report. */
-    @PostMapping("/{id}/dismiss")
-    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
+    @Override
     @Transactional
-    public Map<String, Object> dismiss(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> dismiss(long id, Map<String, Object> body) {
         Map<String, Object> report = findOr404(id);
         if ("converted".equals(report.get("status"))) {
             throw new BusinessRuleException("A converted report cannot be dismissed.");
         }
-        String reason = str(body.get("reason"));
+        String reason = str(body == null ? null : body.get("reason"));
         if (reason == null) {
             throw new BusinessRuleException("A dismissal reason is required.");
         }
@@ -125,14 +107,9 @@ public class PublicReportsController {
         return Map.of("success", true, "message", "Report dismissed.");
     }
 
-    /**
-     * Convert a credible citizen report into a formal incident — the loop from public reporting
-     * into the response workflow. The incident starts at 'Reported' for the normal approval chain.
-     */
-    @PostMapping("/{id}/convert")
-    @PreAuthorize(Authz.PERM_INCIDENT_APPROVE)
+    @Override
     @Transactional
-    public Map<String, Object> convert(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> convert(long id, Map<String, Object> body) {
         Map<String, Object> report = findOr404(id);
         if ("converted".equals(report.get("status"))) {
             throw new BusinessRuleException("This report has already been converted to incident #"
@@ -141,9 +118,7 @@ public class PublicReportsController {
         if ("dismissed".equals(report.get("status"))) {
             throw new BusinessRuleException("This report was dismissed and cannot be converted — re-review it first.");
         }
-        // DDMC "approve presence": the converted incident enters the ladder at the DED stage (the DDMC has
-        // confirmed it by converting). It needs a district to be scopable — taken from the report if tagged,
-        // else assigned by the DDMC in the convert request.
+        // DDMC convert: incident enters ladder at waiting_ded (presence approved).
         AreaSelection area = resolveConversionArea(report, body);
         Long districtId = area.districtId();
         Long regionId = area.regionId();
@@ -153,9 +128,6 @@ public class PublicReportsController {
                 select id from public.incident_types where name ilike ? or ? ilike '%' || name || '%' limit 1
                 """, rs -> rs.next() ? rs.getLong(1) : null,
                 "%" + report.get("hazard_type") + "%", String.valueOf(report.get("hazard_type")));
-        // The denormalized area names are resolved from the ids in hand — the RAS/DED queues, stage
-        // notifications and the map's no-coordinates fallback all read district_name/region_name, so a
-        // converted incident must carry them like an officer-created one does (null ids yield null names).
         Long incidentId = jdbc.queryForObject("""
                 insert into public.incidents(title, description, incident_type_id, severity_level, status,
                     workflow_status, origin_level, district_id, region_id, district_name, region_name,
@@ -184,23 +156,18 @@ public class PublicReportsController {
         if (linked == 0) {
             throw new BusinessRuleException("Incident was created but the public report could not be linked — contact support.");
         }
-        // Integrity: never leave status=converted without a linked incident id (orphans break triage).
         Long check = jdbc.queryForObject(
                 "select linked_incident_id from public.public_hazard_reports where id = ?", Long.class, id);
         if (check == null || !check.equals(incidentId)) {
             throw new BusinessRuleException("Public report link integrity check failed after convert.");
         }
-        // Settle the chain: skip any unstaffed/auto tier (per System Settings) so the incident rests on a real
-        // approver even in a district/region with no DED/coordinator — then the resting officers are notified.
-        String resting = users.settleStage(incidentId, "waiting_ded");
+        String resting = users.settleStage(incidentId.longValue(), "waiting_ded");
         return Map.of("success", true, "incident_id", incidentId,
                 "message", "Report confirmed — incident #" + incidentId + " is now in the response chain ("
                         + IncidentOptions.workflowStatusLabel(resting) + ").");
     }
 
-    // ── helpers ──
-
-    private void requireNew(long id, String to) {
+    private void requireNew(long id) {
         Map<String, Object> report = findOr404(id);
         if ("converted".equals(report.get("status")) || "dismissed".equals(report.get("status"))) {
             throw new BusinessRuleException("This report is already " + report.get("status") + ".");
@@ -208,11 +175,11 @@ public class PublicReportsController {
     }
 
     private Map<String, Object> findOr404(long id) {
-        List<Map<String, Object>> rows = jdbc.queryForList("select * from public.public_hazard_reports where id = ?", id);
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "select * from public.public_hazard_reports where id = ?", id);
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Report not found.");
         }
-        // Mirror the list scope (strict appendAreaScope): only own district/region; national sees all.
         areaGuard.assertOwn("public.public_hazard_reports", id);
         return rows.get(0);
     }
@@ -246,12 +213,14 @@ public class PublicReportsController {
         if (tier == JurisdictionScope.Tier.DISTRICT) {
             Long myDistrict = toLong(area.get("district_id"));
             if (myDistrict == null || !myDistrict.equals(districtId)) {
-                throw new BusinessRuleException("You can only convert public reports into incidents for your own district.");
+                throw new BusinessRuleException(
+                        "You can only convert public reports into incidents for your own district.");
             }
         } else if (tier == JurisdictionScope.Tier.REGION) {
             Long myRegion = toLong(area.get("region_id"));
             if (myRegion == null || !myRegion.equals(regionId)) {
-                throw new BusinessRuleException("You can only convert public reports into incidents for your own region.");
+                throw new BusinessRuleException(
+                        "You can only convert public reports into incidents for your own region.");
             }
         } else if (tier == JurisdictionScope.Tier.NONE) {
             throw new BusinessRuleException("Your account is not attached to an incident reporting area.");
@@ -266,7 +235,6 @@ public class PublicReportsController {
         return s.isEmpty() ? null : s;
     }
 
-    /** First non-null of two values coerced to Long (report's own area, else the value supplied on convert). */
     private static Long firstLong(Object a, Object b) {
         Long x = toLong(a);
         return x != null ? x : toLong(b);
