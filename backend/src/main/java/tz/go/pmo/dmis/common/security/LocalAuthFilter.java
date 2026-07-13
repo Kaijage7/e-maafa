@@ -30,6 +30,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * posture as production for security assessment. Opt-in:
  * <ul>
  *   <li>{@code X-Local-Roles: DAS} (or Super Admin, …) injects that persona for E2E;</li>
+ *   <li>{@code X-Local-User-Id: 1623} pins the acting {@code users.id} (area attachment for jurisdiction
+ *       tests). Roles still come from {@code X-Local-Roles}; if omitted, roles are loaded from the DB for that user.</li>
  *   <li>{@code dmis.security.local-god-mode=true} restores legacy full-access without a header
  *       (dev convenience only — never production).</li>
  * </ul>
@@ -60,12 +62,13 @@ public class LocalAuthFilter extends OncePerRequestFilter {
             return;
         }
         String rolesHeader = request.getHeader("X-Local-Roles");
-        if (!StringUtils.hasText(rolesHeader) && !godModeDefault) {
+        String userIdHeader = request.getHeader("X-Local-User-Id");
+        if (!StringUtils.hasText(rolesHeader) && !StringUtils.hasText(userIdHeader) && !godModeDefault) {
             // Fail closed: no persona, no token → leave SecurityContext empty → 401 on protected paths.
             chain.doFilter(request, response);
             return;
         }
-        SecurityContextHolder.getContext().setAuthentication(authFor(rolesHeader));
+        SecurityContextHolder.getContext().setAuthentication(authFor(rolesHeader, userIdHeader));
         chain.doFilter(request, response);
     }
 
@@ -73,12 +76,22 @@ public class LocalAuthFilter extends OncePerRequestFilter {
         return token != null && token.chars().filter(c -> c == '.').count() == 2;
     }
 
-    private Authentication authFor(String rolesHeader) {
-        boolean godMode = !StringUtils.hasText(rolesHeader);
-        List<String> roles = godMode
-                ? List.of(Authz.ALL)
-                : Arrays.stream(rolesHeader.split(",")).map(String::trim).filter(StringUtils::hasText).toList();
-        Long subjectId = resolveSubjectId(roles);
+    private Authentication authFor(String rolesHeader, String userIdHeader) {
+        Long pinnedUser = parseUserId(userIdHeader);
+        boolean godMode = !StringUtils.hasText(rolesHeader) && pinnedUser == null;
+        List<String> roles;
+        if (godMode) {
+            roles = List.of(Authz.ALL);
+        } else if (StringUtils.hasText(rolesHeader)) {
+            roles = Arrays.stream(rolesHeader.split(",")).map(String::trim).filter(StringUtils::hasText).toList();
+        } else {
+            // Pin user only: load their real roles so jurisdiction + RBAC match production seats.
+            roles = loadRolesForUser(pinnedUser);
+            if (roles.isEmpty()) {
+                roles = List.of(Authz.SUPER_ADMIN);
+            }
+        }
+        Long subjectId = pinnedUser != null ? pinnedUser : resolveSubjectId(roles);
         Jwt jwt = Jwt.withTokenValue("local")
                 .header("alg", "none")
                 .subject(Long.toString(subjectId))
@@ -90,6 +103,30 @@ public class LocalAuthFilter extends OncePerRequestFilter {
         (godMode ? permissions.all() : permissions.forRoles(roles))
                 .forEach(p -> authorities.add(new SimpleGrantedAuthority(p)));
         return new JwtAuthenticationToken(jwt, authorities);
+    }
+
+    private static Long parseUserId(String header) {
+        if (!StringUtils.hasText(header)) {
+            return null;
+        }
+        try {
+            long id = Long.parseLong(header.trim());
+            return id > 0 ? id : null;
+        } catch (NumberFormatException bad) {
+            return null;
+        }
+    }
+
+    private List<String> loadRolesForUser(Long userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        return jdbc.queryForList("""
+                select r.name from public.model_has_roles mhr
+                join public.roles r on r.id = mhr.role_id
+                where mhr.model_id = ?
+                order by coalesce(r.sort_order, 500), r.name
+                """, String.class, userId);
     }
 
     private Long resolveSubjectId(List<String> roles) {

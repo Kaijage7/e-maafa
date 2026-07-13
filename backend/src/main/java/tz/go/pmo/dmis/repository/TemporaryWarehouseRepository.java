@@ -11,14 +11,17 @@ public interface TemporaryWarehouseRepository extends JpaRepository<TemporaryWar
     List<TemporaryWarehouse> findAllByOrderByNameAsc();
 
     /**
-     * Jurisdiction-scoped list (shared-or-own): national tier sees all; a region/district officer sees
-     * their own area plus shared (NULL-area) rows.
+     * Same shared-or-own district rule as permanent warehouses — null district is shared only when
+     * region matches the officer or region is also null.
      */
     @Query("""
             select w from TemporaryWarehouse w
             where :scope = 'NATIONAL'
-               or (:scope = 'REGION'   and (w.regionId   = :regionId   or w.regionId   is null))
-               or (:scope = 'DISTRICT' and (w.districtId = :districtId or w.districtId is null))
+               or (:scope = 'REGION' and (w.regionId = :regionId or w.regionId is null))
+               or (:scope = 'DISTRICT' and (
+                    w.districtId = :districtId
+                    or (w.districtId is null and (w.regionId = :regionId or w.regionId is null))
+               ))
             order by w.name asc
             """)
     List<TemporaryWarehouse> findScoped(@Param("scope") String scope,

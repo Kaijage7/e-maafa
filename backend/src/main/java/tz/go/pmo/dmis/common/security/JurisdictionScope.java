@@ -33,10 +33,20 @@ public class JurisdictionScope {
     public static final Set<String> NATIONAL = Set.of(Authz.SUPER_ADMIN, Authz.ICT_ADMIN, Authz.DIRECTOR,
             Authz.ASST_DIRECTOR, Authz.SECRETARY, Authz.EOCC, Authz.MDA_FOCAL,
             Authz.MINISTER, Authz.PRESIDENT, Authz.NATIONAL_TECHNICAL_COMMITTEE, Authz.NATIONAL_STEERING_COMMITTEE);
-    /** Roles scoped to their own region. */
-    public static final Set<String> REGION = Set.of(Authz.RAS, Authz.RC, Authz.REG_DC);
-    /** Roles scoped to their own district. */
-    public static final Set<String> DISTRICT = Set.of(Authz.DED, Authz.DAS, Authz.DIST_DC);
+    /**
+     * Roles scoped to their own region (fallback when user has no region_id on the account —
+     * preferred path is always the area attribute on {@code users}).
+     */
+    public static final Set<String> REGION = Set.of(
+            Authz.RAS, Authz.RC, Authz.REG_DC,
+            "Regional Planning Officer", "Regional Logistic Officer");
+    /**
+     * Roles scoped to their own district/council (fallback when area ids missing).
+     * Advisers (Planning, DC, DAS) and logistics are area-bound the same way as Dist DC / DED.
+     */
+    public static final Set<String> DISTRICT = Set.of(
+            Authz.DED, Authz.DAS, Authz.DIST_DC,
+            "District Commissioner", "District Planning Officer", "District Logistic Officer");
 
     public enum Tier { NATIONAL, REGION, DISTRICT, NONE }
 

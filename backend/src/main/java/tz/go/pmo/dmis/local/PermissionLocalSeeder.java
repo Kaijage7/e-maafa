@@ -174,11 +174,13 @@ public class PermissionLocalSeeder implements CommandLineRunner {
                 "Warehouse & Stock|manage", "Monitoring & Evaluation|enter"));
         p.put("Dist DC", List.of("*|view", "Incidents|create", "Incidents|update", "Incidents|approve",
                 "Incidents|comment", "Tasks|manage",
-                "Damage Assessment|create", "Monitoring & Evaluation|enter"));
+                "Damage Assessment|create", "Resource Allocation|request",
+                "Warehouse & Stock|view", "Monitoring & Evaluation|enter"));
         // DED owns waiting_ded — approve + comment. DAS is adviser (view+comment), not an incident stage owner.
-        p.put("DED", List.of("*|view", "Incidents|approve", "Incidents|comment", "Monitoring & Evaluation|enter"));
+        p.put("DED", List.of("*|view", "Incidents|approve", "Incidents|comment",
+                "Resource Allocation|request", "Warehouse & Stock|view", "Monitoring & Evaluation|enter"));
         p.put("DAS", List.of("*|view", "Incidents|comment", "Tasks|manage",
-                "Damage Assessment|create", "Monitoring & Evaluation|enter"));
+                "Damage Assessment|create", "Warehouse & Stock|view", "Monitoring & Evaluation|enter"));
         p.put("District Commissioner", List.of("*|view", "Incidents|comment", "Monitoring & Evaluation|enter"));
         p.put("District Planning Officer", List.of("*|view", "Incidents|comment", "Monitoring & Evaluation|enter"));
         p.put("District Logistic Officer", List.of("*|view", "Resource Allocation|dispatch",
