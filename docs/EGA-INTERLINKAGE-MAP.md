@@ -259,7 +259,8 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R14 | Incident Ops Timeline | `/v1/response/incidents/{id}/ops-timeline` | ~519 | Read-only trail merge; shares base with fat IncidentController | **DONE** |
 | R15 | DLNA | `/v1/response/dlna` | ~715 | PDF + NotificationService + AreaGuard; Annex 1/2 | **DONE** |
 | R16 | Dashboard + EOCC | `/v1/response/dashboard`, `/eocc`, `/eocc/activate` | ~542 | JurisdictionScope + AreaGuard + ActivationService; CurrentUserResolver | **DONE** |
-| R8+ | Warehouse-ops, dispatch, allocations, bidding, incidents, command center | various | large | High SQL + stock + shared bases — last | pending |
+| R17 | Resource allocations | `/v1/response/allocations` | ~719 | ApprovalWorkflowEngine + DispatchSupportService (returns) + SimulationGuard | **DONE** |
+| R8+ | Warehouse-ops, dispatch, bidding, incidents, command center | various | large | High SQL + stock + shared bases — last | pending |
 
 ### 10.5 Do **not** start with
 

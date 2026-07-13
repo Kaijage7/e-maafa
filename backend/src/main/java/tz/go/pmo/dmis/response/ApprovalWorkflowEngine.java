@@ -35,8 +35,8 @@ public class ApprovalWorkflowEngine {
 
     private static final Logger log = LoggerFactory.getLogger(ApprovalWorkflowEngine.class);
 
-    /** Polymorphic type stored on step rows — kept as the Laravel FQCN for data parity. */
-    static final String ALLOCATION_TYPE = "App\\Models\\AllocatedResource";
+    /** Polymorphic type stored on step rows — kept as the Laravel FQCN for data parity. Public for eGA service.impl. */
+    public static final String ALLOCATION_TYPE = "App\\Models\\AllocatedResource";
 
     private final JdbcTemplate jdbc;
     private final IncidentWorkflowService users; // reused for actingUserId()

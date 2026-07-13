@@ -173,7 +173,8 @@ Suggested migration order:
 27. ~~**DLNA**~~ — **DONE** (Annex 1/2; PDF + NotificationService retained)  
 28. ~~**Dashboard + EOCC**~~ — **DONE** (overview + live board + activate; ActivationService retained)  
 29. ~~**Resource Approvals**~~ — **DONE** (queues + actions; ApprovalWorkflowEngine retained)  
-30. Response remaining (never dispatch/warehouse/allocation first) then EW  
+30. ~~**Resource Allocations**~~ — **DONE** (request queues + store/lifecycle; engine + DispatchSupportService retained)  
+31. Response remaining (dispatch/warehouse/bidding/hubs last) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -210,8 +211,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | DLNA | Done | `/v1/response/dlna` | Thin controller + service.impl; request records on service; create/header/section; Dist **403**; drill net-zero |
 | Dashboard + EOCC | Done | `/v1/response/dashboard`, `/eocc`, `/eocc/activate` | Thin controller + service.impl; JurisdictionScope isolation; SA/DED/RAS/DAS baseline match; unauth **401**; empty activate **422**; DAS activate **403**; ActivationService retained |
 | Resource Approvals | Done | `/v1/response/approvals` | Thin controller + service.impl; engine retained; SA/DED/RAS/DAS list+show isolation; unauth **401**; reject empty **422** (net-zero); Partner/DLO approve **403**; bulk empty **422**; pending count unchanged |
+| Resource Allocations | Done | `/v1/response/allocations` | Thin controller + service.impl; engine + DispatchSupportService + SimulationGuard retained; store validation **errors** map preserved; multi-persona baseline; Partner **403**; DED track/forward OOA **404**; reject empty net-zero |
 
-29. ~~**Resource Approvals**~~ — **DONE**; remaining Response leaves next (never dispatch/warehouse/allocation first)
+30. ~~**Resource Allocations**~~ — **DONE**; remaining Response leaves next (dispatch/warehouse/bidding/hubs last)
 
 ---
 

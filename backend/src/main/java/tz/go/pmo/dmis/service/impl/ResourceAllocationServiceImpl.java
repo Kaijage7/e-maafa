@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -6,21 +6,18 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.response.ApprovalWorkflowEngine;
+import tz.go.pmo.dmis.response.DispatchSupportService;
+import tz.go.pmo.dmis.response.SimulationGuard;
+import tz.go.pmo.dmis.service.ResourceAllocationService;
 
 /**
  * Port of Response\ResourceAllocationController: the request → forward-to-PMO →
@@ -33,10 +30,11 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  * deducted at dispatch from the source warehouse. There is no destination store on the incident
  * site, so no second ledger row is created. Warehouse-to-warehouse transfers, borrows, procurement
  * deliveries, and donation receipts <em>do</em> update destination stock.</p>
+ * <p>Logic lives in service.impl (eGA); paths/JSON unchanged. Acting user via
+ * {@link CurrentUserResolver}; engine + stock support retained as transitional hubs.</p>
  */
-@RestController
-@RequestMapping("/v1/response/allocations")
-public class ResourceAllocationController {
+@Service
+public class ResourceAllocationServiceImpl implements ResourceAllocationService {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final TypeReference<List<Map<String, Object>>> JOURNAL = new TypeReference<>() {};
 
@@ -53,20 +51,21 @@ public class ResourceAllocationController {
             "In Transit", List.of("Deployed", "Returned"),
             "Deployed", List.of("Delivered", "Returned"));
 
+
     private final JdbcTemplate jdbc;
-    private final IncidentWorkflowService incidents;
+    private final CurrentUserResolver users;
     private final ApprovalWorkflowEngine approvals;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
     private final SimulationGuard simulationGuard;
     private final DispatchSupportService stock;
 
-    public ResourceAllocationController(JdbcTemplate jdbc, IncidentWorkflowService incidents,
-                                        ApprovalWorkflowEngine approvals, JurisdictionScope jurisdiction,
-                                        AreaGuard areaGuard, SimulationGuard simulationGuard,
-                                        DispatchSupportService stock) {
+    public ResourceAllocationServiceImpl(JdbcTemplate jdbc, CurrentUserResolver users,
+                                         ApprovalWorkflowEngine approvals, JurisdictionScope jurisdiction,
+                                         AreaGuard areaGuard, SimulationGuard simulationGuard,
+                                         DispatchSupportService stock) {
         this.jdbc = jdbc;
-        this.incidents = incidents;
+        this.users = users;
         this.approvals = approvals;
         this.jurisdiction = jurisdiction;
         this.areaGuard = areaGuard;
@@ -76,7 +75,7 @@ public class ResourceAllocationController {
 
     // ─── Index: the three operational queues + stock summary ───
 
-    @GetMapping
+    @Override
     public Map<String, Object> index() {
         areaGuard.assertNotStakeholder();   // staff queues — partners use the bidding portal, not this
         Map<String, Object> out = new LinkedHashMap<>();
@@ -156,7 +155,7 @@ public class ResourceAllocationController {
     }
 
     /** Eligible incidents (approved chain OR operationally active) + catalogue with live stock. */
-    @GetMapping("/form-data")
+    @Override
     public Map<String, Object> formData() {
         areaGuard.assertNotStakeholder();   // staff allocation form — not for partners
         Map<String, Object> out = new LinkedHashMap<>();
@@ -214,11 +213,10 @@ public class ResourceAllocationController {
 
     // ─── Store: one request → N allocation rows (one per resource line) ───
 
-    @PreAuthorize("hasAuthority('resource_allocation.request')")
-    @PostMapping
+    @Override
     @Transactional
     @SuppressWarnings("unchecked")
-    public ResponseEntity<Map<String, Object>> store(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> store(Map<String, Object> body) {
         Long incidentId = longOf(body.get("incident_id"));
         String justification = strOf(body.get("justification"));
         String urgency = strOf(body.get("urgency"));
@@ -245,12 +243,11 @@ public class ResourceAllocationController {
             errors.put("resources", List.of("The resources field is required."));
         }
         if (!errors.isEmpty()) {
-            return ResponseEntity.unprocessableEntity()
-                    .body(Map.of("success", false, "message", "Validation failed.", "errors", errors));
+            return Map.of("success", false, "message", "Validation failed.", "errors", errors);
         }
 
         // Gate to approved/active incidents — verbatim source rule + message
-        Map<String, Object> incident = incidents.findOr404(incidentId);
+        Map<String, Object> incident = findIncidentOr404(incidentId);
         // Jurisdiction: an area officer may only request resources against an incident in their own
         // region/district (STRICT, mirrors how the queues/form-data scope incidents). Out of area → 404,
         // so a District-A officer cannot bind a request to District-B's incident.
@@ -265,7 +262,7 @@ public class ResourceAllocationController {
         // area (district → region → national/shared), then approvers refine before dispatch.
         // Never falls back to "first warehouse by id" — that mis-linked stock across areas.
         Long preferredWarehouse = resolvePreferredWarehouse(incident);
-        Long userId = incidents.actingUserId();
+        Long userId = users.actingUserId();
         List<Long> created = new ArrayList<>();
         for (Map<String, Object> line : resources) {
             Long resourceId = longOf(line.get("resource_id"));
@@ -302,16 +299,15 @@ public class ResourceAllocationController {
         if ("Verified".equals(incident.get("status"))) {
             jdbc.update("update public.incidents set status = 'Active Response', updated_at = now() where id = ?", incidentId);
         }
-        return ResponseEntity.ok(Map.of("success", true, "ids", created, "message",
-                "Resource request submitted successfully. It is now pending approval from the District Administrative Secretary."));
+        return Map.of("success", true, "ids", created, "message",
+                "Resource request submitted successfully. It is now pending approval from the District Administrative Secretary.");
     }
 
     // ─── Forward / Approve / Reject / Status / Track ───
 
-    @PreAuthorize("hasAuthority('resource_allocation.request')")
-    @PostMapping("/{id}/forward")
+    @Override
     @Transactional
-    public Map<String, Object> forward(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> forward(long id, Map<String, Object> body) {
         Map<String, Object> allocation = findOr404(id);
         // Scope via the served incident (shared-or-own, mirrors the queues): an area officer may forward only
         // an allocation whose incident is in their own area; out of area → 404.
@@ -319,7 +315,7 @@ public class ResourceAllocationController {
         if (!"Requested".equals(allocation.get("status"))) {
             throw new BusinessRuleException("Only requests with status \"Requested\" can be forwarded.");
         }
-        Long userId = incidents.actingUserId();
+        Long userId = users.actingUserId();
         jdbc.update("""
                 update public.allocated_resources set status = 'Pending PMO Approval',
                     forwarded_by = ?, forwarded_at = now(), updated_at = now() where id = ?
@@ -328,10 +324,9 @@ public class ResourceAllocationController {
         return Map.of("success", true, "message", "Request forwarded to PMO for approval.");
     }
 
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
-    @PostMapping("/{id}/approve")
+    @Override
     @Transactional
-    public Map<String, Object> approve(@PathVariable long id) {
+    public Map<String, Object> approve(long id) {
         Map<String, Object> allocation = findOr404(id);
         if (!"Requested".equals(allocation.get("status"))) {
             throw new BusinessRuleException("This allocation cannot be approved in its current status.");
@@ -354,34 +349,31 @@ public class ResourceAllocationController {
                 update public.allocated_resources set status = 'Approved', workflow_status = 'approved',
                     approved_by = ?, approved_at = now(),
                     deployed_from_warehouse = coalesce(?, deployed_from_warehouse), updated_at = now() where id = ?
-                """, incidents.actingUserId(), warehouse, id);
+                """, users.actingUserId(), warehouse, id);
         history(id, "approved", "Quick-approved via resource allocation dashboard", null);
         return Map.of("success", true, "message", "Resource allocation approved successfully.");
     }
 
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
-    @PostMapping("/{id}/reject")
+    @Override
     @Transactional
-    public ResponseEntity<Map<String, Object>> reject(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> reject(long id, Map<String, Object> body) {
         findOr404(id);
         String reason = strOf(body.get("rejection_reason"));
         if (reason == null || reason.length() > 500) {
-            return ResponseEntity.unprocessableEntity().body(Map.of("success", false, "message", "Validation failed.",
-                    "errors", Map.of("rejection_reason", List.of("The rejection reason field is required."))));
+            throw new BusinessRuleException("The rejection reason field is required.");
         }
         jdbc.update("""
                 update public.allocated_resources set status = 'Rejected', rejected_by = ?, rejected_at = now(),
                     rejection_reason = ?, updated_at = now() where id = ?
-                """, incidents.actingUserId(), reason, id);
+                """, users.actingUserId(), reason, id);
         history(id, "rejected", reason, null);
-        return ResponseEntity.ok(Map.of("success", true, "message", "Resource request rejected."));
+        return Map.of("success", true, "message", "Resource request rejected.");
     }
 
     /** Deployment lifecycle transitions with the source's matrix and timestamps. */
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
-    @PostMapping("/{id}/status")
+    @Override
     @Transactional
-    public Map<String, Object> updateStatus(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> updateStatus(long id, Map<String, Object> body) {
         Map<String, Object> allocation = findOr404(id);
         // Scope via the served incident (shared-or-own, mirrors the queues): a dispatch officer may transition
         // only an allocation whose incident is in their own area; out of area → 404.
@@ -396,7 +388,7 @@ public class ResourceAllocationController {
         if (!allowed.isEmpty() && !allowed.contains(newStatus)) {
             throw new BusinessRuleException("Cannot transition from '" + current + "' to '" + newStatus + "'.");
         }
-        Long userId = incidents.actingUserId();
+        Long userId = users.actingUserId();
         jdbc.update("update public.allocated_resources set status = ?, updated_at = now() where id = ?", newStatus, id);
         // Stamp the lifecycle timestamps the source sets per transition
         switch (newStatus) {
@@ -436,8 +428,8 @@ public class ResourceAllocationController {
     }
 
     /** Deployment tracking timeline + audit history for the track view. */
-    @GetMapping("/{id}/track")
-    public Map<String, Object> track(@PathVariable long id) {
+    @Override
+    public Map<String, Object> track(long id) {
         areaGuard.assertNotStakeholder();   // staff deployment tracking — not for partners
         // Jurisdiction visibility: area officer tracks only allocations for in-area incidents (strict).
         StringBuilder where = new StringBuilder("ar.id = ?");
@@ -576,7 +568,16 @@ public class ResourceAllocationController {
         jdbc.update("""
                 insert into public.approval_histories(allocation_id, action, user_id, remarks, created_at, updated_at)
                 values (?,?,?,?,now(),now())
-                """, allocationId, action, incidents.actingUserId(), remarks != null ? remarks : fallback);
+                """, allocationId, action, users.actingUserId(), remarks != null ? remarks : fallback);
+    }
+
+
+    private Map<String, Object> findIncidentOr404(long id) {
+        List<Map<String, Object>> rows = jdbc.queryForList("select * from public.incidents where id = ?", id);
+        if (rows.isEmpty()) {
+            throw new ResourceNotFoundException("Incident not found.");
+        }
+        return rows.get(0);
     }
 
     private Map<String, Object> findOr404(long id) {
@@ -597,7 +598,7 @@ public class ResourceAllocationController {
         String resourceName = jdbc.queryForObject("select name from public.resources where id = ?",
                 String.class, resourceId);
         List<Map<String, Object>> journal = journal(allocation.get("source_details"));
-        Long userId = incidents.actingUserId();
+        Long userId = users.actingUserId();
         double totalReturned = 0;
 
         for (Map<String, Object> entry : journal) {
@@ -650,7 +651,7 @@ public class ResourceAllocationController {
     private void recordReturnMovement(long resourceId, double quantity, long allocationId,
                                       Long fromWarehouseId, Long fromTempWarehouseId,
                                       Long toWarehouseId, Long toTempWarehouseId, String notes) {
-        Long userId = incidents.actingUserId();
+        Long userId = users.actingUserId();
         jdbc.update("""
                 insert into public.stock_movements(resource_id, quantity, movement_type, from_warehouse_id,
                     from_temporary_warehouse_id, to_warehouse_id, to_temporary_warehouse_id,
