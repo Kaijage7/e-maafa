@@ -231,12 +231,15 @@ public class DispatchController {
         if (!List.of("Approved", "Sourcing", "Requested to Stakeholders").contains((String) allocation.get("status"))) {
             throw new BusinessRuleException("This allocation cannot be dispatched. Current status: " + allocation.get("status"));
         }
-        // Warehouse/temp sources must be visible under the caller's warehouse matrix — picker is scoped;
+        // Stocked sources must be visible under the caller's matrix — picker is scoped;
         // body.source_id must not bypass it (no cross-region stock draw via raw API).
         if ("warehouse".equals(sourceType)) {
             areaGuard.assertWarehouseVisible("public.warehouses", sourceId);
         } else if ("temporary_warehouse".equals(sourceType)) {
             areaGuard.assertWarehouseVisible("public.temporary_warehouses", sourceId);
+        } else if ("agency".equals(sourceType)) {
+            // Shared-or-own: own-area agency stock or national/untagged (NULL area) rows.
+            areaGuard.assertOwnOrShared("public.agency_resources", sourceId);
         }
         // Validate against the REMAINING need, not the gross allocation: subtract what is already
         // journalled as dispatched AND what is already sitting in pending dispatch-approvals (procurement
@@ -366,6 +369,8 @@ public class DispatchController {
         String sourceType = "Warehouse".equals(approval.get("source_type")) ? "warehouse" : "temporary_warehouse";
         double quantity = dbl(approval.get("quantity"));
         Long userId = users.actingUserId();
+        // Maker ≠ checker on the warehouse manager gate (same person cannot request and release stock).
+        assertNotDispatchRequester(approval, userId);
 
         sources.deductStock(sourceType, sourceId, resourceId, quantity);
         jdbc.update("""
@@ -405,6 +410,8 @@ public class DispatchController {
         if (!"Pending".equals(approval.get("status"))) {
             throw new BusinessRuleException("This dispatch request has already been processed.");
         }
+        // Same SoD as approve: the officer who opened the dispatch gate cannot also reject it as "manager".
+        assertNotDispatchRequester(approval, users.actingUserId());
         long allocationId = ((Number) approval.get("allocated_resource_id")).longValue();
         jdbc.update("""
                 update public.dispatch_approvals set status = 'Rejected', rejected_by = ?, rejected_at = now(),
@@ -781,6 +788,21 @@ public class DispatchController {
             throw new ResourceNotFoundException("Allocation not found.");
         }
         return rows.get(0);
+    }
+
+    /**
+     * Warehouse manager gate: the user who submitted the dispatch request must not also approve/reject it.
+     * Super Admin is not exempt — same SoD rule as the resource multi-step chain (person-keyed, not role-keyed).
+     */
+    private void assertNotDispatchRequester(Map<String, Object> approval, Long actorUserId) {
+        if (actorUserId == null || approval.get("requested_by") == null) {
+            return;
+        }
+        long requester = ((Number) approval.get("requested_by")).longValue();
+        if (actorUserId == requester) {
+            throw new BusinessRuleException(
+                    "You submitted this dispatch request, so you cannot approve or reject it (segregation of duties).");
+        }
     }
 
     /** Counts allocations in the caller's incident area only ({@code where} must use alias {@code ar.}). */

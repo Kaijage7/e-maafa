@@ -75,11 +75,23 @@ INCIDENT (approved or Active Response)
 
 **Code:** `DispatchSupportService.availableSources` uses `appendWarehouseScope`; `DispatchController.dispatch` re-checks warehouse/temp visibility on the body.
 
+## Agency sources + dispatch SoD (careful follow-up)
+
+| Check | Result |
+|-------|--------|
+| Agency stock in source picker | Scoped **shared-or-own** on `agency_resources` (region/district) |
+| Untagged agency rows | Visible to area seats (national pool) |
+| Agency row tagged Arusha (region 62) | **Hidden** from Dodoma Reg; still visible nationally |
+| POST dispatch foreign agency body | **404** |
+| RLO requests dispatch then self-approves | **422** segregation of duties |
+| EOCC approves different seat | **200**; stock deducted |
+
+**Code:** `appendAreaScopeSharedOrOwn` on agency list; `assertOwnOrShared` on agency dispatch body; `assertNotDispatchRequester` on approve/reject.
+
 ## Remaining honest limits
 
-- Warehouse dispatch-manager gate has **no separate maker≠checker** (same logistic seat may request and approve stock leave) — only the resource multi-step chain enforces SoD.  
 - Dual catalogue surfaces remain (`/v1/settings/resources` eGA + response settings) — both productive.  
-- Agency stock list is still national (agency table is not area-keyed the same way).
+- Live agency stock corpus is small and mostly **untagged** (NULL area → national shared until operators stamp region/district).
 
 ## Seats used (proof matrix)
 

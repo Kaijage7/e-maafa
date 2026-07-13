@@ -104,14 +104,19 @@ public class DispatchSupportService {
                     true, distanceKm(incLat, incLng, row.get("latitude"), row.get("longitude"))));
         }
 
-        // Agency-held stock dispatched directly (no warehouse-manager gate)
-        for (Map<String, Object> row : jdbc.queryForList("""
+        // Agency-held stock (direct deduct, no manager gate). Scoped shared-or-own: own area rows
+        // plus national/untagged (NULL area) pools; area officers never see another region's tagged stock.
+        StringBuilder aSql = new StringBuilder("""
                 select ar.id, a.name, ar.location_description as location_name, ar.condition_status,
                        ar.latitude, ar.longitude, ar.quantity as available
                 from public.agency_resources ar
                 join public.agencies a on a.id = ar.agency_id
                 where ar.resource_id = ? and ar.quantity > 0
-                """, resourceId)) {
+                """);
+        List<Object> aParams = new ArrayList<>();
+        aParams.add(resourceId);
+        jurisdiction.appendAreaScopeSharedOrOwn("ar", aSql, aParams);
+        for (Map<String, Object> row : jdbc.queryForList(aSql.toString(), aParams.toArray())) {
             sources.add(source("agency", row.get("id"), row.get("name"), row.get("location_name"),
                     "Agency Stock", row.get("available"), "Agency Resource",
                     false, distanceKm(incLat, incLng, row.get("latitude"), row.get("longitude"))));
