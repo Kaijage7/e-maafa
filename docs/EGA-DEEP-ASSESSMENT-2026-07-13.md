@@ -723,3 +723,30 @@ Controls retained: area scope + partner self-isolation in `index()`; verify prov
 FE: `/m/stakeholder-portal/directory` → `/api/v1/stakeholders` (list/create/update/verify/link-user).
 
 **Verdict:** Stakeholder admin is eGA-layered with isolation and verification flows intact. Residual fat: **ops/IAM** only.
+
+
+## 23. Settings + formulas revalidation (2026-07-13)
+
+User: *make sure things are well automated and controlled in the system settings and formulas flow well and work end to end.*
+
+Full live re-pass after recent eGA; net-zero cleanup; **no code changes required**.
+
+### Control surfaces → runtime
+
+| Settings surface | FE | Runtime consumer | Control |
+|------------------|----|------------------|---------|
+| Incident approval automation | `/m/user-management/approval-workflows` → POST automation | `IncidentWorkflowService.settleStage` | modes: manual / auto / skip_if_unstaffed; empty/bogus stage/mode **422**; Partner **403** |
+| Resource allocation chain | same page → `/v1/settings/approval-workflows` | `ApprovalWorkflowEngine.initialize` | 6 contiguous levels; can_skip honored when unstaffed |
+| Budget approval ceilings | Finance → Approval Ceilings | `approveCommitment` tierCeiling | scope ∈ district/region/national; amount &gt; 0 or null; village/negative **422** |
+| Economics formulas | `/m/budget-finance/economics` | live GET recompute | `ai:false`, 24 formulaAudit steps, cash stable across two GETs |
+| Resource / incident types | Response settings + catalogue | ops modules | **200** (71 resources / 8 types) |
+
+### End-to-end proofs (this pass)
+
+1. **Automation → ladder:** set DDMC/DED/RDMC=`auto` → submit incident → rested at **`waiting_ras`** with 3× `auto_advanced` history → defaults restored → drill incident deleted.
+2. **Threshold → money:** district ceiling **100k** → 150k commitment approve **422** ceiling → ceiling restored **50M** → commitment deleted.
+3. **Automation write controls:** empty body / invalid mode / unknown stage **422**; Partner write **403**.
+4. **Economics honesty:** deterministic engine, not ML/AI; historical cash **8,000,000** stable.
+5. **Net-zero:** 1 historical budget commitment; 0 leftover settings-drill incidents; automation defaults intact.
+
+**Verdict:** System settings automation and formulas remain controlled, FE-wired, and proven end-to-end.
