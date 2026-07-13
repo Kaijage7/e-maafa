@@ -281,6 +281,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | RC4 | Knowledge repository | `/v1/recovery/knowledge` | — | Multipart document/attachment; approve | **DONE** |
 | P1–P7 | Portal CMS admins | content/portal,news,upload,education,materials,sections + settings/agencies | — | Thin eGA | **DONE** |
 | P8–P9 | Portal public + threats | `/v1/portal/**`, `/v1/content/threats` | — | PortalPublicServiceImpl + ThreatServiceImpl + ThreatAdmin; no portal package | **DONE** |
+| OH1 | One Health dashboard | `/v1/onehealth/dashboard` | — | National KPIs; recent_events area-scoped; productive E2E validated | **DONE** |
 
 ### 10.5 Do **not** start with
 

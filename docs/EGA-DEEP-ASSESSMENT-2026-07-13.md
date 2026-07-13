@@ -150,7 +150,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 34. ~~eGA migrate **Recovery (4 leaves)**~~ — **DONE**.
 35. ~~eGA migrate **Portal CMS admins (7 leaves)**~~ — **DONE**.
 36. ~~eGA migrate **Portal public + threats**~~ — **DONE** (no `portal/` package left).
-37. Next fat domains: One Health / finance / M&E / remaining reports. 
+37. ~~eGA migrate **One Health dashboard**~~ — **DONE** (first OH leaf).
+38. Next OH leaves: events → directives → dissemination → actions; then finance / M&E / reports. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -285,3 +286,34 @@ Public portal regressions exact: landing, threats, regions, education, shelters,
 | Threat admin | `/v1/content/threats` | Size baseline exact; unauth **401**; Partner **403**; create **201** → delete net-zero; empty name **400** |
 
 **Portal controllers: complete** (no `portal/` package). CMS admins still exact (news/portal/education sizes).
+
+## 13. One Health validation + dashboard eGA (2026-07-13)
+
+### Productive filters (live SA) — no fake params
+
+| Surface | Param behaviour verified |
+|---------|--------------------------|
+| Events `/v1/onehealth/events` | `status=NOPE` → total **0**; real status exact match; `search=zzzz` → 0; `priority_level`/`event_type`/`area_of_concern_id` nonsense → 0; `event_type=ew_alert` → **3** all `ew_alert`; date future window → 0; bad `date_from` → **400** (not 500); page clamp works |
+| Events list vs KPI | `total`/`data` **filter-aligned** (FE “Showing X of Y”); KPI `stats` stay area-scoped national snapshot (source parity for KPI navigation) |
+| Directives | `status=NOPE` → total **0**; list total filter-aligned; show **404** |
+| Disseminations | `approval_status=NOPE` → 0; `dissemination_type=stakeholder` productive |
+| Form cascade | `districts/{region}` **200** (n>0); bad region → **[]**; concern-items productive |
+| Dashboard | unauth **401**; SA baseline exact post-eGA extract |
+
+### Security / integration / honesty
+
+| Check | Result |
+|-------|--------|
+| Unauth | events/dashboard/directives/disseminations **401** |
+| Partner | module **403** (`one_health.view`) |
+| DAS/RAS without OH perm | **403** (module gate; not a leak) |
+| EW → OH | 3 events with `source_warning_id` set; FE `?event_type=ew_alert` deep-link wired |
+| Empty create | **422** with field errors (not silent success) |
+| AI product claims | No OH AI features; platform `sat_ai` remains **out of scope**; impact-support lists AI consolidation under **deferred honestly** |
+| FE organisation | Routes under `/m/one-health/*`; events FE params match backend names (`area_of_concern_id`, `event_type`, …) |
+
+### eGA start
+
+| Leaf | Path | Notes |
+|------|------|-------|
+| One Health dashboard | `/v1/onehealth/dashboard` | Thin controller + `OneHealthDashboardServiceImpl`; `statusLabel` made public for service.impl; residual fat: events, directives, dissemination, actions + `OneHealthEventService` helpers in `onehealth/` |

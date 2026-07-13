@@ -40,7 +40,8 @@ public class OneHealthEventService {
         STATUSES.put("archived", "Archived");
     }
 
-    static String statusLabel(String status) {
+    /** Shared status display label for OH list/dashboard surfaces (public for eGA service.impl). */
+    public static String statusLabel(String status) {
         if (status == null) {
             return "";
         }

@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.onehealth;
+package tz.go.pmo.dmis.service.impl;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -11,10 +11,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.onehealth.OneHealthEventService;
+import tz.go.pmo.dmis.service.OneHealthDashboardService;
 
 /**
  * Port of OneHealthDashboardController + OneHealthService::getDashboardStats():
@@ -23,19 +23,18 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  * 10 most recent events. The source's unused $ewAlerts collection is not
  * reproduced (issues/onehealth.issues.md OH-9).
  */
-@RestController
-@RequestMapping("/v1/onehealth/dashboard")
-public class OneHealthDashboardController {
+@Service
+public class OneHealthDashboardServiceImpl implements OneHealthDashboardService {
 
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
 
-    public OneHealthDashboardController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
+    public OneHealthDashboardServiceImpl(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
     }
 
-    @GetMapping
+    @Override
     public Map<String, Object> index() {
         Map<String, Object> stats = new LinkedHashMap<>();
         LocalDate today = LocalDate.now();

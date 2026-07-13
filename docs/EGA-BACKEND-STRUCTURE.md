@@ -200,7 +200,8 @@ Suggested migration order:
 54. ~~**Knowledge repository**~~ — **DONE** (multipart document/attachment; approve)
 55. ~~**Portal CMS admins (7 leaves)**~~ — **DONE** (management, upload, news, education, materials, sections, agencies)
 56. ~~**Portal public + threats**~~ — **DONE** (public facade + ThreatService + threat admin; no `portal/` package left)
-57. Remaining fat domains: One Health, finance, M&E, remaining reports, notification, stakeholder admin, ops/IAM
+57. ~~**One Health dashboard**~~ — **DONE** (first OH eGA leaf; national KPIs + area-scoped recent)
+58. Remaining OH (events, directives, dissemination, actions) then finance / M&E / reports / notification / stakeholder / ops-IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
@@ -274,6 +275,7 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Agency admin | Done | `/v1/settings/agencies` | Thin controller + service.impl; empty name **400**; FK delete **409** retained |
 | Portal public | Done | `/v1/portal/**` | Thin controller + PortalPublicServiceImpl + ThreatServiceImpl; unauth by design; size baselines exact |
 | Threat admin | Done | `/v1/content/threats` | Thin controller + service.impl; graphic multipart; create **201**/delete net-zero; empty name **400**; Partner **403** |
+| One Health dashboard | Done | `/v1/onehealth/dashboard` | Thin controller + service.impl; national aggregates; recent_events area-scoped; baseline exact; unauth **401** |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 
