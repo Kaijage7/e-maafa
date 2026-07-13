@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 32 thin eGA controllers, 32 service + 32 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 33 thin eGA controllers, 33 service + 33 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, Response Settings, Exercise Scenarios, Ops Timeline, DLNA, Dashboard + EOCC, Resource Approvals, Resource Allocations, Warehouse Ops, **Dispatch** |
-| Response remaining | **Legacy fat** | ~3 controllers under `response/` (CommandCenter ~1.8k, Incident ~1.3k, Bidding ~1k) |
+| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, Tasks, Assessments, Communication, Response Settings, Exercise Scenarios, Ops Timeline, DLNA, Dashboard + EOCC, Resource Approvals, Resource Allocations, Warehouse Ops, Dispatch, **Stakeholder Bidding** |
+| Response remaining | **Legacy fat** | ~2 hub controllers under `response/` (CommandCenter ~1.8k, Incident ~1.3k) |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Dispatch**~~ **DONE** | Next: bidding still last among logistics; hubs last |
+| Next eGA leaf (binding order) | ~~**Stakeholder Bidding**~~ **DONE** | Next: Incident + CommandCenter hubs last (largest; shared paths) |
 
-**Honest score:** Master data + nineteen Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
+**Honest score:** Master data + twenty Response leaves are eGA-shaped. Only Incident + CommandCenter remain fat under Response. That is documented hub debt, not pretend compliance.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
@@ -44,6 +44,7 @@
 | Resource Allocations | SA/DED/RAS/DAS index+form-data match; track SA **200** / DED+RAS OOA **404**; store empty **422** with `errors`; Partner **403**; reject empty net-zero; pending unchanged |
 | Warehouse Ops | SA/DED/RAS/DAS warehouse counts match; movements/capacity/loans scoped; DED OOA stock **404**; Partner **403**; bad remove + empty stock-taking **422** (no ledger mutation) |
 | Dispatch | SA/DED/RAS/DAS board stats match; sources SA/RAS **200** DED OOA **404**; procurement track DED **404**; empty dispatch **422** net-zero; Partner **403** |
+| Stakeholder Bidding | SA/DED/RAS/DAS donations/open-needs/NDMF match; pool SA **200** Dist/Reg OOA **404**; empty bid/ndmf **422** net-zero; Partner module **403** |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass

@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,64 +9,55 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
 import tz.go.pmo.dmis.notification.NotificationService;
+import tz.go.pmo.dmis.response.DispatchSupportService;
+import tz.go.pmo.dmis.response.SimulationGuard;
+import tz.go.pmo.dmis.service.StakeholderBiddingService;
 
 /**
  * Port of the stakeholder bidding & donation flows from
- * Admin\ResourceDispatchController — the third fulfilment channel:
+ * Admin\ResourceDispatchController — the third fulfilment channel.
  *
  * <pre>
- *   publish     allocation opens for bidding ('Requested to Stakeholders',
- *               bidding_status 'open', deadline; default window 7 days)
+ *   publish     allocation opens for bidding
  *   bid         a stakeholder offers quantity/price/delivery date (Pending)
  *   accept      offer journalled onto source_details, allocation 'Sourcing'
  *   dismiss     offer rejected with a reason, stakeholder notified
- *   receive     goods arrive → bid 'Received', stock intaken to the chosen
- *               store, allocation 'Delivered' / 'Partially Fulfilled'
+ *   receive     goods arrive → bid 'Received', stock intaken
  *   close       pending offers withdrawn, allocation unpublished
  *   return      no active offers → back to 'Approved' for normal dispatch
  * </pre>
- *
- * One table backs two screens: the per-allocation bidding pool and the global
- * donations queue (the source's StakeholderDonation model aliases the same
- * stakeholder_resource_bids table). Source bugs fixed here: receive
- * wrote the temp-warehouse id into the zonal warehouse_id column, and
- * 'Received' was missing from the model's status list.
+ * <p>Logic lives in service.impl (eGA); paths/JSON unchanged. Acting user via
+ * {@link CurrentUserResolver}; stock via transitional {@link DispatchSupportService}.
  */
-@RestController
-@RequestMapping("/v1/response/bidding")
-public class StakeholderBiddingController {
+@Service
+public class StakeholderBiddingServiceImpl implements StakeholderBiddingService {
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final TypeReference<List<Map<String, Object>>> JOURNAL = new TypeReference<>() {};
     private static final List<String> PRIORITIES = List.of("low", "medium", "high", "critical");
 
+
     private final JdbcTemplate jdbc;
     private final DispatchSupportService stock;
-    private final IncidentWorkflowService users;
-    private final NotificationService notifications; // the notification dispatcher (in-app feed + channels)
-    private final JurisdictionScope jurisdiction; // row-level area (region/district) visibility for area officers
-    private final AreaGuard areaGuard; // by-id area guards (allocation via incident, warehouse own-or-shared)
-    private final SimulationGuard simulationGuard; // drill isolation — table-top sims never reach real partners
+    private final CurrentUserResolver users;
+    private final NotificationService notifications;
+    private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
+    private final SimulationGuard simulationGuard;
 
-    public StakeholderBiddingController(JdbcTemplate jdbc, DispatchSupportService stock,
-                                        IncidentWorkflowService users, NotificationService notifications,
-                                        JurisdictionScope jurisdiction, AreaGuard areaGuard,
-                                        SimulationGuard simulationGuard) {
+    public StakeholderBiddingServiceImpl(JdbcTemplate jdbc, DispatchSupportService stock,
+                                         CurrentUserResolver users, NotificationService notifications,
+                                         JurisdictionScope jurisdiction, AreaGuard areaGuard,
+                                         SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.stock = stock;
         this.users = users;
@@ -95,10 +86,9 @@ public class StakeholderBiddingController {
     // ─── Publish ───
 
     /** Open an allocation for stakeholder bidding (submitStakeholderRequest; no body = the quick 7-day publish). */
-    @PostMapping("/allocations/{id}/publish")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> publish(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> publish(long id, Map<String, Object> body) {
         guardAllocationArea(id);
         // Drill isolation: publishing a table-top drill's need would notify REAL partners.
         simulationGuard.assertAllocationNotSimulation(id, "publishing a donation request to stakeholders");
@@ -142,9 +132,8 @@ public class StakeholderBiddingController {
 
     // ─── Bidding pool (per allocation) ───
 
-    @GetMapping("/allocations/{id}/pool")
-    @PreAuthorize("hasAuthority('resource_allocation.view')")
-    public Map<String, Object> pool(@PathVariable long id) {
+    @Override
+    public Map<String, Object> pool(long id) {
         guardAllocationArea(id);
         Map<String, Object> allocation = jdbc.queryForMap("""
                 select ar.*, i.title as incident_title, r.name as resource_name
@@ -195,10 +184,9 @@ public class StakeholderBiddingController {
      * stakeholder portal; the admin console exposes it for on-behalf-of entry
      * (e.g. offers phoned in during an emergency).
      */
-    @PostMapping("/bids")
-    @PreAuthorize("hasAnyAuthority('resource_allocation.request','stakeholder_portal.donate')")
+    @Override
     @Transactional
-    public Map<String, Object> submitBid(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> submitBid(Map<String, Object> body) {
         if (jurisdiction.currentStakeholderId() == null && !SecurityUtils.hasAuthority("resource_allocation.request")) {
             throw new BusinessRuleException("Your account is not linked to a partner organisation yet.");
         }
@@ -220,10 +208,9 @@ public class StakeholderBiddingController {
      * pledge as themselves. Requires the account to be linked to a stakeholder (Partner Directory →
      * Link login). This is the donor-facing counterpart to the admin's on-behalf {@code submitBid}.
      */
-    @PostMapping("/pledge")
-    @PreAuthorize("hasAnyAuthority('resource_allocation.request','stakeholder_portal.donate')")
+    @Override
     @Transactional
-    public Map<String, Object> pledge(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> pledge(Map<String, Object> body) {
         Long userId = users.actingUserId();
         List<Long> ids = userId == null ? List.of()
                 : jdbc.queryForList("select id from public.stakeholders where user_id = ? and coalesce(is_active, true) = true",
@@ -276,10 +263,9 @@ public class StakeholderBiddingController {
     }
 
     /** Accept: journal the offer onto the allocation and move it to 'Sourcing'. */
-    @PostMapping("/bids/{id}/accept")
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> accept(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> accept(long id, Map<String, Object> body) {
         Map<String, Object> bid = findBid(id);
         guardAllocationArea(bidAllocationId(bid));
         requireStatus(bid, "Pending", "Only pending bids can be accepted.");
@@ -314,10 +300,9 @@ public class StakeholderBiddingController {
     }
 
     /** Dismiss/reject a pending offer with a reason. */
-    @PostMapping("/bids/{id}/dismiss")
-    @PreAuthorize("hasAuthority('resource_allocation.approve')")
+    @Override
     @Transactional
-    public Map<String, Object> dismiss(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> dismiss(long id, Map<String, Object> body) {
         String reason = str(body.get("reason"));
         if (reason == null || reason.length() < 10) {
             throw new BusinessRuleException("The reason must be at least 10 characters.");
@@ -336,10 +321,9 @@ public class StakeholderBiddingController {
      * (temp destinations leave warehouse_id null), allocation rolls
      * up to 'Delivered' or 'Partially Fulfilled' from the received total.
      */
-    @PostMapping("/bids/{id}/receive")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> receive(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> receive(long id, Map<String, Object> body) {
         Map<String, Object> bid = findBid(id);
         guardAllocationArea(bidAllocationId(bid));
         requireStatus(bid, "Accepted", "Only accepted bids can be marked as received.");
@@ -414,10 +398,9 @@ public class StakeholderBiddingController {
     // ─── Pool lifecycle ───
 
     /** Unpublish with no active offers and return the allocation to normal dispatch. */
-    @PostMapping("/allocations/{id}/return-to-dispatch")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> returnToDispatch(@PathVariable long id) {
+    public Map<String, Object> returnToDispatch(long id) {
         guardAllocationArea(id);
         findAllocation(id);
         Long active = jdbc.queryForObject("""
@@ -442,10 +425,9 @@ public class StakeholderBiddingController {
     }
 
     /** Close bidding: withdraw all pending offers, keep accepted ones, unpublish. */
-    @PostMapping("/allocations/{id}/close-bidding")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> closeBidding(@PathVariable long id) {
+    public Map<String, Object> closeBidding(long id) {
         guardAllocationArea(id);
         findAllocation(id);
         int withdrawn = jdbc.update("""
@@ -466,10 +448,9 @@ public class StakeholderBiddingController {
     // ─── Global donations queue + NDMF cash registry ───
 
     /** All bids across allocations (the source's "Stakeholder Donations" screen). */
-    @GetMapping("/donations")
-    @PreAuthorize("hasAnyAuthority('resource_allocation.view','stakeholder_portal.donate')")
-    public Map<String, Object> donations(@RequestParam(required = false) String status,
-                                         @RequestParam(required = false) String search) {
+    @Override
+    public Map<String, Object> donations(String status,
+                                         String search) {
         StringBuilder where = new StringBuilder("b.deleted_at is null");
         List<Object> params = new ArrayList<>();
         if (status != null && !status.isBlank()) {
@@ -534,10 +515,9 @@ public class StakeholderBiddingController {
      * fulfilment, plus trainings whose funding support has been requested but is unfunded. Partner-facing
      * donation and support pledges are handled by the donations/support surfaces instead.
      */
-    @GetMapping("/open-needs")
-    @PreAuthorize("hasAuthority('resource_allocation.view')")
-    public Map<String, Object> openNeeds(@RequestParam(required = false) String region,
-                                         @RequestParam(required = false) String category) {
+    @Override
+    public Map<String, Object> openNeeds(String region,
+                                         String category) {
         StringBuilder where = new StringBuilder(
                 "ar.published_for_stakeholder_bidding = true and ar.bidding_status = 'open'"
                         + " and ar.bid_deadline::date >= current_date"
@@ -604,8 +584,7 @@ public class StakeholderBiddingController {
         return Map.of("allocations", allocations, "trainings", trainings, "stats", stats, "stakeholders", stakeholders);
     }
 
-    @GetMapping("/ndmf-donations")
-    @PreAuthorize("hasAuthority('resource_allocation.view')")
+    @Override
     public Map<String, Object> ndmfDonations() {
         return Map.of("donations", jdbc.queryForList("""
                 select d.*, u.name as recorded_by_name from public.ndmf_donations d
@@ -615,10 +594,9 @@ public class StakeholderBiddingController {
     }
 
     /** Record an NDMF cash donation (InventoryItemController::recordDonation). */
-    @PostMapping("/ndmf-donations")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> recordNdmfDonation(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> recordNdmfDonation(Map<String, Object> body) {
         String donor = str(body.get("donor_name"));
         String currency = str(body.get("currency"));
         if (donor == null || currency == null || currency.length() != 3) {
@@ -644,8 +622,7 @@ public class StakeholderBiddingController {
     // ─── NDMF fund ledger (cash IN balance + cash OUT disbursements) ───
 
     /** The fund's per-currency balance + the donation and disbursement ledgers. */
-    @GetMapping("/ndmf-fund")
-    @PreAuthorize("hasAuthority('resource_allocation.view')")
+    @Override
     public Map<String, Object> ndmfFund() {
         // Balance is strictly per currency: received/acknowledged cash IN minus paid cash OUT. The currency
         // key set is the UNION of both sides so a disburse-only currency is never hidden from the ledger.
@@ -684,10 +661,9 @@ public class StakeholderBiddingController {
     }
 
     /** Advance a donation's arrival status (pending → received → acknowledged) so it counts toward the balance. */
-    @PostMapping("/ndmf-donations/{id}/status")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> ndmfDonationStatus(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> ndmfDonationStatus(long id, Map<String, Object> body) {
         String status = str(body.get("status"));
         if (!List.of("received", "acknowledged").contains(status)) {
             throw new BusinessRuleException("Status must be 'received' or 'acknowledged'.");
@@ -703,10 +679,9 @@ public class StakeholderBiddingController {
     }
 
     /** Disburse NDMF cash to fund an unfunded training — sets its source_of_fund so it leaves Open Needs. */
-    @PostMapping("/ndmf-disbursements/training")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> disburseTraining(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> disburseTraining(Map<String, Object> body) {
         long trainingId = lng(body.get("training_plan_id"), "training_plan_id");
         double amount = positiveAmount(body.get("amount"));
         String currency = currency3(body.get("currency"));
@@ -733,10 +708,9 @@ public class StakeholderBiddingController {
     }
 
     /** Disburse NDMF cash to procure resources INTO the warehouse (reuses the normal stock-intake path). */
-    @PostMapping("/ndmf-disbursements/procurement")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> disburseProcurement(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> disburseProcurement(Map<String, Object> body) {
         double amount = positiveAmount(body.get("amount"));
         String currency = currency3(body.get("currency"));
         LocalDate date = parseDate(body.get("disbursement_date"));
@@ -811,10 +785,9 @@ public class StakeholderBiddingController {
     }
 
     /** Void a disbursement: credits the cash back. Training returns to Open Needs; procured stock is NOT auto-reversed. */
-    @PostMapping("/ndmf-disbursements/{id}/void")
-    @PreAuthorize("hasAuthority('resource_allocation.dispatch')")
+    @Override
     @Transactional
-    public Map<String, Object> voidDisbursement(@PathVariable long id) {
+    public Map<String, Object> voidDisbursement(long id) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select id, status, purpose_type, training_plan_id from public.ndmf_disbursements where id=? for update", id);
         if (rows.isEmpty()) {
