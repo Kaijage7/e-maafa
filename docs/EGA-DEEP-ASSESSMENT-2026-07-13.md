@@ -70,7 +70,8 @@
 - ~~Communication eGA extract~~ — **DONE** (`@Scheduled` dispatch on service.impl; ExternalDeliveryService + NotificationService retained).  
 - ~~Response Settings eGA extract~~ — **DONE** (JdbcTemplate only; `IncidentOptions` vocabulary helper retained).  
 - ~~Exercise Scenarios eGA extract~~ — **DONE** (`ActivationService` retained for launch; create drill only, no launch in verify).  
-- ~~Incident Ops Timeline eGA extract~~ — **DONE** (read-only; shared `/v1/response/incidents` base with fat IncidentController).
+- ~~Incident Ops Timeline eGA extract~~ — **DONE** (read-only; shared `/v1/response/incidents` base with fat IncidentController).  
+- ~~DLNA eGA extract~~ — **DONE** (PDF + NotificationService retained; request records on service interface).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -91,7 +92,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 10. ~~eGA migrate **Response Settings**~~ — **DONE**.  
 11. ~~eGA migrate **Exercise Scenarios**~~ — **DONE**.  
 12. ~~eGA migrate **Ops Timeline**~~ — **DONE**.  
-13. Next: DLNA (never engine/dispatch/allocation first).  
-14. Keep logistics in place; extract services only when touching heavily.  
-15. Stamp area on temp warehouses + agency stock data hygiene.  
-16. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+13. ~~eGA migrate **DLNA**~~ — **DONE**.  
+14. Next: logistics spine still last (dispatch / warehouse-ops / allocations / approvals / bidding).  
+15. Keep logistics in place; extract services only when touching heavily.  
+16. Stamp area on temp warehouses + agency stock data hygiene.  
+17. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
