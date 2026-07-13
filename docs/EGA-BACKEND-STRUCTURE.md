@@ -167,7 +167,8 @@ Suggested migration order:
 21. ~~**Tasks**~~ — **DONE** (board/calendar/assign/status; area scope + NotificationService)  
 22. ~~**Assessments**~~ — **DONE** (multipart DNA; ApprovalWorkflowEngine.initialize retained)  
 23. ~~**Communication**~~ — **DONE** (alert center; @Scheduled dispatch on service.impl)  
-24. Response remaining (never engine/dispatch/allocation first) then EW  
+24. ~~**Response Settings**~~ — **DONE** (approval chains, catalogue, types, ladder automation)  
+25. Response remaining (never engine/dispatch/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 

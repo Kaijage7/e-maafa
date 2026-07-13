@@ -1,47 +1,33 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.response.IncidentOptions;
+import tz.go.pmo.dmis.service.ResponseSettingsService;
 
 /**
- * R12 — System Settings hub. Administers the configurable parts of the Response module:
- *
- *   • Approval chains — the role chain the V24 generalized engine actually reads
- *     (approval_workflow_modules + approval_workflow_configurations). Editing a chain here
- *     changes how the live DAS→RAS→EOCC→Asst.Dir→Director approvals run (the user's directive
- *     that "the key part is approval flows well captured, linking with the System Settings module").
- *   • Resource catalogue — the resources every allocation/dispatch flow draws from.
- *   • Incident types — the hazard classification used across Response.
- *
- * (Alert templates are administered in the Communication Center, R9.)
+ * Response System Settings hub. Logic moved from the former response package
+ * controller; Angular paths/JSON unchanged. {@link IncidentOptions} remains
+ * a transitional response-package vocabulary helper.
  */
-@RestController
-@RequestMapping("/v1/response/settings")
-public class SettingsController {
+@Service
+public class ResponseSettingsServiceImpl implements ResponseSettingsService {
 
     private final JdbcTemplate jdbc;
 
-    public SettingsController(JdbcTemplate jdbc) {
+    public ResponseSettingsServiceImpl(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
     // ─── Approval chains (the live V24 engine config) ───
 
-    @GetMapping("/approval-chains")
+    @Override
     public Map<String, Object> approvalChains() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("modules", jdbc.queryForList("""
@@ -54,8 +40,8 @@ public class SettingsController {
         return out;
     }
 
-    @GetMapping("/approval-chains/{moduleId}")
-    public Map<String, Object> approvalChain(@PathVariable long moduleId) {
+    @Override
+    public Map<String, Object> approvalChain(long moduleId) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("module", jdbc.queryForMap("select * from public.approval_workflow_modules where id = ?", moduleId));
         out.put("steps", jdbc.queryForList("""
@@ -68,10 +54,9 @@ public class SettingsController {
     }
 
     /** Replace a module's whole chain — the simplest faithful editor (delete + reinsert in order). */
-    @PreAuthorize("hasAuthority('approval_workflows.manage')")
-    @PostMapping("/approval-chains/{moduleId}/steps")
     @Transactional
-    public Map<String, Object> saveChain(@PathVariable long moduleId, @RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> saveChain(long moduleId, Map<String, Object> body) {
         requireModule(moduleId);
         if (!(body.get("steps") instanceof List<?> steps) || steps.isEmpty()) {
             throw new BusinessRuleException("At least one approval step is required.");
@@ -99,10 +84,9 @@ public class SettingsController {
                 "message", "Approval chain updated. New requests will follow this " + (order - 1) + "-step chain.");
     }
 
-    @PreAuthorize("hasAuthority('approval_workflows.manage')")
-    @PostMapping("/approval-chains/{moduleId}/toggle")
     @Transactional
-    public Map<String, Object> toggleModule(@PathVariable long moduleId) {
+    @Override
+    public Map<String, Object> toggleModule(long moduleId) {
         requireModule(moduleId);
         jdbc.update("update public.approval_workflow_modules set is_active = not is_active, updated_at = now() where id = ?", moduleId);
         return Map.of("success", true, "message", "Module status toggled.");
@@ -110,7 +94,7 @@ public class SettingsController {
 
     // ─── Resource catalogue ───
 
-    @GetMapping("/resources")
+    @Override
     public Map<String, Object> resources() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("resources", jdbc.queryForList("""
@@ -123,10 +107,9 @@ public class SettingsController {
         return out;
     }
 
-    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
-    @PostMapping("/resources")
     @Transactional
-    public Map<String, Object> createResource(@RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> createResource(Map<String, Object> body) {
         Long id = jdbc.queryForObject("""
                 insert into public.resources(name, category, description, unit_of_measure, low_stock_threshold,
                     unit_cost, created_at, updated_at)
@@ -137,10 +120,9 @@ public class SettingsController {
         return Map.of("success", true, "id", id, "message", "Resource added to the catalogue.");
     }
 
-    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
-    @PostMapping("/resources/{id}")
     @Transactional
-    public Map<String, Object> updateResource(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> updateResource(long id, Map<String, Object> body) {
         int updated = jdbc.update("""
                 update public.resources set name = ?, category = ?, description = ?, unit_of_measure = ?,
                     low_stock_threshold = ?, unit_cost = ?, updated_at = now() where id = ?
@@ -153,10 +135,9 @@ public class SettingsController {
         return Map.of("success", true, "message", "Resource updated.");
     }
 
-    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
-    @DeleteMapping("/resources/{id}")
     @Transactional
-    public Map<String, Object> deleteResource(@PathVariable long id) {
+    @Override
+    public Map<String, Object> deleteResource(long id) {
         // Guard: a resource in use by allocations or stock must not be deleted (referential safety).
         Long inUse = jdbc.queryForObject("""
                 select (select count(*) from public.allocated_resources where resource_id = ?)
@@ -173,7 +154,7 @@ public class SettingsController {
 
     // ─── Incident types ───
 
-    @GetMapping("/incident-types")
+    @Override
     public Map<String, Object> incidentTypes() {
         return Map.of(
                 "incident_types", jdbc.queryForList("""
@@ -185,10 +166,9 @@ public class SettingsController {
                 "icons", IncidentOptions.INCIDENT_ICONS);
     }
 
-    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
-    @PostMapping("/incident-types")
     @Transactional
-    public Map<String, Object> createIncidentType(@RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> createIncidentType(Map<String, Object> body) {
         Long id = jdbc.queryForObject("""
                 insert into public.incident_types(name, description, default_severity, icon_class, created_at, updated_at)
                 values (?,?,?,?,now(),now()) returning id
@@ -198,10 +178,9 @@ public class SettingsController {
         return Map.of("success", true, "id", id, "message", "Incident type added.");
     }
 
-    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
-    @PostMapping("/incident-types/{id}")
     @Transactional
-    public Map<String, Object> updateIncidentType(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> updateIncidentType(long id, Map<String, Object> body) {
         int updated = jdbc.update("""
                 update public.incident_types set name = ?, description = ?, default_severity = ?, icon_class = ?,
                     updated_at = now() where id = ?
@@ -214,10 +193,9 @@ public class SettingsController {
         return Map.of("success", true, "message", "Incident type updated.");
     }
 
-    @PreAuthorize("hasAuthority('resource_catalogue.manage')")
-    @DeleteMapping("/incident-types/{id}")
     @Transactional
-    public Map<String, Object> deleteIncidentType(@PathVariable long id) {
+    @Override
+    public Map<String, Object> deleteIncidentType(long id) {
         Long inUse = jdbc.queryForObject(
                 "select count(*) from public.incidents where incident_type_id = ?", Long.class, id);
         if (inUse != null && inUse > 0) {
@@ -244,8 +222,7 @@ public class SettingsController {
     private static final java.util.Set<String> AUTOMATION_MODES = java.util.Set.of("manual", "auto", "skip_if_unstaffed");
 
     /** Current mode for each ladder stage + how many officers actually staff that role, for the settings screen. */
-    @GetMapping("/approval-automation")
-    @PreAuthorize("hasAuthority('approval_workflows.manage')")
+    @Override
     public Map<String, Object> approvalAutomation() {
         Map<String, String> configured = new LinkedHashMap<>();
         jdbc.queryForList("select key, value from public.portal_settings where \"group\" = 'incident_approval'")
@@ -297,10 +274,9 @@ public class SettingsController {
     }
 
     /** Save the stage modes. Body: { "waiting_ddmc": "skip_if_unstaffed", "waiting_ras": "manual", ... }. */
-    @PostMapping("/approval-automation")
-    @PreAuthorize("hasAuthority('approval_workflows.manage')")
     @Transactional
-    public Map<String, Object> saveApprovalAutomation(@RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> saveApprovalAutomation(Map<String, Object> body) {
         java.util.Set<String> validStages = new java.util.HashSet<>();
         AUTOMATION_TIERS.forEach(t -> validStages.add(t.get("stage")));
         int saved = 0;
