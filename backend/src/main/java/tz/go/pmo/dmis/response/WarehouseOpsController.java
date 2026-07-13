@@ -166,12 +166,14 @@ public class WarehouseOpsController {
     @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
     @Transactional
     public Map<String, Object> intake(@RequestBody Map<String, Object> body) {
-        simulationGuard.assertNotSimulationIncident(incidentId(body), "booking real warehouse stock");
+        Long linkedIncidentId = incidentId(body);
+        simulationGuard.assertNotSimulationIncident(linkedIncidentId, "booking real warehouse stock");
         String warehouseType = warehouseType(body.get("warehouse_type"));
         long warehouseId = lng(body.get("warehouse_id"), "warehouse_id");
         long resourceId = lng(body.get("resource_id"), "resource_id");
         int quantity = positiveInt(body.get("quantity"));
         requireStore(warehouseType, warehouseId);
+        requireIncidentInArea(linkedIncidentId);
 
         String resourceName = jdbc.queryForObject("select name from public.resources where id = ?", String.class, resourceId);
         // A dated/batched intake always opens its own ledger row so expiry tracking stays per-batch
@@ -201,8 +203,8 @@ public class WarehouseOpsController {
                 "zonal".equals(warehouseType) ? warehouseId : null,
                 "temporary".equals(warehouseType) ? warehouseId : null,
                 warehouseType, str(body.get("batch_number")), str(body.get("expiry_date")),
-                str(body.get("supplier_donor")), str(body.get("notes")), incidentId(body), userId, userId);
-        if (incidentId(body) != null) {
+                str(body.get("supplier_donor")), str(body.get("notes")), linkedIncidentId, userId, userId);
+        if (linkedIncidentId != null) {
             notifyRole("EOCC", "warehouse_receipt", "Supplies received for an incident",
                     resourceName + " ×" + quantity + " received into " + storeName(warehouseType, warehouseId)
                             + " for an active incident.");
@@ -215,10 +217,12 @@ public class WarehouseOpsController {
     @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
     @Transactional
     public Map<String, Object> remove(@RequestBody Map<String, Object> body) {
-        simulationGuard.assertNotSimulationIncident(incidentId(body), "removing real warehouse stock");
+        Long linkedIncidentId = incidentId(body);
+        simulationGuard.assertNotSimulationIncident(linkedIncidentId, "removing real warehouse stock");
         String warehouseType = warehouseType(body.get("warehouse_type"));
         long warehouseId = lng(body.get("warehouse_id"), "warehouse_id");
         requireStore(warehouseType, warehouseId);   // cannot deplete another region's store
+        requireIncidentInArea(linkedIncidentId);
         long resourceId = lng(body.get("resource_id"), "resource_id");
         int quantity = positiveInt(body.get("quantity"));
         String reason = str(body.get("reason"));
@@ -238,7 +242,7 @@ public class WarehouseOpsController {
                 "temporary".equals(warehouseType) ? warehouseId : null,
                 warehouseType, reason,
                 REMOVAL_REASONS.get(reason) + (str(body.get("notes")) == null ? "" : " — " + str(body.get("notes"))),
-                incidentId(body), userId, userId);
+                linkedIncidentId, userId, userId);
         return Map.of("success", true, "message", "Stock removed: " + REMOVAL_REASONS.get(reason) + ".");
     }
 
@@ -247,7 +251,8 @@ public class WarehouseOpsController {
     @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
     @Transactional
     public Map<String, Object> transfer(@RequestBody Map<String, Object> body) {
-        simulationGuard.assertNotSimulationIncident(incidentId(body), "transferring real warehouse stock");
+        Long linkedIncidentId = incidentId(body);
+        simulationGuard.assertNotSimulationIncident(linkedIncidentId, "transferring real warehouse stock");
         String fromType = warehouseType(body.get("from_type"));
         String toType = warehouseType(body.get("to_type"));
         long fromId = lng(body.get("from_id"), "from_id");
@@ -259,6 +264,7 @@ public class WarehouseOpsController {
         }
         requireStore(fromType, fromId);   // both ends must be in the caller's area (or national-shared)
         requireStore(toType, toId);
+        requireIncidentInArea(linkedIncidentId);
         stock.deductStock("zonal".equals(fromType) ? "warehouse" : "temporary_warehouse", fromId, resourceId, quantity);
         String resourceName = jdbc.queryForObject("select name from public.resources where id = ?", String.class, resourceId);
         stock.addStock(toType, toId, resourceId, quantity, resourceName, users.actingUserId());
@@ -271,7 +277,7 @@ public class WarehouseOpsController {
                 """, resourceId, quantity,
                 "zonal".equals(fromType) ? fromId : null, "temporary".equals(fromType) ? fromId : null,
                 "zonal".equals(toType) ? toId : null, "temporary".equals(toType) ? toId : null,
-                str(body.get("notes")), incidentId(body), userId, userId);
+                str(body.get("notes")), linkedIncidentId, userId, userId);
         return Map.of("success", true, "message", "Stock transferred successfully.");
     }
 
@@ -361,8 +367,12 @@ public class WarehouseOpsController {
             if (condition == null || !List.of("good", "damaged", "expired").contains(condition)) {
                 throw new BusinessRuleException("Condition must be good, damaged or expired.");
             }
+            // Item must belong to the claimed warehouse — otherwise an officer could mutate foreign
+            // ledger rows by posting a count against a local store id they are allowed to see.
             List<Map<String, Object>> rows = jdbc.queryForList(
-                    "select quantity, resource_id from public.inventory_items where id = ? for update", itemId);
+                    "select quantity, resource_id from public.inventory_items "
+                            + "where id = ? and warehouse_id = ? and temporary_warehouse_id is null for update",
+                    itemId, warehouseId);
             if (rows.isEmpty()) {
                 throw new ResourceNotFoundException("Inventory item " + itemId + " not found.");
             }
@@ -459,23 +469,33 @@ public class WarehouseOpsController {
         network.put("warehouse_count", warehouses.size());
 
         // Stockout forecast: per resource, days = on-hand / avg daily out-velocity (last 30 days).
+        // Scope both velocity and on-hand to stores the caller may see (no national soft leak).
+        StringBuilder velScope = new StringBuilder();
+        List<Object> velParams = new ArrayList<>();
+        appendStoreVisibility(velScope, velParams,
+                new String[]{"sm.from_warehouse_id", "sm.to_warehouse_id"},
+                new String[]{"sm.from_temporary_warehouse_id", "sm.to_temporary_warehouse_id"}, false);
         Map<Long, Double> velocity = new LinkedHashMap<>();
         for (Map<String, Object> v : jdbc.queryForList("""
-                select resource_id, round(coalesce(sum(quantity),0) / 30.0, 4) as daily
-                from public.stock_movements
-                where movement_type in ('Removal','Dispatch','Deduction','Deployment','Borrow')
-                  and created_at >= now() - interval '30 days'
-                group by resource_id
-                """)) {
+                select sm.resource_id, round(coalesce(sum(sm.quantity),0) / 30.0, 4) as daily
+                from public.stock_movements sm
+                where sm.movement_type in ('Removal','Dispatch','Deduction','Deployment','Borrow')
+                  and sm.created_at >= now() - interval '30 days'
+                """ + velScope + " group by sm.resource_id", velParams.toArray())) {
             velocity.put(((Number) v.get("resource_id")).longValue(), num(v.get("daily")));
         }
+        StringBuilder handScope = new StringBuilder();
+        List<Object> handParams = new ArrayList<>();
+        appendStoreVisibility(handScope, handParams,
+                new String[]{"ii.warehouse_id"}, new String[]{"ii.temporary_warehouse_id"}, false);
         List<Map<String, Object>> forecast = new ArrayList<>();
         for (Map<String, Object> r : jdbc.queryForList("""
                 select r.id, r.name, coalesce(sum(ii.quantity),0) as on_hand
                 from public.resources r
                 join public.inventory_items ii on ii.resource_id = r.id
-                group by r.id having coalesce(sum(ii.quantity),0) > 0 order by r.name
-                """)) {
+                where 1=1
+                """ + handScope + " group by r.id having coalesce(sum(ii.quantity),0) > 0 order by r.name",
+                handParams.toArray())) {
             long rid = ((Number) r.get("id")).longValue();
             double daily = velocity.getOrDefault(rid, 0.0);
             if (daily <= 0) { continue; }                       // no recent consumption → not forecastable
@@ -515,6 +535,7 @@ public class WarehouseOpsController {
     @PreAuthorize("hasAuthority('warehouse_and_stock.manage')")
     @Transactional
     public Map<String, Object> borrow(@RequestBody Map<String, Object> body) {
+        Long linkedIncidentId = incidentId(body);
         String fromType = warehouseType(body.get("from_type"));
         String toType = warehouseType(body.get("to_type"));
         long fromId = lng(body.get("from_id"), "from_id");
@@ -526,6 +547,7 @@ public class WarehouseOpsController {
         }
         requireStore(fromType, fromId);
         requireStore(toType, toId);
+        requireIncidentInArea(linkedIncidentId);
         String dueDate = str(body.get("due_date"));
         stock.deductStock("zonal".equals(fromType) ? "warehouse" : "temporary_warehouse", fromId, resourceId, quantity);
         String resourceName = jdbc.queryForObject("select name from public.resources where id = ?", String.class, resourceId);
@@ -550,7 +572,7 @@ public class WarehouseOpsController {
                 "zonal".equals(toType) ? toId : null, "temporary".equals(toType) ? toId : null,
                 "Borrowed" + (dueDate == null ? "" : ", due " + dueDate)
                         + (str(body.get("notes")) == null ? "" : " — " + str(body.get("notes"))),
-                incidentId(body), userId, userId);
+                linkedIncidentId, userId, userId);
         notifyRole("EOCC", "warehouse_borrow", "Stock lent between stores",
                 resourceName + " ×" + quantity + " lent from " + storeName(fromType, fromId)
                         + " to " + storeName(toType, toId) + (dueDate == null ? "" : ", due " + dueDate) + ".");
@@ -680,6 +702,16 @@ public class WarehouseOpsController {
     private void requireStore(String warehouseType, long id) {
         String table = "zonal".equals(warehouseType) ? "public.warehouses" : "public.temporary_warehouses";
         areaGuard.assertWarehouseVisible(table, id);
+    }
+
+    /**
+     * Optional incident linkage on stock movements must stay inside the caller's jurisdiction —
+     * picker is area-scoped, but body.incident_id was previously accepted raw (journal integrity leak).
+     */
+    private void requireIncidentInArea(Long incidentId) {
+        if (incidentId != null) {
+            areaGuard.assertOwn("public.incidents", incidentId);
+        }
     }
 
     /**

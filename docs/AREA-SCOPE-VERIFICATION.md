@@ -65,6 +65,27 @@ Reversible drill (incident **37** temporarily `approved` + `Active Response`, th
 
 **Fix:** warehouse-ops index incident picker uses `appendAreaScopeWithCouncil` (same wall as dispatch/allocations).
 
+## Warehouse-ops **write-path** drill (manage seat, 2026-07-13)
+
+Persona: **District Logistic Officer** user **2696** (Dodoma Urban) — has `warehouse_and_stock.manage`.  
+Dist DC user 4 remains view-only on writes (403).
+
+| Step | Result before fix | Result after fix |
+|------|-------------------|------------------|
+| Dist DC POST `/intake` | 403 | 403 |
+| DLO intake OOA WH Ilala **13** | 404 | 404 |
+| DLO intake in-area WH **11** | 200 | 200 (cleaned) |
+| DLO intake WH 11 + **Dar incident #1** | **200 (hidden journal leak)** | **404** `assertOwn` on incident |
+| DLO stock-taking WH 11 + **Dar inventory item #2** | **200; Dar qty 80→9999** | **404**; Dar qty stays **80** |
+| Capacity `stockout_forecast` | national on-hand soft leak | scoped to visible stores |
+| Cleanup | inv/mov restored to 25 / 57 | same baseline after retest |
+
+**Root causes fixed in `WarehouseOpsController`:**
+
+1. **Stock-taking membership** — count locked `inventory_items` by id only; now requires `warehouse_id = claimed store`.  
+2. **Optional `incident_id`** on intake/remove/transfer/borrow — picker was scoped, body was not; now `requireIncidentInArea` → `AreaGuard.assertOwn`.  
+3. **Capacity forecast** — velocity + on-hand use `appendStoreVisibility` (no national soft leak for area seats).
+
 ## Dispatch + inventory write re-check (careful pass)
 
 | Check | Dist DC Dodoma | National |
