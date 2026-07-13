@@ -169,7 +169,8 @@ Suggested migration order:
 23. ~~**Communication**~~ — **DONE** (alert center; @Scheduled dispatch on service.impl)  
 24. ~~**Response Settings**~~ — **DONE** (approval chains, catalogue, types, ladder automation)  
 25. ~~**Exercise Scenarios**~~ — **DONE** (create/show; launch via ActivationService)  
-26. Response remaining (never engine/dispatch/allocation first) then EW  
+26. ~~**Incident Ops Timeline**~~ — **DONE** (read-only merge; shared incidents path)  
+27. Response remaining (never engine/dispatch/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -202,8 +203,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Communication | Done | `/v1/response/communication` | Thin controller + service.impl; dash/form-data/alerts/analytics; templates CRUD; send (app-only drill); Dist **403**; @Scheduled retained on impl |
 | Response Settings | Done | `/v1/response/settings` | Thin controller + service.impl; approval-chains/resources/incident-types/approval-automation; Dist **403**; type+resource drills net-zero |
 | Exercise Scenarios | Done | `/v1/response/coordination/scenarios` | Thin controller + service.impl; index/show/create; Dist **403**; create drill net-zero (no launch); CP coordination still **200** |
+| Incident Ops Timeline | Done | `/v1/response/incidents/{id}/ops-timeline` | Thin controller + service.impl; read-only; area 404; source filter; IncidentController co-exists on same base |
 
-25. ~~**Exercise Scenarios**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
+26. ~~**Incident Ops Timeline**~~ — **DONE**; remaining Response leaves next (never engine/dispatch first)
 
 ---
 

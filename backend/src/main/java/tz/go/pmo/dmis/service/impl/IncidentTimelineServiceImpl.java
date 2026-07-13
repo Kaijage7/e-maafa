@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,58 +16,20 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import tz.go.pmo.dmis.common.security.Authz;
+import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.response.IncidentOptions;
+import tz.go.pmo.dmis.service.IncidentTimelineService;
 
 /**
- * Audit F12 — the unified per-incident OPERATIONS TIMELINE. Before this endpoint, an incident's
- * action tracing was split across disconnected trails (workflow histories on the show page, task
- * activity keyed by activation, situation reports, and dispatch/warehouse/communication/budget
- * journals living only inside their own modules). This is the READ-SIDE union of every trail that
- * GENUINELY carries incident linkage, merged into one time-descending master ops log. No schema
- * change and no writes — each module keeps journalling exactly where it always has.
- *
- * <p>Trails and their real linkage (verified against the live schema — nothing fabricated):
- * <ul>
- *   <li><b>workflow</b> — incident_workflow_histories.incident_id (FK to incidents).</li>
- *   <li><b>task</b> — task_activity_log.activation_id → response_activations.incident_id
- *       (response_activations.incident_id is UNIQUE, so an activation IS the incident's).</li>
- *   <li><b>situation_report</b> — incident_history_reports.incident_id (FK).</li>
- *   <li><b>allocation</b> — allocated_resources.incident_id (FK); one entry per request.</li>
- *   <li><b>dispatch</b> — dispatch_approvals.allocated_resource_id → allocated_resources.incident_id,
- *       PLUS the allocation's source_details fulfilment journal (a TEXT column holding the JSON
- *       array DispatchController appends agency/procurement/warehouse dispatch events to — the only
- *       place agency and procurement sourcing is journalled).</li>
- *   <li><b>warehouse</b> — stock_movements.incident_id (direct FK) OR stock_movements.allocation_id
- *       → allocated_resources.incident_id.</li>
- *   <li><b>sms / email</b> — sms_logs / email_logs rows with notification_type = 'incident_workflow'
- *       and notification_id = the incident id. That pairing is the writer's contract:
- *       IncidentWorkflowService dispatches Notice(type="incident_workflow", entityId=incidentId)
- *       and ExternalDeliveryService forwards (n.type(), n.entityId()) into both gateways' logs.
- *       Other notification_types reuse notification_id for OTHER entities, so they are excluded.</li>
- *   <li><b>budget</b> — budget_commitments.incident_id (FK).</li>
- * </ul>
- *
- * <p><b>Deliberately omitted:</b> command_role — the schema has no persisted per-incident command
- * role assignment table (the command center works off activations/tasks/DRFs), so there is no
- * genuine trail to union; inventing one would fabricate a join.
- *
- * <p>Visibility mirrors the incident show hub: incidents.view (the same permission the module guard
- * enforces on this prefix) + jurisdiction area scope — out-of-area reads 404, indistinguishable
- * from "not found". Empty trails contribute nothing (never 500); ordering is deterministic:
- * at desc, then source, then ref_id desc.
+ * Unified per-incident operations timeline (read-only). Logic moved from the former
+ * response package controller; path/JSON unchanged. Area visibility via
+ * {@link JurisdictionScope}; workflow labels via transitional {@link IncidentOptions}.
  */
-@RestController
-@RequestMapping("/v1/response/incidents")
-public class IncidentTimelineController {
+@Service
+public class IncidentTimelineServiceImpl implements IncidentTimelineService {
 
     /** Every source this log can carry, in canonical order (drives the payload's counts map). */
     static final List<String> SOURCES = List.of("workflow", "task", "situation_report",
@@ -85,7 +47,7 @@ public class IncidentTimelineController {
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
 
-    public IncidentTimelineController(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
+    public IncidentTimelineServiceImpl(JdbcTemplate jdbc, JurisdictionScope jurisdiction) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
     }
@@ -105,11 +67,8 @@ public class IncidentTimelineController {
         }
     }
 
-    @GetMapping("/{id}/ops-timeline")
-    @PreAuthorize(Authz.PERM_INCIDENT_VIEW)
-    public Map<String, Object> opsTimeline(@PathVariable long id,
-                                           @RequestParam(required = false) String source,
-                                           @RequestParam(defaultValue = "100") int limit) {
+    @Override
+    public Map<String, Object> opsTimeline(long id, String source, int limit) {
         if (source != null && !source.isBlank() && !SOURCES.contains(source)) {
             throw new BusinessRuleException("Unknown timeline source '" + source
                     + "'. Valid sources: " + String.join(", ", SOURCES) + ".");
