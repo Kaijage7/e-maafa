@@ -132,7 +132,7 @@ Optional later: subpackages under layers for readability only, e.g. `controller.
 
 ## 7. Transition rules (existing code)
 
-Legacy fat domain controllers are eGA-layered under `controller/` + `service/` + `service.impl/`. Shared delivery engines remain in `notification/`; pure helpers like `TotpService` live in `service.support/`. Residual non-eGA controller packages (if any) are limited to transitional content helpers.
+Domain HTTP controllers live under `controller/` + `service/` + `service.impl/`. Shared delivery engines remain in `notification/`; helpers like `TotpService` / `Recipients` in `service.support/`. Spring Data JPA interfaces stay in `repository/`. INFORM domain entities/engine remain in `inform/domain` + `inform/engine` (web layer eGA-ed to `controller/`).
 
 | Rule | |
 |------|---|
@@ -212,6 +212,7 @@ Suggested migration order:
 66. ~~**Stakeholder admin directory**~~ — **DONE** (thin controller + `StakeholderAdminServiceImpl`; `stakeholder/` package empty)
 67. ~~**ops/IAM (auth + go-live ops)**~~ — **DONE** (thin controllers + `AuthServiceImpl` / `GoLiveOpsServiceImpl`; `TotpService` in `service.support`; `iam/` + `ops/` packages empty)
 68. Progressive eGA of primary fat domains complete
+69. ~~**Residual content / repository domain / INFORM web**~~ — **DONE** (email/sms logs, action guide, disaster events + Sendai analytics services, INFORM controllers)
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).

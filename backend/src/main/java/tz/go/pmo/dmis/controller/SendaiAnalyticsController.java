@@ -1,4 +1,6 @@
-package tz.go.pmo.dmis.repository;
+package tz.go.pmo.dmis.controller;
+
+import tz.go.pmo.dmis.service.SendaiAnalyticsService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

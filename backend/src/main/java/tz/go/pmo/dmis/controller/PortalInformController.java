@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.inform.web;
+package tz.go.pmo.dmis.controller;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

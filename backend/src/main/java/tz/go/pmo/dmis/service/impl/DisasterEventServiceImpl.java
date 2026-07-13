@@ -1,4 +1,6 @@
-package tz.go.pmo.dmis.repository;
+package tz.go.pmo.dmis.service.impl;
+
+import tz.go.pmo.dmis.service.DisasterEventService;
 
 import java.time.Year;
 import java.util.Arrays;
@@ -26,7 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 @RequiredArgsConstructor
-public class DisasterEventService {
+public class DisasterEventServiceImpl implements DisasterEventService {
 
     /** Entity types a card can link to — each maps to a real DMIS table (no dead options). */
     static final Map<String, String> LINKABLE = Map.ofEntries(
@@ -47,6 +49,7 @@ public class DisasterEventService {
     // ------------------------------------------------------------------ registry
 
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> index(String hazard, String region, Integer year, String status) {
         StringBuilder where = new StringBuilder(" where 1=1");
         List<Object> args = new ArrayList<>();
@@ -106,6 +109,7 @@ public class DisasterEventService {
      *  Reuses the same filters as {@link #index} so the file matches what the screen shows.
      *  UTF-8 with a BOM so Excel renders Swahili text and the TZS figures correctly. */
     @Transactional(readOnly = true)
+    @Override
     public byte[] exportCsv(String hazard, String region, Integer year, String status) {
         StringBuilder where = new StringBuilder(" where 1=1");
         List<Object> args = new ArrayList<>();
@@ -180,6 +184,7 @@ public class DisasterEventService {
      * resolved/closed end state but are not linked to any disaster repository card yet.
      */
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> incidentWorklist() {
         List<Map<String, Object>> incidents = jdbc.queryForList("""
                 select i.id, i.title, coalesce(h.name, it.name, 'Unspecified') as "hazardType",
@@ -233,6 +238,7 @@ public class DisasterEventService {
      * remain review-and-save via {@link #pullFromLinks(long)} so EOCC still controls Sendai data quality.
      */
     @Transactional
+    @Override
     public Map<String, Object> createFromIncident(long incidentId, String actor) {
         Map<String, Object> incident = repositoryIncidentOr404(incidentId);
         if (!incidentReadyForRepository(incident)) {
@@ -287,6 +293,7 @@ public class DisasterEventService {
     // ------------------------------------------------------------------ event card
 
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> show(long id) {
         Map<String, Object> event = one(id);
         Map<String, Object> out = new LinkedHashMap<>();
@@ -319,6 +326,7 @@ public class DisasterEventService {
     }
 
     @Transactional
+    @Override
     public Map<String, Object> create(Map<String, Object> req, String actor) {
         String name = str(req.get("name"));
         String startedOn = str(req.get("startedOn"));
@@ -367,6 +375,7 @@ public class DisasterEventService {
     }
 
     @Transactional
+    @Override
     public void update(long id, Map<String, Object> req) {
         requireEditable(id);
         String govResponse = numericOrBadRequest(req.get("govResponseTzs"),
@@ -385,6 +394,7 @@ public class DisasterEventService {
 
     /** Open → Validated → Archived (validation freezes figures into the Sendai analytics). */
     @Transactional
+    @Override
     public Map<String, Object> transition(long id, String action, String actor) {
         Map<String, Object> e = one(id);
         String status = String.valueOf(e.get("status"));
@@ -418,6 +428,7 @@ public class DisasterEventService {
 
     /** Open cards only — validated history is never deleted, it is reopened and corrected. */
     @Transactional
+    @Override
     public void delete(long id) {
         requireEditable(id);
         jdbc.update("delete from disaster_events where id = ?", id);
@@ -426,6 +437,7 @@ public class DisasterEventService {
     // ------------------------------------------------------------------ effects records
 
     @Transactional
+    @Override
     public Map<String, Object> saveEffects(long eventId, Map<String, Object> r) {
         requireEditable(eventId);
         String region = str(r.get("region"));
@@ -488,6 +500,7 @@ public class DisasterEventService {
     }
 
     @Transactional
+    @Override
     public void deleteEffects(long eventId, long effectsId) {
         requireEditable(eventId);
         jdbc.update("delete from disaster_event_effects where id=? and event_id=?", effectsId, eventId);
@@ -496,6 +509,7 @@ public class DisasterEventService {
     // ------------------------------------------------------------------ links
 
     @Transactional
+    @Override
     public Map<String, Object> addLink(long eventId, String entityType, long entityId, String note, String actor) {
         String table = LINKABLE.get(entityType);
         if (table == null) {
@@ -512,6 +526,7 @@ public class DisasterEventService {
     }
 
     @Transactional
+    @Override
     public void removeLink(long eventId, long linkId) {
         jdbc.update("delete from disaster_event_links where id=? and event_id=?", linkId, eventId);
     }
@@ -522,6 +537,7 @@ public class DisasterEventService {
      * officers see what the system already knows about this disaster.
      */
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> linkSuggestions(long eventId) {
         Map<String, Object> e = one(eventId);
         Map<String, Object> out = new LinkedHashMap<>();
@@ -610,6 +626,7 @@ public class DisasterEventService {
      * writes Sendai figures.
      */
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> pullFromLinks(long eventId) {
         Map<String, Object> incident = jdbc.queryForMap(
                 "select coalesce(sum(i.deaths_male),0) as \"deathsMale\","

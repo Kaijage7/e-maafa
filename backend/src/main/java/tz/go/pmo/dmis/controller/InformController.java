@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.inform.web;
+package tz.go.pmo.dmis.controller;
 
 import org.springframework.web.bind.annotation.*;
 import tz.go.pmo.dmis.inform.domain.*;

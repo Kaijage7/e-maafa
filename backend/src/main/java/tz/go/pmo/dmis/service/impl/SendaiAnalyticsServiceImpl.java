@@ -1,4 +1,6 @@
-package tz.go.pmo.dmis.repository;
+package tz.go.pmo.dmis.service.impl;
+
+import tz.go.pmo.dmis.service.SendaiAnalyticsService;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -21,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @RequiredArgsConstructor
-public class SendaiAnalyticsService {
+public class SendaiAnalyticsServiceImpl implements SendaiAnalyticsService {
 
     /** Cards whose figures are allowed into the national numbers. */
     private static final String COUNTED = "('Validated','Archived')";
@@ -35,6 +37,7 @@ public class SendaiAnalyticsService {
     private final JdbcTemplate jdbc;
 
     @Transactional(readOnly = true)
+    @Override
     public Map<String, Object> dashboard(Integer yearParam) {
         int year = yearParam == null ? currentDataYear() : yearParam;
         double population = baseline("population", year, 61_741_120);

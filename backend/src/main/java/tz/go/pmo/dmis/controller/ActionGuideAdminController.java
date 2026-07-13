@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.content;
+package tz.go.pmo.dmis.controller;
 
 import java.util.Map;
 import org.springframework.security.access.prepost.PreAuthorize;

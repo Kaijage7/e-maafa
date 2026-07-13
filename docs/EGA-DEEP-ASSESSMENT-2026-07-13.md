@@ -161,7 +161,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 45. ~~eGA migrate **Notification HTTP surface**~~ — **DONE** (see §20; shared engines retained in `notification/`).
 46. ~~eGA migrate **Stakeholder admin**~~ — **DONE** (see §22).
 47. ~~eGA migrate **ops/IAM** (auth + go-live)~~ — **DONE** (see §24).
-48. Primary fat-domain eGA arc complete. 
+48. Primary fat-domain eGA arc complete.
+49. ~~Residual **content / repository domain / INFORM web** eGA~~ — **DONE** (see §25). 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -786,3 +787,35 @@ Hazard-area context under `/v1/ops/hazard-area-context` was already eGA (unchang
 | Finance budgets (local headers) | **200** (no regression) |
 
 **Verdict:** Auth and go-live ops are eGA-layered without changing public contracts. Primary progressive eGA of fat domains is complete.
+
+
+## 25. Residual content / repository / INFORM web eGA (2026-07-13, careful)
+
+### Structure
+
+| Surface | After |
+|---------|--------|
+| `/v1/content/email-logs` | Thin controller + `EmailLogServiceImpl` |
+| `/v1/content/sms-logs` | Thin controller + `SmsLogServiceImpl` |
+| `/v1/content/action-guide` | Thin controller (delegates `ActionGuideStatementService`) |
+| `/v1/repository/events` | Thin controller + `DisasterEventServiceImpl` |
+| `/v1/repository/analytics` | Thin controller + `SendaiAnalyticsServiceImpl` |
+| `/v1/inform/*`, `/v1/portal/inform/*` | Controllers in `controller/`; domain+engine unchanged |
+| JPA interfaces | Remain `repository/*Repository` |
+| `Recipients` helper | `service.support` (public) |
+
+### Live validation
+
+| Check | Result |
+|-------|--------|
+| Email logs | **200**, n=300; `status=NOPE` logs **0** |
+| SMS logs | **200**, n=102; `status=NOPE` logs **0** |
+| Action guide | **200** rows/common/hazards |
+| Repository events | **200**, 86 events; status/hazard nonsense **0** |
+| Sendai analytics | **200** targets/series/insights |
+| INFORM indicators | **200**, 76; `owner=NOPE` **0** |
+| Portal INFORM risk (public) | **200** |
+| Unauth repo/inform | **401** |
+| Partner repo | **403** |
+
+**Verdict:** Residual HTTP surfaces eGA-layered with productive filters and walls. Platform controller layer is now consistently under `controller/`.

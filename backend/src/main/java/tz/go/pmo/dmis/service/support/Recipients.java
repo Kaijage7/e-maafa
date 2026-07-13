@@ -1,14 +1,14 @@
-package tz.go.pmo.dmis.content;
+package tz.go.pmo.dmis.service.support;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /** Parse a compose-box recipients field: either a JSON list, or a comma/semicolon/newline-separated string. */
-final class Recipients {
+public final class Recipients {
 
     private Recipients() {}
 
-    static List<String> parse(Object raw) {
+    public static List<String> parse(Object raw) {
         List<String> out = new ArrayList<>();
         if (raw instanceof List<?> list) {
             for (Object o : list) {

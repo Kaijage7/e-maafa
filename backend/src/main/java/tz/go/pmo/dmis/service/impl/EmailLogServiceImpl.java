@@ -1,4 +1,9 @@
-package tz.go.pmo.dmis.content;
+package tz.go.pmo.dmis.service.impl;
+
+import tz.go.pmo.dmis.service.support.Recipients;
+
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.EmailLogService;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -7,14 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.notification.AudienceService;
 import tz.go.pmo.dmis.notification.MailService;
 
@@ -25,25 +22,24 @@ import tz.go.pmo.dmis.notification.MailService;
  * Every send goes through {@link MailService}, which records the {@code email_logs} row — so a manual
  * send shows up in this same log automatically.
  */
-@RestController
-@RequestMapping("/v1/content/email-logs")
-public class EmailLogController {
+@Service
+public class EmailLogServiceImpl implements EmailLogService {
 
     private final JdbcTemplate jdbc;
     private final MailService mail;
     private final AudienceService audiences;
 
-    public EmailLogController(JdbcTemplate jdbc, MailService mail, AudienceService audiences) {
+    public EmailLogServiceImpl(JdbcTemplate jdbc, MailService mail, AudienceService audiences) {
         this.jdbc = jdbc;
         this.mail = mail;
         this.audiences = audiences;
     }
 
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false) String search,
-                                     @RequestParam(required = false) String from,
-                                     @RequestParam(required = false) String to) {
+    @Override
+    public Map<String, Object> index(String status,
+                                     String search,
+                                     String from,
+                                     String to) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> p = new ArrayList<>();
         if (status != null && !status.isBlank()) { where.append(" and status = ?"); p.add(status); }
@@ -77,9 +73,8 @@ public class EmailLogController {
      * Compose &amp; send an email to one or many recipients (comma/newline-separated addresses or a list).
      * Routes through {@link MailService}, which logs each recipient to {@code email_logs} as 'manual'.
      */
-    @PostMapping("/send")
-    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
-    public Map<String, Object> send(@RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> send(Map<String, Object> body) {
         // Manual / pasted (incl. from-Excel) addresses, plus any selected audience group resolved live.
         Set<String> recipientSet = new LinkedHashSet<>(Recipients.parse(body.get("recipients")));
         boolean audiencePicked = false;

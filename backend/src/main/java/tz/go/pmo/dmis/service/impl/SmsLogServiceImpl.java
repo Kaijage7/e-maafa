@@ -1,4 +1,9 @@
-package tz.go.pmo.dmis.content;
+package tz.go.pmo.dmis.service.impl;
+
+import tz.go.pmo.dmis.service.support.Recipients;
+
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.SmsLogService;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -7,14 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.ew.MgovSmsService;
 import tz.go.pmo.dmis.notification.AudienceService;
 
@@ -25,25 +22,24 @@ import tz.go.pmo.dmis.notification.AudienceService;
  * one number or in bulk, straight from here. Every send goes through {@link MgovSmsService}, which
  * records the {@code sms_logs} row — so a manual send shows up in this same log automatically.
  */
-@RestController
-@RequestMapping("/v1/content/sms-logs")
-public class SmsLogController {
+@Service
+public class SmsLogServiceImpl implements SmsLogService {
 
     private final JdbcTemplate jdbc;
     private final MgovSmsService sms;
     private final AudienceService audiences;
 
-    public SmsLogController(JdbcTemplate jdbc, MgovSmsService sms, AudienceService audiences) {
+    public SmsLogServiceImpl(JdbcTemplate jdbc, MgovSmsService sms, AudienceService audiences) {
         this.jdbc = jdbc;
         this.sms = sms;
         this.audiences = audiences;
     }
 
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false) String search,
-                                     @RequestParam(required = false) String from,
-                                     @RequestParam(required = false) String to) {
+    @Override
+    public Map<String, Object> index(String status,
+                                     String search,
+                                     String from,
+                                     String to) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> p = new ArrayList<>();
         if (status != null && !status.isBlank()) { where.append(" and status = ?"); p.add(status); }
@@ -77,9 +73,8 @@ public class SmsLogController {
      * Compose &amp; send an SMS to one or many recipients (comma/newline-separated numbers or a list).
      * Routes through the M-Gov gateway, which logs each recipient to {@code sms_logs} as 'manual'.
      */
-    @PostMapping("/send")
-    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
-    public Map<String, Object> send(@RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> send(Map<String, Object> body) {
         // Manual / pasted (incl. from-Excel) numbers, plus any selected audience group resolved live.
         Set<String> recipientSet = new LinkedHashSet<>(Recipients.parse(body.get("recipients")));
         boolean audiencePicked = false;
