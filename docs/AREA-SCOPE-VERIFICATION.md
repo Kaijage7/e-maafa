@@ -37,6 +37,17 @@
    own region or fully national). Dist DC Dodoma now **2** warehouses (was 10).  
 5. **Backfill** `users.region_id` from district when missing (V202).
 
+## Warehouse-ops re-check (careful pass)
+
+| Check | Dist DC Dodoma | Reg DC Dodoma | National |
+|-------|----------------|---------------|----------|
+| Store list (zonal/temp) | 2 / scoped | 4 / scoped | full |
+| Incident link picker | **only own-area incidents** (was 17 national) | Dodoma only | 17 |
+| Stock sheet foreign WH | **404** | **404** | ok |
+| Intake foreign WH (Reg has manage) | 403 (no manage) | **404** area | — |
+
+**Fix:** warehouse-ops index incident picker uses `appendAreaScopeWithCouncil` (same wall as dispatch/allocations).
+
 ## Dispatch + inventory write re-check (careful pass)
 
 | Check | Dist DC Dodoma | National |

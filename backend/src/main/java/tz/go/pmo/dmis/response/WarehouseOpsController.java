@@ -122,14 +122,18 @@ public class WarehouseOpsController {
         out.put("removal_reasons", REMOVAL_REASONS);
         out.put("resources", jdbc.queryForList(
                 "select id, name, category, unit_of_measure from public.resources order by name"));
-        // Open incidents so any warehouse operation can optionally be linked to the emergency it supports.
-        // Table-top drill clones are not linkable (real stock never moves for them); full-scale exercises are.
-        out.put("incidents", jdbc.queryForList(
-                "select id, title, status from public.incidents i"
-                + " where coalesce(i.is_simulation, false) = false"
-                + "    or exists (select 1 from public.response_activations ra"
-                + "                where ra.incident_id = i.id and ra.allow_real_ops)"
-                + " order by created_at desc limit 60"));
+        // Open incidents for optional ops linkage — area-scoped like dispatch/allocations pickers
+        // (district officers must not link stock moves to foreign-region incidents).
+        StringBuilder isql = new StringBuilder("""
+                select i.id, i.title, i.status from public.incidents i
+                where (coalesce(i.is_simulation, false) = false
+                       or exists (select 1 from public.response_activations ra
+                                   where ra.incident_id = i.id and ra.allow_real_ops))
+                """);
+        List<Object> iparams = new ArrayList<>();
+        jurisdiction.appendAreaScopeWithCouncil("i", isql, iparams);
+        isql.append(" order by i.created_at desc limit 60");
+        out.put("incidents", jdbc.queryForList(isql.toString(), iparams.toArray()));
         StringBuilder rmWhere = new StringBuilder();
         List<Object> rmParams = new ArrayList<>();
         appendStoreVisibility(rmWhere, rmParams,
