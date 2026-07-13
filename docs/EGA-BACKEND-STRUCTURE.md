@@ -152,8 +152,9 @@ Suggested migration order:
 6. ~~**Training plans**~~ — **DONE** (preparedness package fully migrated)  
 7. ~~**Translations (Settings)**~~ — **DONE**  
 8. ~~**Resource catalogue (Settings)**~~ — **DONE** (named ResourceCatalogue* to avoid clash with inventory `entity.Resource`)  
-9. Remaining Settings (locations, roles, users, institutions, approval workflows)  
-10. Response / EW (SQL-heavy)  
+9. ~~**Approval workflows (Settings)**~~ — **DONE** (`RoleCatalogue` made public for service.impl reuse; engine remains SQL-coupled only)  
+10. Remaining Settings (locations, roles, users, institutions)  
+11. Response / EW (SQL-heavy)  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -169,6 +170,7 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Training plans | Done | `/v1/training-plans` (+ publish, push-priority, request-support) | Full CRUD + golden-thread actions + preparedness/response regressions |
 | Translations | Done | `/v1/settings/translations` | Index/filter, create, conflict 409, update, delete, bad group 400; portal i18n + proxy + preparedness regressions |
 | Resource catalogue | Done | `/v1/settings/resources` | CRUD + vocab guards + in-use delete 409; inventory/reference linkage; proxy + regressions |
+| Approval workflows | Done | `/v1/settings/approval-workflows` | Index + roles, add/edit/move/delete level, toggle module restore, bad-role 400; FE proxy; allocations/coordination regressions; `ApprovalWorkflowRoleVocabTest` |
 
 ---
 

@@ -175,6 +175,15 @@ These callers use **table SQL**, not Java types — package move of controllers/
 | JPA | `entity.Resource` + `ResourceRepository` | Inventory read/join |
 | JDBC admin | `ResourceCatalogueService` / `ResourceCatalogueController` | Settings CRUD on same `public.resources` table |
 
+**Approval workflow dual access (SQL only):**
+
+| Layer | Type | Role |
+|-------|------|------|
+| Settings admin (eGA) | `ApprovalWorkflowConfigController` / `ApprovalWorkflowConfigService` | Configure modules + level chains |
+| Runtime engine | `response.ApprovalWorkflowEngine` | Snapshots chain when starting an approval |
+| Parallel response UI | `response.SettingsController` | Older write paths on same tables (paths differ) |
+| Shared role vocab | `settings.RoleCatalogue` (public) | Also used by RolePermission + UserManagement |
+
 **Shared `@RequestMapping` bases (not bugs):** multiple controllers may share a base path when *method* paths differ, e.g. `/v1/response/incidents` (IncidentController + ops-timeline), `/v1/ew/warnings`, `/v1/onehealth/*` subpaths.
 
 Plan later: relocate Disaster Repository feature to eGA `controller`/`service` and keep `repository` for JPA only.

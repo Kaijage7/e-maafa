@@ -1,51 +1,30 @@
-package tz.go.pmo.dmis.settings;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.service.ApprovalWorkflowConfigService;
+import tz.go.pmo.dmis.settings.RoleCatalogue;
 
 /**
- * System Settings → Approval Workflows. Administers the V24 generalized approval engine:
- * each {@code approval_workflow_modules} row (e.g. Resource Allocation) owns an ordered chain of
- * {@code approval_workflow_configurations} levels (role + order + skip + active). This is the
- * single configuration source the {@code ApprovalWorkflowEngine} reads when initializing a
- * record's approval steps — editing a chain here changes who approves what, system-wide.
- *
- * <p>Reads are open to any signed-in officer; writes are gated to the administrators who govern
- * the approval doctrine.</p>
+ * JDBC admin for the V24 generalized approval engine chains. Paths and JSON shapes are
+ * unchanged from the former settings package controller. Runtime approval steps are initialized
+ * by {@code response.ApprovalWorkflowEngine} from the same tables (no Java type coupling).
  */
-@RestController
-@RequestMapping("/v1/settings/approval-workflows")
-@Tag(name = "Settings: Approval Workflows", description = "Configure the V24 approval engine chains")
+@Service
 @RequiredArgsConstructor
-public class ApprovalWorkflowConfigController {
-
-    private static final String CAN_WRITE = "hasAuthority('approval_workflows.manage')";
+public class ApprovalWorkflowConfigServiceImpl implements ApprovalWorkflowConfigService {
 
     private final JdbcTemplate jdbc;
 
-    /** All modules, each with its ordered level chain + a count of records currently in flight. */
-    @GetMapping
-    @Operation(summary = "Modules + their approval chains + role catalogue")
-    @PreAuthorize("isAuthenticated()")
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> index() {
         List<Map<String, Object>> modules = jdbc.queryForList(
                 "select id, module_code as \"moduleCode\", module_name as \"moduleName\","
@@ -67,16 +46,9 @@ public class ApprovalWorkflowConfigController {
         return out;
     }
 
-    // NB: there is intentionally NO "create module" endpoint. Approval modules are wired into the engine
-    // in code (ApprovalWorkflowEngine is invoked with hardcoded module codes — today only
-    // "resource_allocation"), so an admin-created module could never be initialised and would be dead
-    // config. This screen configures the chains of the engine-wired modules; adding a new module is a
-    // code change (wire the engine + seed it), not a runtime admin action.
-
-    @PostMapping("/{moduleId}/toggle")
-    @Operation(summary = "Activate / deactivate a module's chain")
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> toggleModule(@PathVariable long moduleId) {
+    @Override
+    @Transactional
+    public Map<String, Object> toggleModule(long moduleId) {
         int n = jdbc.update("update public.approval_workflow_modules set is_active = not is_active,"
                 + " updated_at = now() where id = ?", moduleId);
         if (n == 0) {
@@ -85,13 +57,9 @@ public class ApprovalWorkflowConfigController {
         return Map.of("message", "Module updated");
     }
 
-    /** Append a level to a module's chain (order defaults to next in sequence). */
-    @PostMapping("/{moduleId}/levels")
-    @Operation(summary = "Add an approval level to a module")
-    @ResponseStatus(HttpStatus.CREATED)
+    @Override
     @Transactional
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> addLevel(@PathVariable long moduleId, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> addLevel(long moduleId, Map<String, Object> req) {
         requireModule(moduleId);
         String name = req(req, "name");
         String role = req(req, "roleRequired");
@@ -113,10 +81,9 @@ public class ApprovalWorkflowConfigController {
         return Map.of("id", id, "message", "Level added");
     }
 
-    @PutMapping("/levels/{levelId}")
-    @Operation(summary = "Edit an approval level (name, role, skip, active, description)")
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> updateLevel(@PathVariable long levelId, @RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> updateLevel(long levelId, Map<String, Object> req) {
         String role = str(req.get("roleRequired"));
         if (role != null) {
             requireRole(role);
@@ -134,12 +101,9 @@ public class ApprovalWorkflowConfigController {
         return Map.of("message", "Level updated");
     }
 
-    /** Move a level up/down in its chain by swapping order with its neighbour. */
-    @PostMapping("/levels/{levelId}/move")
-    @Operation(summary = "Reorder a level within its chain (direction up|down)")
+    @Override
     @Transactional
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> moveLevel(@PathVariable long levelId, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> moveLevel(long levelId, Map<String, Object> req) {
         Map<String, Object> level = jdbc.queryForMap(
                 "select id, module_id, \"order\" from public.approval_workflow_configurations where id = ?", levelId);
         int order = ((Number) level.get("order")).intValue();
@@ -163,15 +127,11 @@ public class ApprovalWorkflowConfigController {
         return Map.of("message", "Level moved " + (up ? "up" : "down"));
     }
 
-    @DeleteMapping("/levels/{levelId}")
-    @Operation(summary = "Remove an approval level")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize(CAN_WRITE)
-    public void deleteLevel(@PathVariable long levelId) {
+    @Override
+    @Transactional
+    public void deleteLevel(long levelId) {
         jdbc.update("delete from public.approval_workflow_configurations where id = ?", levelId);
     }
-
-    // ── helpers ──
 
     private void requireModule(long id) {
         Long n = jdbc.queryForObject(
