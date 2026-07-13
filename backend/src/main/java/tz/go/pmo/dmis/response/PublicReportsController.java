@@ -172,12 +172,24 @@ public class PublicReportsController {
                 incidentTypeId, severity, districtId, regionId, districtId, regionId,
                 report.get("location_description"),
                 report.get("latitude"), report.get("longitude"), users.actingUserId());
+        if (incidentId == null) {
+            throw new BusinessRuleException("Could not create the incident from this public report.");
+        }
         users.logHistory(incidentId, "created", null, "waiting_ded",
                 "Citizen report " + report.get("report_code") + " converted by DDMC — presence approved, escalated to DED.");
-        jdbc.update("""
+        int linked = jdbc.update("""
                 update public.public_hazard_reports set status = 'converted', linked_incident_id = ?,
                     reviewed_by = ?, reviewed_at = now(), updated_at = now() where id = ?
                 """, incidentId, users.actingUserId(), id);
+        if (linked == 0) {
+            throw new BusinessRuleException("Incident was created but the public report could not be linked — contact support.");
+        }
+        // Integrity: never leave status=converted without a linked incident id (orphans break triage).
+        Long check = jdbc.queryForObject(
+                "select linked_incident_id from public.public_hazard_reports where id = ?", Long.class, id);
+        if (check == null || !check.equals(incidentId)) {
+            throw new BusinessRuleException("Public report link integrity check failed after convert.");
+        }
         // Settle the chain: skip any unstaffed/auto tier (per System Settings) so the incident rests on a real
         // approver even in a district/region with no DED/coordinator — then the resting officers are notified.
         String resting = users.settleStage(incidentId, "waiting_ded");

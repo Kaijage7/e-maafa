@@ -168,17 +168,21 @@ public class PermissionLocalSeeder implements CommandLineRunner {
                 "Resource Allocation|request", "Monitoring & Evaluation|enter"));
         p.put("RAS", List.of("*|view", "Incidents|approve", "Tasks|manage", "Damage Assessment|verify",
                 "Monitoring & Evaluation|enter"));
-        p.put("RC", List.of("*|view", "Monitoring & Evaluation|enter"));
-        p.put("Regional Planning Officer", List.of("*|view", "Monitoring & Evaluation|enter"));
-        p.put("Regional Logistic Officer", List.of("*|view", "Monitoring & Evaluation|enter"));
-        p.put("Dist DC", List.of("*|view", "Incidents|create", "Incidents|update", "Tasks|manage",
+        p.put("RC", List.of("*|view", "Incidents|comment", "Monitoring & Evaluation|enter"));
+        p.put("Regional Planning Officer", List.of("*|view", "Incidents|comment", "Monitoring & Evaluation|enter"));
+        p.put("Regional Logistic Officer", List.of("*|view", "Resource Allocation|dispatch",
+                "Warehouse & Stock|manage", "Monitoring & Evaluation|enter"));
+        p.put("Dist DC", List.of("*|view", "Incidents|create", "Incidents|update", "Incidents|approve",
+                "Incidents|comment", "Tasks|manage",
                 "Damage Assessment|create", "Monitoring & Evaluation|enter"));
-        p.put("DED", List.of("*|view", "Monitoring & Evaluation|enter"));
-        p.put("DAS", List.of("*|view", "Incidents|create", "Incidents|update", "Tasks|manage",
+        // DED owns waiting_ded — approve + comment. DAS is adviser (view+comment), not an incident stage owner.
+        p.put("DED", List.of("*|view", "Incidents|approve", "Incidents|comment", "Monitoring & Evaluation|enter"));
+        p.put("DAS", List.of("*|view", "Incidents|comment", "Tasks|manage",
                 "Damage Assessment|create", "Monitoring & Evaluation|enter"));
-        p.put("District Commissioner", List.of("*|view", "Monitoring & Evaluation|enter"));
-        p.put("District Planning Officer", List.of("*|view", "Monitoring & Evaluation|enter"));
-        p.put("District Logistic Officer", List.of("*|view", "Monitoring & Evaluation|enter"));
+        p.put("District Commissioner", List.of("*|view", "Incidents|comment", "Monitoring & Evaluation|enter"));
+        p.put("District Planning Officer", List.of("*|view", "Incidents|comment", "Monitoring & Evaluation|enter"));
+        p.put("District Logistic Officer", List.of("*|view", "Resource Allocation|dispatch",
+                "Warehouse & Stock|manage", "Monitoring & Evaluation|enter"));
         p.put("Comms Officer", List.of("*|view", "Communication & Alerts|send", "Content Management|manage",
                 "Early Warning|disseminate", "Translations|manage", "One Health|disseminate"));
         p.put("MDA Focal", List.of("Prevention & Mitigation|view", "Risk Index|view", "Risk Index|create",
@@ -226,7 +230,7 @@ public class PermissionLocalSeeder implements CommandLineRunner {
         d.put("Reg DC", "Regional Disaster Coordinator — regional approvals and coordination.");
         d.put("RAS", "Regional Administrative Secretary — regional approval authority.");
         d.put("Dist DC", "District Disaster Coordinator — district incident reporting and tasks.");
-        d.put("DAS", "District Administrative Secretary — district approval authority.");
+        d.put("DAS", "District Administrative Secretary — district leadership; incident view/comment (DED owns district approval stage).");
         d.put("Comms Officer", "Communications — alert dissemination and public content.");
         d.put("MDA Focal", "Sector / MDA focal point — One Health and sectoral coordination.");
         d.put("Partners", "Stakeholders & partners — scoped read access to planning and public analytics.");

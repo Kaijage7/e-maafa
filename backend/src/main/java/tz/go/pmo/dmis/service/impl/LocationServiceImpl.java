@@ -298,7 +298,9 @@ public class LocationServiceImpl implements LocationService {
                     values
                         ('Reg DC', 'rdmc', 'Regional Disaster Coordinator', 'RDMC'),
                         ('RAS', 'ras', 'Regional Administrative Secretary', 'RAS'),
-                        ('RC', 'rc', 'Regional Commissioner', 'RC')
+                        ('RC', 'rc', 'Regional Commissioner', 'RC'),
+                        ('Regional Planning Officer', 'rpo', 'Regional Planning Officer', 'RPO'),
+                        ('Regional Logistic Officer', 'rlo', 'Regional Logistic Officer', 'RLO')
                 ),
                 targets as (
                     select s.role_name,
@@ -323,7 +325,9 @@ public class LocationServiceImpl implements LocationService {
                 on conflict (email) do nothing
                 """, regionId);
         jdbc.update("""
-                with seats(role_name) as (values ('Reg DC'), ('RAS'), ('RC')),
+                with seats(role_name) as (values
+                    ('Reg DC'), ('RAS'), ('RC'),
+                    ('Regional Planning Officer'), ('Regional Logistic Officer')),
                 targets as (
                     select s.role_name, 'region:' || r.id || ':' || lower(replace(s.role_name, ' ', '_')) as position_key
                     from public.regions r cross join seats s
@@ -351,7 +355,9 @@ public class LocationServiceImpl implements LocationService {
                         ('Dist DC', 'ddmc', 'District Disaster Coordinator', 'DDMC'),
                         ('DED', 'ded', 'District Executive Director', 'DED'),
                         ('DAS', 'das', 'District Administrative Secretary', 'DAS'),
-                        ('District Commissioner', 'dc', 'District Commissioner', 'DC')
+                        ('District Commissioner', 'dc', 'District Commissioner', 'DC'),
+                        ('District Planning Officer', 'dpo', 'District Planning Officer', 'DPO'),
+                        ('District Logistic Officer', 'dlo', 'District Logistic Officer', 'DLO')
                 ),
                 targets as (
                     select s.role_name,
@@ -380,7 +386,9 @@ public class LocationServiceImpl implements LocationService {
                 on conflict (email) do nothing
                 """, councilId);
         jdbc.update("""
-                with seats(role_name) as (values ('Dist DC'), ('DED'), ('DAS'), ('District Commissioner')),
+                with seats(role_name) as (values
+                    ('Dist DC'), ('DED'), ('DAS'), ('District Commissioner'),
+                    ('District Planning Officer'), ('District Logistic Officer')),
                 targets as (
                     select s.role_name, 'council:' || c.id || ':' || lower(replace(s.role_name, ' ', '_')) as position_key
                     from public.councils c cross join seats s
