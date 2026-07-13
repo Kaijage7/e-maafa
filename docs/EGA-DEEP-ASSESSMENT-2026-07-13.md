@@ -503,3 +503,36 @@ User: *make sure things are well automated and controlled in the system settings
 - Economics of Disaster: formula workbook + recompute
 
 **Verdict:** System settings automation and formula paths are controlled, wired into runtime engines, and proven end-to-end with net-zero cleanup.
+
+
+## 18. Monitoring & Evaluation eGA (2026-07-13, careful)
+
+Progressive eGA of the next residual fat domain after finance/settings. **No path or JSON change** for Angular.
+
+### Structure
+
+| Before | After |
+|--------|--------|
+| `monitoring/MonitoringEvaluationController` + 2 fat `@Service` classes (~3.3k lines) | Thin `controller/MonitoringEvaluationController` |
+| | `service/MonitoringEvaluationService` + `MonitoringEvaluationEntryService` |
+| | `service.impl/*ServiceImpl` |
+| | `monitoring/` package **empty / removed** |
+
+Paths remain `/v1/monitoring-evaluation/*`.
+
+### Live validation (post-extract)
+
+| Surface | Result |
+|---------|--------|
+| Dashboard SA | **200**, 19 top-level keys, 10 frameworkAims, NATIONAL scope |
+| framework-aims | **200**, n=10 |
+| workbench default | **200**, indicators n=12 (period context) |
+| workbench `domain=NOPE` + `search=zzzz` | indicators/targets/values **0** (productive) |
+| indicators list | **200**, n=127 |
+| indicators `search=zzzznotfound` | **0** |
+| unauth dashboard | **401** |
+| Partner manage write | **403** (Partners have view/enter only by design) |
+| empty indicator create | **400** code required |
+| create E2E_ME_TEMP + SQL delete | net-zero |
+
+**Verdict:** M&E is eGA-layered with productive filters and auth walls intact. Next carefully: reports / notification.

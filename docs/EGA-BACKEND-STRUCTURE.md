@@ -206,7 +206,8 @@ Suggested migration order:
 60. ~~**One Health events**~~ — **DONE** (list filters, store, show, review, directives, cascades)
 61. ~~**One Health dissemination**~~ — **DONE** (dual-track create, approve, recipients; OH controllers complete)
 62. ~~**Finance (budget + economics)**~~ — **DONE** (maker-checker SoD hardened; eGA layered)
-63. Remaining fat domains: M&E / reports / notification / stakeholder / ops-IAM
+63. ~~**Monitoring & Evaluation**~~ — **DONE** (thin controller + dashboard/entry service.impl; `monitoring/` package empty)
+64. Remaining fat domains: reports / notification / stakeholder / ops-IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
