@@ -4,6 +4,15 @@
 **Scope:** Live local DB + running API (`clean2`, profile `local`) + source inspection  
 **Stance:** No sugar-coating. What works, what is half-built, what is broken or empty.
 
+### P0 applied (2026-07-13, commit `6105bcc` / migration **V201**)
+
+| Fix | Result |
+|-----|--------|
+| DAS no longer has false `incidents.approve` / `close` | Has `view` + `comment` (+ legacy create/update until further tighten) |
+| Planning / logistic seats | District Planning **156**, District Logistic **156**, Regional Planning **26**, Regional Logistic **26** |
+| Orphan `converted` PHR without link | Demoted to **reviewing** (4); remaining **converted=6 all linked** |
+| Convert integrity | Code asserts `linked_incident_id` after convert |
+
 This is the operational truth-check for: **roles → jurisdiction → public report → incident ladder → warehouse/dispatch → EW ↔ incident → portal → notifications → repository → command post / simulations → dissemination**.
 
 ---
