@@ -133,7 +133,7 @@ Inventory ── Java: WarehouseRepository, Resource (package-private)
 | `service.impl.ReliefDistributionServiceImpl` | source labels |
 | `finance/EconomicsOfDisasterService` | stock value |
 | `monitoring/MonitoringEvaluationService` | indicators |
-| `mitigation/GisMapController` | map layers |
+| `controller.GisMapController` | map layers |
 | `local/LocalDataSeeder` | seed rows |
 | `common/security/JurisdictionScope` | `appendWarehouseScope` |
 | `common/security/AreaGuard` | `assertWarehouseVisible` |
