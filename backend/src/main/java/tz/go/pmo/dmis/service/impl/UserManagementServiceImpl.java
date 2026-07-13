@@ -1,7 +1,5 @@
-package tz.go.pmo.dmis.settings;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,55 +7,36 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.service.UserManagementService;
+import tz.go.pmo.dmis.settings.RoleCatalogue;
 
 /**
- * System Settings → User Management. Administers the {@code users} table and each user's SRS roles
- * ({@code model_has_roles}). Passwords are BCrypt-hashed the same way {@code AuthController} verifies
- * them. Roles drive both the sidebar (the module hub) and every {@code @PreAuthorize} check across
- * the platform, so this screen is the access-control front door.
- *
- * <p>Writes are gated to the administrators who govern accounts. A safety rail prevents deleting or
- * stripping the role of the last Super Admin (locking everyone out).</p>
+ * JDBC admin for users + role assignment. Paths/JSON unchanged from the former settings package.
+ * Last Super Admin cannot be deleted or stripped; unknown role names are rejected (not silently skipped).
  */
-@RestController
-@RequestMapping("/v1/settings/users")
-@Tag(name = "Settings: User Management", description = "Users + role assignment")
+@Service
 @RequiredArgsConstructor
-public class UserManagementController {
+public class UserManagementServiceImpl implements UserManagementService {
 
-    private static final String CAN_WRITE = "hasAuthority('user_management.manage')";
     private static final String MODEL_TYPE = "App\\Models\\User";
 
     private final JdbcTemplate jdbc;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
-    @GetMapping
-    @Operation(summary = "Users with their roles + the role catalogue + stats")
-    @PreAuthorize("isAuthenticated()")
-    public Map<String, Object> index(@RequestParam(required = false) String search,
-                                     @RequestParam(required = false) String role,
-                                     @RequestParam(required = false) String roleCategory,
-                                     @RequestParam(required = false) String scopeLevel,
-                                     @RequestParam(required = false) Long regionId,
-                                     @RequestParam(required = false) Long districtId,
-                                     @RequestParam(required = false) Long councilId,
-                                     @RequestParam(required = false) Boolean seeded,
-                                     @RequestParam(required = false) String accountGroup) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> index(String search,
+                                     String role,
+                                     String roleCategory,
+                                     String scopeLevel,
+                                     Long regionId,
+                                     Long districtId,
+                                     Long councilId,
+                                     Boolean seeded,
+                                     String accountGroup) {
         StringBuilder where = new StringBuilder(" where 1=1");
         List<Object> args = new ArrayList<>();
         if (search != null && !search.isBlank()) {
@@ -193,13 +172,9 @@ public class UserManagementController {
                 Map.of("code", "all", "label", "All accounts")));
         return out;
     }
-
-    @PostMapping
-    @Operation(summary = "Create a user (BCrypt password) + assign roles")
-    @ResponseStatus(HttpStatus.CREATED)
+    @Override
     @Transactional
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> create(@RequestBody Map<String, Object> req) {
+    public Map<String, Object> create(Map<String, Object> req) {
         String name = req(req, "name");
         String email = req(req, "email").toLowerCase();
         String password = req(req, "password");
@@ -226,12 +201,9 @@ public class UserManagementController {
         syncStakeholderLink(id, area.stakeholderId());
         return Map.of("id", id, "message", "User created");
     }
-
-    @PutMapping("/{id}")
-    @Operation(summary = "Edit a user's name / email / area attachment")
+    @Override
     @Transactional
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> update(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> update(long id, Map<String, Object> req) {
         find(id);
         String email = str(req.get("email"));
         if (email != null) {
@@ -255,23 +227,18 @@ public class UserManagementController {
         }
         return Map.of("message", "User updated");
     }
-
-    @PutMapping("/{id}/roles")
-    @Operation(summary = "Replace a user's roles")
+    @Override
     @Transactional
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> setUserRoles(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    public Map<String, Object> setUserRoles(long id, Map<String, Object> req) {
         find(id);
         List<String> roles = roleList(req.get("roles"));
         guardLastSuperAdmin(id, roles);
         setRoles(id, roles);
         return Map.of("message", "Roles updated");
     }
-
-    @PostMapping("/{id}/password")
-    @Operation(summary = "Reset a user's password")
-    @PreAuthorize(CAN_WRITE)
-    public Map<String, Object> resetPassword(@PathVariable long id, @RequestBody Map<String, Object> req) {
+    @Override
+    @Transactional
+    public Map<String, Object> resetPassword(long id, Map<String, Object> req) {
         find(id);
         String password = req(req, "password");
         validatePassword(password);
@@ -287,13 +254,9 @@ public class UserManagementController {
     private static void validatePassword(String password) {
         tz.go.pmo.dmis.common.security.PasswordPolicy.validate(password);
     }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a user (cannot remove the last Super Admin)")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Override
     @Transactional
-    @PreAuthorize(CAN_WRITE)
-    public void delete(@PathVariable long id) {
+    public void delete(long id) {
         find(id);
         guardLastSuperAdmin(id, List.of()); // deleting = stripping all roles
         jdbc.update("delete from public.model_has_roles where model_id = ? and model_type = ?", id, MODEL_TYPE);
@@ -403,13 +366,18 @@ public class UserManagementController {
     }
 
     private void setRoles(long userId, List<String> roleNames) {
+        // Reject unknown role names — previously silent skip left admins thinking a grant applied.
+        for (String roleName : roleNames) {
+            if (roleId(roleName) == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Unknown role \"" + roleName + "\" — choose one from the role list.");
+            }
+        }
         jdbc.update("delete from public.model_has_roles where model_id = ? and model_type = ?", userId, MODEL_TYPE);
         for (String roleName : roleNames) {
             Long roleId = roleId(roleName);
-            if (roleId != null) {
-                jdbc.update("insert into public.model_has_roles(role_id, model_type, model_id) values (?,?,?)"
-                        + " on conflict do nothing", roleId, MODEL_TYPE, userId);
-            }
+            jdbc.update("insert into public.model_has_roles(role_id, model_type, model_id) values (?,?,?)"
+                    + " on conflict do nothing", roleId, MODEL_TYPE, userId);
         }
     }
 
@@ -429,8 +397,6 @@ public class UserManagementController {
                     "This is the last Super Admin — assign Super Admin to another user first.");
         }
     }
-
-    @SuppressWarnings("unchecked")
     private static List<String> roleList(Object v) {
         if (v instanceof List<?> list) {
             return list.stream().map(String::valueOf).filter(s -> !s.isBlank()).toList();

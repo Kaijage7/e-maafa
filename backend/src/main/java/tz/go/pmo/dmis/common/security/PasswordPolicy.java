@@ -7,7 +7,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * The single source of truth for the account password policy (VAPT vi remediation). Used by BOTH the
- * admin password-setting path ({@code settings/UserManagementController}) and the self-service change
+ * admin password-setting path ({@code UserManagementService}) and the self-service change
  * path ({@code iam/AuthController}) so the two can never drift.
  *
  * <p>Policy: at least 10 characters, containing lowercase, uppercase, a digit AND a special character,
