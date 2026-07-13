@@ -237,7 +237,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 |-----------|-------------|
 | `/v1/response/incidents` | `IncidentController` + `IncidentTimelineController` |
 | `/v1/response/coordination` | `CommandCenterController` (+ scenarios under `/coordination/scenarios`) |
-| `/v1/response` | `DashboardController` (root dashboard) |
+| `/v1/response` | `controller.DashboardController` (dashboard + eocc + activate; eGA) |
 
 ### 10.4 Recommended Response migration order (safest first)
 
@@ -258,7 +258,8 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R13 | Exercise Scenarios | `/v1/response/coordination/scenarios` | ~592 | ActivationService for launch; create/show package | **DONE** |
 | R14 | Incident Ops Timeline | `/v1/response/incidents/{id}/ops-timeline` | ~519 | Read-only trail merge; shares base with fat IncidentController | **DONE** |
 | R15 | DLNA | `/v1/response/dlna` | ~715 | PDF + NotificationService + AreaGuard; Annex 1/2 | **DONE** |
-| R8+ | Warehouse-ops, dispatch, allocations, bidding, incidents, command center, dashboard, resource approvals | various | large | High SQL + engine + shared bases — last | pending |
+| R16 | Dashboard + EOCC | `/v1/response/dashboard`, `/eocc`, `/eocc/activate` | ~542 | JurisdictionScope + AreaGuard + ActivationService; CurrentUserResolver | **DONE** |
+| R8+ | Warehouse-ops, dispatch, allocations, bidding, incidents, command center, resource approvals | various | large | High SQL + engine + shared bases — last | pending |
 
 ### 10.5 Do **not** start with
 

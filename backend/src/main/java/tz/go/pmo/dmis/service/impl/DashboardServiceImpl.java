@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -8,18 +8,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
+import tz.go.pmo.dmis.response.ActivationService;
+import tz.go.pmo.dmis.response.IncidentOptions;
+import tz.go.pmo.dmis.service.DashboardService;
 
 /**
  * Port of Response\ResponseDashboardController + EOCCDashboardController —
@@ -35,19 +34,20 @@ import tz.go.pmo.dmis.common.security.SecurityUtils;
  * status chart counts ALL incidents ever; EOCC critical count excludes
  * 'Reported'; EOCC works on created_at while the dashboard uses
  * reported_at.
+ * <p>Logic lives in service.impl (eGA); paths/JSON unchanged. Acting user via
+ * {@link CurrentUserResolver}; activate via transitional {@link ActivationService}.
  */
-@RestController
-@RequestMapping("/v1/response")
-public class DashboardController {
+@Service
+public class DashboardServiceImpl implements DashboardService {
 
     private final JdbcTemplate jdbc;
-    private final IncidentWorkflowService users;
+    private final CurrentUserResolver users;
     private final ActivationService activations;
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
 
-    public DashboardController(JdbcTemplate jdbc, IncidentWorkflowService users, ActivationService activations,
-                              JurisdictionScope jurisdiction, AreaGuard areaGuard) {
+    public DashboardServiceImpl(JdbcTemplate jdbc, CurrentUserResolver users, ActivationService activations,
+                                JurisdictionScope jurisdiction, AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.users = users;
         this.activations = activations;
@@ -91,8 +91,7 @@ public class DashboardController {
     }
 
     /** Response overview dashboard (stat cards, feeds, type/region rollups, map markers). */
-    @PreAuthorize("hasAuthority('incidents.view')")
-    @GetMapping("/dashboard")
+    @Override
     public Map<String, Object> dashboard() {
         Map<String, Object> out = new LinkedHashMap<>();
         // REAL picture only: every branch excludes simulation drill clones (and rows hanging off them).
@@ -282,8 +281,7 @@ public class DashboardController {
     }
 
     /** The merged EOCC live board payload (also the 30-second poll). */
-    @PreAuthorize("hasAuthority('command_post.view')")
-    @GetMapping("/eocc")
+    @Override
     public Map<String, Object> eocc() {
         Map<String, Object> out = new LinkedHashMap<>();
         // REAL picture only (drills excluded; they surface via simulations_running below).
@@ -493,7 +491,7 @@ public class DashboardController {
             return rows;
         } catch (Exception e) {
             // Keep dashboard up; surface the cause in logs so empty strips are diagnosable.
-            org.slf4j.LoggerFactory.getLogger(DashboardController.class)
+            org.slf4j.LoggerFactory.getLogger(DashboardServiceImpl.class)
                     .warn("areaIssuedEarlyWarnings failed (tier={}, rid={}, did={}): {}",
                             tier, rid, did, e.toString());
             return List.of();
@@ -519,10 +517,9 @@ public class DashboardController {
      * source, wired here to open a response activation for an incident
      * (the one the Command Center coordinates around).
      */
-    @PreAuthorize("hasAuthority('command_post.activate')")
-    @PostMapping("/eocc/activate")
+    @Override
     @Transactional
-    public Map<String, Object> activate(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> activate(Map<String, Object> body) {
         if (body.get("incident_id") == null) {
             throw new BusinessRuleException("The incident_id field is required.");
         }
