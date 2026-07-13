@@ -263,7 +263,8 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R18 | Warehouse Ops | `/v1/response/warehouse-ops` | ~856 | DispatchSupportService + SimulationGuard + NotificationService | **DONE** |
 | R19 | Dispatch | `/v1/response/dispatch` | ~900 | DispatchSupportService + SimulationGuard + NotificationService; APPROVAL_REQUIRED_SOURCES public | **DONE** |
 | R20 | Stakeholder Bidding | `/v1/response/bidding` | ~1037 | DispatchSupportService + SimulationGuard + NotificationService; NDMF cash | **DONE** |
-| R8+ | Incidents, command center | various | large | Largest hubs + shared path bases — last | pending |
+| R21 | Incidents | `/v1/response/incidents` | ~1283 | IncidentWorkflowService retained; multipart; coexists with ops-timeline | **DONE** |
+| R8+ | Command center | `/v1/response/coordination` | ~1883 | Largest hub + shared path with scenarios — last | pending |
 
 ### 10.5 Do **not** start with
 

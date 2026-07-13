@@ -45,6 +45,7 @@
 | Warehouse Ops | SA/DED/RAS/DAS warehouse counts match; movements/capacity/loans scoped; DED OOA stock **404**; Partner **403**; bad remove + empty stock-taking **422** (no ledger mutation) |
 | Dispatch | SA/DED/RAS/DAS board stats match; sources SA/RAS **200** DED OOA **404**; procurement track DED **404**; empty dispatch **422** net-zero; Partner **403** |
 | Stakeholder Bidding | SA/DED/RAS/DAS donations/open-needs/NDMF match; pool SA **200** Dist/Reg OOA **404**; empty bid/ndmf **422** net-zero; Partner module **403** |
+| Incidents | SA/DED/RAS/DAS index+form-data match; show OOA **404**; ops-timeline coexists **200**; empty store/update **422** with `errors`; Partner approve **403**; no workflow mutation |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -84,6 +85,7 @@
 - ~~Warehouse Ops eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; multi-persona baseline; no stock mutation in verify).
 - ~~Dispatch eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; APPROVAL_REQUIRED_SOURCES public; multi-persona baseline; no stock mutation in verify).
 - ~~Stakeholder Bidding eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; multi-persona baseline; no stock/donation mutation in verify).
+- ~~Incidents eGA extract~~ — **DONE** (IncidentWorkflowService retained; findOr404 public; multipart store/update; coexists with ops-timeline; multi-persona baseline; no workflow mutation in verify).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -111,6 +113,7 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 17. ~~eGA migrate **Warehouse Ops**~~ — **DONE**.  
 18. ~~eGA migrate **Dispatch**~~ — **DONE**.  
 19. ~~eGA migrate **Stakeholder Bidding**~~ — **DONE**.  
-20. Next: Incident + CommandCenter hubs last (largest; shared path bases).  
-21. Stamp area on temp warehouses + agency stock data hygiene.  
-22. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+20. ~~eGA migrate **Incidents**~~ — **DONE**.  
+21. Next: CommandCenter hub last.  
+22. Stamp area on temp warehouses + agency stock data hygiene.  
+23. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
