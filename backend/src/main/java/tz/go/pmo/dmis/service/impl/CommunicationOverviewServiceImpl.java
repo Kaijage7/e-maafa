@@ -1,13 +1,13 @@
 package tz.go.pmo.dmis.service.impl;
 
-import org.springframework.stereotype.Service;
-import tz.go.pmo.dmis.notification.AudienceService;
-import tz.go.pmo.dmis.service.CommunicationOverviewService;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import tz.go.pmo.dmis.notification.AudienceService;
+import tz.go.pmo.dmis.service.CommunicationOverviewService;
 
 /**
  * Communication Center overview — the one cross-channel rollup of everything the platform sends:
@@ -56,8 +56,10 @@ public class CommunicationOverviewServiceImpl implements CommunicationOverviewSe
 
     @Override
     public Map<String, Object> overview(String range) {
-        String since = since(range);
+        String effective = normalizeRange(range);
+        String since = since(effective);
         Map<String, Object> out = new LinkedHashMap<>();
+        out.put("range", effective);
 
         Map<String, Object> sms = jdbc.queryForMap("""
                 select count(*) as total,
@@ -84,7 +86,7 @@ public class CommunicationOverviewServiceImpl implements CommunicationOverviewSe
 
         Map<String, Object> alerts = jdbc.queryForMap(("""
                 select count(*) as total, count(*) filter (where sent_at::date = current_date) as today
-                from public.alerts where %s""").formatted(sinceCol(range, "coalesce(sent_at, created_at)")));
+                from public.alerts where %s""").formatted(sinceCol(effective, "coalesce(sent_at, created_at)")));
         out.put("alerts", alerts);
 
         out.put("by_channel", List.of(
@@ -131,17 +133,36 @@ public class CommunicationOverviewServiceImpl implements CommunicationOverviewSe
         return o instanceof Number n ? n.longValue() : 0;
     }
 
+    /**
+     * Controlled vocabulary matching Communication Centre FE (today/week/month/all).
+     * Unknown values → 422 (never silently treat garbage as "this month").
+     */
+    private static String normalizeRange(String range) {
+        if (range == null || range.isBlank()) {
+            return "month";
+        }
+        String r = range.trim().toLowerCase();
+        return switch (r) {
+            case "today", "week", "month", "all" -> r;
+            case "7d" -> "week";
+            case "30d" -> "month";
+            case "year" -> "all"; // legacy alias; FE does not send year
+            default -> throw new BusinessRuleException(
+                    "Unknown range '" + range.trim() + "'. Use today, week, month or all.");
+        };
+    }
+
     /** Safe range predicate over created_at (range is a fixed enum, never interpolated user text). */
     private static String since(String range) {
         return sinceCol(range, "created_at");
     }
 
     private static String sinceCol(String range, String col) {
-        return switch (range == null ? "month" : range.toLowerCase()) {
+        return switch (range) {
             case "today" -> col + " >= current_date";
             case "week" -> col + " >= now() - interval '7 days'";
             case "all" -> "1=1";
-            default -> col + " >= date_trunc('month', now())";
+            default -> col + " >= date_trunc('month', now())"; // month
         };
     }
 }

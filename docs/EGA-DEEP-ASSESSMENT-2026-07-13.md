@@ -862,3 +862,35 @@ User direction: *notification to be really of next level* — productive persona
 | preferences GET/POST | **200** |
 
 **Verdict:** Personal notification surface is productively next-level — filters, categories, smart poll, full centre UI — without AI claims or schema churn. Delivery engines remain the single `notification/` spine.
+
+
+## 27. Productive validation pass — no fake params (2026-07-13)
+
+User direction: *keep validating; no fake codes; every functionality/param productive end-to-end; work at all angles; detect and resolve issues.*
+
+### Issues found and fixed
+
+| Issue | Symptom | Fix |
+|-------|---------|-----|
+| Notification `severity=NOPE` | Silently returned **info** rows (fake productive filter) | Controlled vocab → **422** (`critical\|high\|warning\|info\|success` + aliases) |
+| Feed `before_id` cursor | **7 dups**, **55/82** coverage under severity-aware ORDER BY | Keyset pagination aligned with ORDER BY; foreign `before_id` → empty; `limit+1` for accurate `has_more` |
+| Search `q` unbounded | Possible abuse / noise | Max **200** chars → **422** |
+| Communication `range=NOPE` | Silently treated as **this month** | Controlled vocab `today\|week\|month\|all` → **422**; response echoes `range` |
+
+### Revalidation matrix (live)
+
+| Surface | Result |
+|---------|--------|
+| Notif severity/category garbage | **422** |
+| Notif cursor full walk | **82/82**, dups=**0** |
+| Notif multi-persona ownership | director/eocc own rows only |
+| Notif foreign mark-unread/dismiss | **422**; foreign row intact |
+| Comm range today/week/month/all | **200** + `range` echo |
+| Comm range garbage | **422** |
+| Incidents `status_filter=Reported` | total **11** |
+| Incidents `status_filter=NOPE` / workflow NOPE / hazard 999999 | **n=0** |
+| Email/SMS logs `status=NOPE` | **n=0** |
+| Repository events `status=NOPE` | **n=0** |
+| Unauth notif / comm / incidents | **401** |
+
+**Verdict:** Detected fake-filter behaviours fixed; productive params work end-to-end; isolation and walls hold.

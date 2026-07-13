@@ -23,6 +23,18 @@ public class UserNotificationServiceImpl implements UserNotificationService {
     private static final Set<String> CATEGORIES = Set.of(
             "workflow", "early_warning", "approval", "logistics", "training", "scanner", "system");
 
+    private static final Set<String> SEVERITIES = Set.of("critical", "high", "warning", "info", "success");
+
+    /** Shared ORDER BY rank for severity (lower = higher priority). Must match keyset math. */
+    private static final String SEV_RANK_SQL = """
+            case lower(coalesce(severity,''))
+              when 'critical' then 0 when 'danger' then 0
+              when 'high' then 1 when 'major_warning' then 1 when 'major-warning' then 1
+              when 'warning' then 2
+              when 'success' then 4
+              else 3 end
+            """;
+
     private final JdbcTemplate jdbc;
     private final CurrentUserResolver currentUser;
 
@@ -41,7 +53,8 @@ public class UserNotificationServiceImpl implements UserNotificationService {
             throw new BusinessRuleException(
                     "Unknown category '" + cat + "'. Use workflow, early_warning, approval, logistics, training, scanner or system.");
         }
-        String sev = normalizeSeverity(severity);
+        // Controlled vocabulary — unknown severity must not silently match info rows.
+        String sev = parseSeverityFilter(severity);
 
         StringBuilder where = new StringBuilder("user_id = ?");
         List<Object> params = new ArrayList<>();
@@ -62,33 +75,35 @@ public class UserNotificationServiceImpl implements UserNotificationService {
             where.append(" and lower(coalesce(severity,'')) in (").append(severityMatchSql(sev)).append(")");
         }
         if (notBlank(q)) {
+            String qq = q.trim();
+            if (qq.length() > 200) {
+                throw new BusinessRuleException("Search query is too long (max 200 characters).");
+            }
             where.append(" and (title ilike ? or message ilike ?)");
-            String like = "%" + q.trim() + "%";
+            String like = "%" + qq + "%";
             params.add(like);
             params.add(like);
         }
+        // Keyset cursor aligned with ORDER BY (not bare id < ? — that duplicated/skipped rows).
         if (beforeId != null && beforeId > 0) {
-            where.append(" and id < ?");
-            params.add(beforeId);
+            appendKeysetAfter(where, params, uid, beforeId);
         }
 
-        // Unread first, then critical→warning→info, then newest.
+        // Unread first, then critical→warning→info, then newest. Fetch lim+1 for accurate has_more.
+        String orderBy = "is_read asc, " + SEV_RANK_SQL + ", created_at desc, id desc";
         String sql = """
                 select id, type, title, message, link, entity_type, entity_id, severity, is_read, created_at
                 from public.resource_notifications
                 where %s
-                order by is_read asc,
-                         case lower(coalesce(severity,''))
-                           when 'critical' then 0 when 'danger' then 0
-                           when 'high' then 1 when 'major_warning' then 1
-                           when 'warning' then 2
-                           when 'success' then 4
-                           else 3 end,
-                         created_at desc, id desc
+                order by %s
                 limit ?
-                """.formatted(where);
-        params.add(lim);
+                """.formatted(where, orderBy);
+        params.add(lim + 1);
         List<Map<String, Object>> rows = jdbc.queryForList(sql, params.toArray());
+        boolean hasMore = rows.size() > lim;
+        if (hasMore) {
+            rows = rows.subList(0, lim);
+        }
         List<Map<String, Object>> items = new ArrayList<>(rows.size());
         for (Map<String, Object> r : rows) {
             items.add(enrich(r));
@@ -101,7 +116,7 @@ public class UserNotificationServiceImpl implements UserNotificationService {
                 "select id from public.resource_notifications where user_id = ? order by id desc limit 1",
                 rs -> rs.next() ? rs.getLong(1) : null, uid);
 
-        // Category counts for filter chips (scoped to actor, all time unread+read for chip totals of unread).
+        // Category counts for filter chips (scoped to actor).
         List<Map<String, Object>> catCounts = categoryCounts(uid);
 
         Map<String, Object> out = new LinkedHashMap<>();
@@ -109,7 +124,7 @@ public class UserNotificationServiceImpl implements UserNotificationService {
         out.put("unread_count", unread == null ? 0 : unread);
         out.put("latest_id", latestId);
         out.put("limit", lim);
-        out.put("has_more", items.size() == lim);
+        out.put("has_more", hasMore);
         out.put("next_before_id", items.isEmpty() ? null : ((Number) items.get(items.size() - 1).get("id")).longValue());
         out.put("categories", catCounts);
         out.put("filters", Map.of(
@@ -119,6 +134,63 @@ public class UserNotificationServiceImpl implements UserNotificationService {
                 "severity", sev == null ? "" : sev,
                 "q", q == null ? "" : q));
         return out;
+    }
+
+    /**
+     * Continue after the row identified by {@code beforeId} under the feed ORDER BY.
+     * Scoped to the actor so a foreign id cannot leak or shift another user's cursor.
+     */
+    private void appendKeysetAfter(StringBuilder where, List<Object> params, long uid, long beforeId) {
+        List<Map<String, Object>> anchors = jdbc.queryForList("""
+                select is_read, severity, created_at, id
+                from public.resource_notifications
+                where id = ? and user_id = ?
+                """, beforeId, uid);
+        if (anchors.isEmpty()) {
+            // Unknown / foreign cursor → empty page (productive, no leak).
+            where.append(" and false");
+            return;
+        }
+        Map<String, Object> a = anchors.get(0);
+        int readBit = Boolean.TRUE.equals(a.get("is_read")) ? 1 : 0;
+        int sevRank = severityRank(str(a.get("severity")));
+        Object createdAt = a.get("created_at");
+        long id = ((Number) a.get("id")).longValue();
+
+        // Sort: is_read ASC, sev_rank ASC, created_at DESC, id DESC
+        // Next row is strictly after this position in that order.
+        where.append("""
+                 and (
+                      (case when is_read then 1 else 0 end) > ?
+                   or ((case when is_read then 1 else 0 end) = ? and (%s) > ?)
+                   or ((case when is_read then 1 else 0 end) = ? and (%s) = ? and created_at < ?)
+                   or ((case when is_read then 1 else 0 end) = ? and (%s) = ? and created_at = ? and id < ?)
+                 )
+                """.formatted(SEV_RANK_SQL, SEV_RANK_SQL, SEV_RANK_SQL));
+        params.add(readBit);
+        params.add(readBit);
+        params.add(sevRank);
+        params.add(readBit);
+        params.add(sevRank);
+        params.add(createdAt);
+        params.add(readBit);
+        params.add(sevRank);
+        params.add(createdAt);
+        params.add(id);
+    }
+
+    private static int severityRank(String raw) {
+        String n = mapSeverity(raw);
+        if (n == null) {
+            return 3; // info / unknown
+        }
+        return switch (n) {
+            case "critical" -> 0;
+            case "high" -> 1;
+            case "warning" -> 2;
+            case "success" -> 4;
+            default -> 3;
+        };
     }
 
     @Override
@@ -381,41 +453,59 @@ public class UserNotificationServiceImpl implements UserNotificationService {
         m.put("category", cat);
         m.put("category_label", categoryLabel(cat));
         m.put("category_icon", categoryIcon(cat));
-        String sev = normalizeSeverity(str(r.get("severity")));
+        String sev = mapSeverity(str(r.get("severity")));
         m.put("severity_norm", sev == null ? "info" : sev);
         return m;
     }
 
-    private static String normalizeSeverity(String raw) {
+    /**
+     * Filter param: blank = no filter; known alias → bucket; anything else → 422
+     * (never silently treat garbage as info).
+     */
+    private static String parseSeverityFilter(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String mapped = mapSeverity(raw);
+        if (mapped == null || !SEVERITIES.contains(mapped)) {
+            throw new BusinessRuleException(
+                    "Unknown severity '" + raw.trim() + "'. Use critical, high, warning, info or success.");
+        }
+        return mapped;
+    }
+
+    /** Map stored or query severity into a controlled bucket; null if blank/unknown. */
+    private static String mapSeverity(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
         String s = raw.trim().toLowerCase(Locale.ROOT);
-        if (s.contains("critical") || s.equals("danger")) {
+        if (s.equals("critical") || s.equals("danger")) {
             return "critical";
         }
-        if (s.equals("high") || s.contains("major")) {
+        if (s.equals("high") || s.equals("major_warning") || s.equals("major-warning") || s.equals("major")) {
             return "high";
         }
-        if (s.contains("warn")) {
+        if (s.equals("warning") || s.equals("warn")) {
             return "warning";
         }
-        if (s.contains("success") || s.equals("ok")) {
+        if (s.equals("success") || s.equals("ok")) {
             return "success";
         }
-        if (s.equals("info") || s.equals("low") || s.equals("normal")) {
+        if (s.equals("info") || s.equals("low") || s.equals("normal") || s.equals("medium")) {
             return "info";
         }
-        return s;
+        return null;
     }
 
     private static String severityMatchSql(String sev) {
         return switch (sev) {
             case "critical" -> "'critical','danger'";
-            case "high" -> "'high','major_warning','major-warning'";
-            case "warning" -> "'warning'";
+            case "high" -> "'high','major_warning','major-warning','major'";
+            case "warning" -> "'warning','warn'";
             case "success" -> "'success','ok'";
-            default -> "'info','low','normal',''";
+            case "info" -> "'info','low','normal','medium',''";
+            default -> throw new IllegalArgumentException("severity bucket: " + sev);
         };
     }
 
