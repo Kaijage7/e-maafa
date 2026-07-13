@@ -56,7 +56,8 @@ class FinanceWorkflowIntegrationTest {
         budgetId = id(create(DED, FIN + "/budgets",
                 "{\"period_id\":" + periodId + ",\"scope_level\":\"district\",\"district_id\":" + DISTRICT_DODOMA
                         + ",\"title\":\"__fin_it__ budget\",\"total_amount\":120000000}"));
-        post(DED, FIN + "/budgets/" + budgetId + "/approve", null).andExpect(status().isOk());
+        // SoD: creator (DED) cannot activate the budget — a separate approver seat must do it.
+        post(DIRECTOR, FIN + "/budgets/" + budgetId + "/approve", null).andExpect(status().isOk());
         line1Id = id(create(DED, FIN + "/budgets/" + budgetId + "/lines",
                 "{\"category\":\"Relief Supplies\",\"allocated_amount\":100000000}"));
         line2Id = id(create(DED, FIN + "/budgets/" + budgetId + "/lines",

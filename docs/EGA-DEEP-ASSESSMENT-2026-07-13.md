@@ -411,3 +411,48 @@ Public portal regressions exact: landing, threats, regions, education, shelters,
 | Economics | `/v1/finance/economics` | Thin controller + `EconomicsOfDisasterServiceImpl`; deterministic formula (not AI) |
 
 Post-eGA: GETs **200**, unauth **401**, SoD self-approve/reject **422**, happy path **200**, ledger cleaned to original commitment only.
+
+
+## 16. Finance money-path careful harden (2026-07-13, critical)
+
+User direction: **more careful on finance — very crucial**. Residual SoD/money gaps closed after eGA; re-drilled with distinct user ids under Super Admin authority so **service-layer SoD** is proven (not masked by RBAC 403).
+
+### Gaps closed
+
+| Gap | Before | After |
+|-----|--------|-------|
+| Soft SoD (`me() != null &&`) | Unknown actor **skipped** maker≠checker | `requireActor()` fail-closed on all money writes |
+| Missing maker audit id | Null `requested_by`/`approved_by`/`created_by` allowed transition | `requireRecordedActor` — incomplete trail **422** |
+| Status races | UPDATE without expected-status predicate | Conditional `WHERE status='…'` + row-count; `FOR UPDATE` on commitment/virement/budget/donation |
+| Expended overpay | Client could post expended **>** obligated | **422** must be positive and ≤ obligated amount |
+| Budget envelope SoD | Creator could activate own draft (historical budget 1 is self-approved) | **422** *you cannot approve a budget you created* (draft→active only) |
+| NDMF donation race | Remaining balance without row lock | Donation `FOR UPDATE` + existing fund advisory lock |
+
+### Intentionally retained design
+
+| Rule | Rationale |
+|------|-----------|
+| Same LO may **commit then disburse** | Three authority classes (manage / approve / disburse); PEFA encumbrance then cash-out can be one expenditure officer in small councils |
+| NDMF single-step disburse | No multi-user SoD on NDMF path; controls = disburse authority + area + sim + fund/earmark locks + actor required |
+
+### Live deep matrix (line 1 Dodoma Urban; net-zero)
+
+| # | Drill | Result |
+|---|-------|--------|
+| B | User 2695 request then self-approve (SA role) | **422** SoD |
+| C | Same self-reject | **422** SoD |
+| D–G | 14 approve; 14/2695 commit blocked; 2696 commit | **422 / 200** |
+| H–I | 14/2695 disburse blocked | **422** |
+| J–K | expended 999999 / 0 | **422** money bound |
+| L | 2696 disburse full amount | **200** |
+| M | Budget create 2695 → self-approve **422** → 14 activate **200** | pass |
+| N | Virement self-approve/reject **422**; 14 approve **200** | pass |
+| — | Simulation incident 7 request | **422** sim guard |
+| — | Cleanup | only historical commitment **1** / line **20M** remain |
+
+### Code
+
+- `BudgetServiceImpl` — all transitions above
+- `FinanceWorkflowIntegrationTest` setUp — budget approve by DIRECTOR (not creator DED)
+
+**Verdict:** Finance money paths are fail-closed on identity, maker≠checker, expenditure ceiling, and concurrent state. Ledger restored. Ready for next domain only after product sign-off.

@@ -91,6 +91,7 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Transactional
     public Map<String, Object> createBudget(Map<String, Object> b) {
+        Long actor = requireActor();
         Long periodId = lng(req(b, "period_id"));
         BudgetScope target = resolveBudgetScope(b);
         Long id = jdbc.queryForObject("""
@@ -98,7 +99,7 @@ public class BudgetServiceImpl implements BudgetService {
                     currency, status, created_by, created_at, updated_at)
                 values (?,?,?,?,?,?, coalesce(?,'TZS'), 'draft', ?, now(), now()) returning id
                 """, Long.class, periodId, target.scope(), target.districtId(), target.regionId(),
-                str(b.get("title")), dec(b.get("total_amount")), str(b.get("currency")), me());
+                str(b.get("title")), dec(b.get("total_amount")), str(b.get("currency")), actor);
         return Map.of("success", true, "id", id);
     }
     @Override
@@ -146,9 +147,24 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Transactional
     public Map<String, Object> approveBudget(long id) {
+        Long actor = requireActor();
         areaGuard.assertOwnOrShared("public.disaster_budgets", id);   // 404 if cross-area
-        if (jdbc.update("update public.disaster_budgets set status='active', approved_by=?, approved_at=now(), updated_at=now() "
-                + "where id=? and status in ('draft','approved')", me(), id) == 0) {
+        Map<String, Object> budget = one(
+                "select status, created_by from public.disaster_budgets where id = ? for update", id);
+        if (!"draft".equals(budget.get("status"))) {
+            throw new BusinessRuleException("Budget not found or not in an approvable state.");
+        }
+        // Maker≠checker on the envelope itself: the officer who drafted the budget cannot activate it.
+        Long creator = requireRecordedActor(budget.get("created_by"), "creator");
+        if (actor.equals(creator)) {
+            throw new BusinessRuleException(
+                    "Separation of duties: you cannot approve a budget you created.");
+        }
+        if (jdbc.update("""
+                update public.disaster_budgets
+                   set status='active', approved_by=?, approved_at=now(), updated_at=now()
+                 where id=? and status='draft'
+                """, actor, id) == 0) {
             throw new BusinessRuleException("Budget not found or not in an approvable state.");
         }
         return Map.of("success", true, "message", "Budget approved and active.");
@@ -172,6 +188,7 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Transactional
     public Map<String, Object> request(Map<String, Object> b) {
+        Long actor = requireActor();
         // Drill isolation: real money is never committed against a table-top simulation incident.
         simulationGuard.assertNotSimulationIncident(lng(b.get("incident_id")), "committing budget funds");
         Long lineId = lng(req(b, "budget_line_id"));
@@ -197,7 +214,7 @@ public class BudgetServiceImpl implements BudgetService {
                 insert into public.budget_commitments(budget_line_id, incident_id, amount, purpose, payee, status,
                     requested_by, created_at, updated_at)
                 values (?,?,?,?,?, 'requested', ?, now(), now()) returning id
-                """, Long.class, lineId, lng(b.get("incident_id")), amount, str(b.get("purpose")), str(b.get("payee")), me());
+                """, Long.class, lineId, lng(b.get("incident_id")), amount, str(b.get("purpose")), str(b.get("payee")), actor);
         return Map.of("success", true, "id", id, "message", "Spend requested — awaiting approval.");
     }
 
@@ -209,18 +226,22 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Transactional
     public Map<String, Object> approveCommitment(long id) {
+        Long actor = requireActor();
+        // Lock commitment row first so concurrent approve/reject cannot both succeed.
         Map<String, Object> c = one("""
-                select c.status, c.requested_by, c.amount, db.scope_level, db.id as budget_id
+                select c.id, c.status, c.requested_by, c.amount, db.scope_level, db.id as budget_id
                 from public.budget_commitments c
                 join public.budget_lines bl on bl.id = c.budget_line_id
                 join public.disaster_budgets db on db.id = bl.disaster_budget_id
-                where c.id = ?""", id);
+                where c.id = ? for update of c""", id);
         // Scope via the owning budget (commitment -> budget_line -> disaster_budget); 404 if cross-area.
         areaGuard.assertOwnOrShared("public.disaster_budgets", lng(c.get("budget_id")));
         if (!"requested".equals(c.get("status"))) {
             throw new BusinessRuleException("Only a requested commitment can be approved.");
         }
-        if (me() != null && me().equals(lng(c.get("requested_by")))) {
+        Long requestedBy = requireRecordedActor(c.get("requested_by"), "requester");
+        // Fail-closed SoD: actor is always known (requireActor); never skip when identity is missing.
+        if (actor.equals(requestedBy)) {
             throw new BusinessRuleException("Separation of duties: you cannot approve a spend you requested.");
         }
         BigDecimal amount = dec(c.get("amount"));
@@ -230,7 +251,13 @@ public class BudgetServiceImpl implements BudgetService {
                     + "-tier approval ceiling of " + ceiling + " — fund it from a higher-tier (region or national) "
                     + "budget, or have an authorized officer raise the ceiling.");
         }
-        jdbc.update("update public.budget_commitments set status='approved', approved_by=?, approved_at=now(), updated_at=now() where id=?", me(), id);
+        if (jdbc.update("""
+                update public.budget_commitments
+                   set status='approved', approved_by=?, approved_at=now(), updated_at=now()
+                 where id=? and status='requested'
+                """, actor, id) == 0) {
+            throw new BusinessRuleException("Only a requested commitment can be approved.");
+        }
         return Map.of("success", true, "message", "Commitment approved — awaiting obligation.");
     }
 
@@ -242,16 +269,27 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Transactional
     public Map<String, Object> commit(long id) {
+        Long actor = requireActor();
         assertCommitmentInArea(id);   // 404 if cross-area
-        Map<String, Object> c = one("select status, requested_by, approved_by from public.budget_commitments where id = ?", id);
+        Map<String, Object> c = one(
+                "select status, requested_by, approved_by from public.budget_commitments where id = ? for update", id);
         if (!"approved".equals(c.get("status"))) {
             throw new BusinessRuleException("Only an approved commitment can be obligated.");
         }
-        // Three distinct authorities: neither the requester nor the approver may obligate the funds.
-        if (me() != null && (me().equals(lng(c.get("approved_by"))) || me().equals(lng(c.get("requested_by"))))) {
+        Long requestedBy = requireRecordedActor(c.get("requested_by"), "requester");
+        Long approvedBy = requireRecordedActor(c.get("approved_by"), "approver");
+        // Three authority classes: requester and approver must not obligate (encumber) the funds.
+        // The same Logistic Officer may later disburse (commit+disburse share disburse authority).
+        if (actor.equals(approvedBy) || actor.equals(requestedBy)) {
             throw new BusinessRuleException("Separation of duties: the requester/approver cannot obligate the funds.");
         }
-        jdbc.update("update public.budget_commitments set status='committed', committed_by=?, committed_at=now(), updated_at=now() where id=?", me(), id);
+        if (jdbc.update("""
+                update public.budget_commitments
+                   set status='committed', committed_by=?, committed_at=now(), updated_at=now()
+                 where id=? and status='approved'
+                """, actor, id) == 0) {
+            throw new BusinessRuleException("Only an approved commitment can be obligated.");
+        }
         return Map.of("success", true, "message", "Funds obligated (committed) — awaiting disbursement.");
     }
 
@@ -263,39 +301,66 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Transactional
     public Map<String, Object> disburse(long id, Map<String, Object> b) {
+        Long actor = requireActor();
         assertCommitmentInArea(id);   // 404 if cross-area
-        simulationGuard.assertNotSimulationIncident(jdbc.queryForObject(
-                "select incident_id from public.budget_commitments where id = ?", Long.class, id), "disbursing funds");
-        Map<String, Object> c = one("select status, amount, requested_by, approved_by from public.budget_commitments where id = ?", id);
+        Map<String, Object> c = one(
+                "select status, amount, incident_id, requested_by, approved_by from public.budget_commitments where id = ? for update",
+                id);
+        simulationGuard.assertNotSimulationIncident(lng(c.get("incident_id")), "disbursing funds");
         if (!"committed".equals(c.get("status"))) {
             throw new BusinessRuleException("Only an obligated (committed) commitment can be disbursed.");
         }
-        // Three distinct authorities: neither the requester nor the approver may pay it out.
-        if (me() != null && (me().equals(lng(c.get("approved_by"))) || me().equals(lng(c.get("requested_by"))))) {
+        Long requestedBy = requireRecordedActor(c.get("requested_by"), "requester");
+        Long approvedBy = requireRecordedActor(c.get("approved_by"), "approver");
+        // Three authority classes: requester and approver must not pay out. Committer may disburse
+        // (same Logistic Officer / expenditure authority) — cash control is maker≠checker on request/approve.
+        if (actor.equals(approvedBy) || actor.equals(requestedBy)) {
             throw new BusinessRuleException("Separation of duties: the requester/approver cannot also disburse.");
         }
+        BigDecimal committed = dec(c.get("amount"));
         BigDecimal expended = b == null ? null : dec(b.get("expended_amount"));
         if (expended == null) {
-            expended = dec(c.get("amount"));   // default the actual expenditure to the committed amount
+            expended = committed;   // default the actual expenditure to the committed amount
         }
-        jdbc.update("update public.budget_commitments set status='disbursed', expended_amount=?, disbursed_by=?, disbursed_at=now(), updated_at=now() where id=?",
-                expended, me(), id);
+        // Hard money bound: expenditure must be positive and must never exceed the obligated amount.
+        if (expended.signum() <= 0) {
+            throw new BusinessRuleException("Expended amount must be a positive figure.");
+        }
+        if (committed != null && expended.compareTo(committed) > 0) {
+            throw new BusinessRuleException(
+                    "Expended amount (" + expended + ") cannot exceed the obligated amount (" + committed + ").");
+        }
+        if (jdbc.update("""
+                update public.budget_commitments
+                   set status='disbursed', expended_amount=?, disbursed_by=?, disbursed_at=now(), updated_at=now()
+                 where id=? and status='committed'
+                """, expended, actor, id) == 0) {
+            throw new BusinessRuleException("Only an obligated (committed) commitment can be disbursed.");
+        }
         return Map.of("success", true, "message", "Commitment disbursed (paid).");
     }
     @Override
 
     @Transactional
     public Map<String, Object> reject(long id, Map<String, Object> b) {
+        Long actor = requireActor();
         assertCommitmentInArea(id);   // 404 if cross-area
-        Map<String, Object> c = one("select status, requested_by from public.budget_commitments where id = ?", id);
+        Map<String, Object> c = one(
+                "select status, requested_by from public.budget_commitments where id = ? for update", id);
         if (!"requested".equals(c.get("status"))) {
             throw new BusinessRuleException("Only a requested commitment can be rejected.");
         }
-        if (me() != null && me().equals(lng(c.get("requested_by")))) {
+        Long requestedBy = requireRecordedActor(c.get("requested_by"), "requester");
+        if (actor.equals(requestedBy)) {
             throw new BusinessRuleException("Separation of duties: you cannot reject a spend you requested.");
         }
-        jdbc.update("update public.budget_commitments set status='rejected', reject_reason=?, approved_by=?, approved_at=now(), updated_at=now() where id=?",
-                req(b, "reason"), me(), id);
+        if (jdbc.update("""
+                update public.budget_commitments
+                   set status='rejected', reject_reason=?, approved_by=?, approved_at=now(), updated_at=now()
+                 where id=? and status='requested'
+                """, req(b, "reason"), actor, id) == 0) {
+            throw new BusinessRuleException("Only a requested commitment can be rejected.");
+        }
         return Map.of("success", true, "message", "Commitment rejected.");
     }
 
@@ -306,6 +371,7 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Transactional
     public Map<String, Object> requestVirement(Map<String, Object> b) {
+        Long actor = requireActor();
         Long fromLine = lng(req(b, "from_line_id"));
         Long toLine = lng(req(b, "to_line_id"));
         BigDecimal amount = dec(req(b, "amount"));
@@ -331,7 +397,7 @@ public class BudgetServiceImpl implements BudgetService {
                 insert into public.budget_virements(disaster_budget_id, from_line_id, to_line_id, amount, reason,
                     status, requested_by, created_at, updated_at)
                 values (?,?,?,?,?, 'requested', ?, now(), now()) returning id
-                """, Long.class, budgetId, fromLine, toLine, amount, str(b.get("reason")), me());
+                """, Long.class, budgetId, fromLine, toLine, amount, str(b.get("reason")), actor);
         return Map.of("success", true, "id", id, "message", "Virement requested — awaiting approval.");
     }
 
@@ -340,14 +406,18 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Transactional
     public Map<String, Object> approveVirement(long id) {
+        Long actor = requireActor();
         // Scope via the virement's budget (budget_virements.disaster_budget_id); 404 if cross-area.
         areaGuard.assertParentOwnOrShared("public.budget_virements", "disaster_budget_id",
                 "public.disaster_budgets", id);
-        Map<String, Object> v = one("select status, from_line_id, to_line_id, amount, requested_by from public.budget_virements where id = ?", id);
+        Map<String, Object> v = one(
+                "select status, from_line_id, to_line_id, amount, requested_by from public.budget_virements where id = ? for update",
+                id);
         if (!"requested".equals(v.get("status"))) {
             throw new BusinessRuleException("Only a requested virement can be approved.");
         }
-        if (me() != null && me().equals(lng(v.get("requested_by")))) {
+        Long requestedBy = requireRecordedActor(v.get("requested_by"), "requester");
+        if (actor.equals(requestedBy)) {
             throw new BusinessRuleException("Separation of duties: you cannot approve a virement you requested.");
         }
         Long fromLine = lng(v.get("from_line_id"));
@@ -359,25 +429,39 @@ public class BudgetServiceImpl implements BudgetService {
         }
         jdbc.update("update public.budget_lines set allocated_amount = allocated_amount - ?, updated_at = now() where id = ?", amount, fromLine);
         jdbc.update("update public.budget_lines set allocated_amount = allocated_amount + ?, updated_at = now() where id = ?", amount, lng(v.get("to_line_id")));
-        jdbc.update("update public.budget_virements set status='approved', approved_by=?, approved_at=now(), updated_at=now() where id=?", me(), id);
+        if (jdbc.update("""
+                update public.budget_virements
+                   set status='approved', approved_by=?, approved_at=now(), updated_at=now()
+                 where id=? and status='requested'
+                """, actor, id) == 0) {
+            throw new BusinessRuleException("Only a requested virement can be approved.");
+        }
         return Map.of("success", true, "message", "Virement approved — allocation reallocated.");
     }
     @Override
 
     @Transactional
     public Map<String, Object> rejectVirement(long id, Map<String, Object> b) {
+        Long actor = requireActor();
         // Scope via the virement's budget (budget_virements.disaster_budget_id); 404 if cross-area.
         areaGuard.assertParentOwnOrShared("public.budget_virements", "disaster_budget_id",
                 "public.disaster_budgets", id);
-        Map<String, Object> v = one("select status, requested_by from public.budget_virements where id = ?", id);
+        Map<String, Object> v = one(
+                "select status, requested_by from public.budget_virements where id = ? for update", id);
         if (!"requested".equals(v.get("status"))) {
             throw new BusinessRuleException("Only a requested virement can be rejected.");
         }
-        if (me() != null && me().equals(lng(v.get("requested_by")))) {
+        Long requestedBy = requireRecordedActor(v.get("requested_by"), "requester");
+        if (actor.equals(requestedBy)) {
             throw new BusinessRuleException("Separation of duties: you cannot reject a virement you requested.");
         }
-        jdbc.update("update public.budget_virements set status='rejected', reject_reason=?, approved_by=?, approved_at=now(), updated_at=now() where id=?",
-                req(b, "reason"), me(), id);
+        if (jdbc.update("""
+                update public.budget_virements
+                   set status='rejected', reject_reason=?, approved_by=?, approved_at=now(), updated_at=now()
+                 where id=? and status='requested'
+                """, req(b, "reason"), actor, id) == 0) {
+            throw new BusinessRuleException("Only a requested virement can be rejected.");
+        }
         return Map.of("success", true, "message", "Virement rejected.");
     }
 
@@ -429,6 +513,8 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Transactional
     public Map<String, Object> ndmfDisburse(Map<String, Object> b) {
+        // NDMF is a single-step cash-out (disburse authority); still fail-closed on actor for audit + FK.
+        Long actor = requireActor();
         Long incidentId = lng(req(b, "incident_id"));
         if (incidentId == null) {
             throw new BusinessRuleException("A valid incident is required.");
@@ -451,7 +537,10 @@ public class BudgetServiceImpl implements BudgetService {
         }
         Long donationId = lng(b.get("donation_id"));
         if (donationId != null) {
-            Map<String, Object> d = one("select status, earmark_type, earmark_incident_id from public.ndmf_donations where id = ?", donationId);
+            // Lock the donation row so concurrent earmarked disbursements serialize on remaining balance.
+            Map<String, Object> d = one(
+                    "select status, earmark_type, earmark_incident_id from public.ndmf_donations where id = ? for update",
+                    donationId);
             // The cash must actually be in hand: a pledged/pending donation cannot be paid out yet.
             String dStatus = str(d.get("status"));
             if (!"received".equals(dStatus) && !"acknowledged".equals(dStatus)) {
@@ -478,7 +567,7 @@ public class BudgetServiceImpl implements BudgetService {
                 values (coalesce(?, 'NDMF-' || to_char(now(),'YYYYMMDDHH24MISSMS')), 'incident_response', ?,
                     coalesce(?,'TZS'), current_date, 'paid', ?, ?, ?, ?, ?, now(), now()) returning id
                 """, Long.class, str(b.get("reference_number")), amount, str(b.get("currency")), incidentId, donationId,
-                str(b.get("payee")), str(b.get("notes")), me());
+                str(b.get("payee")), str(b.get("notes")), actor);
         return Map.of("success", true, "id", id, "message", "NDMF cash disbursed to incident #" + incidentId + ".");
     }
 
@@ -599,8 +688,31 @@ public class BudgetServiceImpl implements BudgetService {
         return alloc.subtract(used == null ? BigDecimal.ZERO : used);
     }
 
-    private Long me() {
-        return currentUser.actingUserId();
+    /**
+     * Money paths fail closed: every create/transition that writes an audit user id must have a real actor.
+     * Soft {@code me() != null &&} SoD checks previously skipped separation of duties when identity was missing.
+     */
+    private Long requireActor() {
+        Long id = currentUser.actingUserId();
+        if (id == null) {
+            throw new BusinessRuleException(
+                    "Authenticated user identity is required for this finance action.");
+        }
+        return id;
+    }
+
+    /**
+     * SoD needs a recorded maker/checker on the row. A missing audit id must not allow the transition
+     * (fail closed — never approve/disburse against an anonymous prior step).
+     */
+    private static Long requireRecordedActor(Object raw, String roleLabel) {
+        Long id = lng(raw);
+        if (id == null) {
+            throw new BusinessRuleException(
+                    "This record has no recorded " + roleLabel
+                            + " — cannot continue without a complete maker-checker trail.");
+        }
+        return id;
     }
 
     /**
