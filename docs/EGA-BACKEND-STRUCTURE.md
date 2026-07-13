@@ -240,8 +240,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | EW Warning Lifecycle | Done | `POST /v1/ew/warnings/{id}/approve\|publish\|map\|bulletin` | Thin controller + service.impl; coexists with GET index; `early_warning.approve` SoD (MDA/Partner **403**); pending/approved gates **422**; missing PDF **400**; invalid PDF **422**; map missing **404**; full approve→bulletin→publish→map net-zero |
 | EW Scanner | Done | `/v1/ew/scanner/*` | Thin controller + service.impl; **dual stats** (`stats`=filtered WHERE, `global`=unfiltered); productive AND filters status/hazard/source/severity/reliability/region/q/days; `matched` before limit; show **404**; re-dismiss **404**; agency tasking isolation; Partner **403** |
 | EW Management Report | Done | `GET /v1/reports/early-warnings` | Thin controller + service.impl; productive `from`/`to` (yyyy-MM-dd; invalid→full range); DAS Dodoma isolation; Partner **403**; unauth **401**; SA/DAS baselines identical post-extract |
+| Hazard Area Context | Done | `GET /v1/ops/hazard-area-context` | Thin controller + service.impl; lat/lng/districtId/regionId/areaName productive; bad geo **404**; **fixed** warningId/code join to warning_hazards (was always null); submission uses hazard_types/top_alert; Partner **403** |
 
-44. ~~**EW Management Report**~~ — **DONE**
+45. ~~**Hazard Area Context**~~ — **DONE**
 
 ---
 

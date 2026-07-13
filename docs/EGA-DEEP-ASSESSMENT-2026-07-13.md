@@ -12,7 +12,7 @@
 | Response remaining | **Support hubs only** | Transitional services in `response/` |
 | EW | **Migrated** | Boundary + Warnings + Products + Agency + Ingest + Lifecycle + Scanner + **Management Report** |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**EW Management Report**~~ **DONE** | Response support hubs / mitigation / portal / recovery next |
+| Next eGA leaf (binding order) | ~~**Hazard Area Context**~~ **DONE** | Mitigation / portal / recovery next |
 
 **Honest score:** Master data + Response + **all EW leaves + EW management report** eGA-shaped. Residual: Response support services + non-EW modules.
 
@@ -55,6 +55,7 @@
 | EW Warning Lifecycle | Unauth **401**; Partner/MDA(create)/DAS **403** (SoD); approve non-pending / publish non-approved / map pre-portal / re-approve/re-publish **422**; map missing **404**; missing PDF **400**; tiny/non-PDF **422**; counts hold on fails; full ingest→approve→bulletin→publish→map on/off net-zero (17\|210\|54\|76\|5); GET warnings coexist **200**; EOCC reaches approve |
 | EW Scanner (advanced) | Dual stats: `status=new` → stats.total=matched=58, global.total=83; nonsense filters → 0 + global intact; AND hazard+status; severity/reliability/q/days/limit productive; show **404**; re-dismiss **404** (fixed); MoH taskings isolation **403** cross-agency; Partner **403**; report empty title success=false; bad dispatch `as` soft-fail; net-zero report→dismiss→delete |
 | EW Management Report | SA summary+rows match pre-extract; `from`/`to` productive (2090 empty; 2000–01 empty; invalid dates full fallback); DAS Dodoma-only (4 windows); Partner **403**; unauth **401** |
+| Hazard Area Context | lat/lng override; district/region **404** bad ids; areaName approx centroid; **warningId/code now return hazardType+severity** (join fix); submission top_alert/hazard_types; Partner **403**; unauth **401** |
 | Module guards | Dist **403** on executive (no perm), anticipatory (no perm), settings |
 
 ## 3. Issues found by deep audit → fixed this pass
@@ -104,6 +105,7 @@
 - ~~EW Warning Lifecycle eGA extract~~ — **DONE** (approve/publish/map/bulletin; NotificationService afterCommit publish broadcast retained; SoD + net-zero).
 - ~~EW Scanner eGA extract + advanced filters~~ — **DONE** (dual stats filtered+global; productive multi-filters; re-dismiss fixed; DisasterScannerService OSINT retained).
 - ~~EW Management Report eGA extract~~ — **DONE** (from/to productive; JurisdictionScope area isolation; stakeholder hide retained).
+- ~~Hazard Area Context eGA extract~~ — **DONE** (productive geo params; **fixed** broken warning column SQL; submission real columns).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -141,6 +143,7 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 27. ~~eGA migrate **EW Warning Lifecycle**~~ — **DONE**.  
 28. ~~eGA migrate **EW Scanner** (+ advanced dual stats)~~ — **DONE**.  
 29. ~~eGA migrate **EW Management Report**~~ — **DONE**.  
-30. Next: mitigation / portal / recovery leaves or Response support hubs.  
-31. Stamp area on temp warehouses + agency stock data hygiene.  
-32. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+30. ~~eGA migrate **Hazard Area Context**~~ — **DONE**.  
+31. Next: mitigation / portal / recovery leaves.  
+32. Stamp area on temp warehouses + agency stock data hygiene.  
+33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
