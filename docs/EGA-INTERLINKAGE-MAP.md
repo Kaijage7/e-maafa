@@ -253,7 +253,8 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R8 | Anticipatory plans | `/v1/response/anticipatory-plans` | ~372 | Area scope; `matchingPlans` consumed by CommandCenter (now via service) | **DONE** |
 | R9 | Tasks | `/v1/response/tasks` | ~429 | Area scope + NotificationService; no Java type importers | **DONE** |
 | R10 | Assessments | `/v1/response/assessments` | ~541 | Multipart + AreaGuard + ApprovalWorkflowEngine.initialize | **DONE** |
-| R8+ | Communication, settings, warehouse-ops, dispatch, allocations, bidding, DLNA, incidents, command center | various | large | High SQL + engine + shared bases — last | pending |
+| R11 | Communication | `/v1/response/communication` | ~712 | NotificationService + ExternalDeliveryService + SimulationGuard; @Scheduled dispatch | **DONE** |
+| R8+ | Settings, warehouse-ops, dispatch, allocations, bidding, DLNA, incidents, command center | various | large | High SQL + engine + shared bases — last | pending |
 
 ### 10.5 Do **not** start with
 

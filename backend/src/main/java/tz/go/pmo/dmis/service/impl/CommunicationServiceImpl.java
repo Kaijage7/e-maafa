@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
@@ -13,43 +13,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
-import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.notification.ExternalDeliveryService;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.notification.NotificationService;
+import tz.go.pmo.dmis.response.SimulationGuard;
+import tz.go.pmo.dmis.service.CommunicationService;
 
 /**
- * The consolidated Communication & Alert Center — the single merged port of
- * Response\CommunicationAlertsController + Response\AlertSystemController
- * (the source ran two parallel alert systems with diverging enums
- * and recipient logic; this is the one stream).
- *
- * Flow: compose (template → variable substitution) → resolve recipients from
- * the 8 group keys → write the alerts row → fan out one alert_recipients row
- * per recipient × channel (THE delivery log — deduped from the source's three
- * half-journals) → send/schedule. Locally every channel records a simulated
- * delivery; production swaps the channel senders (M-Gov SMS, mail, FCM)
- * without touching this flow.
- *
- * Also fixed: 'sectoral_focal', 'emergency_teams' and 'public' resolved to
- * nobody in the source — now mapped to MDA Focal, EOCC and the preparedness
- * alert_subscriptions registry respectively.
+ * Communication & Alert Center. Logic moved from the former response package
+ * controller; Angular paths/JSON unchanged. Scheduled dispatch retained here
+ * as a Spring {@code @Service} bean. Acting user via {@link CurrentUserResolver}.
  */
-@RestController
-@RequestMapping("/v1/response/communication")
-public class CommunicationController {
+@Service
+public class CommunicationServiceImpl implements CommunicationService {
 
     private static final List<String> ALERT_TYPES = List.of("evacuation", "warning", "update", "all_clear", "custom");
     private static final List<String> SEVERITIES = List.of("low", "medium", "high", "critical");
@@ -69,17 +51,17 @@ public class CommunicationController {
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
-    private static final Logger log = LoggerFactory.getLogger(CommunicationController.class);
+    private static final Logger log = LoggerFactory.getLogger(CommunicationServiceImpl.class);
 
     private final JdbcTemplate jdbc;
-    private final IncidentWorkflowService users;
+    private final CurrentUserResolver users;
     private final ExternalDeliveryService externalDelivery; // the one async SMS+SMTP sender (off the request thread)
     private final NotificationService notifications;        // the one in-app feed dispatcher
     private final JurisdictionScope jurisdiction;           // row-level area scoping for the operational history list
     private final AreaGuard areaGuard;                      // by-id read area guard (scoped-list/unscoped-detail leaks)
     private final SimulationGuard simulationGuard;          // drill isolation — no real SMS/email for table-top drills
 
-    public CommunicationController(JdbcTemplate jdbc, IncidentWorkflowService users,
+    public CommunicationServiceImpl(JdbcTemplate jdbc, CurrentUserResolver users,
                                    ExternalDeliveryService externalDelivery, NotificationService notifications,
                                    JurisdictionScope jurisdiction, AreaGuard areaGuard,
                                    SimulationGuard simulationGuard) {
@@ -94,7 +76,7 @@ public class CommunicationController {
 
     // ─── Dashboard + form data ───
 
-    @GetMapping
+    @Override
     public Map<String, Object> index() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("stats", jdbc.queryForMap("""
@@ -121,7 +103,7 @@ public class CommunicationController {
         return out;
     }
 
-    @GetMapping("/form-data")
+    @Override
     public Map<String, Object> formData() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("alert_types", ALERT_TYPES);
@@ -166,12 +148,11 @@ public class CommunicationController {
      * source's sendAlert(); the fan-out writes one alert_recipients row per
      * resolved recipient × selected channel.
      */
-    @PostMapping("/alerts")
-    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     // NOT @Transactional: fanOut writes the alert + recipient rows (auto-committed) then offloads the
     // SMS/SMTP send to the @Async ExternalDeliveryService — the request never holds a DB connection
     // across gateway I/O, and a rollback can't discard a record of a message that already went out.
-    public Map<String, Object> sendAlert(@RequestBody Map<String, Object> body) throws Exception {
+    @Override
+    public Map<String, Object> sendAlert(Map<String, Object> body) throws Exception {
         String alertType = requireIn(body.get("alert_type"), ALERT_TYPES, "alert_type");
         String severity = requireIn(body.get("severity"), SEVERITIES, "severity");
         String title = requireMax(body.get("title"), 255, "title");
@@ -402,7 +383,7 @@ public class CommunicationController {
 
     // ─── History / details / retry ───
 
-    @GetMapping("/alerts")
+    @Override
     public Map<String, Object> history() {
         return Map.of("alerts", alertList("limit 100", true));   // operational history — scope to the officer's area
     }
@@ -451,8 +432,8 @@ public class CommunicationController {
         }
     }
 
-    @GetMapping("/alerts/{id}")
-    public Map<String, Object> alertDetails(@PathVariable long id) {
+    @Override
+    public Map<String, Object> alertDetails(long id) {
         // Area guard mirroring the history list (alertList shared-or-own): an alert tied to another area's
         // incident 404s for region/district officers, while alerts with NULL incident_id stay shared-visible.
         StringBuilder where = new StringBuilder("a.id = ?");
@@ -493,9 +474,8 @@ public class CommunicationController {
      * rows go failed → pending → sent/failed from the REAL gateway outcome. Previously this faked 'sent' with
      * a bare UPDATE and sent nothing.
      */
-    @PostMapping("/alerts/{id}/resend-failed")
-    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
-    public Map<String, Object> resendFailed(@PathVariable long id) {
+    @Override
+    public Map<String, Object> resendFailed(long id) {
         Map<String, Object> alert = jdbc.queryForMap(
                 "select title, message, recipient_groups from public.alerts where id = ?", id);
         Map<String, Map<String, Object>> byKey = new LinkedHashMap<>();
@@ -538,10 +518,9 @@ public class CommunicationController {
 
     // ─── Templates ───
 
-    @PostMapping("/templates")
-    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     @Transactional
-    public Map<String, Object> saveTemplate(@RequestBody Map<String, Object> body) throws Exception {
+    @Override
+    public Map<String, Object> saveTemplate(Map<String, Object> body) throws Exception {
         String name = requireMax(body.get("name"), 255, "name");
         String type = requireIn(body.get("alert_type") == null ? body.get("type") : body.get("alert_type"),
                 ALERT_TYPES, "type");
@@ -556,10 +535,9 @@ public class CommunicationController {
         return Map.of("success", true, "id", id, "message", "Template saved successfully.");
     }
 
-    @PostMapping("/templates/{id}")
-    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     @Transactional
-    public Map<String, Object> updateTemplate(@PathVariable long id, @RequestBody Map<String, Object> body) throws Exception {
+    @Override
+    public Map<String, Object> updateTemplate(long id, Map<String, Object> body) throws Exception {
         String message = requireMax(body.get("message"), 1000, "message");
         int updated = jdbc.update("""
                 update public.alert_templates set name = ?, type = ?, category = ?, title = ?, subject = ?,
@@ -574,10 +552,9 @@ public class CommunicationController {
         return Map.of("success", true, "message", "Template updated successfully.");
     }
 
-    @PostMapping("/templates/{id}/toggle")
-    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     @Transactional
-    public Map<String, Object> toggleTemplate(@PathVariable long id) {
+    @Override
+    public Map<String, Object> toggleTemplate(long id) {
         int updated = jdbc.update(
                 "update public.alert_templates set is_active = not is_active, updated_at = now() where id = ?", id);
         if (updated == 0) {
@@ -586,10 +563,9 @@ public class CommunicationController {
         return Map.of("success", true, "message", "Template status toggled.");
     }
 
-    @DeleteMapping("/templates/{id}")
-    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
     @Transactional
-    public Map<String, Object> deleteTemplate(@PathVariable long id) {
+    @Override
+    public Map<String, Object> deleteTemplate(long id) {
         if (jdbc.update("delete from public.alert_templates where id = ?", id) == 0) {
             throw new ResourceNotFoundException("Template not found.");
         }
@@ -597,9 +573,8 @@ public class CommunicationController {
     }
 
     /** Fill {placeholders} from an incident + now — the compose form's preview. */
-    @PostMapping("/templates/{id}/preview")
-    @PreAuthorize("hasAuthority('communication_and_alerts.view')")   // read-only POST, but gated so the coverage test holds
-    public Map<String, Object> previewTemplate(@PathVariable long id, @RequestBody(required = false) Map<String, Object> body) {
+    @Override
+    public Map<String, Object> previewTemplate(long id, Map<String, Object> body) {
         List<Map<String, Object>> templates = jdbc.queryForList(
                 "select title, message from public.alert_templates where id = ?", id);
         if (templates.isEmpty()) {
@@ -638,7 +613,7 @@ public class CommunicationController {
 
     // ─── Analytics ───
 
-    @GetMapping("/analytics")
+    @Override
     public Map<String, Object> analytics() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("periods", jdbc.queryForMap("""
