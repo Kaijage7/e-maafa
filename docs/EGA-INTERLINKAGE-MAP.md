@@ -273,7 +273,15 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 
 ---
 
-## 11. Hidden issues already fixed during Settings eGA
+## 11. Operational honesty assessment
+
+Full open assessment (roles, ladder, warehouse, EW, portal, notifications, repository, COP, dead ends):
+
+→ [`OPERATIONAL-LINKAGE-ASSESSMENT.md`](./OPERATIONAL-LINKAGE-ASSESSMENT.md)
+
+---
+
+## 12. Hidden issues already fixed during Settings eGA
 
 | Issue | Fix commit line |
 |-------|-----------------|
