@@ -922,3 +922,21 @@ Read-only inventory first; mutate only proven silent-accept defects. No package 
 
 ### Regression
 Prior notification severity/cursor and communication `range` contracts still hold.
+
+
+## 29. Careful audit — One Health / warehouse / settings (2026-07-14)
+
+User direction: *proceed very carefully.*
+
+### Productive (no code change)
+One Health events/directives/disseminations nonsense filters → primary `data` **n=0**; inverted dates **n=0**. Tasks/assessments/loans/settings resources/users/institutions/translations nonsense → **n=0** or loans status **422**. Resource allocation report inverted dates **422**. Unauth walls **401**. Prior notif/scanner/consol contracts hold.
+
+### Defects fixed
+| Surface | Issue | Fix |
+|---------|-------|-----|
+| `GET /v1/response/warehouse-ops/movements?warehouse_type=` | Type alone was **ignored** (even `NOPE` returned full journal) | Validate `zonal\|temporary`; type-only filters movements that touch that store class |
+| `GET /v1/evacuation-centers/nearest` | `lat=999` etc. returned centres | **422** for lat/lng outside ±90/±180; TZ soft note retained for valid-but-out-of-envelope coords; limit 1–50 |
+
+### Live proof
+- movements `NOPE` → **422**; `zonal` n=57 / `temporary` n=11 (productive split)
+- evac TZ **200**; impossible coords **422**; London soft note **200**

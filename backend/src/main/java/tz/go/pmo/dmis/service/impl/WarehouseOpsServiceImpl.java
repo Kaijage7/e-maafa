@@ -293,9 +293,9 @@ public class WarehouseOpsServiceImpl implements WarehouseOpsService {
             where.append(" and sm.resource_id = ?");
             params.add(resource_id);
         }
-        // Productive store filter: touch from/to for zonal or temporary as declared.
+        // Productive store filter: warehouse_type is never silently ignored when present.
         if (warehouse_id != null) {
-            String wt = warehouse_type == null ? "zonal" : warehouseType(warehouse_type);
+            String wt = (warehouse_type == null || warehouse_type.isBlank()) ? "zonal" : warehouseType(warehouse_type);
             requireStore(wt, warehouse_id);   // OOA store → 404 (same wall as stock sheet)
             if ("zonal".equals(wt)) {
                 where.append(" and (sm.from_warehouse_id = ? or sm.to_warehouse_id = ?)");
@@ -305,6 +305,14 @@ public class WarehouseOpsServiceImpl implements WarehouseOpsService {
                 where.append(" and (sm.from_temporary_warehouse_id = ? or sm.to_temporary_warehouse_id = ?)");
                 params.add(warehouse_id);
                 params.add(warehouse_id);
+            }
+        } else if (warehouse_type != null && !warehouse_type.isBlank()) {
+            // Type-only filter: validate vocab + restrict to movements that touch that store class.
+            String wt = warehouseType(warehouse_type);
+            if ("zonal".equals(wt)) {
+                where.append(" and (sm.from_warehouse_id is not null or sm.to_warehouse_id is not null)");
+            } else {
+                where.append(" and (sm.from_temporary_warehouse_id is not null or sm.to_temporary_warehouse_id is not null)");
             }
         }
         appendStoreVisibility(where, params,

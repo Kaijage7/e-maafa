@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.security.AreaLookup;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.dto.request.EvacuationCenterWriteRequest;
@@ -93,16 +94,25 @@ public class EvacuationCenterController {
             @RequestParam double lat,
             @RequestParam double lng,
             @RequestParam(defaultValue = "5") int limit) {
+        // Absolute geographic validity (never invent nearest-of for nonsense coords).
+        if (Double.isNaN(lat) || Double.isNaN(lng) || Double.isInfinite(lat) || Double.isInfinite(lng)
+                || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            throw new BusinessRuleException("lat must be between -90 and 90, lng between -180 and 180.");
+        }
+        int lim = Math.min(Math.max(limit, 1), 50);
+        // Soft operational note when outside typical Tanzania envelope (still productive haversine).
         if (lat < -12.5 || lat > 0.5 || lng < 28.5 || lng > 41.5) {
-            List<Map<String, Object>> rows = evacuationCenterService.nearest(lat, lng, limit);
+            List<Map<String, Object>> rows = evacuationCenterService.nearest(lat, lng, lim);
             return Map.of(
                     "origin", Map.of("latitude", lat, "longitude", lng),
                     "centers", rows,
+                    "limit", lim,
                     "note", "Coordinates outside typical Tanzania bounds — distances may not be operationally useful.");
         }
         return Map.of(
                 "origin", Map.of("latitude", lat, "longitude", lng),
-                "centers", evacuationCenterService.nearest(lat, lng, limit),
+                "centers", evacuationCenterService.nearest(lat, lng, lim),
+                "limit", lim,
                 "note", "Straight-line km + ~40 km/h drive estimate. Use road directions for navigation.");
     }
 
