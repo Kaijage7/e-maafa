@@ -22,7 +22,7 @@ import tz.go.pmo.dmis.notification.ExternalDeliveryService;
 import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.notification.NotificationService;
-import tz.go.pmo.dmis.response.SimulationGuard;
+import tz.go.pmo.dmis.service.support.SimulationGuard;
 import tz.go.pmo.dmis.service.CommunicationService;
 
 /**

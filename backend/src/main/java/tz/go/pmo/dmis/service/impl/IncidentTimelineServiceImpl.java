@@ -20,7 +20,7 @@ import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
-import tz.go.pmo.dmis.response.IncidentOptions;
+import tz.go.pmo.dmis.service.support.IncidentOptions;
 import tz.go.pmo.dmis.service.IncidentTimelineService;
 
 /**

@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.support;
 
 import java.util.List;
 import java.util.Map;

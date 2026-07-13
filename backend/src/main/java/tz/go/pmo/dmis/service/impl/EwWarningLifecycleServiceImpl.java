@@ -208,7 +208,7 @@ public class EwWarningLifecycleServiceImpl implements EwWarningLifecycleService 
     // ── publish — approved → published + clone to early_warnings (EarlyWarningController@publish) ──
     @Override
     @Transactional
-    public Map<String, Object> publish(long id) {
+    public Map<String, Object> publish(long id, Map<String, Object> body) {
         List<Map<String, Object>> wrows = jdbc.queryForList(
             "select id, warning_code, status from public.warnings where id=?", id);
         if (wrows.isEmpty()) throw new ResourceNotFoundException("Warning not found.");
@@ -217,6 +217,12 @@ public class EwWarningLifecycleServiceImpl implements EwWarningLifecycleService 
             throw new BusinessRuleException("Warning must be approved before publishing.");
         }
         String code = str(w.get("warning_code"));
+        // Optional one-step portal light: body.show_on_map=true. Default false = deliberate PMO map gate.
+        Object showRaw = body == null ? null : body.get("show_on_map");
+        if (showRaw == null && body != null) {
+            showRaw = body.get("showOnMap");
+        }
+        boolean showOnMap = Boolean.TRUE.equals(showRaw) || "true".equalsIgnoreCase(String.valueOf(showRaw));
         jdbc.update("update public.warnings set status='published', updated_by=? where id=?", currentUserId(), id);
 
         List<Map<String, Object>> hazards = jdbc.queryForList(
@@ -256,12 +262,10 @@ public class EwWarningLifecycleServiceImpl implements EwWarningLifecycleService 
             jdbc.update(
                 "insert into public.early_warnings (warning_code, hazard_type, hazard_id, severity_level, " +
                 "alert_message, affected_regions, affected_districts, latitude, longitude, show_on_map, status, created_at, updated_at) " +
-                // DMIS portal (PortalPublicService) shows early_warnings where status='active' AND show_on_map.
-                // Default OFF the public map: publishing a warning records it (active) but does NOT light the
-                // public map — it appears only when PMO explicitly pushes it (POST /{id}/map / EOCC Bulletin →
-                // Publish → Map). Keeps the public map to PMO-selected warnings, not every published one.
-                "values (?,?,?,?,?,?,?,?,?, false, 'active', now(), now())",
-                code, hazardType, wh.get("hazard_id"), severity, alertMsg, region, district, lat, lng);
+                // Portal shows early_warnings where status='active' AND show_on_map.
+                // Default OFF unless body.show_on_map=true; can also toggle later via POST /{id}/map.
+                "values (?,?,?,?,?,?,?,?,?, ?, 'active', now(), now())",
+                code, hazardType, wh.get("hazard_id"), severity, alertMsg, region, district, lat, lng, showOnMap);
             published++;
         }
         // The ONE notification backbone: announce the published warning to all DMIS users AND public
@@ -340,8 +344,12 @@ public class EwWarningLifecycleServiceImpl implements EwWarningLifecycleService 
         String ohEventId = null;
         try { ohEventId = createOhEventFromWarning(id, code, currentUserId()); } catch (Exception ignored) { }
 
-        return Map.of("success", "Warning published and visible on public portal.",
-            "warning_code", code, "published", published, "oh_event_id", ohEventId == null ? "" : ohEventId);
+        String msg = showOnMap
+            ? "Warning published and shown on the public portal map."
+            : "Warning published to the national registry (public map off — set show_on_map or POST /map).";
+        return Map.of("success", msg,
+            "warning_code", code, "published", published, "show_on_map", showOnMap,
+            "oh_event_id", ohEventId == null ? "" : ohEventId);
     }
 
     // ── EW → One Health: auto-create an OH event from the published warning (OneHealthService.createFromWarning) ──

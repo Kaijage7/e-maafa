@@ -25,8 +25,8 @@ import tz.go.pmo.dmis.common.geo.RegionCentroids;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
-import tz.go.pmo.dmis.response.IncidentOptions;
-import tz.go.pmo.dmis.response.IncidentWorkflowService;
+import tz.go.pmo.dmis.service.support.IncidentOptions;
+import tz.go.pmo.dmis.service.support.IncidentWorkflowService;
 import tz.go.pmo.dmis.service.IncidentService;
 
 /**

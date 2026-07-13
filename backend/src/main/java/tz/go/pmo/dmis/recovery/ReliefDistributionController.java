@@ -19,8 +19,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
-import tz.go.pmo.dmis.response.DispatchSupportService;
-import tz.go.pmo.dmis.response.SimulationGuard;
+import tz.go.pmo.dmis.service.support.DispatchSupportService;
+import tz.go.pmo.dmis.service.support.SimulationGuard;
 
 /**
  * Relief Distribution (Recovery) — port of the Laravel relief_distributions module: logs each relief

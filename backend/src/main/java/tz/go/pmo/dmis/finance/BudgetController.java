@@ -37,10 +37,10 @@ public class BudgetController {
     private final JurisdictionScope jurisdiction;
     private final CurrentUserResolver currentUser;
     private final AreaGuard areaGuard;
-    private final tz.go.pmo.dmis.response.SimulationGuard simulationGuard; // no real money against table-top drills
+    private final tz.go.pmo.dmis.service.support.SimulationGuard simulationGuard; // no real money against table-top drills
 
     public BudgetController(JdbcTemplate jdbc, JurisdictionScope jurisdiction, CurrentUserResolver currentUser,
-            AreaGuard areaGuard, tz.go.pmo.dmis.response.SimulationGuard simulationGuard) {
+            AreaGuard areaGuard, tz.go.pmo.dmis.service.support.SimulationGuard simulationGuard) {
         this.jdbc = jdbc;
         this.jurisdiction = jurisdiction;
         this.currentUser = currentUser;

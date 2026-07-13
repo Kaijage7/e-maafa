@@ -12,8 +12,8 @@ import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
-import tz.go.pmo.dmis.response.IncidentOptions;
-import tz.go.pmo.dmis.response.IncidentWorkflowService;
+import tz.go.pmo.dmis.service.support.IncidentOptions;
+import tz.go.pmo.dmis.service.support.IncidentWorkflowService;
 import tz.go.pmo.dmis.service.PublicReportsService;
 
 /**

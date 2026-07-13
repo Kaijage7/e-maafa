@@ -132,7 +132,7 @@ Optional later: subpackages under layers for readability only, e.g. `controller.
 
 ## 7. Transition rules (existing code)
 
-The tree still contains legacy feature packages (`response/`, `ew/`, `mitigation/`, …). That is expected until migration finishes.
+Legacy fat packages under `ew/` controllers are gone. Shared Response engines live in `service.support/` (not fat controllers). Other domains (`mitigation/`, `portal/`, …) may still host controllers until migrated.
 
 | Rule | |
 |------|---|
@@ -189,7 +189,9 @@ Suggested migration order:
 43. ~~**EW Scanner / Monitoring**~~ — **DONE** (advanced dual stats + productive multi-filters; DisasterScannerService retained)  
 44. ~~**EW Management Report**~~ — **DONE** (`GET /v1/reports/early-warnings`; productive from/to + area isolation)  
 45. ~~**Hazard Area Context**~~ — **DONE** (ops context links; productive geo + warning/submission resolve)  
-46. Other modules (mitigation/portal/recovery/…) next  
+46. ~~**Response support engines → service.support**~~ — **DONE** (shared hubs, not fat controllers)  
+47. ~~**Publish `show_on_map` + PDF live probe**~~ — **DONE** (excellence: one-step portal map; go-live GL-09)  
+48. Other modules (mitigation/portal/recovery/…) next  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 

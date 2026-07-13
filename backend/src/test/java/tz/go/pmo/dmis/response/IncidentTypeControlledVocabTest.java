@@ -15,7 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /**
  * Proves the incident-type severity + icon are now CONTROLLED from the single canonical source
- * ({@link IncidentOptions}): the GET serves the canonical severities (incl. "Unknown", which the old
+ * ({@link tz.go.pmo.dmis.service.support.IncidentOptions}): the GET serves the canonical severities (incl. "Unknown", which the old
  * inline list dropped) and an icon catalogue, and create rejects an off-vocabulary severity. The
  * rejecting POST throws on the validity check before any INSERT, so it has no DB side effect.
  */

@@ -16,5 +16,9 @@ public interface EwWarningLifecycleService {
 
     Map<String, Object> uploadBulletin(long id, MultipartFile pdf, String description) throws Exception;
 
-    Map<String, Object> publish(long id);
+    /**
+     * Publish approved warning. Optional body {@code show_on_map:true} lights the public portal map
+     * in the same step (default false — deliberate PMO gate).
+     */
+    Map<String, Object> publish(long id, Map<String, Object> body);
 }

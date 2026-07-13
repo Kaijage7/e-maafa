@@ -13,7 +13,7 @@ import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
-import tz.go.pmo.dmis.response.ActivationService;
+import tz.go.pmo.dmis.service.support.ActivationService;
 import tz.go.pmo.dmis.service.AnticipatoryPlansService;
 import tz.go.pmo.dmis.service.CommandCenterService;
 

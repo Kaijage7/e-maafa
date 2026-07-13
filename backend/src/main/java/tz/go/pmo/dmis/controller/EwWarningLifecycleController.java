@@ -45,8 +45,10 @@ public class EwWarningLifecycleController {
         return service.uploadBulletin(id, pdf, description);
     }
 
+    /** Optional body {@code show_on_map:true} to light the public portal map at publish (default false). */
     @PostMapping("/{id}/publish")
-    public Map<String, Object> publish(@PathVariable long id) {
-        return service.publish(id);
+    public Map<String, Object> publish(@PathVariable long id,
+                                       @RequestBody(required = false) Map<String, Object> body) {
+        return service.publish(id, body);
     }
 }

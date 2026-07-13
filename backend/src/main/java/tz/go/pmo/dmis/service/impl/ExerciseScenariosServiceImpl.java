@@ -16,7 +16,7 @@ import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
-import tz.go.pmo.dmis.response.ActivationService;
+import tz.go.pmo.dmis.service.support.ActivationService;
 import tz.go.pmo.dmis.service.ExerciseScenariosService;
 
 /**

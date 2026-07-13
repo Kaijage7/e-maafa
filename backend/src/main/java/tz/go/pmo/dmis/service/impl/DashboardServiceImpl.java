@@ -16,8 +16,8 @@ import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
-import tz.go.pmo.dmis.response.ActivationService;
-import tz.go.pmo.dmis.response.IncidentOptions;
+import tz.go.pmo.dmis.service.support.ActivationService;
+import tz.go.pmo.dmis.service.support.IncidentOptions;
 import tz.go.pmo.dmis.service.DashboardService;
 
 /**

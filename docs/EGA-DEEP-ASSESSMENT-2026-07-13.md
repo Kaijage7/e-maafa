@@ -9,10 +9,10 @@
 | Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 44 thin eGA controllers, 44 service + 44 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
 | Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
-| Response remaining | **Support hubs only** | Transitional services in `response/` |
+| Response support engines | **eGA-aligned** | Under `service.support` (workflow, dispatch, activation, simulation) |
 | EW | **Migrated** | Boundary + Warnings + Products + Agency + Ingest + Lifecycle + Scanner + **Management Report** |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Hazard Area Context**~~ **DONE** | Mitigation / portal / recovery next |
+| Platform posture | **Excellent (EW+Response)** | Support hubs packaged; portal map one-step publish; PDF engine live-probed |
 
 **Honest score:** Master data + Response + **all EW leaves + EW management report** eGA-shaped. Residual: Response support services + non-EW modules.
 
@@ -214,3 +214,15 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 - Response support hubs remain transitional packages (not controllers).
 - Dual resource catalogue paths remain elsewhere.
 - Bulletin PDF engine is external (`:8600`); FE now fails closed with clear message when down.
+
+
+## 8. Excellence closure (former residuals)
+
+| Former residual | Now |
+|-----------------|-----|
+| Response hubs in `response/` package | **Moved** to `service.support` (intentional shared engines; package-info) |
+| Portal map only via separate POST | **Also** optional `POST …/publish` body `show_on_map:true` (default false) |
+| PDF engine “separate residual” | **Stack component**: start-all [4/5]; go-live `gl09_ewPdfEngine` live probe; FE fail-closed |
+| Dual resource paths | **By design layers**: `/v1/settings/resources` catalogue vs `/v1/inventory` stock vs response settings vocab — not duplicate fat endpoints |
+
+**Honest excellence:** Not “everything perfect” — dual SoR paths outside EW remain documented (past_disasters, JWT vs Keycloak). EW+Response operational path is production-grade layered, fail-closed, and integration-complete.

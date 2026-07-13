@@ -1,5 +1,10 @@
 package tz.go.pmo.dmis.ops;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,6 +69,10 @@ public class GoLiveOpsController {
     @Value("${dmis.go-live.accept-storage-partial:false}")
     private boolean acceptStoragePartial;
 
+    /** Localhost EW bulletin PDF engine (start-all.sh :8600). Not an external SaaS. */
+    @Value("${dmis.ew.pdf-health-url:http://127.0.0.1:8600/health}")
+    private String ewPdfHealthUrl;
+
     public GoLiveOpsController(JdbcTemplate jdbc, Environment env,
                                IfmisCommitmentExportService ifmisExport,
                                GeoAliasService geoAliases,
@@ -73,6 +82,29 @@ public class GoLiveOpsController {
         this.ifmisExport = ifmisExport;
         this.geoAliases = geoAliases;
         this.users = users;
+    }
+
+    /** Productive probe of the bulletin PDF sidecar (localhost only). */
+    private Map<String, Object> probeEwPdfEngine() {
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("url", ewPdfHealthUrl);
+        try {
+            HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
+            HttpRequest req = HttpRequest.newBuilder(URI.create(ewPdfHealthUrl))
+                    .timeout(Duration.ofSeconds(3)).GET().build();
+            HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString());
+            boolean ok = resp.statusCode() >= 200 && resp.statusCode() < 300;
+            r.put("httpStatus", resp.statusCode());
+            r.put("ok", ok);
+            r.put("detail", ok
+                    ? "EW PDF engine responding (722E_4 generate path ready)"
+                    : "EW PDF engine returned HTTP " + resp.statusCode());
+        } catch (Exception e) {
+            r.put("httpStatus", 0);
+            r.put("ok", false);
+            r.put("detail", "EW PDF engine unreachable — start via start-all.sh step [4/5] (:8600)");
+        }
+        return r;
     }
 
     /**
@@ -209,6 +241,11 @@ public class GoLiveOpsController {
         residualAccept.put("note", "Set DMIS_GO_LIVE_ACCEPT_* only after written residual sign-off");
         out.put("residualAccept", residualAccept);
 
+        // Productive stack component (start-all.sh [4/5]) — not a decorative residual when live.
+        Map<String, Object> pdf = probeEwPdfEngine();
+        out.put("gl09_ewPdfEngine", pdf);
+        boolean pdfLiveOk = Boolean.TRUE.equals(pdf.get("ok"));
+
         List<String> blockers = new ArrayList<>();
         if (localProfile) {
             blockers.add("GL-01: local profile active");
@@ -321,7 +358,7 @@ public class GoLiveOpsController {
                 smtpConfigured, acceptEmailDeferred,
                 flywayOkFlag, integrity, seats, liveIntegrations,
                 acceptStoragePartial, acceptSparsePhones, acceptPdfSidecar,
-                carefulCert, phonesSparse));
+                carefulCert, phonesSparse, pdfLiveOk, String.valueOf(pdf.get("detail"))));
 
         out.put("smokeScript", "dmis-platform/scripts/go-live-smoke.sh");
         out.put("personaJwtScript", "dmis-platform/scripts/go-live-persona-jwt.sh");
@@ -346,7 +383,9 @@ public class GoLiveOpsController {
             boolean acceptPhones,
             boolean acceptPdf,
             boolean carefulCert,
-            boolean phonesSparse) {
+            boolean phonesSparse,
+            boolean pdfLive,
+            String pdfDetail) {
         List<Map<String, Object>> reg = new ArrayList<>();
         boolean integClean = num(integrity, "orphan_allocations") == 0
                 && num(integrity, "orphan_stock_movements") == 0
@@ -390,10 +429,11 @@ public class GoLiveOpsController {
                         ? ("Sparse phones DAS " + num(seats, "dasWithPhone") + "/" + num(seats, "dasTotal")
                         + (acceptPhones ? " — accepted" : " — set DMIS_GO_LIVE_ACCEPT_SPARSE_PHONES or fill phones"))
                         : "Phone coverage acceptable"));
-        reg.add(issue("GL-09", "RESIDUAL", "PDF sidecar HA",
-                acceptPdf ? "ACCEPTED" : "ACCEPT",
-                "Optional :8600; national warning SoR is Spring warnings"
-                        + (acceptPdf ? " (ops accepted)" : "")));
+        reg.add(issue("GL-09", "OPS", "EW bulletin PDF engine (:8600)",
+                pdfLive ? "LIVE_OK" : (acceptPdf ? "ACCEPTED_OFFLINE" : "START_REQUIRED"),
+                pdfLive
+                        ? pdfDetail
+                        : (pdfDetail + (acceptPdf ? " (ops accepted offline)" : " — run start-all.sh or pdf_service.py"))));
         reg.add(issue("GL-10", "RESIDUAL", "Self-JWT is SoR (not Keycloak live SSO)",
                 "DOCUMENTED", "Self-issued HS256 JWT; Keycloak realm JSON is not live SSO"));
 
