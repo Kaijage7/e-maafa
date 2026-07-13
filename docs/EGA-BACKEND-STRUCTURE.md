@@ -201,7 +201,8 @@ Suggested migration order:
 55. ~~**Portal CMS admins (7 leaves)**~~ — **DONE** (management, upload, news, education, materials, sections, agencies)
 56. ~~**Portal public + threats**~~ — **DONE** (public facade + ThreatService + threat admin; no `portal/` package left)
 57. ~~**One Health dashboard**~~ — **DONE** (first OH eGA leaf; national KPIs + area-scoped recent)
-58. Remaining OH (events, directives, dissemination, actions) then finance / M&E / reports / notification / stakeholder / ops-IAM
+58. ~~**One Health action tracking**~~ — **DONE** (actions + progress rollup + close/archive; AreaGuard)
+59. Remaining OH (events, directives, dissemination) then finance / M&E / reports / notification / stakeholder / ops-IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).

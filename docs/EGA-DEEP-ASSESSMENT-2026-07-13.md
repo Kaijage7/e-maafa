@@ -151,7 +151,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 35. ~~eGA migrate **Portal CMS admins (7 leaves)**~~ — **DONE**.
 36. ~~eGA migrate **Portal public + threats**~~ — **DONE** (no `portal/` package left).
 37. ~~eGA migrate **One Health dashboard**~~ — **DONE** (first OH leaf).
-38. Next OH leaves: events → directives → dissemination → actions; then finance / M&E / reports. 
+38. ~~eGA migrate **One Health action tracking**~~ — **DONE**.
+39. Next OH leaves: events → directives → dissemination; then finance / M&E / reports. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 

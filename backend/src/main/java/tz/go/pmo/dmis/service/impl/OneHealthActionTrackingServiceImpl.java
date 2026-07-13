@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.onehealth;
+package tz.go.pmo.dmis.service.impl;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -7,18 +7,12 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import org.springframework.security.access.prepost.PreAuthorize;
-import tz.go.pmo.dmis.common.security.Authz;
+import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.security.AreaGuard;
+import tz.go.pmo.dmis.onehealth.OneHealthEventService;
+import tz.go.pmo.dmis.service.OneHealthActionTrackingService;
 
 /**
  * Port of OneHealth\OneHealthActionTrackingController: action items per event,
@@ -28,23 +22,23 @@ import tz.go.pmo.dmis.common.security.AreaGuard;
  * OH-11 fix: the source gates close/archive on canBeEditedBy() which is always
  * false — here they are gated by the PMO-role semantics (locally permitted).
  */
-@RestController
-@RequestMapping("/v1/onehealth")
-public class OneHealthActionTrackingController {
+@Service
+public class OneHealthActionTrackingServiceImpl implements OneHealthActionTrackingService {
 
     private final JdbcTemplate jdbc;
     private final OneHealthEventService service;
     private final AreaGuard areaGuard;
 
-    public OneHealthActionTrackingController(JdbcTemplate jdbc, OneHealthEventService service, AreaGuard areaGuard) {
+    public OneHealthActionTrackingServiceImpl(JdbcTemplate jdbc, OneHealthEventService service, AreaGuard areaGuard) {
         this.jdbc = jdbc;
         this.service = service;
         this.areaGuard = areaGuard;
     }
 
     /** Action tracking index payload for an event. */
-    @GetMapping("/events/{eventId}/actions")
-    public Map<String, Object> index(@PathVariable long eventId) {
+    @Override
+
+    public Map<String, Object> index(long eventId) {
         areaGuard.assertOwn("public.oh_events", eventId);
         Map<String, Object> ev = service.findEventOr404(eventId);
 
@@ -87,10 +81,10 @@ public class OneHealthActionTrackingController {
     }
 
     /** Store a new action item (the "Add Action Item" modal). */
-    @PreAuthorize("hasAuthority('one_health.manage')")
-    @PostMapping("/events/{eventId}/actions")
+    @Override
+
     @Transactional
-    public ResponseEntity<Map<String, Object>> store(@PathVariable long eventId, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> store(long eventId, Map<String, Object> body) {
         areaGuard.assertOwn("public.oh_events", eventId);
         service.findEventOr404(eventId);
         Map<String, List<String>> errors = new LinkedHashMap<>();
@@ -134,10 +128,10 @@ public class OneHealthActionTrackingController {
     }
 
     /** Edit an action item. */
-    @PreAuthorize("hasAuthority('one_health.manage')")
-    @PutMapping("/actions/{id}")
+    @Override
+
     @Transactional
-    public ResponseEntity<Map<String, Object>> update(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> update(long id, Map<String, Object> body) {
         Map<String, Object> tracking = findActionOr404(id);
         Map<String, List<String>> errors = new LinkedHashMap<>();
         String title = OneHealthEventService.strOf(body.get("action_title"));
@@ -186,10 +180,10 @@ public class OneHealthActionTrackingController {
     }
 
     /** Quick progress slider — rolls the average up into the event completion. */
-    @PreAuthorize("hasAuthority('one_health.manage')")
-    @PostMapping("/actions/{id}/progress")
+    @Override
+
     @Transactional
-    public ResponseEntity<Map<String, Object>> updateProgress(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> updateProgress(long id, Map<String, Object> body) {
         Map<String, Object> tracking = findActionOr404(id);
         Integer pct = body.get("completion_percentage") == null ? null
                 : (int) Double.parseDouble(String.valueOf(body.get("completion_percentage")));
@@ -227,10 +221,10 @@ public class OneHealthActionTrackingController {
     }
 
     /** Closure workflow (OH-11 fix: reachable for PMO sessions). */
-    @PreAuthorize("hasAuthority('one_health.manage')")
-    @PostMapping("/events/{eventId}/close")
+    @Override
+
     @Transactional
-    public ResponseEntity<Map<String, Object>> closeEvent(@PathVariable long eventId, @RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> closeEvent(long eventId, Map<String, Object> body) {
         areaGuard.assertOwn("public.oh_events", eventId);
         Map<String, Object> ev = service.findEventOr404(eventId);
         String outcome = OneHealthEventService.strOf(body.get("outcome_summary"));
@@ -252,10 +246,10 @@ public class OneHealthActionTrackingController {
     }
 
     /** Archive (only closed events). */
-    @PreAuthorize("hasAuthority('one_health.manage')")
-    @PostMapping("/events/{eventId}/archive")
+    @Override
+
     @Transactional
-    public ResponseEntity<Map<String, Object>> archiveEvent(@PathVariable long eventId) {
+    public ResponseEntity<Map<String, Object>> archiveEvent(long eventId) {
         areaGuard.assertOwn("public.oh_events", eventId);
         Map<String, Object> ev = service.findEventOr404(eventId);
         if (!"closed".equals(ev.get("status"))) {

@@ -107,11 +107,12 @@ public class OneHealthEventService {
     private static final DateTimeFormatter D_M_Y = DateTimeFormatter.ofPattern("dd MMM uuuu", Locale.ENGLISH);
     private static final DateTimeFormatter D_M_Y_HI = DateTimeFormatter.ofPattern("dd MMM uuuu HH:mm", Locale.ENGLISH);
 
-    static String formatDate(java.sql.Date d) {
+    /** Public for eGA service.impl callers outside the onehealth package. */
+    public static String formatDate(java.sql.Date d) {
         return d == null ? null : d.toLocalDate().format(D_M_Y);
     }
 
-    static String formatDateTime(Timestamp t) {
+    public static String formatDateTime(Timestamp t) {
         return t == null ? null : t.toLocalDateTime().format(D_M_Y_HI);
     }
 
@@ -314,12 +315,12 @@ public class OneHealthEventService {
     }
 
     /** OneHealthService::updateEventStatus + OhEventWorkflowHistory::log. */
-    void updateEventStatus(long eventId, String fromStatus, String toStatus, Long userId, String comments) {
+    public void updateEventStatus(long eventId, String fromStatus, String toStatus, Long userId, String comments) {
         jdbc.update("update public.oh_events set status = ?, updated_at = now() where id = ?", toStatus, eventId);
         logWorkflow(eventId, userId, "status_changed", toStatus, fromStatus, comments);
     }
 
-    void logWorkflow(long eventId, Long userId, String action, String toStatus, String fromStatus, String comments) {
+    public void logWorkflow(long eventId, Long userId, String action, String toStatus, String fromStatus, String comments) {
         String role = jdbc.query("""
                 select r.name from public.roles r
                 join public.model_has_roles mhr on mhr.role_id = r.id and mhr.model_id = ?
@@ -471,7 +472,7 @@ public class OneHealthEventService {
         return out;
     }
 
-    Map<String, Object> findEventOr404(long eventId) {
+    public Map<String, Object> findEventOr404(long eventId) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select * from public.oh_events where id = ? and deleted_at is null", eventId);
         if (rows.isEmpty()) {
@@ -498,7 +499,7 @@ public class OneHealthEventService {
      * users.id of the acting user — JWT subject, configured system actor, or Super Admin role.
      * Does not invent demo emails. May be null if no real user can be resolved.
      */
-    Long actingUserId() {
+    public Long actingUserId() {
         return users.actingUserId();
     }
 
@@ -524,7 +525,7 @@ public class OneHealthEventService {
         return false;
     }
 
-    static String strOf(Object v) {
+    public static String strOf(Object v) {
         return v == null ? null : trimToNull(String.valueOf(v));
     }
 
@@ -538,7 +539,7 @@ public class OneHealthEventService {
         return s == null ? 0 : (int) Double.parseDouble(s);
     }
 
-    static Long longOf(Object v) {
+    public static Long longOf(Object v) {
         String s = strOf(v);
         return s == null ? null : (long) Double.parseDouble(s);
     }
