@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.ops;
+package tz.go.pmo.dmis.service.impl;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -7,48 +7,43 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import tz.go.pmo.dmis.common.geo.GeoAliasService;
+import tz.go.pmo.dmis.service.HazardAreaContextService;
 
 /**
- * PMO exposure-context helper for hazard / warned areas.
- * <p><b>Honesty:</b> Does <em>not</em> run satellite AI, does not claim owned imagery,
- * and does not scrape Google. It returns <strong>context links and coordinates</strong> so
- * operators can open OpenStreetMap, open aerial basemaps (Esri World Imagery / OSM), and
- * Google Maps / Street View in a new browser tab under Google's terms of use.
- * Impact analysis and INFORM scores remain separate (impact-support).
+ * PMO exposure-context helper — context links and coordinates only (no satellite AI).
+ * Logic in service.impl (eGA). Path {@code GET /v1/ops/hazard-area-context} unchanged.
+ * Warning lookup uses real {@code warnings} + {@code warning_hazards} columns (productive).
  */
-@RestController
-@RequestMapping("/v1/ops/hazard-area-context")
-@RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
-public class HazardAreaContextController {
+@Service
+public class HazardAreaContextServiceImpl implements HazardAreaContextService {
+
+
 
     private final JdbcTemplate jdbc;
     private final GeoAliasService geoAliases;
 
-    @GetMapping
-    @PreAuthorize("hasAnyAuthority('early_warning.view','monitoring_evaluation.view','incidents.view',"
-            + "'roles_and_permissions.view')")
+    public HazardAreaContextServiceImpl(JdbcTemplate jdbc, GeoAliasService geoAliases) {
+        this.jdbc = jdbc;
+        this.geoAliases = geoAliases;
+    }
+
+    @Override
     public Map<String, Object> context(
-            @RequestParam(required = false) String areaName,
-            @RequestParam(required = false) Long regionId,
-            @RequestParam(required = false) Long districtId,
-            @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lng,
-            @RequestParam(required = false) String hazardType,
-            @RequestParam(required = false) String warningCode,
-            @RequestParam(required = false) Long warningId,
-            @RequestParam(required = false) Long submissionId) {
+            String areaName,
+            Long regionId,
+            Long districtId,
+            Double lat,
+            Double lng,
+            String hazardType,
+            String warningCode,
+            Long warningId,
+            Long submissionId) {
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("honestyNote",
@@ -106,18 +101,37 @@ public class HazardAreaContextController {
         // Optional hazard payload from warning or agency submission
         Map<String, Object> hazardInfo = new LinkedHashMap<>();
         if (warningId != null || (warningCode != null && !warningCode.isBlank())) {
+            // public.warnings has no hazard_type/severity columns — join warning_hazards (productive).
             try {
-                Map<String, Object> w = warningId != null
-                        ? jdbc.queryForMap("""
-                            select id, warning_code as "warningCode", hazard_type as "hazardType",
-                                   status, severity, title, summary
-                            from public.warnings where id = ?
-                            """, warningId)
-                        : jdbc.queryForMap("""
-                            select id, warning_code as "warningCode", hazard_type as "hazardType",
-                                   status, severity, title, summary
-                            from public.warnings where warning_code = ? limit 1
-                            """, warningCode);
+                Map<String, Object> w;
+                if (warningId != null) {
+                    w = jdbc.queryForMap("""
+                        select w.id, w.warning_code as "warningCode", w.status,
+                               (select h.name from public.warning_hazards wh
+                                  join public.hazards h on h.id = wh.hazard_id
+                                 where wh.warning_id = w.id and wh.deleted_at is null
+                                 order by wh.id limit 1) as "hazardType",
+                               (select wh.warning_level from public.warning_hazards wh
+                                 where wh.warning_id = w.id and wh.deleted_at is null
+                                 order by wh.id limit 1) as severity
+                          from public.warnings w
+                         where w.id = ? and w.deleted_at is null
+                        """, warningId);
+                } else {
+                    w = jdbc.queryForMap("""
+                        select w.id, w.warning_code as "warningCode", w.status,
+                               (select h.name from public.warning_hazards wh
+                                  join public.hazards h on h.id = wh.hazard_id
+                                 where wh.warning_id = w.id and wh.deleted_at is null
+                                 order by wh.id limit 1) as "hazardType",
+                               (select wh.warning_level from public.warning_hazards wh
+                                 where wh.warning_id = w.id and wh.deleted_at is null
+                                 order by wh.id limit 1) as severity
+                          from public.warnings w
+                         where w.warning_code = ? and w.deleted_at is null
+                         limit 1
+                        """, warningCode);
+                }
                 hazardInfo.put("warning", w);
                 if (hazardType == null) {
                     hazardType = str(w.get("hazardType"));
@@ -135,9 +149,13 @@ public class HazardAreaContextController {
                     Map<String, Object> s = rows.get(0);
                     hazardInfo.put("agencySubmissionId", s.get("id"));
                     hazardInfo.put("agency", s.get("agency"));
-                    hazardInfo.put("hazardType", first(s, "hazard_type", "hazardType"));
-                    hazardInfo.put("severity", first(s, "severity", "level", "tier"));
-                    // try lat/lng columns if present
+                    // Real columns: hazard_types (json), top_alert (not hazard_type/severity).
+                    Object ht = first(s, "hazard_types", "hazard_type", "hazardType");
+                    hazardInfo.put("hazardType", ht != null ? String.valueOf(ht) : null);
+                    hazardInfo.put("severity", first(s, "top_alert", "severity", "level", "tier"));
+                    hazardInfo.put("warningCode", s.get("warning_code"));
+                    hazardInfo.put("regions", s.get("regions"));
+                    // try lat/lng columns if present (not on current schema — keep soft)
                     Object slat = first(s, "centroid_lat", "latitude", "lat");
                     Object slng = first(s, "centroid_lng", "longitude", "lng");
                     if (cLat == null && slat instanceof Number n) {

@@ -188,7 +188,8 @@ Suggested migration order:
 42. ~~**EW Warning Lifecycle**~~ — **DONE** (approve/publish/map/bulletin; SoD + net-zero drill)  
 43. ~~**EW Scanner / Monitoring**~~ — **DONE** (advanced dual stats + productive multi-filters; DisasterScannerService retained)  
 44. ~~**EW Management Report**~~ — **DONE** (`GET /v1/reports/early-warnings`; productive from/to + area isolation)  
-45. Other modules (mitigation/portal/recovery/…) next  
+45. ~~**Hazard Area Context**~~ — **DONE** (ops context links; productive geo + warning/submission resolve)  
+46. Other modules (mitigation/portal/recovery/…) next  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 

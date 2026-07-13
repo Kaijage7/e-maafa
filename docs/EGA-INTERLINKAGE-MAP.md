@@ -273,6 +273,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | E6 | EW Warning Lifecycle | `POST /v1/ew/warnings/{id}/approve\|publish\|map\|bulletin` | ~462 | early_warning.approve SoD; clone to early_warnings; NotificationService broadcast; OH kick | **DONE** |
 | E7 | EW Scanner | `/v1/ew/scanner/*` | ~503+ | Dual stats; productive multi-filters; real dispatch router; DisasterScannerService OSINT; tasking SoD | **DONE** |
 | E8 | EW Management Report | `GET /v1/reports/early-warnings` | ~388 | from/to window; area isolation; warned↔incident effectiveness + DRR coverage | **DONE** |
+| O1 | Hazard Area Context | `GET /v1/ops/hazard-area-context` | ~337 | Context links only (no AI); geo + warning/submission resolve productive | **DONE** |
 
 ### 10.5 Do **not** start with
 
