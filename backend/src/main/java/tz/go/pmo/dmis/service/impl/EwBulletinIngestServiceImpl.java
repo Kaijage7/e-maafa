@@ -1,11 +1,10 @@
-package tz.go.pmo.dmis.ew;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Year;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -13,28 +12,21 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.notification.NotificationService;
+import tz.go.pmo.dmis.service.EwBulletinIngestService;
 
 /**
- * EW Bulletin Ingestion — FAITHFUL port of the Laravel BulletinIngestionController@ingest
- * (POST /api/ew/bulletins/ingest). The native PMO-DMD "Push to PMO" lands here: it creates a pending
- * Warning + WarningHazard rows (per district/region/national) on the existing DMIS EW tables, exactly as
- * Laravel did — same warning_code (EW-YYYY-00001), same hazard/level maps, same name resolution.
- * Cross-sector One Health kick is best-effort (non-fatal, mirrors the Laravel try/catch).
+ * EW Bulletin Ingestion — FAITHFUL port of Laravel BulletinIngestionController@ingest.
+ * Logic in service.impl (eGA). Creates pending Warning + WarningHazard rows.
+ * Path {@code POST /ew/bulletins/ingest} unchanged.
  */
-@RestController
-@RequestMapping("/ew/bulletins")
-// Ingest creates pending warnings in the national pipeline from PMO-DMD bulletins — trusted
-// operator data entry, not any signed-in user. Was isAuthenticated().
-@PreAuthorize("hasAuthority('early_warning.create')")
-public class EwBulletinIngestController {
+@Service
+public class EwBulletinIngestServiceImpl implements EwBulletinIngestService {
+
+
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -51,22 +43,22 @@ public class EwBulletinIngestController {
 
     private final JdbcTemplate jdbc;
     private final String publicRoot;
-    private final tz.go.pmo.dmis.notification.NotificationService notifications;
+    private final NotificationService notifications;
 
-    public EwBulletinIngestController(JdbcTemplate jdbc,
-            tz.go.pmo.dmis.notification.NotificationService notifications,
+    public EwBulletinIngestServiceImpl(JdbcTemplate jdbc,
+            NotificationService notifications,
             @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
         this.jdbc = jdbc;
         this.notifications = notifications;
         this.publicRoot = publicRoot;
     }
 
-    @PostMapping("/ingest")
+    @Override
     @Transactional
     @SuppressWarnings("unchecked")
-    public ResponseEntity<Map<String, Object>> ingest(@RequestParam("payload") String payloadJson,
-                                                      @RequestParam("bulletin_type") String bulletinType,
-                                                      @RequestParam(value = "pdf_file", required = false) MultipartFile pdf) throws Exception {
+    public ResponseEntity<Map<String, Object>> ingest(String payloadJson,
+                                                      String bulletinType,
+                                                      MultipartFile pdf) throws Exception {
         if (!"tma".equals(bulletinType) && !"dmd".equals(bulletinType)) {
             return ResponseEntity.status(422).body(Map.of("success", false, "message", "bulletin_type must be tma or dmd."));
         }
@@ -133,7 +125,7 @@ public class EwBulletinIngestController {
             try {
                 // F72: approvers only — not every DMIS account.
                 notifications.notifyRoles(java.util.List.of("EOCC", "Director", "Asst. Director", "Super Admin"),
-                        tz.go.pmo.dmis.notification.NotificationService.Notice.inApp(
+                        NotificationService.Notice.inApp(
                         "ew_bulletin_received", "Early-warning bulletin received",
                         "Bulletin " + code + " (" + created + " hazard area" + (created == 1 ? "" : "s")
                                 + ") was received from PMO and is pending approval.",

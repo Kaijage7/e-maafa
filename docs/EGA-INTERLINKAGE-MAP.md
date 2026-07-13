@@ -269,6 +269,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | E2 | EW Warnings index | `GET /v1/ew/warnings` | ~226 | Area isolation; coexists with lifecycle POSTs; no fake query params | **DONE** |
 | E3 | EW Products | `/v1/ew/products` | ~533 | severity/type filters + stats; SMS/email disseminate retained | **DONE** |
 | E4 | EW Agency bus | `/v1/ew/agency/*`, `/v1/ew/dmd/*` | ~650 | JurisdictionScope agency isolation; DmdImpactSupport + ActionGuide; submit supersede + withdraw; productive filters | **DONE** |
+| E5 | EW Bulletin Ingest | `POST /ew/bulletins/ingest` | ~339 | NotificationService afterCommit; pending Warning + hazards; tma/dmd parsers; 1h duplicate | **DONE** |
 
 ### 10.5 Do **not** start with
 

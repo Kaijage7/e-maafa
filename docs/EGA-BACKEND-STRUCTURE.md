@@ -184,7 +184,8 @@ Suggested migration order:
 38. ~~**EW Warnings registry (index)**~~ — **DONE** (read; area isolation productive; no fake query filters)  
 39. ~~**EW Products (bulletins)**~~ — **DONE** (severity/type filters + aligned stats; disseminate retained)  
 40. ~~**EW Agency bus**~~ — **DONE** (submit/update/withdraw/latest/history/updates/DMD; agency isolation productive)  
-41. Remaining EW (lifecycle, bulletin ingest, scanner) then other modules  
+41. ~~**EW Bulletin Ingest**~~ — **DONE** (PMO-DMD push → pending warnings; productive params + net-zero drill)  
+42. Remaining EW (lifecycle, scanner) then other modules  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -231,8 +232,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | EW Warnings index | Done | `GET /v1/ew/warnings` | Thin controller + service.impl; JSON DTO unchanged; **no unused query params** (isolation via JurisdictionScope); SA **17** vs Dist/Reg **5** Dodoma-only; stats.total = list length; Partner **403** |
 | EW Products | Done | `/v1/ew/products` | Thin controller + service.impl; `severity`/`type` productive; **stats use same WHERE as list**; show **404**; missing PDF **400**; publish missing **404**; Partner **403** |
 | EW Agency bus | Done | `/v1/ew/agency/*`, `/v1/ew/dmd/*` | Thin controller + service.impl; JurisdictionScope agency isolation; productive `agency`/`warning_code`/`limit`/`exclude`/`days`/`hazardFocus`; empty/no-geo submit **422** (no supersede); MoH→TMA **403**; Partner **403**; JSON baselines identical post-extract |
+| EW Bulletin Ingest | Done | `POST /ew/bulletins/ingest` | Thin controller + service.impl; `bulletin_type` tma\|dmd; missing params **400**; bad type/payload **422**; zero hazards **422** (rollback); success **201** + hazard_count; 1h duplicate **200**; Partner/DAS **403**; net-zero drill |
 
-40. ~~**EW Agency bus**~~ — **DONE**; remaining EW: lifecycle, bulletin ingest, scanner
+41. ~~**EW Bulletin Ingest**~~ — **DONE**; remaining EW: lifecycle, scanner
 
 ---
 
