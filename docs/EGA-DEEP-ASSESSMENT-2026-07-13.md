@@ -60,7 +60,8 @@
 - ~~Support Pledges eGA extract~~ — **DONE** (NotificationService retained; national donor queue by design).  
 - ~~Declarations eGA extract~~ — **DONE** (statutory chain; `CurrentUserResolver` + NotificationService; no workflow coupling).  
 - ~~Anticipatory Plans eGA extract~~ — **DONE** (`matchingPlans` on service; CommandCenter rewired off fat controller).  
-- ~~Tasks eGA extract~~ — **DONE** (NotificationService retained; area scope on board/calendar/form-data/show).
+- ~~Tasks eGA extract~~ — **DONE** (NotificationService retained; area scope on board/calendar/form-data/show).  
+- ~~Assessments eGA extract~~ — **DONE** (multipart + ApprovalWorkflowEngine.initialize for resource lines).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -76,7 +77,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 5. ~~eGA migrate **Declarations**~~ — **DONE**.  
 6. ~~eGA migrate **Anticipatory Plans**~~ — **DONE**.  
 7. ~~eGA migrate **Tasks**~~ — **DONE**.  
-8. Next: Assessments or Communication (never engine/dispatch/allocation first).  
-9. Keep logistics in place; extract services only when touching heavily.  
-10. Stamp area on temp warehouses + agency stock data hygiene.  
-11. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
+8. ~~eGA migrate **Assessments**~~ — **DONE**.  
+9. Next: Communication (never engine/dispatch/allocation first).  
+10. Keep logistics in place; extract services only when touching heavily.  
+11. Stamp area on temp warehouses + agency stock data hygiene.  
+12. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
