@@ -328,3 +328,57 @@ Public portal regressions exact: landing, threats, regions, education, shelters,
 | One Health dissemination | `/v1/onehealth/disseminations` | Thin controller + `OneHealthDisseminationServiceImpl`; index/show/recipients **exact**; approval/type filters productive; unauth **401**; show **404**; invalid approve soft `success:false`; empty stakeholder create **422**; all OH siblings **200** |
 
 **One Health controllers: complete.** Residual under `onehealth/`: `OhEventWriteRequest` + `OneHealthEventService` helpers only (no `*Controller`).
+
+## 14. Post-OH system validation (2026-07-13) — productive, no fake codes, no AI product
+
+### One Health full matrix (live Super Admin)
+
+| Surface | Productive checks | Auth |
+|---------|-------------------|------|
+| Events | status/priority/type/area/search nonsense → **0**; `event_type=ew_alert` → **3** all match; `status=submitted` exact; future date window **0**; bad date **400** | unauth **401**, Partner **403** |
+| Form cascades | regions→districts n>0; bad region → **[]** | SA **200** |
+| EW→OH | DB: **3** events with `source_warning_id`; type `ew_alert` count **3**/5 | integration live |
+| Directives | status NOPE / search zzzz → **0**; show **200**; **404** missing | **401/403** |
+| Disseminations | approval NOPE → **0**; type=public productive; recipients **200** (n=7) | **401/403** |
+| Actions | event 1: 2 actions, 1 directive, 7 stakeholders | **401/403** |
+| Dashboard | total_events **5**, ew_alerts_active **3**, recent **5** | **401/403** |
+| Write validation | empty event/action/directive/dissemination store → **422** field errors | no durable mutation |
+
+### Frontend organisation (OH)
+
+| Page | API params match backend |
+|------|---------------------------|
+| Events | `status`, `area_of_concern_id`, `region_id`, `event_type`, `priority_level`, `date_from`/`date_to`, `search` |
+| Directives | `status`, `priority`, `filter`, `date_from`/`date_to`, `search`, `event_id` |
+| Disseminations | `dissemination_type`, `approval_status`, `status`; approve posts `approval_status=approved` |
+| Dashboard | `GET /dashboard`; deep-link to events `?event_type=ew_alert` |
+| Actions | progress/store/close paths under `/v1/onehealth` |
+| Routes | `/m/one-health/*` + stakeholder portal alias; breadcrumbs between event ↔ directive |
+
+### AI / honesty footprint
+
+| Item | Status |
+|------|--------|
+| Third-party LLM/AI SDKs / `ai: true` product flags | **None** in FE/BE |
+| `sat_ai` | **Out of scope** card only (not a toggleable product feature) |
+| Economics of disaster | **Deterministic formula** (`Not ML/AI` in service + FE copy) |
+| INFORM / hazard context | Human basemaps + deferred honesty catalogue |
+
+### Finance residual baseline (next domain; not yet eGA)
+
+| Endpoint | Result |
+|----------|--------|
+| periods / budgets / thresholds / ndmf donations / economics | unauth **401**, SA **200** |
+| empty period/budget create | **422** required fields |
+| economics | disclaimer + deterministic modelVersion present |
+| budgets `?status=NOPE` | **ignored** (no list filter params by design; FE has no status query filter) |
+| FE | `/m/budget-finance/budgets`, detail, economics wired to `/api/v1/finance/*` |
+
+### Cross-domain smoke
+
+| Surface | Result |
+|---------|--------|
+| Portal public landing | **200** |
+| Recovery programs | **200**, stats total **6** |
+
+**Verdict:** OH is production-grade for productive filters, security walls, EW integration, and FE wiring. No AI product surface. Next carefully: finance eGA + optional productive budget filters if product owners want list query params.
