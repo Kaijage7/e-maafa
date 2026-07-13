@@ -1,37 +1,28 @@
-package tz.go.pmo.dmis.response;
+package tz.go.pmo.dmis.service.impl;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.notification.NotificationService;
+import tz.go.pmo.dmis.service.TasksService;
 
 /**
- * Port of Response\TaskManagementController — incident task assignment and
- * tracking: board with statistics, create/edit with dependencies, reassign,
- * status changes with an activity log, calendar feed and my-tasks.
- *
- * Source bugs fixed: update() validated form keys that matched no model
- * column, so edits saved nothing; and priority was sorted
- * alphabetically — 'Low' outranked 'Medium').
+ * Incident task assignment and tracking. Logic moved from the former response package
+ * controller; Angular paths/JSON unchanged. Area scope on board/calendar/form-data/show;
+ * notifications via {@link NotificationService}; acting user via {@link CurrentUserResolver}.
  */
-@RestController
-@RequestMapping("/v1/response/tasks")
-public class TaskController {
+@Service
+@RequiredArgsConstructor
+public class TasksServiceImpl implements TasksService {
 
     private static final List<String> PRIORITIES = List.of("Low", "Medium", "High", "Critical");
     /** Excludes exercise tasks — those whose incident OR activation is a simulation drill. */
@@ -44,23 +35,13 @@ public class TaskController {
             "case t.priority when 'Critical' then 0 when 'High' then 1 when 'Medium' then 2 else 3 end";
 
     private final JdbcTemplate jdbc;
-    private final IncidentWorkflowService users;
-    private final NotificationService notifications; // the ONE dispatcher (in-app feed + channels)
-    private final JurisdictionScope jurisdiction; // row-level area scope for operational lists
+    private final CurrentUserResolver users;
+    private final NotificationService notifications;
+    private final JurisdictionScope jurisdiction;
 
-    public TaskController(JdbcTemplate jdbc, IncidentWorkflowService users,
-                          NotificationService notifications, JurisdictionScope jurisdiction) {
-        this.jdbc = jdbc;
-        this.users = users;
-        this.notifications = notifications;
-        this.jurisdiction = jurisdiction;
-    }
-
-    // ─── Board / my-tasks / calendar ───
-
-    @GetMapping
-    public Map<String, Object> index(@RequestParam(required = false) String status,
-                                     @RequestParam(required = false, name = "mine") Boolean mine) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> index(String status, Boolean mine) {
         // Drill isolation: exercise tasks (sim incident or sim activation) live on the Command Post
         // board, never in the general task module or its statistics.
         StringBuilder where = new StringBuilder(NOT_SIM_TASK);
@@ -125,8 +106,8 @@ public class TaskController {
         return out;
     }
 
-    /** Calendar feed: due-date events coloured by priority (calendarView's mapping). */
-    @GetMapping("/calendar")
+    @Override
+    @Transactional(readOnly = true)
     public Map<String, Object> calendar() {
         StringBuilder sql = new StringBuilder("""
                 select t.id, t.title, t.due_date::date as start, t.priority, t.status,
@@ -152,8 +133,9 @@ public class TaskController {
         return Map.of("events", events);
     }
 
-    @GetMapping("/form-data")
-    public Map<String, Object> formData(@RequestParam(required = false) Long incident_id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> formData(Long incidentId) {
         Map<String, Object> out = new LinkedHashMap<>();
         // Area scope on the picker: an area officer may only assign tasks to incidents in their own
         // district/region (or shared/null-area ones); national tier keeps the full list. Mirrors the board.
@@ -175,17 +157,14 @@ public class TaskController {
         out.put("priorities", PRIORITIES);
         out.put("statuses", STATUSES);
         // Dependency candidates: other tasks of the same incident (edit()'s rule)
-        out.put("available_dependencies", incident_id == null ? List.of() : jdbc.queryForList(
-                "select id, title, status from public.incident_tasks where incident_id = ? order by id", incident_id));
+        out.put("available_dependencies", incidentId == null ? List.of() : jdbc.queryForList(
+                "select id, title, status from public.incident_tasks where incident_id = ? order by id", incidentId));
         return out;
     }
 
-    // ─── CRUD ───
-
-    @PostMapping
-    @PreAuthorize("hasAuthority('tasks.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> store(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> store(Map<String, Object> body) {
         long incidentId = lng(body.get("incident_id"), "incident_id");
         // A task may only be opened against an incident in the caller's own area (national sees all); an
         // out-of-area incident_id 404s rather than letting a district officer plant a task on another region.
@@ -216,8 +195,9 @@ public class TaskController {
         return Map.of("success", true, "id", id, "message", "Task created and assigned successfully");
     }
 
-    @GetMapping("/{id}")
-    public Map<String, Object> show(@PathVariable long id) {
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> show(long id) {
         findOr404(id); // regression sweep: unknown ids must 404, not leak a 500
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("task", jdbc.queryForMap("""
@@ -244,11 +224,9 @@ public class TaskController {
         return out;
     }
 
-    /** The form's fields map onto the real columns, so edits persist. */
-    @PostMapping("/{id}")
-    @PreAuthorize("hasAuthority('tasks.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> update(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> update(long id, Map<String, Object> body) {
         findOr404(id);
         jdbc.update("""
                 update public.incident_tasks set title = ?, description = ?, assigned_to_user_id = ?,
@@ -266,12 +244,9 @@ public class TaskController {
         return Map.of("success", true, "message", "Task updated successfully");
     }
 
-    // ─── Actions ───
-
-    @PostMapping("/{id}/assign")
-    @PreAuthorize("hasAuthority('tasks.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> assign(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> assign(long id, Map<String, Object> body) {
         findOr404(id);
         long assignee = lng(body.get("assigned_to_user_id"), "assigned_to_user_id");
         String name = jdbc.queryForObject("select name from public.users where id = ?", String.class, assignee);
@@ -285,10 +260,9 @@ public class TaskController {
         return Map.of("success", true, "message", "Task assigned successfully");
     }
 
-    @PostMapping("/{id}/status")
-    @PreAuthorize("hasAuthority('tasks.manage')")
+    @Override
     @Transactional
-    public Map<String, Object> updateStatus(@PathVariable long id, @RequestBody Map<String, Object> body) {
+    public Map<String, Object> updateStatus(long id, Map<String, Object> body) {
         Map<String, Object> task = findOr404(id);
         String status = requireIn(body.get("status"), STATUSES, "status");
         String notes = str(body.get("notes"));
@@ -305,8 +279,6 @@ public class TaskController {
         }
         return Map.of("success", true, "message", "Task status updated successfully");
     }
-
-    // ─── internals ───
 
     private void saveDependencies(long taskId, Object raw) {
         if (!(raw instanceof List<?> ids)) {

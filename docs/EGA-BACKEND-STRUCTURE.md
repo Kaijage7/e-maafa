@@ -164,7 +164,8 @@ Suggested migration order:
 18. ~~**Support Pledges (map R4)**~~ — **DONE** (needs + pledge + accept/decline; NotificationService retained)  
 19. ~~**Declarations (map R6)**~~ — **DONE** (statutory s.32/s.33 chain; thin controller + service.impl)  
 20. ~~**Anticipatory Plans**~~ — **DONE** (area scope; matchingPlans on service for Command Post)  
-21. Response remaining (never engine/dispatch/allocation first) then EW  
+21. ~~**Tasks**~~ — **DONE** (board/calendar/assign/status; area scope + NotificationService)  
+22. Response remaining (never engine/dispatch/allocation first) then EW  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 

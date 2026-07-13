@@ -251,7 +251,8 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R6 | Declarations | `/v1/response/declarations` | ~294 | Executive/activation SQL consumers (SQL-only; controller eGA) | **DONE** |
 | R7 | Resource approvals | `/v1/response/approvals` | ~285 | **ApprovalWorkflowEngine** + warehouses | pending |
 | R8 | Anticipatory plans | `/v1/response/anticipatory-plans` | ~372 | Area scope; `matchingPlans` consumed by CommandCenter (now via service) | **DONE** |
-| R8+ | Tasks, assessments, communication, settings, warehouse-ops, dispatch, allocations, bidding, DLNA, incidents, command center | various | large | High SQL + engine + shared bases — last | pending |
+| R9 | Tasks | `/v1/response/tasks` | ~429 | Area scope + NotificationService; no Java type importers | **DONE** |
+| R8+ | Assessments, communication, settings, warehouse-ops, dispatch, allocations, bidding, DLNA, incidents, command center | various | large | High SQL + engine + shared bases — last | pending |
 
 ### 10.5 Do **not** start with
 

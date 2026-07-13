@@ -6,15 +6,15 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 20 thin eGA controllers, 20 service + 20 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 21 thin eGA controllers, 21 service + 21 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
-| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, **Anticipatory Plans** |
-| Response remaining | **Legacy fat** | ~15 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
+| Response leaves | **Migrated** | SC, Executive Watch, Public Reports, Contingency Plans, Support Pledges, Declarations, Anticipatory Plans, **Tasks** |
+| Response remaining | **Legacy fat** | ~14 controllers under `response/` with JdbcTemplate (CommandCenter ~1.8k, Incident ~1.3k, Dispatch ~900, Bidding ~1k) |
 | EW / finance / onehealth / portal | **Legacy feature packages** | Expected under transition rules |
 | New endpoints rule | **Must use eGA layers** | Do not add controllers under `response/` / `ew/` for new work |
-| Next eGA leaf (binding order) | ~~**Anticipatory Plans**~~ **DONE** | Next: Tasks (never engine/dispatch first) |
+| Next eGA leaf (binding order) | ~~**Tasks**~~ **DONE** | Next: Assessments or Communication (never engine/dispatch first) |
 
-**Honest score:** Master data + seven Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
+**Honest score:** Master data + eight Response leaves are eGA-shaped. Operational Response spine is **production-real but not eGA-layered** yet. That is documented transition debt, not pretend compliance.
 
 ## 2. Deep multi-persona E2E (what is solid)
 
