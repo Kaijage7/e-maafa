@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.ew;
+package tz.go.pmo.dmis.service.impl;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -17,6 +17,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.dto.response.EwIndexResponse;
+import tz.go.pmo.dmis.ew.EwDistrictRepository;
+import tz.go.pmo.dmis.ew.EwHazard;
+import tz.go.pmo.dmis.ew.EwHazardRepository;
+import tz.go.pmo.dmis.ew.EwRegion;
+import tz.go.pmo.dmis.ew.EwRegionRepository;
+import tz.go.pmo.dmis.ew.EwWarning;
+import tz.go.pmo.dmis.ew.EwWarningHazard;
+import tz.go.pmo.dmis.ew.EwWarningHazardRepository;
+import tz.go.pmo.dmis.ew.EwWarningRepository;
+import tz.go.pmo.dmis.service.EwWarningsService;
 
 /**
  * Early Warning registry for the workbench: hazard rows under each warning, area-scoped for
@@ -32,9 +43,11 @@ import tz.go.pmo.dmis.common.security.JurisdictionScope;
  *   <li>NONE — empty (strict)</li>
  * </ul>
  * Dissemination (SMS/email/PDF) is not filtered here; this is operator visibility of the register.
+ * <p>Logic lives in service.impl (eGA); path/JSON unchanged. Entities/repos remain transitional in ew/.
  */
 @Service
-public class EwQueryService {
+public class EwWarningsServiceImpl implements EwWarningsService {
+
 
     private static final ZoneId ZONE = ZoneId.of("Africa/Dar_es_Salaam");
     private static final DateTimeFormatter D_MON_Y = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH);
@@ -48,7 +61,7 @@ public class EwQueryService {
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
 
-    public EwQueryService(EwWarningRepository warnings,
+    public EwWarningsServiceImpl(EwWarningRepository warnings,
                           EwWarningHazardRepository warningHazards,
                           EwHazardRepository hazards,
                           EwRegionRepository regions,
@@ -64,6 +77,7 @@ public class EwQueryService {
         this.jurisdiction = jurisdiction;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public EwIndexResponse index() {
         Map<Long, EwHazard> hazardById = byId(hazards.findAll(), EwHazard::getId);

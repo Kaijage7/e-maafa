@@ -266,6 +266,7 @@ Preparedness eGA + Settings eGA + key Response endpoints verified live.
 | R21 | Incidents | `/v1/response/incidents` | ~1283 | IncidentWorkflowService retained; multipart; coexists with ops-timeline | **DONE** |
 | R22 | Command Center | `/v1/response/coordination` | ~1883 | ActivationService + AnticipatoryPlansService; coexists with scenarios | **DONE** |
 | E1 | EW Boundary | `/ew/monitoring/reports` | ~99 | JdbcTemplate only; focal-point reports; productive filters | **DONE** |
+| E2 | EW Warnings index | `GET /v1/ew/warnings` | ~226 | Area isolation; coexists with lifecycle POSTs; no fake query params | **DONE** |
 
 ### 10.5 Do **not** start with
 

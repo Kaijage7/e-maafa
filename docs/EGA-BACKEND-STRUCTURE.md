@@ -181,7 +181,8 @@ Suggested migration order:
 35. ~~**Command Center**~~ — **DONE** (coordination hub; ActivationService + AnticipatoryPlansService retained)  
 36. Response fat controllers complete; transitional support services remain  
 37. ~~**EW Boundary (monitoring reports)**~~ — **DONE** (first EW eGA leaf; productive filters)  
-38. Remaining EW (lifecycle, products, agency, bulletin ingest, scanner) then other modules  
+38. ~~**EW Warnings registry (index)**~~ — **DONE** (read; area isolation productive; no fake query filters)  
+39. Remaining EW (lifecycle, products, agency, bulletin ingest, scanner) then other modules  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -225,8 +226,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Incidents | Done | `/v1/response/incidents` | Thin controller + service.impl; workflow hub retained; multipart store/update; coexists with ops-timeline; multi-persona index/show; empty store/update **422**; Partner approve **403** |
 | Command Center | Done | `/v1/response/coordination` | Thin controller + service.impl; ActivationService retained; coexists with scenarios; SA board/readiness/AAR; area OOA **404**; bad posture/forecast **422** net-zero; Partner **403** |
 | EW Boundary | Done | `/ew/monitoring/reports` | Thin controller + service.impl; `bulletin_number`/`warning_code` productive (blank=unfiltered, nonsense=0); store requires `focal_point_name`; create drill net-zero; Partner **403** |
+| EW Warnings index | Done | `GET /v1/ew/warnings` | Thin controller + service.impl; JSON DTO unchanged; **no unused query params** (isolation via JurisdictionScope); SA **17** vs Dist/Reg **5** Dodoma-only; stats.total = list length; Partner **403** |
 
-37. ~~**EW Boundary**~~ — **DONE**; remaining EW controllers next (lifecycle/products/agency/bulletin/scanner)
+38. ~~**EW Warnings index**~~ — **DONE**; remaining EW: lifecycle, products, agency, bulletin, scanner
 
 ---
 

@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.ew;
+package tz.go.pmo.dmis.dto.response;
 
 import java.util.List;
 
