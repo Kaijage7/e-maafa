@@ -65,16 +65,18 @@ public class ContingencyPlanController {
                 """.formatted(where), params.toArray());
         plans.forEach(p -> { parseJsonField(p, "coverage_regions"); parseJsonField(p, "sectors"); });
         out.put("plans", plans);
+        // Stats + by_hazard honour the same status/hazard filters as the list so query params are productive.
         out.put("stats", jdbc.queryForMap("""
                 select count(*) as total,
                        count(*) filter (where status='active') as active,
                        count(*) filter (where status='pending') as pending,
                        count(*) filter (where status='draft') as draft,
                        coalesce(sum(budget) filter (where status='active'),0) as budget_active
-                from public.contingency_plans
-                """));
+                from public.contingency_plans where %s
+                """.formatted(where), params.toArray()));
         out.put("by_hazard", jdbc.queryForList(
-                "select hazard_type, count(*) as count from public.contingency_plans group by hazard_type order by count desc"));
+                "select hazard_type, count(*) as count from public.contingency_plans where " + where
+                        + " group by hazard_type order by count desc", params.toArray()));
         return out;
     }
 

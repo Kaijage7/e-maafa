@@ -504,16 +504,25 @@ public class StakeholderBiddingController {
                 where %s
                 order by case b.status when 'Pending' then 0 else 1 end, b.created_at desc limit 200
                 """.formatted(where), params.toArray());
-        // Stats + the stakeholder filter list are scoped the same way (a partner sees only its own figures/org).
-        StringBuilder statsWhere = new StringBuilder("deleted_at is null");
+        // Stats use the same area + stakeholder isolation as the list (no national soft leak for Dist seats).
+        // Status/search filters apply only to the table — dashboard chips stay full-queue for the visible area.
+        StringBuilder statsSql = new StringBuilder("""
+                select count(*) as total,
+                       count(*) filter (where b.status = 'Pending') as pending,
+                       count(*) filter (where b.status = 'Accepted') as accepted,
+                       count(*) filter (where b.status = 'Received') as received,
+                       count(*) filter (where b.status in ('Rejected','Withdrawn')) as closed
+                from public.stakeholder_resource_bids b
+                left join public.allocated_resources ar on ar.id = b.allocated_resource_id
+                left join public.incidents i on i.id = ar.incident_id
+                where b.deleted_at is null""");
         List<Object> statsParams = new ArrayList<>();
-        if (myStakeholder != null) { statsWhere.append(" and stakeholder_id = ?"); statsParams.add(myStakeholder); }
-        Map<String, Object> stats = jdbc.queryForMap("select count(*) as total,"
-                + " count(*) filter (where status = 'Pending') as pending,"
-                + " count(*) filter (where status = 'Accepted') as accepted,"
-                + " count(*) filter (where status = 'Received') as received,"
-                + " count(*) filter (where status in ('Rejected','Withdrawn')) as closed"
-                + " from public.stakeholder_resource_bids where " + statsWhere, statsParams.toArray());
+        jurisdiction.appendAreaScopeWithCouncil("i", statsSql, statsParams);
+        if (myStakeholder != null) {
+            statsSql.append(" and b.stakeholder_id = ?");
+            statsParams.add(myStakeholder);
+        }
+        Map<String, Object> stats = jdbc.queryForMap(statsSql.toString(), statsParams.toArray());
         List<Map<String, Object>> stakeholderList = myStakeholder != null
                 ? jdbc.queryForList("select id, name from public.stakeholders where id = ?", myStakeholder)
                 : jdbc.queryForList("select id, name from public.stakeholders where coalesce(is_active, true) order by name");

@@ -120,13 +120,16 @@ public class AssessmentController {
         jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
         sql.append(" order by da.created_at desc limit 200");
         out.put("assessments", jdbc.queryForList(sql.toString(), params.toArray()));
-        // Stats + charts must use the same incident-area wall as the registry — otherwise a district
-        // officer sees national roll-ups while the table only shows their own assessments (soft leak).
+        // Stats + charts: same area wall AND the same status/incident_id filters as the table —
+        // otherwise ?status= / ?incident_id= look productive on the list while the dashboard
+        // still rolls up every assessment in scope (non-productive params).
         StringBuilder scopeFrom = new StringBuilder("""
                 from public.damage_assessments da
                 left join public.incidents i on i.id = da.incident_id
-                where 1=1""");
-        List<Object> scopeParams = new ArrayList<>();
+                where """);
+        // Space required: text-block "where" + "1=1..." must not become "where1=1".
+        scopeFrom.append(' ').append(where);
+        List<Object> scopeParams = new ArrayList<>(params);
         jurisdiction.appendAreaScopeWithCouncil("i", scopeFrom, scopeParams);
         out.put("stats", jdbc.queryForMap("""
                 select count(*) as total,
