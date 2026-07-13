@@ -83,6 +83,7 @@
 - ~~Resource Allocations eGA extract~~ — **DONE** (engine + DispatchSupportService + SimulationGuard retained; `ALLOCATION_TYPE` public; store `errors` map preserved; multi-persona baseline match).
 - ~~Warehouse Ops eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; multi-persona baseline; no stock mutation in verify).
 - ~~Dispatch eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; APPROVAL_REQUIRED_SOURCES public; multi-persona baseline; no stock mutation in verify).
+- ~~Stakeholder Bidding eGA extract~~ — **DONE** (DispatchSupportService + SimulationGuard + NotificationService retained; multi-persona baseline; no stock/donation mutation in verify).
 
 ## 5. Commits in this deep-fix arc (logistics + assessment)
 
@@ -109,7 +110,7 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 16. ~~eGA migrate **Resource Allocations**~~ — **DONE**.  
 17. ~~eGA migrate **Warehouse Ops**~~ — **DONE**.  
 18. ~~eGA migrate **Dispatch**~~ — **DONE**.  
-19. Next: logistics spine still last (bidding).  
-20. Keep logistics in place; extract services only when touching heavily.  
+19. ~~eGA migrate **Stakeholder Bidding**~~ — **DONE**.  
+20. Next: Incident + CommandCenter hubs last (largest; shared path bases).  
 21. Stamp area on temp warehouses + agency stock data hygiene.  
 22. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
