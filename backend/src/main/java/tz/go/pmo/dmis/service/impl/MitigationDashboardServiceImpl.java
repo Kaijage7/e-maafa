@@ -1,35 +1,25 @@
-package tz.go.pmo.dmis.mitigation;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.mitigation.RegionDataBuilder;
+import tz.go.pmo.dmis.service.MitigationDashboardService;
 
 /**
- * Reproduces MitigationController@index — everything the mitigation/index-v2 dashboard receives:
- * the six counts, the choropleth regionData, map assessment markers, the six analytic datasets and
- * the three recent tables. Queries are tolerant of absent tables (the source wraps each block in
- * try/catch), via to_regclass guards.
+ * Mitigation dashboard aggregates (eGA service.impl). Path {@code GET /v1/mitigation/dashboard} unchanged.
  */
-@RestController
-@RequestMapping("/v1/mitigation/dashboard")
+@Service
 @RequiredArgsConstructor
-@Tag(name = "Prevention & Mitigation", description = "Module dashboard aggregates")
-public class MitigationDashboardController {
+public class MitigationDashboardServiceImpl implements MitigationDashboardService {
 
     private final JdbcTemplate jdbc;
     private final RegionDataBuilder regionDataBuilder;
 
-    @GetMapping
-    @Operation(summary = "Dashboard payload: counts + choropleth + 6 chart datasets + 3 recent tables")
-    @PreAuthorize("hasAuthority('prevention_dashboard.view')")
+    @Override
     public Map<String, Object> index() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("hazardsCount", count("select count(*) from public.hazards where is_active = true"));

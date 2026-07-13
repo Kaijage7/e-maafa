@@ -6,7 +6,7 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 49 thin eGA controllers, 49 service + 49 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 52 thin eGA controllers, 52 service + 52 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
 | Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
 | Response support engines | **eGA-aligned** | Under `service.support` (workflow, dispatch, activation, simulation) |
@@ -242,4 +242,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 | Infrastructure items | `/v1/infrastructure-items` | stats total 5; mapItems 5; page empty; show 404 |
 | Past disasters | `/v1/past-disasters` | stats total 11; page empty; show 404 |
 
-Remaining fat mitigation: risk assessments, GIS map, dashboard (+ RegionDataBuilder helper).
+| Risk assessments | `/v1/risk-assessments` | stats total 3; page empty; show 404; Partner 403 |
+| GIS map | `/v1/gis-map` | layer counts + regionData match baseline; Partner 403; DAS 200 |
+| Mitigation dashboard | `/v1/mitigation/dashboard` | six counts match baseline |
+
+**Mitigation controllers: complete** (helpers `RegionDataBuilder` remain under `mitigation/`). Next fat domains: portal, recovery, One Health, finance, M&E, remaining reports.

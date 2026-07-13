@@ -1,36 +1,28 @@
-package tz.go.pmo.dmis.mitigation;
+package tz.go.pmo.dmis.service.impl;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.mitigation.RegionDataBuilder;
+import tz.go.pmo.dmis.service.GisMapService;
 
 /**
- * Reproduces Admin/GisMapController@index — the reference GIS map's five marker layers (with the
- * exact column subsets and filters), the four stats and the shared choropleth regionData.
+ * GIS map payload logic (eGA service.impl). Path {@code GET /v1/gis-map} unchanged.
  */
-@RestController
-@RequestMapping("/v1/gis-map")
+@Service
 @RequiredArgsConstructor
-@Tag(name = "Prevention & Mitigation", description = "Risk Mapping & GIS reference map data")
-public class GisMapController {
+public class GisMapServiceImpl implements GisMapService {
 
     private final JdbcTemplate jdbc;
     private final RegionDataBuilder regionDataBuilder;
     private final JurisdictionScope jurisdiction;
 
-    @GetMapping
-    @Operation(summary = "GIS map payload: 5 marker layers + stats + choropleth region data")
-    @PreAuthorize("hasAnyAuthority('risk_mapping.view','reports_and_analytics.view')")
+    @Override
     public Map<String, Object> index() {
         List<Map<String, Object>> infrastructure = rows(
                 "select id, name, type, latitude, longitude, status from public.infrastructure_items "

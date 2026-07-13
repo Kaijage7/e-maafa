@@ -251,6 +251,9 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | Mitigation measures | Done | `/v1/mitigation-measures` | Thin controller + service.impl; page productive; show **404**; unauth **401** |
 | Infrastructure items | Done | `/v1/infrastructure-items` | Thin controller + service.impl; page + mapItems; show **404** |
 | Past disasters | Done | `/v1/past-disasters` | Thin controller + service.impl; page + hazard/year charts; show **404** |
+| Risk assessments | Done | `/v1/risk-assessments` | Thin controller + service.impl; page productive; approve/publish SoD; show **404** |
+| GIS map | Done | `/v1/gis-map` | Thin controller + service.impl; 5 layers + stats + regionData; JurisdictionScope on incidents |
+| Mitigation dashboard | Done | `/v1/mitigation/dashboard` | Thin controller + service.impl; counts/charts/recent tables |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 

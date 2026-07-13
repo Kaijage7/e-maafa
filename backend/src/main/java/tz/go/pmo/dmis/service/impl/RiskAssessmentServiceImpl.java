@@ -1,4 +1,12 @@
-package tz.go.pmo.dmis.mitigation;
+package tz.go.pmo.dmis.service.impl;
+
+import tz.go.pmo.dmis.mitigation.MitHazard;
+import tz.go.pmo.dmis.mitigation.MitHazardRepository;
+import tz.go.pmo.dmis.mitigation.RiskAssessment;
+import tz.go.pmo.dmis.mitigation.RiskAssessmentRepository;
+import tz.go.pmo.dmis.mitigation.RiskAssessmentResponses;
+import tz.go.pmo.dmis.mitigation.RiskAssessmentWriteRequest;
+import tz.go.pmo.dmis.service.RiskAssessmentService;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,7 +51,7 @@ import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
  */
 @Service
 @RequiredArgsConstructor
-public class RiskAssessmentService {
+public class RiskAssessmentServiceImpl implements RiskAssessmentService {
 
     private static final int PER_PAGE = 15;
     private static final ZoneId ZONE = ZoneId.of("Africa/Dar_es_Salaam");
@@ -66,6 +74,7 @@ public class RiskAssessmentService {
 
     /* ===================== READ ===================== */
 
+    @Override
     @Transactional(readOnly = true)
     public RiskAssessmentResponses.Index index(int page) {
         Page<RiskAssessment> result = assessments.pageForIndex(PageRequest.of(Math.max(page, 1) - 1, PER_PAGE));
@@ -88,6 +97,7 @@ public class RiskAssessmentService {
                 stats, hazardOptions);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public RiskAssessmentResponses.Detail show(Long id) {
         return toDetail(find(id));
@@ -95,6 +105,7 @@ public class RiskAssessmentService {
 
     /* ===================== WRITE ===================== */
 
+    @Override
     @Transactional
     public RiskAssessmentResponses.Detail store(RiskAssessmentWriteRequest r) {
         validateOptions(r, true);
@@ -153,6 +164,7 @@ public class RiskAssessmentService {
         return toDetail(assessments.save(a));
     }
 
+    @Override
     @Transactional
     public RiskAssessmentResponses.Detail update(Long id, RiskAssessmentWriteRequest r) {
         validateOptions(r, false);
@@ -191,6 +203,7 @@ public class RiskAssessmentService {
         return toDetail(assessments.save(a));
     }
 
+    @Override
     @Transactional
     public void destroy(Long id) {
         RiskAssessment a = find(id);
@@ -209,6 +222,7 @@ public class RiskAssessmentService {
         assessments.delete(a);
     }
 
+    @Override
     @Transactional
     public void approve(Long id) {
         RiskAssessment a = find(id);
@@ -219,6 +233,7 @@ public class RiskAssessmentService {
         assessments.save(a);
     }
 
+    @Override
     @Transactional
     public void publish(Long id) {
         RiskAssessment a = find(id);

@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-interface RiskAssessmentRepository extends JpaRepository<RiskAssessment, Long> {
+public interface RiskAssessmentRepository extends JpaRepository<RiskAssessment, Long> {
 
     /**
      * index: orderBy(priority_level desc)->latest(assessment_date)->latest(created_at)->paginate(15).
