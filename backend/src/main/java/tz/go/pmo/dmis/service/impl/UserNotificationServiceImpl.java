@@ -1,19 +1,13 @@
-package tz.go.pmo.dmis.notification;
+package tz.go.pmo.dmis.service.impl;
+
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.UserNotificationService;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
-import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 
 /**
@@ -21,21 +15,20 @@ import tz.go.pmo.dmis.common.security.CurrentUserResolver;
  * feed (public.resource_notifications, generalised in V64) for ALL notification types — approvals,
  * incidents, early warnings, activations, publications — not just resource approvals.
  */
-@RestController
-@RequestMapping("/v1/notifications")
-public class NotificationController {
+@Service
+public class UserNotificationServiceImpl implements UserNotificationService {
 
     private final JdbcTemplate jdbc;
     private final CurrentUserResolver currentUser;
 
-    public NotificationController(JdbcTemplate jdbc, CurrentUserResolver currentUser) {
+    public UserNotificationServiceImpl(JdbcTemplate jdbc, CurrentUserResolver currentUser) {
         this.jdbc = jdbc;
         this.currentUser = currentUser;
     }
 
     /** Recent notifications + unread count for the bell dropdown. */
-    @GetMapping
-    public Map<String, Object> feed(@RequestParam(defaultValue = "20") int limit) {
+    @Override
+    public Map<String, Object> feed(int limit) {
         long uid = currentUser.actingUserId();
         int lim = Math.min(Math.max(limit, 1), 100);
         List<Map<String, Object>> items = jdbc.queryForList("""
@@ -55,7 +48,7 @@ public class NotificationController {
     }
 
     /** Lightweight badge poll. */
-    @GetMapping("/unread-count")
+    @Override
     public Map<String, Object> unreadCount() {
         long uid = currentUser.actingUserId();
         Integer unread = jdbc.queryForObject(
@@ -64,17 +57,15 @@ public class NotificationController {
         return Map.of("count", unread == null ? 0 : unread);
     }
 
-    @PreAuthorize(Authz.AUTHENTICATED)
-    @PostMapping("/{id}/read")
-    public Map<String, Object> markRead(@PathVariable long id) {
+    @Override
+    public Map<String, Object> markRead(long id) {
         long uid = currentUser.actingUserId();
         jdbc.update("update public.resource_notifications set is_read = true, read_at = now() "
                 + "where id = ? and user_id = ?", id, uid);
         return Map.of("success", true);
     }
 
-    @PreAuthorize(Authz.AUTHENTICATED)
-    @PostMapping("/read-all")
+    @Override
     public Map<String, Object> markAllRead() {
         long uid = currentUser.actingUserId();
         int n = jdbc.update("update public.resource_notifications set is_read = true, read_at = now() "
@@ -83,7 +74,7 @@ public class NotificationController {
     }
 
     /** The signed-in user's own channel preferences (self-service). */
-    @GetMapping("/preferences")
+    @Override
     public Map<String, Object> myPreferences() {
         long uid = currentUser.actingUserId();
         Map<String, Object> row = jdbc.queryForMap("""
@@ -93,9 +84,8 @@ public class NotificationController {
         return row;
     }
 
-    @PreAuthorize(Authz.AUTHENTICATED)
-    @PostMapping("/preferences")
-    public Map<String, Object> saveMyPreferences(@RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> saveMyPreferences(Map<String, Object> body) {
         long uid = currentUser.actingUserId();
         boolean notifyInApp = boolOf(body.get("notify_in_app"), true);
         boolean notifyEmail = boolOf(body.get("notify_email"), true);

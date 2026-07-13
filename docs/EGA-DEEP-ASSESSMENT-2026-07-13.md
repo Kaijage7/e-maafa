@@ -158,7 +158,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 42. ~~eGA migrate **Finance (budget + economics)**~~ — **DONE** (+ reject SoD fix).
 43. ~~eGA migrate **Monitoring & Evaluation**~~ — **DONE** (see §18).
 44. ~~eGA migrate **Reports** (incident / resource / generated)~~ — **DONE** (see §19).
-45. Next fat domains: notification / stakeholder / ops-IAM. 
+45. ~~eGA migrate **Notification HTTP surface**~~ — **DONE** (see §20; shared engines retained in `notification/`).
+46. Next fat domains: stakeholder / ops-IAM. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 

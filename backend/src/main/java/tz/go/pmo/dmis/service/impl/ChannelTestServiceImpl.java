@@ -1,36 +1,32 @@
-package tz.go.pmo.dmis.notification;
+package tz.go.pmo.dmis.service.impl;
+
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.notification.MailService;
+import tz.go.pmo.dmis.service.ChannelTestService;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import tz.go.pmo.dmis.ew.MgovSmsService;
-import org.springframework.security.access.prepost.PreAuthorize;
-import tz.go.pmo.dmis.common.security.Authz;
 
 /**
  * Admin diagnostics: fire a real message down each channel (SMS / email) independently so an
  * operator can confirm the gateways are live without driving a whole business flow. Used by the
  * SMS/Email Management screen "Send test" buttons and during commissioning.
  */
-@RestController
-@RequestMapping("/v1/notifications/test")
-public class ChannelTestController {
+@Service
+public class ChannelTestServiceImpl implements ChannelTestService {
 
     private final MgovSmsService sms;
     private final MailService mail;
 
-    public ChannelTestController(MgovSmsService sms, MailService mail) {
+    public ChannelTestServiceImpl(MgovSmsService sms, MailService mail) {
         this.sms = sms;
         this.mail = mail;
     }
 
-    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
-    @PostMapping("/sms")
-    public Map<String, Object> testSms(@RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> testSms(Map<String, Object> body) {
         String phone = str(body.get("phone"));
         String message = firstNonBlank(str(body.get("message")), "e-MAAFA DMIS test SMS.");
         Map<String, Object> out = new LinkedHashMap<>();
@@ -47,9 +43,8 @@ public class ChannelTestController {
         return out;
     }
 
-    @PreAuthorize("hasAuthority('communication_and_alerts.send')")
-    @PostMapping("/email")
-    public Map<String, Object> testEmail(@RequestBody Map<String, Object> body) {
+    @Override
+    public Map<String, Object> testEmail(Map<String, Object> body) {
         String to = str(body.get("email"));
         String subject = firstNonBlank(str(body.get("subject")), "e-MAAFA DMIS test email");
         String message = firstNonBlank(str(body.get("message")),

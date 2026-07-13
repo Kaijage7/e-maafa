@@ -4,13 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
+import tz.go.pmo.dmis.service.impl.DeliveryStatusServiceImpl;
 
 /** Unit coverage for F59/F60 DLR status normalisation (no Spring context). */
 class DeliveryStatusMappingTest {
 
     @Test
     void mapsCommonGatewayStatuses() throws Exception {
-        Method m = DeliveryStatusController.class.getDeclaredMethod("mapStatus", String.class);
+        Method m = DeliveryStatusServiceImpl.class.getDeclaredMethod("mapStatus", String.class);
         m.setAccessible(true);
         assertThat(m.invoke(null, "DELIVERED")).isEqualTo("delivered");
         assertThat(m.invoke(null, "DELIVRD")).isEqualTo("delivered"); // SMPP classic

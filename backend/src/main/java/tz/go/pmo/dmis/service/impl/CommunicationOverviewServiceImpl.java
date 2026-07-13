@@ -1,14 +1,13 @@
-package tz.go.pmo.dmis.notification;
+package tz.go.pmo.dmis.service.impl;
+
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.notification.AudienceService;
+import tz.go.pmo.dmis.service.CommunicationOverviewService;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Communication Center overview — the one cross-channel rollup of everything the platform sends:
@@ -16,21 +15,19 @@ import org.springframework.web.bind.annotation.RestController;
  * broadcast alerts ({@code alerts}). Real counts (no hardcoded bars), with per-channel success rate
  * and by-channel / by-type / by-corner breakdowns plus a recent-activity feed across all corners.
  */
-@RestController
-@RequestMapping("/v1/communication")
-public class CommunicationOverviewController {
+@Service
+public class CommunicationOverviewServiceImpl implements CommunicationOverviewService {
 
     private final JdbcTemplate jdbc;
     private final AudienceService audiences;
 
-    public CommunicationOverviewController(JdbcTemplate jdbc, AudienceService audiences) {
+    public CommunicationOverviewServiceImpl(JdbcTemplate jdbc, AudienceService audiences) {
         this.jdbc = jdbc;
         this.audiences = audiences;
     }
 
     /** Audiences the compose form can target (group counts) + the hazard and role sub-pickers. */
-    @PreAuthorize("hasAuthority('communication_and_alerts.view')")
-    @GetMapping("/audiences")
+    @Override
     public Map<String, Object> audiences() {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("audiences", audiences.audiences());
@@ -57,9 +54,8 @@ public class CommunicationOverviewController {
               else 'Other'
             end""";
 
-    @PreAuthorize("hasAuthority('communication_and_alerts.view')")
-    @GetMapping("/overview")
-    public Map<String, Object> overview(@RequestParam(defaultValue = "month") String range) {
+    @Override
+    public Map<String, Object> overview(String range) {
         String since = since(range);
         Map<String, Object> out = new LinkedHashMap<>();
 

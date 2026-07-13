@@ -1,4 +1,7 @@
-package tz.go.pmo.dmis.notification;
+package tz.go.pmo.dmis.service.impl;
+
+import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.service.DeliveryStatusService;
 
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -8,11 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -27,11 +25,10 @@ import org.springframework.web.server.ResponseStatusException;
  * Payload is flexible — M-Gov DLR field names vary by gateway version:
  * messageId / message_id / external_id, status / deliveryStatus, msisdn / phone / recipient.
  */
-@RestController
-@RequestMapping("/v1/webhooks")
-public class DeliveryStatusController {
+@Service
+public class DeliveryStatusServiceImpl implements DeliveryStatusService {
 
-    private static final Logger log = LoggerFactory.getLogger(DeliveryStatusController.class);
+    private static final Logger log = LoggerFactory.getLogger(DeliveryStatusServiceImpl.class);
 
     private final JdbcTemplate jdbc;
 
@@ -41,13 +38,12 @@ public class DeliveryStatusController {
     @Value("${spring.profiles.active:}")
     private String activeProfiles;
 
-    public DeliveryStatusController(JdbcTemplate jdbc) {
+    public DeliveryStatusServiceImpl(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
-    @PostMapping({"/mgov/dlr", "/sms/dlr"})
-    public Map<String, Object> smsDlr(@RequestBody(required = false) Map<String, Object> body,
-                                      @RequestHeader(value = "X-MGov-Dlr-Secret", required = false) String headerSecret) {
+    @Override
+    public Map<String, Object> smsDlr(Map<String, Object> body, String headerSecret) {
         Map<String, Object> payload = body == null ? Map.of() : body;
         assertSecret(headerSecret, str(payload.get("secret")));
 
