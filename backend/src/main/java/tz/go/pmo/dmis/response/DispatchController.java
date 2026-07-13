@@ -293,7 +293,9 @@ public class DispatchController {
 
     @GetMapping("/approvals")
     public Map<String, Object> approvals() {
-        List<Map<String, Object>> rows = jdbc.queryForList("""
+        // Same incident-area wall as the dispatch board — district/region officers must not see
+        // foreign-area warehouse dispatch gates (or act on them via the list UI).
+        StringBuilder sql = new StringBuilder("""
                 select da.*, ar.incident_id, ar.quantity_allocated, ar.unit_of_measure,
                        i.title as incident_title, r.name as resource_name, ru.name as requested_by_name,
                        case when da.source_type = 'Warehouse'
@@ -305,19 +307,31 @@ public class DispatchController {
                 join public.incidents i on i.id = ar.incident_id
                 join public.resources r on r.id = ar.resource_id
                 left join public.users ru on ru.id = da.requested_by
-                where da.deleted_at is null
-                order by case da.status when 'Pending' then 0 else 1 end, da.created_at desc
-                limit 200
-                """);
+                where da.deleted_at is null""");
+        List<Object> params = new ArrayList<>();
+        jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
+        sql.append(" order by case da.status when 'Pending' then 0 else 1 end, da.created_at desc limit 200");
+        List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("approvals", rows);
         out.put("pending_count", rows.stream().filter(r -> "Pending".equals(r.get("status"))).count());
-        out.put("approved_today", jdbc.queryForObject("""
-                select count(*) from public.dispatch_approvals
-                where status = 'Approved' and approved_at::date = current_date
-                """, Long.class));
-        out.put("total_processed", jdbc.queryForObject(
-                "select count(*) from public.dispatch_approvals where status in ('Approved','Rejected')", Long.class));
+        // Counts follow the same area scope (not national soft leak for area seats).
+        StringBuilder daySql = new StringBuilder("""
+                select count(*) from public.dispatch_approvals da
+                join public.allocated_resources ar on ar.id = da.allocated_resource_id
+                join public.incidents i on i.id = ar.incident_id
+                where da.status = 'Approved' and da.approved_at::date = current_date""");
+        List<Object> dayParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeWithCouncil("i", daySql, dayParams);
+        out.put("approved_today", jdbc.queryForObject(daySql.toString(), Long.class, dayParams.toArray()));
+        StringBuilder procSql = new StringBuilder("""
+                select count(*) from public.dispatch_approvals da
+                join public.allocated_resources ar on ar.id = da.allocated_resource_id
+                join public.incidents i on i.id = ar.incident_id
+                where da.status in ('Approved','Rejected')""");
+        List<Object> procParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeWithCouncil("i", procSql, procParams);
+        out.put("total_processed", jdbc.queryForObject(procSql.toString(), Long.class, procParams.toArray()));
         return out;
     }
 

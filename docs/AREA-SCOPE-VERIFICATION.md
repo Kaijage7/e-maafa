@@ -86,6 +86,14 @@ Dist DC user 4 remains view-only on writes (403).
 2. **Optional `incident_id`** on intake/remove/transfer/borrow — picker was scoped, body was not; now `requireIncidentInArea` → `AreaGuard.assertOwn`.  
 3. **Capacity forecast** — velocity + on-hand use `appendStoreVisibility` (no national soft leak for area seats).
 
+## Dispatch approvals list (careful pass)
+
+`GET /v1/response/dispatch/approvals` previously returned **national** pending/processed rows to Dist seats (Dar rows visible to Dodoma). Now uses `appendAreaScopeWithCouncil` on the served incident (same wall as the board). Counts (`approved_today`, `total_processed`) follow the same scope.
+
+## Logistics multi-seat realism
+
+See **`docs/LOGISTICS-SPINE-VERIFICATION.md`**: peacetime Warehouse Ops + full DAS→…→NTC resource chain + zonal/temp dispatch + stakeholder publish/bid (V204/V205 approver permissions).
+
 ## Dispatch + inventory write re-check (careful pass)
 
 | Check | Dist DC Dodoma | National |

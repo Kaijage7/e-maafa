@@ -106,6 +106,18 @@ public class StakeholderBiddingController {
         if (Boolean.TRUE.equals(allocation.get("published_for_stakeholder_bidding"))) {
             throw new BusinessRuleException("This resource is already published for stakeholder donations.");
         }
+        // Realistic gate: only fully approved (or already sourcing) needs go to partners —
+        // publishing a still-pending DAS/RAS chain request misrepresents PMO commitment.
+        String status = String.valueOf(allocation.get("status"));
+        String workflow = allocation.get("workflow_status") == null ? "" : String.valueOf(allocation.get("workflow_status"));
+        boolean ready = "approved".equalsIgnoreCase(workflow)
+                || List.of("Approved", "Sourcing", "Dispatch Approved", "In Transit", "Partially Fulfilled")
+                        .contains(status);
+        if (!ready) {
+            throw new BusinessRuleException(
+                    "Only fully approved resource requests can be published to stakeholders. Current status: "
+                            + status + (workflow.isBlank() ? "" : " / " + workflow) + ".");
+        }
         LocalDate deadline = body != null && body.get("bid_deadline") != null
                 ? LocalDate.parse(String.valueOf(body.get("bid_deadline")))
                 : LocalDate.now().plusDays(7);
@@ -190,8 +202,14 @@ public class StakeholderBiddingController {
         if (jurisdiction.currentStakeholderId() == null && !SecurityUtils.hasAuthority("resource_allocation.request")) {
             throw new BusinessRuleException("Your account is not linked to a partner organisation yet.");
         }
-        long allocationId = lng(body.get("allocated_resource_id"), "allocated_resource_id");
+        // Accept allocated_resource_id (canonical) or allocation_id (common client alias).
+        Object rawAlloc = body.get("allocated_resource_id") != null ? body.get("allocated_resource_id") : body.get("allocation_id");
+        long allocationId = lng(rawAlloc, "allocated_resource_id");
         long stakeholderId = lng(body.get("stakeholder_id"), "stakeholder_id");
+        // quantity_offered is canonical; quantity accepted as alias used by some clients.
+        if (body.get("quantity_offered") == null && body.get("quantity") != null) {
+            body.put("quantity_offered", body.get("quantity"));
+        }
         recordBid(allocationId, stakeholderId, body);
         return Map.of("success", true, "message", "Offer submitted. PMO will review it shortly.");
     }

@@ -120,24 +120,30 @@ public class AssessmentController {
         jurisdiction.appendAreaScopeWithCouncil("i", sql, params);
         sql.append(" order by da.created_at desc limit 200");
         out.put("assessments", jdbc.queryForList(sql.toString(), params.toArray()));
+        // Stats + charts must use the same incident-area wall as the registry — otherwise a district
+        // officer sees national roll-ups while the table only shows their own assessments (soft leak).
+        StringBuilder scopeFrom = new StringBuilder("""
+                from public.damage_assessments da
+                left join public.incidents i on i.id = da.incident_id
+                where 1=1""");
+        List<Object> scopeParams = new ArrayList<>();
+        jurisdiction.appendAreaScopeWithCouncil("i", scopeFrom, scopeParams);
         out.put("stats", jdbc.queryForMap("""
                 select count(*) as total,
-                       count(*) filter (where status = 'Draft') as draft,
-                       count(*) filter (where status = 'Pending Verification') as pending_verification,
-                       count(*) filter (where status = 'Completed') as completed,
-                       coalesce(sum(estimated_loss), 0) as total_estimated_loss
-                from public.damage_assessments
-                """));
-        // Chart feeds, shaped like the source dashboard: by damage level + by district
-        out.put("by_damage_level", jdbc.queryForList("""
-                select damage_level, count(*) as count from public.damage_assessments
-                group by damage_level order by count desc
-                """));
-        out.put("by_district", jdbc.queryForList("""
-                select district, count(*) as count, coalesce(sum(estimated_loss),0) as estimated_loss
-                from public.damage_assessments where district is not null
-                group by district order by estimated_loss desc limit 10
-                """));
+                       count(*) filter (where da.status = 'Draft') as draft,
+                       count(*) filter (where da.status = 'Pending Verification') as pending_verification,
+                       count(*) filter (where da.status = 'Completed') as completed,
+                       coalesce(sum(da.estimated_loss), 0) as total_estimated_loss
+                """ + scopeFrom, scopeParams.toArray()));
+        out.put("by_damage_level", jdbc.queryForList(
+                "select da.damage_level, count(*) as count " + scopeFrom
+                        + " group by da.damage_level order by count desc",
+                scopeParams.toArray()));
+        out.put("by_district", jdbc.queryForList(
+                "select da.district, count(*) as count, coalesce(sum(da.estimated_loss),0) as estimated_loss "
+                        + scopeFrom + " and da.district is not null"
+                        + " group by da.district order by estimated_loss desc limit 10",
+                scopeParams.toArray()));
         return out;
     }
 
