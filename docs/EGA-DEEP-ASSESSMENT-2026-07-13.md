@@ -154,7 +154,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 38. ~~eGA migrate **One Health action tracking**~~ — **DONE**.
 39. ~~eGA migrate **One Health directives**~~ — **DONE**.
 40. ~~eGA migrate **One Health events**~~ — **DONE**.
-41. Next OH leaf: dissemination; then finance / M&E / reports. 
+41. ~~eGA migrate **One Health dissemination**~~ — **DONE** (OH complete).
+42. Next fat domains: finance / M&E / reports. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -324,4 +325,6 @@ Public portal regressions exact: landing, threats, regions, education, shelters,
 | One Health directives | `/v1/onehealth/directives` | Thin controller + `OneHealthDirectiveServiceImpl`; index/show/history **exact**; status/search nonsense → 0; unauth **401**; show **404**; empty PUT **422**; escalate **200** soft-fail if gateway unconfigured (no data mutation); `currentUserDbId` public |
 | One Health events | `/v1/onehealth/events` | Thin controller + `OneHealthEventApiServiceImpl` (named to avoid clash with domain `OneHealthEventService`); index/show/form/qv/comments **exact**; status NOPE / ew_alert productive; empty store **422**; empty comment **422**; bad review priority **422**; siblings 200 |
 
-**OH residual fat:** dissemination only (+ `OhEventWriteRequest`, `OneHealthEventService` helpers in `onehealth/`).
+| One Health dissemination | `/v1/onehealth/disseminations` | Thin controller + `OneHealthDisseminationServiceImpl`; index/show/recipients **exact**; approval/type filters productive; unauth **401**; show **404**; invalid approve soft `success:false`; empty stakeholder create **422**; all OH siblings **200** |
+
+**One Health controllers: complete.** Residual under `onehealth/`: `OhEventWriteRequest` + `OneHealthEventService` helpers only (no `*Controller`).

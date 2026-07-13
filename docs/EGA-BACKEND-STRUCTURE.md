@@ -204,7 +204,8 @@ Suggested migration order:
 58. ~~**One Health action tracking**~~ — **DONE** (actions + progress rollup + close/archive; AreaGuard)
 59. ~~**One Health directives**~~ — **DONE** (filters productive; escalate SMS/email retained)
 60. ~~**One Health events**~~ — **DONE** (list filters, store, show, review, directives, cascades)
-61. Remaining OH (dissemination) then finance / M&E / reports / notification / stakeholder / ops-IAM
+61. ~~**One Health dissemination**~~ — **DONE** (dual-track create, approve, recipients; OH controllers complete)
+62. Remaining fat domains: finance / M&E / reports / notification / stakeholder / ops-IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
@@ -282,6 +283,7 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | One Health action tracking | Done | `/v1/onehealth/events/{id}/actions`, `/actions/{id}`, close/archive | Thin controller + service.impl; AreaGuard; empty store **422**; progress rollup; create+delete net-zero |
 | One Health directives | Done | `/v1/onehealth/directives` | Thin controller + service.impl; productive status/search; show/history baselines exact; empty update **422**; escalate soft-fail without gateway |
 | One Health events | Done | `/v1/onehealth/events` | Thin controller + `OneHealthEventApiServiceImpl`; index/show/form/qv/comments exact; productive filters; empty store **422**; review bad priority **422** |
+| One Health dissemination | Done | `/v1/onehealth/disseminations` (+ event create tracks) | Thin controller + service.impl; filters productive; multipart create; approve invalid **200** success=false; empty store **422** |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 

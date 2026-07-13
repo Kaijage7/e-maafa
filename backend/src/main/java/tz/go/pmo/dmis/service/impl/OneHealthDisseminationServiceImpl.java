@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.onehealth;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
@@ -14,25 +14,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
 import tz.go.pmo.dmis.notification.ExternalDeliveryService;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.notification.MailService;
+import tz.go.pmo.dmis.onehealth.OneHealthEventService;
+import tz.go.pmo.dmis.service.OneHealthDisseminationService;
 
 /**
  * Port of OneHealth\OneHealthDisseminationController + the send/approve flows of
@@ -43,11 +38,10 @@ import tz.go.pmo.dmis.notification.MailService;
  * public SMS capped at 100); the M-Gov/SMTP gateway call itself is a deployment
  * concern and is logged locally.
  */
-@RestController
-@RequestMapping("/v1/onehealth")
-public class OneHealthDisseminationController {
+@Service
+public class OneHealthDisseminationServiceImpl implements OneHealthDisseminationService {
 
-    private static final Logger log = LoggerFactory.getLogger(OneHealthDisseminationController.class);
+    private static final Logger log = LoggerFactory.getLogger(OneHealthDisseminationServiceImpl.class);
     private static final int MAX_PUBLIC_RECIPIENTS = 100; // config('services.mgov.max_public_recipients', 100)
     private static final String DISSEMINATION_DESK =
             "hasAnyAuthority('one_health.disseminate','one_health.approve','one_health.manage')";
@@ -60,10 +54,10 @@ public class OneHealthDisseminationController {
     private final AreaGuard areaGuard;
     private final JurisdictionScope jurisdiction;
 
-    public OneHealthDisseminationController(JdbcTemplate jdbc, OneHealthEventService service,
+    public OneHealthDisseminationServiceImpl(JdbcTemplate jdbc, OneHealthEventService service,
                                             ObjectMapper objectMapper, ExternalDeliveryService delivery,
                                             AreaGuard areaGuard, JurisdictionScope jurisdiction,
-                                            @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
+                                            @org.springframework.beans.factory.annotation.Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
         this.jdbc = jdbc;
         this.service = service;
         this.objectMapper = objectMapper;
@@ -74,13 +68,12 @@ public class OneHealthDisseminationController {
     }
 
     // ─── Index ───
+    @Override
 
-    @GetMapping("/disseminations")
-    @PreAuthorize(DISSEMINATION_DESK)
-    public Map<String, Object> index(@RequestParam(name = "dissemination_type", required = false) String type,
-                                     @RequestParam(name = "approval_status", required = false) String approvalStatus,
-                                     @RequestParam(required = false) String status,
-                                     @RequestParam(defaultValue = "1") int page) {
+    public Map<String, Object> index(String type,
+                                     String approvalStatus,
+                                     String status,
+                                     int page) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
         if (notBlank(type)) {
@@ -161,10 +154,9 @@ public class OneHealthDisseminationController {
     }
 
     // ─── Show ───
+    @Override
 
-    @GetMapping("/disseminations/{id}")
-    @PreAuthorize(DISSEMINATION_DESK)
-    public Map<String, Object> show(@PathVariable long id) {
+    public Map<String, Object> show(long id) {
         // Scope via the parent event's area (disseminations carry no area column); out-of-area 404s.
         areaGuard.assertParentOwnOrShared("public.oh_disseminations", "event_id", "public.oh_events", id);
         Map<String, Object> d = findOr404(id);
@@ -227,15 +219,14 @@ public class OneHealthDisseminationController {
     }
 
     // ─── Store (dual track) ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.disseminate')")
-    @PostMapping(value = "/events/{eventId}/disseminations/stakeholder", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @Transactional
-    public ResponseEntity<Map<String, Object>> storeStakeholder(@PathVariable long eventId,
-            @RequestParam Map<String, String> form,
-            @RequestParam(name = "stakeholder_ids", required = false) List<Long> stakeholderIds,
-            @RequestParam(name = "channels", required = false) List<String> channels,
-            @RequestPart(name = "recipient_file", required = false) MultipartFile recipientFile) {
+    public ResponseEntity<Map<String, Object>> storeStakeholder(long eventId,
+            Map<String, String> form,
+            List<Long> stakeholderIds,
+            List<String> channels,
+            MultipartFile recipientFile) {
         service.findEventOr404(eventId);
         // The dissemination inherits the event's area; block creating one on a cross-area event (404).
         areaGuard.assertOwnOrShared("public.oh_events", eventId);
@@ -300,15 +291,14 @@ public class OneHealthDisseminationController {
         message += " and is pending approval.";
         return ResponseEntity.ok(Map.of("success", true, "message", message, "id", dissId));
     }
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.disseminate')")
-    @PostMapping(value = "/events/{eventId}/disseminations/public", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
     @Transactional
-    public ResponseEntity<Map<String, Object>> storePublic(@PathVariable long eventId,
-            @RequestParam Map<String, String> form,
-            @RequestParam(name = "target_audience", required = false) List<String> targetAudience,
-            @RequestParam(name = "channels", required = false) List<String> channels,
-            @RequestPart(name = "recipient_file", required = false) MultipartFile recipientFile) {
+    public ResponseEntity<Map<String, Object>> storePublic(long eventId,
+            Map<String, String> form,
+            List<String> targetAudience,
+            List<String> channels,
+            MultipartFile recipientFile) {
         service.findEventOr404(eventId);
         // The dissemination inherits the event's area; block creating one on a cross-area event (404).
         areaGuard.assertOwnOrShared("public.oh_events", eventId);
@@ -359,11 +349,10 @@ public class OneHealthDisseminationController {
     }
 
     // ─── Approve / Reject ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.approve')")
-    @PostMapping("/disseminations/{id}/approve")
     @Transactional
-    public ResponseEntity<Map<String, Object>> approve(@PathVariable long id, @org.springframework.web.bind.annotation.RequestBody Map<String, Object> body) {
+    public ResponseEntity<Map<String, Object>> approve(long id, Map<String, Object> body) {
         findOr404(id);
         String action = OneHealthEventService.strOf(body.get("approval_status"));
         if (action == null || !List.of("approved", "rejected").contains(action)) {
@@ -388,11 +377,10 @@ public class OneHealthDisseminationController {
     }
 
     // ─── Acknowledge (stakeholder-session action; PMO sessions get the source 403) ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.acknowledge')")
-    @PostMapping("/disseminations/{id}/acknowledge")
     @Transactional
-    public ResponseEntity<Map<String, Object>> acknowledge(@PathVariable long id) {
+    public ResponseEntity<Map<String, Object>> acknowledge(long id) {
         findOr404(id);
         Long stakeholderId = currentOneHealthStakeholderId();
         if (stakeholderId == null) {
@@ -419,11 +407,10 @@ public class OneHealthDisseminationController {
     }
 
     // ─── Resend ───
+    @Override
 
-    @PreAuthorize("hasAuthority('one_health.manage')")
-    @PostMapping("/disseminations/{id}/resend")
     @Transactional
-    public Map<String, Object> resend(@PathVariable long id) {
+    public Map<String, Object> resend(long id) {
         // resend dispatches REAL SMS/email — block cross-area resends (404), keeping the one_health.manage gate.
         areaGuard.assertParentOwnOrShared("public.oh_disseminations", "event_id", "public.oh_events", id);
         findOr404(id);
@@ -432,11 +419,10 @@ public class OneHealthDisseminationController {
     }
 
     // ─── Recipients lookup for the creation modal ───
+    @Override
 
-    @GetMapping("/disseminations/recipients")
-    @PreAuthorize("hasAuthority('one_health.disseminate')")
-    public Map<String, Object> recipients(@RequestParam(name = "event_id") long eventId,
-                                          @RequestParam String type) {
+    public Map<String, Object> recipients(long eventId,
+                                          String type) {
         Map<String, Object> ev = service.findEventOr404(eventId);
         List<Map<String, Object>> recipients;
         if ("stakeholder".equals(type)) {
