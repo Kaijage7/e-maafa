@@ -191,7 +191,10 @@ Suggested migration order:
 45. ~~**Hazard Area Context**~~ — **DONE** (ops context links; productive geo + warning/submission resolve)  
 46. ~~**Response support engines → service.support**~~ — **DONE** (shared hubs, not fat controllers)  
 47. ~~**Publish `show_on_map` + PDF live probe**~~ — **DONE** (excellence: one-step portal map; go-live GL-09)  
-48. Other modules (mitigation/portal/recovery/…) next  
+48. ~~**Frameworks (content)**~~ — **DONE** (first content/mitigation eGA leaf; page productive)
+49. ~~**Hazards (mitigation master)**~~ — **DONE** (registry + status/delete guards; page productive)
+50. Remaining mitigation (measures, infrastructure, past disasters, risk assessments, GIS, dashboard) then portal/recovery
+  
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 
@@ -243,6 +246,8 @@ Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).
 | EW Scanner | Done | `/v1/ew/scanner/*` | Thin controller + service.impl; **dual stats** (`stats`=filtered WHERE, `global`=unfiltered); productive AND filters status/hazard/source/severity/reliability/region/q/days; `matched` before limit; show **404**; re-dismiss **404**; agency tasking isolation; Partner **403** |
 | EW Management Report | Done | `GET /v1/reports/early-warnings` | Thin controller + service.impl; productive `from`/`to` (yyyy-MM-dd; invalid→full range); DAS Dodoma isolation; Partner **403**; unauth **401**; SA/DAS baselines identical post-extract |
 | Hazard Area Context | Done | `GET /v1/ops/hazard-area-context` | Thin controller + service.impl; lat/lng/districtId/regionId/areaName productive; bad geo **404**; **fixed** warningId/code join to warning_hazards (was always null); submission uses hazard_types/top_alert; Partner **403** |
+| Frameworks | Done | `/v1/frameworks` | Thin controller + service.impl; entity/repo remain mitigation package; productive `page`; show **404**; Partner/DAS **403**; create validation **400** |
+| Hazards | Done | `/v1/hazards` | Thin controller + service.impl; productive `page`; show **404**; unauth **401**; baselines match; EW/response regressions |
 
 45. ~~**Hazard Area Context**~~ — **DONE**
 

@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.mitigation;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,6 +26,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.mitigation.DisasterRiskFramework;
+import tz.go.pmo.dmis.mitigation.FrameworkRepository;
+import tz.go.pmo.dmis.mitigation.FrameworkWriteRequest;
+import tz.go.pmo.dmis.service.FrameworkService;
 
 /**
  * Reproduces MitigationController's framework methods over the existing
@@ -35,7 +39,7 @@ import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
  */
 @Service
 @RequiredArgsConstructor
-public class FrameworkService {
+public class FrameworkServiceImpl implements FrameworkService {
 
     private static final int PER_PAGE = 15;
     private static final ZoneId ZONE = ZoneId.of("Africa/Dar_es_Salaam");
@@ -53,6 +57,7 @@ public class FrameworkService {
     @Value("${dmis.storage.public-root:${user.dir}/storage/public}")
     private String publicRoot;
 
+    @Override
     @Transactional(readOnly = true)
     public Map<String, Object> index(int page) {
         Page<DisasterRiskFramework> result = frameworks.findAll(
@@ -78,11 +83,13 @@ public class FrameworkService {
         return out;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Map<String, Object> show(Long id) {
         return toDetail(find(id));
     }
 
+    @Override
     @Transactional
     public Map<String, Object> store(FrameworkWriteRequest r) {
         validate(r, "draft".equalsIgnoreCase(r.getStatus() == null ? "" : r.getStatus()));
@@ -97,6 +104,7 @@ public class FrameworkService {
         return toDetail(frameworks.save(fw));
     }
 
+    @Override
     @Transactional
     public Map<String, Object> update(Long id, FrameworkWriteRequest r) {
         validate(r, false); // frameworkUpdate has no draft relaxation
@@ -113,6 +121,7 @@ public class FrameworkService {
         return toDetail(frameworks.save(fw));
     }
 
+    @Override
     @Transactional
     public void destroy(Long id) {
         DisasterRiskFramework fw = find(id);

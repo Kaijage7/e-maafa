@@ -6,7 +6,7 @@
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 44 thin eGA controllers, 44 service + 44 impl |
+| Canonical tree `controller` / `service` / `impl` / `repository` / `entity` / `dto` | **Present** | 46 thin eGA controllers, 46 service + 46 impl |
 | Settings + preparedness masters | **Migrated** | users, roles, locations, institutions, resources, translations, warehouses, inventory, temp WH, training, alert-subs, evacuation |
 | Response leaves | **Migrated** | **All former fat Response controllers** are eGA-layered |
 | Response support engines | **eGA-aligned** | Under `service.support` (workflow, dispatch, activation, simulation) |
@@ -144,7 +144,10 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 28. ~~eGA migrate **EW Scanner** (+ advanced dual stats)~~ — **DONE**.  
 29. ~~eGA migrate **EW Management Report**~~ — **DONE**.  
 30. ~~eGA migrate **Hazard Area Context**~~ — **DONE**.  
-31. Next: mitigation / portal / recovery leaves.  
+31. ~~eGA migrate **Frameworks**~~ — **DONE**.
+32. ~~eGA migrate **Hazards**~~ — **DONE** (first mitigation master).
+33. Next mitigation: measures → infrastructure → past disasters → risk assessments → GIS/dashboard.
+34. Then portal / recovery / One Health.  
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -226,3 +229,13 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 | Dual resource paths | **By design layers**: `/v1/settings/resources` catalogue vs `/v1/inventory` stock vs response settings vocab — not duplicate fat endpoints |
 
 **Honest excellence:** Not “everything perfect” — dual SoR paths outside EW remain documented (past_disasters, JWT vs Keycloak). EW+Response operational path is production-grade layered, fail-closed, and integration-complete.
+
+
+## 9. Mitigation eGA start (2026-07-13)
+
+| Leaf | Path | Verified |
+|------|------|----------|
+| Frameworks | `/v1/frameworks` | page productive; stats/pagination baseline; show 404; Partner/DAS 403; create 400 |
+| Hazards | `/v1/hazards` | page productive; stats baseline match; show 404; unauth 401; frameworks co-live |
+
+Remaining fat mitigation controllers: measures, infrastructure, past disasters, risk assessments, GIS map, dashboard.

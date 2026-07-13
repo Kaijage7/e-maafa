@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.mitigation;
+package tz.go.pmo.dmis.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
+import tz.go.pmo.dmis.mitigation.HazardDetailResponse;
+import tz.go.pmo.dmis.mitigation.HazardIndexResponse;
+import tz.go.pmo.dmis.mitigation.HazardWriteRequest;
+import tz.go.pmo.dmis.mitigation.MitHazard;
+import tz.go.pmo.dmis.mitigation.MitHazardRepository;
+import tz.go.pmo.dmis.service.HazardService;
 
 /**
  * Reproduces Admin/HazardController against the existing {@code hazards} table: the index payload
@@ -21,7 +27,7 @@ import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
  */
 @Service
 @RequiredArgsConstructor
-public class HazardService {
+public class HazardServiceImpl implements HazardService {
 
     private static final int PER_PAGE = 15;
 
@@ -29,6 +35,7 @@ public class HazardService {
     private final ObjectMapper objectMapper;
     private final JdbcTemplate jdbc;
 
+    @Override
     @Transactional(readOnly = true)
     public HazardIndexResponse index(int page) {
         Page<MitHazard> result = hazards.findAllByOrderByTypeAscNameAsc(PageRequest.of(Math.max(page, 1) - 1, PER_PAGE));
@@ -54,11 +61,13 @@ public class HazardService {
         return new HazardIndexResponse(rows, pagination, stats, byCategory, bySeverity);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public HazardDetailResponse show(Long id) {
         return toDetail(find(id));
     }
 
+    @Override
     @Transactional
     public HazardDetailResponse store(HazardWriteRequest request) {
         if (hazards.existsByName(request.name())) {
@@ -75,6 +84,7 @@ public class HazardService {
         return toDetail(hazards.save(hazard));
     }
 
+    @Override
     @Transactional
     public HazardDetailResponse update(Long id, HazardWriteRequest request) {
         MitHazard hazard = find(id);
@@ -85,6 +95,7 @@ public class HazardService {
         return toDetail(hazards.save(hazard));
     }
 
+    @Override
     @Transactional
     public void updateStatus(Long id, boolean isActive) {
         MitHazard hazard = find(id);
@@ -93,6 +104,7 @@ public class HazardService {
         hazards.save(hazard);
     }
 
+    @Override
     @Transactional
     public void destroy(Long id) {
         MitHazard hazard = find(id);
