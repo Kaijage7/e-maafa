@@ -132,7 +132,7 @@ Optional later: subpackages under layers for readability only, e.g. `controller.
 
 ## 7. Transition rules (existing code)
 
-Legacy fat packages under `ew/`, `recovery/`, `portal/`, `onehealth/`, `finance/`, and `monitoring/` controllers are gone. Shared Response engines live in `service.support/`. Other domains (remaining reports, notification, stakeholder, ops/IAM …) may still host controllers until migrated.
+Legacy fat packages under `ew/`, `recovery/`, `portal/`, `onehealth/`, `finance/`, `monitoring/`, and `reports/` controllers are gone. Shared Response engines live in `service.support/`. Other domains (notification, stakeholder, ops/IAM …) may still host controllers until migrated.
 
 | Rule | |
 |------|---|
@@ -207,7 +207,8 @@ Suggested migration order:
 61. ~~**One Health dissemination**~~ — **DONE** (dual-track create, approve, recipients; OH controllers complete)
 62. ~~**Finance (budget + economics)**~~ — **DONE** (maker-checker SoD hardened; eGA layered)
 63. ~~**Monitoring & Evaluation**~~ — **DONE** (thin controller + dashboard/entry service.impl; `monitoring/` package empty)
-64. Remaining fat domains: reports / notification / stakeholder / ops-IAM
+64. ~~**Reports (incident / resource / generated)**~~ — **DONE** (thin controllers + service.impl; `reports/` package empty; EW management already eGA)
+65. Remaining fat domains: notification / stakeholder / ops-IAM
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).

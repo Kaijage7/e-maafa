@@ -157,7 +157,8 @@ This commit: assessments 409 root cause + form-data + params + executive 403 + l
 41. ~~eGA migrate **One Health dissemination**~~ — **DONE** (OH complete).
 42. ~~eGA migrate **Finance (budget + economics)**~~ — **DONE** (+ reject SoD fix).
 43. ~~eGA migrate **Monitoring & Evaluation**~~ — **DONE** (see §18).
-44. Next fat domains: reports / notification / stakeholder / ops-IAM. 
+44. ~~eGA migrate **Reports** (incident / resource / generated)~~ — **DONE** (see §19).
+45. Next fat domains: notification / stakeholder / ops-IAM. 
 32. Stamp area on temp warehouses + agency stock data hygiene.  
 33. Integration tests: Reg assessments index, form-data picker, movements warehouse_id, loans Returned.
 
@@ -536,3 +537,37 @@ Paths remain `/v1/monitoring-evaluation/*`.
 | create E2E_ME_TEMP + SQL delete | net-zero |
 
 **Verdict:** M&E is eGA-layered with productive filters and auth walls intact. Next carefully: reports / notification.
+
+
+## 19. Reports eGA (2026-07-13, careful)
+
+Three remaining analytics report controllers in `reports/` (EW management already eGA). **Paths/JSON unchanged.**
+
+### Structure
+
+| Path | Before | After |
+|------|--------|-------|
+| `/v1/reports/incidents` | fat controller | thin controller + `IncidentReportServiceImpl` |
+| `/v1/reports/resource-allocations` | fat controller | thin controller + `ResourceReportServiceImpl` |
+| `/v1/reports/generated` | fat controller | thin controller + `GeneratedReportsServiceImpl` |
+| package `reports/` | 3 controllers | **removed** |
+
+Controls retained: simulation exclusion on incident/resource reports; partner/stakeholder blocked (404/module 403); area scope via `appendAreaScopeWithCouncil`.
+
+### Live validation
+
+| Surface | Result |
+|---------|--------|
+| Incidents default | **200**, summary total **17**, records **17**, full breakdown keys |
+| `status=NOPE_ZZZ` | total **0**, records **0** |
+| inverted / bad dates | **422** |
+| Resource default | **200**, summary + records **11** |
+| future empty window | total **0** |
+| inverted dates | **422** |
+| Generated list | **200**, types catalogue present, n=0 |
+| `type=NOPE` | n=**0** |
+| EW management (prior eGA) | **200** still |
+| unauth incidents | **401** |
+| Partner all three | module **403** |
+
+**Verdict:** Reports domain eGA complete with productive filters and security walls. Next carefully: notification.
