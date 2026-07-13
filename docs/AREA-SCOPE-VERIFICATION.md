@@ -37,9 +37,24 @@
    own region or fully national). Dist DC Dodoma now **2** warehouses (was 10).  
 5. **Backfill** `users.region_id` from district when missing (V202).
 
+## Allocations re-check (careful pass)
+
+| Check | Dist DC Dodoma | Reg DC Dodoma | National |
+|-------|----------------|---------------|----------|
+| Allocation queues | empty (seed data is Dar) | empty | has Dar queues |
+| Track OOA alloc #1 | **404** | — | 200 |
+| Warehouse inventory panel | 2 Dodoma only | Dodoma only | all |
+| `available_resources` qty | **area-scoped** (e.g. Food 0 vs Nat 7455) | scoped | full |
+| form-data warehouses | 2 Dodoma | Dodoma | all |
+
+**Fix:** `ResourceAllocationController` no longer returns national stock roll-ups on index/form-data.
+
+**Flyway hygiene:** never edit applied migrations — V202 left as first applied; region backfill is **V203**.
+
 ## Notes (honest)
 
-- Fully national warehouses (null region + null district) remain visible to area officers.  
+- Fully national warehouses (null region + null district) remain visible when policy allows.  
 - Region officer sees **all districts in region** for incidents/EW — correct.  
 - Module access without permission is **403** (not empty leak).  
-- Seats still need passwords set by admin before human login.
+- Seats still need passwords set by admin before human login.  
+- Allocation seed data is mostly Dar incident #1 — Dodoma officers correctly see **empty queues**, not foreign requests.

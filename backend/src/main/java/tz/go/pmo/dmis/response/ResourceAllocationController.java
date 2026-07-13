@@ -100,12 +100,23 @@ public class ResourceAllocationController {
         jurisdiction.appendWarehouseScope("w", wsql, wparams);
         wsql.append(" group by w.id, w.name, w.region_id, w.district_id, r.name, d.name order by w.name");
         out.put("warehouse_inventory", jdbc.queryForList(wsql.toString(), wparams.toArray()));
-        out.put("available_resources", jdbc.queryForList("""
-                select r.category, count(distinct r.id) as total, coalesce(sum(ii.quantity), 0) as total_quantity
+        // Catalogue categories are national, but stock totals must respect warehouse jurisdiction —
+        // otherwise a district officer sees country-wide quantity aggregates (soft leak).
+        StringBuilder arsql = new StringBuilder("""
+                select r.category, count(distinct r.id) as total, coalesce(sum(scoped.quantity), 0) as total_quantity
                 from public.resources r
-                left join public.inventory_items ii on ii.resource_id = r.id
+                left join (
+                    select ii.resource_id, ii.quantity
+                    from public.inventory_items ii
+                    join public.warehouses w on w.id = ii.warehouse_id
+                    where 1=1""");
+        List<Object> arparams = new ArrayList<>();
+        jurisdiction.appendWarehouseScope("w", arsql, arparams);
+        arsql.append("""
+                ) scoped on scoped.resource_id = r.id
                 group by r.category order by r.category
-                """));
+                """);
+        out.put("available_resources", jdbc.queryForList(arsql.toString(), arparams.toArray()));
         // Honest mode: when no live allocation traffic, the surface is preparedness stocking —
         // warehouses remain area-scoped; dispatch chains activate only against incidents.
         boolean hasOps = !pending.isEmpty() || !forwarded.isEmpty() || !active.isEmpty();
@@ -162,13 +173,23 @@ public class ResourceAllocationController {
         jurisdiction.appendAreaScope("i", isql, iparams);
         isql.append(" order by severity_level asc, reported_at desc");
         out.put("incidents", jdbc.queryForList(isql.toString(), iparams.toArray()));
-        out.put("resources", jdbc.queryForList("""
+        // available_stock is only from warehouses visible to this officer (not national roll-up).
+        StringBuilder rsql = new StringBuilder("""
                 select r.id, r.name, r.category, r.unit_of_measure,
-                       coalesce(sum(ii.quantity), 0) as available_stock
+                       coalesce(sum(scoped.quantity), 0) as available_stock
                 from public.resources r
-                left join public.inventory_items ii on ii.resource_id = r.id
+                left join (
+                    select ii.resource_id, ii.quantity
+                    from public.inventory_items ii
+                    join public.warehouses w on w.id = ii.warehouse_id
+                    where 1=1""");
+        List<Object> rparams = new ArrayList<>();
+        jurisdiction.appendWarehouseScope("w", rsql, rparams);
+        rsql.append("""
+                ) scoped on scoped.resource_id = r.id
                 group by r.id order by r.category, r.name
-                """));
+                """);
+        out.put("resources", jdbc.queryForList(rsql.toString(), rparams.toArray()));
         // Area stamp + zone so the form can show which store serves which incident geography.
         StringBuilder whsql = new StringBuilder("""
                 select w.id, w.name, w.zone, w.region_id, w.district_id,
