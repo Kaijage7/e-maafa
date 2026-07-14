@@ -82,13 +82,18 @@ No monorepo `extracted/` path required.
 
 **Proof:** compose config shows volume; unit test via docker volume inspect + write/read (see appendix if run).
 
-### Phase E — D4 TLS staging fallback
+### Phase E — D4 TLS staging fallback — **DONE 2026-07-14**
 
-1. Add `docker-compose.tls-local.yml` or Caddy env `DMIS_TLS_MODE=internal`.  
-2. Document public ACME vs internal.  
-3. Optional smoke with curl -k https://localhost.  
+1. `deploy/caddy/Caddyfile.internal` — `tls internal` for localhost / 127.0.0.1  
+2. `docker-compose.tls-local.yml` — edge on 8443/8088 (configurable)  
+3. Documented ACME vs internal in DOCKER-DEPLOY §6; README + `.env.example`  
 
-**Proof:** edge serves HTTPS without public DNS (internal) or doc-only ACME path.
+**Proof:**  
+- `docker compose -f docker-compose.yml -f docker-compose.tls-local.yml config` → OK  
+- Isolated Caddy + nginx smoke: `curl -k https://localhost:18443/` → **HTTP 200**, nginx welcome HTML  
+- Cert issuer: `CN = Caddy Local Authority - ECC Intermediate`  
+- Without `-k`: TLS verify fails (expected; not a public CA)  
+- Honest: this is **staging / laptop** TLS only — not production ACME  
 
 ### Phase F — D5 / D13 / docs polish
 
@@ -96,15 +101,9 @@ No monorepo `extracted/` path required.
 2. Fold D6–D12 into DOCKER-DEPLOY as operator checklist.  
 3. Close this plan with “done” dates.  
 
-## 5. Partial work already on disk (not finished)
+## 5. Historical note (phases B–E closed)
 
-| Item | State | Action in plan |
-|------|--------|----------------|
-| `deploy/ew-pdf/engine/` (~22M, untracked) | Copied earlier during rushed pass; **not committed**, Dockerfile **still** monorepo context | Complete under **Phase B** carefully (review contents, .gitignore, Dockerfile rewrite) |
-| Compose PDF service + Caddy prod overlay | Committed earlier | Keep; only adjust build context in Phase B |
-| Full image build of ew-pdf | Not done | Phase C |
-
-Do **not** treat the untracked engine copy as “fixed” until Phase B proof passes and it is intentionally committed.
+Earlier partial work (untracked engine copy, monorepo Dockerfile) was completed under Phases B–C. Storage (D) and TLS local (E) are committed with proof above. Do not re-open closed phases unless a regression appears.
 
 ## 6. Out of scope for this plan
 
@@ -117,15 +116,14 @@ Do **not** treat the untracked engine copy as “fixed” until Phase B proof pa
 
 | Phase | Date | Operator | Pass/Fail | Notes |
 |-------|------|----------|-----------|-------|
-| A Document freeze | 2026-07-14 | | Pass (document written) | Wait before B |
+| A Document freeze | 2026-07-14 | | Pass | Document written |
 | B D1 Vendor + Dockerfile | 2026-07-14 | | **Pass** | In-repo engine; image builds from repo alone |
-| C D2 PDF smoke | 2026-07-14 | | **Pass** | LibreOffice in image; `POST /generate/722e4` → PDF 389891 bytes, 2 pages |
-| D D3 Storage volume | 2026-07-14 | | **Pass** | `dmis_storage` → `/app/storage`; `DMIS_STORAGE_PUBLIC_ROOT` wired |
-| D D3 Storage volume | | | | |
-| E D4 TLS fallback | | | | |
-| F Docs / secrets polish | | | | |
+| C D2 PDF smoke | 2026-07-14 | | **Pass** | LibreOffice; generate → PDF 389891 bytes |
+| D D3 Storage volume | 2026-07-14 | | **Pass** | `dmis_storage` → `/app/storage` |
+| E D4 TLS local | 2026-07-14 | | **Pass** | `tls internal`; curl -k HTTPS 200; CA = Caddy Local Authority |
+| F Docs / secrets polish | | | | Next |
 
 ## 8. Next action
 
-**Phase A complete when this file is linked and the team agrees to proceed.**  
-**Next fix:** Phase B only (D1). No storage, no TLS, no release push until B proof is green.
+**Phases A–E complete.**  
+**Next fix (when operator says proceed):** Phase F only (D5 secrets polish, D13 already largely done in B, fold D6–D12 checklist into DOCKER-DEPLOY). Do not claim go-live from compose alone.

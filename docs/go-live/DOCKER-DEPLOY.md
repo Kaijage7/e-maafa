@@ -93,13 +93,34 @@ Do **not** run `docker compose build` on the public edge if ICT wants immutable 
 
 ## 6. TLS
 
-Production overlay starts **Caddy** (`edge`) with `deploy/caddy/Caddyfile`.
+### 6.1 Production (public DNS + ACME)
 
-- Automatic HTTPS when `DMIS_PUBLIC_HOST` resolves to the server.  
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+- Caddyfile: `deploy/caddy/Caddyfile`  
+- Requires `DMIS_PUBLIC_HOST` with DNS A/AAAA to the host and ports 80/443 open  
+- Automatic HTTPS (Let's Encrypt)  
+
+### 6.2 Staging / laptop without public DNS (internal cert)
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.tls-local.yml up -d
+```
+
+- Caddyfile: `deploy/caddy/Caddyfile.internal` (`tls internal`)  
+- HTTPS: `https://localhost:8443` (HTTP redirect helper on `:8088`)  
+- Browsers show a certificate warning — expected  
+- Smoke: `curl -k https://localhost:8443/`  
+
+Do **not** use internal TLS on a public production hostname.
+
+### 6.3 Behaviour notes
+
 - Frontend nginx still proxies `/api` and `/ew-api` on the internal network.  
-- Backend uses `forward-headers-strategy` so `X-Forwarded-Proto` is honoured.
-
-Alternative: omit `edge` and put host nginx/Caddy in front of port 8081 only. Then still set CORS to the public HTTPS origin.
+- Backend uses `forward-headers-strategy` so `X-Forwarded-Proto` is honoured.  
+- Alternative: omit `edge` and put host nginx/Caddy in front of port 8081 only.
 
 ## 7. EW PDF
 
@@ -147,6 +168,7 @@ See **DOCKER-FIX-PLAN.md**. Remaining after B/C/D:
 1. ~~PDF engine in git (D1)~~ done  
 2. ~~PDF generate smoke (D2)~~ done  
 3. ~~Storage volume (D3)~~ done  
-4. TLS path without public DNS for staging (D4) — next  
+4. ~~TLS without public DNS (D4)~~ done (`docker-compose.tls-local.yml`)  
+5. Secrets polish (D5 / Phase F) — next  
 
 Do not claim full Docker dual-proof until the fix plan’s remaining phases pass.

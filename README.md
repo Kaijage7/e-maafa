@@ -39,6 +39,13 @@ Production-style (image tags + TLS edge):
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
+Staging HTTPS without public DNS:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.tls-local.yml up -d
+curl -k https://localhost:8443/
+```
+
 ## Production cutover
 
 Start with the go-live document set (SRS, SDD, plan, acceptance, honesty, Docker):

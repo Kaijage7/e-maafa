@@ -1,0 +1,33 @@
+# Staging / laptop TLS without public DNS (Phase E / D4).
+# Caddy issues a local CA cert (tls internal). Browsers will warn; use curl -k.
+#
+# Used by: docker-compose.tls-local.yml
+# Production with real DNS: use Caddyfile + docker-compose.prod.yml (ACME).
+
+{
+	# No Let's Encrypt on localhost
+	auto_https disable_redirects
+}
+
+localhost, 127.0.0.1 {
+	tls internal
+	encode gzip
+
+	reverse_proxy frontend:80 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto https
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
