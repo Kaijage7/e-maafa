@@ -309,17 +309,31 @@ export class EwAlertMapComponent {
   activeHazard = computed(() => this.activeHazards().find(h => h.id === this.activeId()) ?? null);
   activeLevelLabel = computed(() => LEVELS.find(l => l.key === this.activeLevel())?.label ?? '');
 
-  colorOf(level: string): string { return LEVELS.find(l => l.key === level)?.color ?? '#E5E7EB'; }
-  /** Highest level among a hazard's areas — just for the card dot. */
-  topColor(h: Hazard): string {
-    let best = 'NONE';
-    for (const a of h.areas) { if (PAINT_LEVELS.findIndex(l => l.key === a.level) > PAINT_LEVELS.findIndex(l => l.key === best)) { best = a.level; } }
-    return this.colorOf(best);
+  colorOf(level: string): string {
+    // Normalize so "warning" / "MAJOR WARNING" still resolve to palette colours.
+    const key = String(level || 'NONE').trim().toUpperCase().replace(/\s+/g, '_');
+    return LEVELS.find(l => l.key === key)?.color
+      ?? ({ ADVISORY: '#FFFF00', WARNING: '#FFA500', MAJOR_WARNING: '#FF0000', NONE: '#E5E7EB' } as Record<string, string>)[key]
+      ?? '#E5E7EB';
   }
 
-  /** Rank for max-level composite fills (PDF region_levels behaviour). */
+  /**
+   * Severity rank — MUST put NONE at 0. PAINT_LEVELS ends with NONE, so findIndex(NONE)
+   * is highest and wrongly beats every real alert (regions never took yellow/orange/red).
+   */
   private levelRank(level: string): number {
-    return PAINT_LEVELS.findIndex(l => l.key === level);
+    const key = String(level || 'NONE').trim().toUpperCase().replace(/\s+/g, '_');
+    const rank: Record<string, number> = { NONE: 0, ADVISORY: 1, WARNING: 2, MAJOR_WARNING: 3 };
+    return rank[key] ?? 0;
+  }
+
+  /** Highest level among a hazard's areas — card icon ring colour. */
+  topColor(h: Hazard): string {
+    let best = 'NONE';
+    for (const a of h.areas) {
+      if (this.levelRank(a.level) > this.levelRank(best)) { best = a.level; }
+    }
+    return this.colorOf(best);
   }
 
   /**
@@ -414,17 +428,26 @@ export class EwAlertMapComponent {
 
   private styleFor(name: string): any {
     const lvl = this.compositeAreaLevel(name);
+    const key = String(lvl || 'NONE').trim().toUpperCase().replace(/\s+/g, '_');
     const onActiveCard = this.activeCardAreaLevel(name) != null;
+    const painted = key !== 'NONE';
     return {
-      fillColor: this.colorOf(lvl),
-      fillOpacity: lvl !== 'NONE' ? 0.8 : 0.18,
+      fill: true,
+      fillColor: this.colorOf(key),
+      fillOpacity: painted ? 0.82 : 0.14,
       color: onActiveCard ? '#0b3d5c' : '#5a6b7b',
       weight: onActiveCard ? 2.4 : 0.8,
       opacity: 1,
     };
   }
   private restyle(): void {
-    for (const [n, layer] of this.regionLayers) { layer.setStyle(this.styleFor(n)); }
+    for (const [n, layer] of this.regionLayers) {
+      // Reset path options fully so Leaflet never keeps a stale grey fill.
+      layer.setStyle(this.styleFor(n));
+      if (typeof layer.bringToFront === 'function' && this.compositeAreaLevel(n) !== 'NONE') {
+        try { layer.bringToFront(); } catch { /* ignore */ }
+      }
+    }
     this.renderHazardIcons();
   }
 
@@ -620,7 +643,11 @@ export class EwAlertMapComponent {
 	          lyr.bindTooltip(() => escapeHtml(this.regionTooltip(name)), { sticky: true, direction: 'top' });
           lyr.on({
             click: () => this.paintArea(name),
-            mouseover: () => lyr.setStyle({ weight: 2.6 }),
+            // Keep fill colours on hover — only bump stroke weight.
+            mouseover: () => {
+              const s = this.styleFor(name);
+              lyr.setStyle({ ...s, weight: Math.max(s.weight, 2.6) });
+            },
             mouseout: () => lyr.setStyle(this.styleFor(name)),
           });
         },
@@ -870,7 +897,7 @@ export class EwAlertMapComponent {
     if (!areas.length) { return; }
     const regions = [...new Set(areas.map(a => a.name))];
     let best = 'ADVISORY';
-    for (const a of areas) { if (PAINT_LEVELS.findIndex(l => l.key === a.level) > PAINT_LEVELS.findIndex(l => l.key === best)) { best = a.level; } }
+    for (const a of areas) { if (this.levelRank(a.level) > this.levelRank(best)) { best = a.level; } }
     // centroid = average of the painted regions' layer centres (the map already holds the geometry)
     let lat = 0, lng = 0, n = 0;
     for (const r of regions) { const ly = this.regionLayers.get(r); if (ly) { const c = ly.getBounds().getCenter(); lat += c.lat; lng += c.lng; n++; } }
