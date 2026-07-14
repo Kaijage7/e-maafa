@@ -1064,3 +1064,21 @@ OH events / dashboard / directives / disseminations / form-data → **200**; sta
 
 ### Intentionally not moved (still hubs)
 `notification/`, `ew/`, `inform/`, `mitigation/` entities, `integration/`, `local/` seeders.
+
+
+## 36. Careful residual markers + breadth smoke (2026-07-14)
+
+User direction: *proceed very carefully please.*
+
+### Structure polish (no runtime behaviour change)
+| Package | Marker |
+|---------|--------|
+| `finance/` | package-info only — emptied (budget/economics/thresholds under eGA layers) |
+| `recovery/` | package-info only — emptied (programs/projects/relief/knowledge under eGA layers) |
+| `onehealth/`, `preparedness/` | already package-info only |
+
+### Breadth smoke (live)
+inventory, warehouses, temp warehouses, alert-subscriptions, locations, roles, approval-workflows, executive, allocations, frameworks, past-disasters, infrastructure → **200**. Unauth inventory/warehouses/roles/OH → **401**. Regressions: accountGroup/instClass/action-guide level **422**; OH status NOPE **n=0**.
+
+### Controllers outside controller/
+**0**
