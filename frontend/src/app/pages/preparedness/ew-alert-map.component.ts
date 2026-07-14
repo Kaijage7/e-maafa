@@ -188,7 +188,10 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
           </select>
         </div>
         <div #alertMap class="alert-map"></div>
-        <div class="map-hint"><i class="fas fa-hand-pointer"></i> Click areas to paint <b>{{ activeLevelLabel() }}</b> · use the toolbar (top-left) to draw hazard shapes · Day {{ activeDay() + 1 }}.</div>
+        <div class="map-hint"><i class="fas fa-hand-pointer"></i>
+          <b>Add</b> one card per hazard (e.g. Heavy Rain vs Strong Wind). Click areas to paint <b>{{ activeLevelLabel() }}</b> on the selected card.
+          Multiple hazards may share a region. Shapes use the shape-level colour + hazard icon (PDF-matching). Day {{ activeDay() + 1 }}.
+        </div>
         @if (status()) { <div class="map-status" [class.err]="statusErr()">{{ status() }}</div> }
       </div>
     </div>
@@ -271,9 +274,9 @@ export class EwAlertMapComponent {
   private shapeSeq = 0;
   private map: any;
   private regionLayers = new Map<string, any>();
-  private drawnGroup: any;            // persistent delineation FeatureGroup (never cleared by restyle)
-  private hazIconLayer: any;          // hazard icon markers (exact engine icons) over each hazard's areas
-  private hazIconMarkers = new Map<string, any>();   // keyed hazardId|area|type — kept STABLE across recolours
+  private drawnGroup: any;            // persistent delineation FeatureGroup (edit/trash target — shapes only)
+  private hazIconLayer: any;          // hazard icon markers on regions + shapes (not in draw edit group)
+  private hazIconMarkers = new Map<string, any>();   // keyed hazardId|area|type or shape|hazardId|dlnId
   refOn = signal(true);                              // overlay what OTHER entities issued (reference, like PMO)
   crossRef = signal<RefMarker[]>([]);
   private refLayer: any;
@@ -314,9 +317,28 @@ export class EwAlertMapComponent {
     return this.colorOf(best);
   }
 
-  /** The level the ACTIVE hazard assigned to a given area (each area owns its level). */
-  private areaLevel(name: string): string {
-    return this.activeHazard()?.areas.find(a => a.name === name)?.level ?? 'NONE';
+  /** Rank for max-level composite fills (PDF region_levels behaviour). */
+  private levelRank(level: string): number {
+    return PAINT_LEVELS.findIndex(l => l.key === level);
+  }
+
+  /**
+   * Composite level for a region across ALL hazards on the active day (highest wins).
+   * Matches the PDF engine: rain @ X and wind @ Y both stay visible; same region with two
+   * hazards uses the stronger alert colour.
+   */
+  private compositeAreaLevel(name: string): string {
+    let best = 'NONE';
+    for (const h of this.activeHazards()) {
+      const a = h.areas.find(x => x.name === name);
+      if (a && this.levelRank(a.level) > this.levelRank(best)) { best = a.level; }
+    }
+    return best;
+  }
+
+  /** Level the ACTIVE hazard card assigned to this area (for paint toggle / emphasis). */
+  private activeCardAreaLevel(name: string): string | null {
+    return this.activeHazard()?.areas.find(a => a.name === name)?.level ?? null;
   }
 
   private mutateActiveHazard(fn: (h: Hazard) => Hazard, restyle = true): void {
@@ -345,6 +367,11 @@ export class EwAlertMapComponent {
   patch(id: number, p: Partial<Hazard>): void {
     this.days.update(days => days.map((d, i) => i === this.activeDay()
       ? { ...d, hazards: d.hazards.map(h => h.id === id ? { ...h, ...p } : h) } : d));
+    // Type change must swap map icons / shape markers immediately.
+    if (p.type !== undefined) {
+      this.restyle();
+      this.renderDelineations();
+    }
   }
   unassign(id: number, name: string, e: Event): void {
     e.stopPropagation();
@@ -360,16 +387,14 @@ export class EwAlertMapComponent {
     this.renderDelineations();
   }
 
-  /** Select a hazard card — must restyle the map + re-render its delineations (the map shows the
-   * ACTIVE hazard's per-area levels and shapes). */
+  /** Select a hazard card — map keeps ALL hazards' areas/shapes visible (PDF-like); selected card is paint target. */
   selectHazard(id: number): void {
     this.activeId.set(id);
     this.restyle();
     this.renderDelineations();
   }
 
-  /** Paint an area at the ACTIVE painting level. The level is captured onto the area NOW — changing the
-   * active level later does not touch it. Clicking an area already at the active level removes it. */
+  /** Paint an area onto the ACTIVE hazard card only (other hazard cards keep their own areas). */
   private paintArea(name: string): void {
     if (!this.activeHazard()) { this.addHazard(); }
     const lvl = this.activeLevel();
@@ -388,54 +413,132 @@ export class EwAlertMapComponent {
   }
 
   private styleFor(name: string): any {
-    const lvl = this.areaLevel(name);
-    return { fillColor: this.colorOf(lvl), fillOpacity: lvl !== 'NONE' ? 0.8 : 0.18, color: '#5a6b7b', weight: 0.8, opacity: 1 };
+    const lvl = this.compositeAreaLevel(name);
+    const onActiveCard = this.activeCardAreaLevel(name) != null;
+    return {
+      fillColor: this.colorOf(lvl),
+      fillOpacity: lvl !== 'NONE' ? 0.8 : 0.18,
+      color: onActiveCard ? '#0b3d5c' : '#5a6b7b',
+      weight: onActiveCard ? 2.4 : 0.8,
+      opacity: 1,
+    };
   }
   private restyle(): void {
     for (const [n, layer] of this.regionLayers) { layer.setStyle(this.styleFor(n)); }
     this.renderHazardIcons();
   }
 
-  /** STABLE hazard icons: ONE exact engine icon per painted area, each fixed at its own region centre,
-   * added/removed INCREMENTALLY. Existing icons are never re-created or moved when colours change — so
-   * the icon does not flicker or jump as you paint/recolour (the reported instability). Keyed by
-   * hazard-id + area + type, so painting recolours leave icons untouched but a hazard-type change swaps
-   * the icon. */
+  /**
+   * Hazard icons for every painted area + every drawn shape on every hazard card.
+   * Multi-hazard on one region: icons are nudged (PDF map_generator style).
+   * Shape icons live here (not in drawnGroup) so Leaflet.Draw trash/edit only hits geometries.
+   */
   private renderHazardIcons(): void {
     if (!this.hazIconLayer || typeof L === 'undefined') { return; }
-    const wanted = new Map<string, { type: string; name: string }>();
+    for (const [, m] of this.hazIconMarkers) { this.hazIconLayer.removeLayer(m); }
+    this.hazIconMarkers.clear();
+
+    const byRegion = new Map<string, { key: string; type: string; level: string }[]>();
     for (const h of this.activeHazards()) {
-      for (const a of h.areas) { wanted.set(`${h.id}|${a.name}|${h.type}`, { type: h.type, name: a.name }); }
+      for (const a of h.areas) {
+        if (!a.level || a.level === 'NONE') { continue; }
+        const key = `area|${h.id}|${a.name}|${h.type}`;
+        const list = byRegion.get(a.name) ?? [];
+        list.push({ key, type: h.type, level: a.level });
+        byRegion.set(a.name, list);
+      }
     }
-    // remove icons no longer wanted (area unpainted, hazard removed, or type changed)
-    for (const [key, m] of this.hazIconMarkers) {
-      if (!wanted.has(key)) { this.hazIconLayer.removeLayer(m); this.hazIconMarkers.delete(key); }
-    }
-    // add only NEW icons; leave existing ones exactly where they are (no flicker, no jump)
-    for (const [key, w] of wanted) {
-      if (this.hazIconMarkers.has(key)) { continue; }
-      const ly = this.regionLayers.get(w.name);
+    const nudges: [number, number][] = [
+      [0, 0], [0.18, 0.12], [-0.18, 0.12], [0.18, -0.12], [-0.18, -0.12], [0, 0.22],
+    ];
+    for (const [name, items] of byRegion) {
+      const ly = this.regionLayers.get(name);
       if (!ly) { continue; }
       const c = ly.getBounds().getCenter();
-      const icon = L.icon({ iconUrl: HAZ_ICON(w.type), iconSize: [28, 28], iconAnchor: [14, 14], className: 'haz-map-icon' });
-      const m = L.marker([c.lat, c.lng], { icon, pane: 'delineation-pane', interactive: false, keyboard: false }).addTo(this.hazIconLayer);
-      this.hazIconMarkers.set(key, m);
+      items.forEach((w, i) => {
+        const [dLat, dLng] = nudges[i % nudges.length];
+        const m = this.makeHazardMarker(c.lat + dLat, c.lng + dLng, w.type, w.level, false);
+        m.addTo(this.hazIconLayer);
+        this.hazIconMarkers.set(w.key, m);
+      });
+    }
+    // Shape centroids — same icon ring as PDF hazard_icons on drawn_shapes.
+    for (const h of this.activeHazards()) {
+      for (const dln of h.delineations) {
+        const c = this.delineationCentroid(dln);
+        if (!c) { continue; }
+        const key = `shape|${h.id}|${dln.id}|${h.type}`;
+        const m = this.makeHazardMarker(c.lat, c.lng, h.type, dln.level, false);
+        m.addTo(this.hazIconLayer);
+        this.hazIconMarkers.set(key, m);
+      }
     }
   }
 
+  private delineationCentroid(dln: Delineation): { lat: number; lng: number } | null {
+    const geom = dln.geojson?.geometry;
+    if (!geom) { return null; }
+    if (geom.type === 'Point') {
+      const [lng, lat] = geom.coordinates;
+      return { lat, lng };
+    }
+    if (geom.type === 'Polygon' && geom.coordinates?.[0]?.length) {
+      let slat = 0, slng = 0, n = 0;
+      for (const [lng, lat] of geom.coordinates[0]) { slat += lat; slng += lng; n++; }
+      return n ? { lat: slat / n, lng: slng / n } : null;
+    }
+    if (geom.type === 'LineString' && geom.coordinates?.length) {
+      let slat = 0, slng = 0, n = 0;
+      for (const [lng, lat] of geom.coordinates) { slat += lat; slng += lng; n++; }
+      return n ? { lat: slat / n, lng: slng / n } : null;
+    }
+    return null;
+  }
+
+  /** Ringed hazard icon (engine PNG) — used on regions and on drawn shapes. */
+  private makeHazardMarker(lat: number, lng: number, type: string, level: string, interactive: boolean): any {
+    const ring = this.colorOf(level);
+    return L.marker([lat, lng], {
+      icon: L.divIcon({
+        className: 'haz-map-icon',
+        html: `<div style="width:30px;height:30px;border-radius:50%;border:3px solid ${ring};background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.35)"><img src="${HAZ_ICON(type)}" style="width:18px;height:18px;object-fit:contain" alt=""></div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+      }),
+      pane: 'delineation-pane',
+      interactive,
+      keyboard: false,
+    });
+  }
+
   // ── delineation (draw) layer ──
+  /**
+   * Render shapes for ALL hazards on the day (PDF day map shows every hazard's
+   * drawn_shapes). Active card's shapes are full opacity; others slightly faded.
+   * Icons are re-applied via renderHazardIcons (shape centroids).
+   */
   private renderDelineations(): void {
     if (!this.drawnGroup) { return; }
     this.drawnGroup.clearLayers();
-    const h = this.activeHazard();
-    if (!h) { return; }
-    for (const dln of h.delineations) {
-      const lyr = this.layerFromDelineation(dln);
-      if (lyr) { this.drawnGroup.addLayer(lyr); }
+    for (const h of this.activeHazards()) {
+      const isActive = h.id === this.activeId();
+      for (const dln of h.delineations) {
+        const lyr = this.layerFromDelineation(dln, isActive);
+        if (lyr) { this.drawnGroup.addLayer(lyr); }
+      }
     }
+    this.renderHazardIcons();
   }
-  private layerFromDelineation(dln: Delineation): any {
-    const style = { ...leafletDrawShapeOptions(dln.level), pane: 'delineation-pane' };
+  private layerFromDelineation(dln: Delineation, isActive = true): any {
+    const base = leafletDrawShapeOptions(dln.level);
+    const style = {
+      ...base,
+      pane: 'delineation-pane',
+      // Active card shapes match PDF fill strength; other hazards stay visible but quieter.
+      fillOpacity: isActive ? base.fillOpacity : Math.min(0.28, base.fillOpacity),
+      weight: isActive ? base.weight : 2,
+      dashArray: isActive ? undefined : '4 3',
+    };
     const geom = dln.geojson?.geometry;
     let lyr: any = null;
     if (dln.kind === 'circle' && geom?.type === 'Point') {
@@ -443,7 +546,7 @@ export class EwAlertMapComponent {
       lyr = L.circle([lat, lng], { radius: dln.radius ?? 10000, ...style });
     } else if (dln.kind === 'point' && geom?.type === 'Point') {
       const [lng, lat] = geom.coordinates;
-      lyr = L.circleMarker([lat, lng], { radius: 7, ...style, fillOpacity: 0.9 });
+      lyr = L.circleMarker([lat, lng], { radius: 7, ...style, fillOpacity: isActive ? 0.9 : 0.5 });
     } else if (geom?.type === 'Polygon') {
       lyr = L.polygon(geom.coordinates.map((ring: any[]) => ring.map(([lng, lat]: number[]) => [lat, lng])), style);
     } else if (geom?.type === 'LineString') {
@@ -487,7 +590,8 @@ export class EwAlertMapComponent {
     if (!this.activeHazard()) { this.addHazard(); }
     this.mutateActiveHazard(h => ({ ...h, delineations: [...h.delineations, dln] }), false);
     this.renderDelineations();
-    this.flash(`${dln.kind} drawn in ${this.activeLevelLabel()} colour — trash tool removes if unwanted.`, false);
+    const lvlLabel = LEVELS.find(l => l.key === lvl)?.label ?? lvl;
+    this.flash(`${dln.kind} drawn in ${lvlLabel} colour with hazard icon — trash tool removes if unwanted.`, false);
   }
 
   private initMap(): void {
@@ -513,8 +617,12 @@ export class EwAlertMapComponent {
         onEachFeature: (f: any, lyr: any) => {
 	          const name = this.rn(f);
 	          this.regionLayers.set(name, lyr);
-	          lyr.bindTooltip(escapeHtml(name), { sticky: true, direction: 'top' });
-          lyr.on({ click: () => this.paintArea(name), mouseover: () => lyr.setStyle({ weight: 2 }), mouseout: () => lyr.setStyle({ weight: 0.8 }) });
+	          lyr.bindTooltip(() => escapeHtml(this.regionTooltip(name)), { sticky: true, direction: 'top' });
+          lyr.on({
+            click: () => this.paintArea(name),
+            mouseover: () => lyr.setStyle({ weight: 2.6 }),
+            mouseout: () => lyr.setStyle(this.styleFor(name)),
+          });
         },
       }).addTo(this.map);
       this.map.fitBounds(layer.getBounds(), { padding: [10, 10] });
@@ -536,7 +644,13 @@ export class EwAlertMapComponent {
         const ids = new Set<number>();
         e.layers.eachLayer((l: any) => { if (l._dlnId) { ids.add(l._dlnId); } });
         if (ids.size) {
-          this.mutateActiveHazard(h => ({ ...h, delineations: h.delineations.filter(d => !ids.has(d.id)) }), false);
+          // Shapes from any hazard card may be on the map — remove matching ids across the day.
+          this.days.update(days => days.map((d, i) => i === this.activeDay()
+            ? { ...d, hazards: d.hazards.map(h => ({
+                ...h,
+                delineations: h.delineations.filter(x => !ids.has(x.id)),
+              })) }
+            : d));
           this.renderDelineations();
           this.flash(`${ids.size} shape(s) removed.`, false);
         }
@@ -544,6 +658,19 @@ export class EwAlertMapComponent {
     }
   }
   private rn(f: any): string { return f.properties.Region_Nam ?? f.properties.name; }
+
+  /** Tooltip lists every hazard card that painted this region (multi-hazard / multi-incident). */
+  private regionTooltip(name: string): string {
+    const parts: string[] = [name];
+    for (const h of this.activeHazards()) {
+      const a = h.areas.find(x => x.name === name);
+      if (!a || a.level === 'NONE') { continue; }
+      const label = this.hazardTypes.find(t => t.key === h.type)?.label ?? h.type;
+      const lv = LEVELS.find(l => l.key === a.level)?.label ?? a.level;
+      parts.push(`${label} · ${lv}`);
+    }
+    return parts.join(' · ');
+  }
 
   /** PUBLIC build-on-push hook (Phase 1 foundation): load a serialized envelope (areas+levels+delineations)
    * into the map so a downstream view (e.g. PMO impact) can build upon what was pushed. */
@@ -565,22 +692,56 @@ export class EwAlertMapComponent {
     this.renderDelineations();
   }
 
-  /** Build the engine payload: split each hazard's areas BY LEVEL so per-area levels survive into the
-   * 722E_4 — producing exactly the `{type, alert_level, regions, …}` shape the UNCHANGED Python engine
-   * already consumes. Delineation geometries are deliberately NOT sent here (the PDF engine doesn't use
-   * them and unknown fields could regress it); they live in the component model for the EW-DB envelope. */
+  /**
+   * Build the 722E_4 engine payload.
+   * - One engine entry per (hazard type × alert level) so Heavy Rain @ X and Strong Wind @ Y
+   *   both survive as independent multi-hazard rows on the same day map.
+   * - Drawn shapes go as `drawn_shapes` (GeoJSON Features with level/fill colour) — the PDF
+   *   map_generator renders them with per-shape colour + hazard icons, matching the authoring map.
+   * - Shape-only hazards (no region paint) are valid.
+   */
   private buildPayload(): any {
     const days = this.days().map(d => {
       const hazards: any[] = [];
       for (const h of d.hazards) {
-        const byLevel = new Map<string, string[]>();
-        for (const a of h.areas) { if (a.level && a.level !== 'NONE') { byLevel.set(a.level, [...(byLevel.get(a.level) ?? []), a.name]); } }
-        const label = this.hazardTypes.find(t => t.key === h.type)?.label.toLowerCase();
-        for (const [level, regions] of byLevel) {
+        type Bucket = { regions: string[]; shapes: any[] };
+        const byLevel = new Map<string, Bucket>();
+        const bucket = (lv: string): Bucket => {
+          if (!byLevel.has(lv)) { byLevel.set(lv, { regions: [], shapes: [] }); }
+          return byLevel.get(lv)!;
+        };
+        for (const a of h.areas) {
+          if (a.level && a.level !== 'NONE') { bucket(a.level).regions.push(a.name); }
+        }
+        for (const dln of h.delineations) {
+          const lv = (dln.level && dln.level !== 'NONE') ? dln.level : null;
+          if (!lv) { continue; }
+          // Ensure GeoJSON properties carry colour/level so PDF _resolve_shape_color works.
+          const feat = dln.geojson ? { ...dln.geojson } : null;
+          if (!feat) { continue; }
+          const col = this.colorOf(lv);
+          feat.properties = {
+            ...(feat.properties || {}),
+            kind: dln.kind,
+            level: lv,
+            fill: col,
+            color: col,
+            radius: dln.radius,
+            hazard_type: h.type,
+          };
+          bucket(lv).shapes.push(feat);
+        }
+        const label = this.hazardTypes.find(t => t.key === h.type)?.label.toLowerCase() ?? 'hazard';
+        for (const [level, grp] of byLevel) {
+          if (!grp.regions.length && !grp.shapes.length) { continue; }
           hazards.push({
-            type: h.type, alert_level: level, regions,
+            type: h.type,
+            alert_level: level,
+            regions: grp.regions,
+            drawn_shapes: grp.shapes,
             description: h.description || `of ${label} is issued over these areas.`,
-            likelihood: h.likelihood, impact: h.impact,
+            likelihood: h.likelihood,
+            impact: h.impact,
             impacts_expected: h.impactsExpected || 'Localized impacts over few areas.',
           });
         }
@@ -609,7 +770,10 @@ export class EwAlertMapComponent {
   /** Generate Warning: build the 722E_4 PDF via the Python engine, open it, and add it to the registry. */
   generate(): void {
     const payload = this.buildPayload();
-    if (!payload.days.some((d: any) => d.hazards.length)) { this.flash('Paint at least one area for a hazard first.', true); return; }
+    if (!payload.days.some((d: any) => d.hazards.length)) {
+      this.flash('Paint at least one area or draw a shape for a hazard first.', true);
+      return;
+    }
     this.generating.set(true);
     this.flash('Generating the 722E_4 bulletin…', false);
     // Health-check the PDF engine first so operators get a clear message if :8600 is down.
@@ -677,7 +841,10 @@ export class EwAlertMapComponent {
    * Analysis and every other entity can see it as input. Independent of the PDF engine. */
   pushToEocc(): void {
     const payload = this.buildPayload();
-    if (!payload.days.some((d: any) => d.hazards.length)) { this.flash('Paint at least one area for a hazard first.', true); return; }
+    if (!payload.days.some((d: any) => d.hazards.length)) {
+      this.flash('Paint at least one area or draw a shape for a hazard first.', true);
+      return;
+    }
     this.pushing.set(true);
     this.agencyBus.submit('tma', payload).subscribe({
       next: () => { this.pushing.set(false); this.flash('Pushed to EOCC — shared with PMO-DMD for impact analysis and visible to all entities.', false); },
