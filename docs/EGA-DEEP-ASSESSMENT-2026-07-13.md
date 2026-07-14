@@ -1001,3 +1001,23 @@ EW products severity/type NOPE → **n=0**. Scanner entity-taskings status/agenc
 ### Live proof
 - analytics default year=2026; 2024 OK; garbage years **422**
 - `dim:hazard` value matches hazard; garbage metrics **422**
+
+
+## 33. Careful audit — action-guide / agency history / impact focus (2026-07-14)
+
+User direction: *proceed very carefully.*
+
+### Productive without change
+Portal public (landing/threats/regions/education/shelters/calendar) **200**. Content threats/news/portal admin **200**. Training plans, pledges, coordination, scenarios, declarations, stakeholders **200**. Unauth admin surfaces **401**. Prior Sendai year / INFORM metric / EW report / notif contracts hold.
+
+### Defects fixed
+| Surface | Issue | Fix |
+|---------|-------|-----|
+| Action-guide `level=NOPE` | Mapped to ADVISORY (92 rows) | Strict filter vocab → **422** |
+| Agency history `…/NOPE/history` | Empty **200** for unknown entity | Known codes only → **422** |
+| Impact `hazardFocus=NOPE` | Silent auto → flood | Controlled focus list → **422** |
+
+### Live proof
+- ADVISORY **92** / WARNING **103**; garbage level **422**
+- TMA history OK; unknown agency **422**; limit clamp **1–200**
+- flood focus OK; garbage focus **422**; auto still resolves

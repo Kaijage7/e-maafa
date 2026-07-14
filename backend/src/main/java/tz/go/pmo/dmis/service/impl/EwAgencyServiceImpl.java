@@ -328,14 +328,20 @@ public class EwAgencyServiceImpl implements EwAgencyService {
     @Override
     public Map<String, Object> history(String agency, int limit) {
         String a = agency == null ? "" : agency.toLowerCase(Locale.ROOT);
+        if (!AGENCIES.contains(a)) {
+            throw new BusinessRuleException("Unknown warning entity: " + agency
+                    + ". Use tma, mow, gst, moh, moa, nemc or mlf.");
+        }
         assertAgencyRead(a);
+        // Productive limit 1–200 (same ceiling as other agency audit reads).
+        int lim = Math.min(Math.max(limit, 1), 200);
         List<Map<String, Object>> rows = jdbc.queryForList(
             "select id, agency, bridge_ts, issue_date, issue_time, top_alert, item_count, regions, " +
             "districts, hazard_types, is_latest from public.ew_agency_submissions where agency = ? " +
-            "order by bridge_ts desc, id desc limit ?", a, Math.min(Math.max(limit, 1), 200));
+            "order by bridge_ts desc, id desc limit ?", a, lim);
         for (Map<String, Object> r : rows) { r.put("regions", readList(r.get("regions")));
             r.put("districts", readList(r.get("districts"))); r.put("hazard_types", readList(r.get("hazard_types"))); }
-        return Map.of("agency", a, "history", rows, "count", rows.size());
+        return Map.of("agency", a, "history", rows, "count", rows.size(), "limit", lim);
     }
 
     /** Clear / withdraw an entity's current bulletin — the warning entity retracts its own issued warning

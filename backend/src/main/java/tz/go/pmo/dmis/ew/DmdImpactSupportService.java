@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.geo.GeoAliasService;
 import tz.go.pmo.dmis.inform.domain.HazardSignal;
 import tz.go.pmo.dmis.inform.domain.InformService;
@@ -700,7 +701,9 @@ public class DmdImpactSupportService {
         if (HAZARD_FOCUSES.contains(f)) {
             return f;
         }
-        return "auto";
+        // Never silently re-label garbage as auto → flood; FE must pick a real focus option.
+        throw new BusinessRuleException(
+                "Unknown hazardFocus '" + raw.trim() + "'. Use auto, flood, drought, landslide, storm, earthquake, coastal or overall.");
     }
 
     private static double meanFinite(double... xs) {

@@ -14,6 +14,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 
 /**
  * PMO-DMD Action Guide Book statement proposals.
@@ -558,7 +559,8 @@ public class ActionGuideStatementService {
         }
         if (level != null && !level.isBlank()) {
             sql.append(" and impact_level = ?");
-            args.add(normalizeLevel(level, null));
+            // Filter vocab is strict — never silently map garbage to ADVISORY.
+            args.add(requireLevelFilter(level));
         }
         sql.append(" order by hazard_name, impact_level, sort_order, id");
         List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), args.toArray());
@@ -709,6 +711,22 @@ public class ActionGuideStatementService {
     }
 
     private static String normalizeLevel(String level, String color) {
+        String mapped = mapLevel(level, color);
+        return mapped == null ? "ADVISORY" : mapped;
+    }
+
+    /** Admin list filter: blank ignored; unknown level → 422. */
+    private static String requireLevelFilter(String level) {
+        String mapped = mapLevel(level, null);
+        if (mapped == null) {
+            throw new BusinessRuleException(
+                    "Unknown level '" + level.trim() + "'. Use ADVISORY, WARNING or MAJOR_WARNING.");
+        }
+        return mapped;
+    }
+
+    /** @return controlled level key, or null when neither level nor colour maps to one */
+    private static String mapLevel(String level, String color) {
         String s = (level == null ? "" : level).trim().toUpperCase(Locale.ROOT).replace(' ', '_');
         if (s.contains("MAJOR") || s.equals("RED") || s.equals("L3") || s.equals("LEVEL_3") || s.equals("LEVEL3")) {
             return "MAJOR_WARNING";
@@ -716,7 +734,8 @@ public class ActionGuideStatementService {
         if (s.contains("WARN") || s.equals("ORANGE") || s.equals("L2") || s.equals("LEVEL_2") || s.equals("LEVEL2")) {
             return "WARNING";
         }
-        if (s.contains("ADVIS") || s.equals("YELLOW") || s.equals("L1") || s.equals("LEVEL_1") || s.equals("LEVEL1")) {
+        if (s.contains("ADVIS") || s.equals("YELLOW") || s.equals("L1") || s.equals("LEVEL_1") || s.equals("LEVEL1")
+                || s.equals("ADVISORY")) {
             return "ADVISORY";
         }
         String c = (color == null ? "" : color).trim().toLowerCase(Locale.ROOT);
@@ -729,7 +748,7 @@ public class ActionGuideStatementService {
         if (c.contains("yellow") || c.equals("#ffff00")) {
             return "ADVISORY";
         }
-        return "ADVISORY";
+        return null;
     }
 
     private static String normalizeLang(String lang) {
