@@ -18,6 +18,7 @@ Read in order. Each document has one job. Details live in the source tree when c
 | 4 | [Acceptance](./04-ACCEPTANCE.md) | Pass/fail checks for release |
 | 5 | [Ops and honesty](./05-OPS-AND-HONESTY.md) | What is live, planned, or deferred |
 | 6 | [Docker deploy](./DOCKER-DEPLOY.md) | Compose, PDF, TLS edge, image tags, secrets |
+| 7 | [Docker fix plan](./DOCKER-FIX-PLAN.md) | Challenges + ordered fixes (one at a time) |
 
 ## Related operational files (existing)
 

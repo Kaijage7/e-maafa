@@ -125,4 +125,16 @@ curl -fsS -o /dev/null -w "%{http_code}\n" https://$DMIS_PUBLIC_HOST/
 | `docs/go-live/00-INDEX.md` | Full cutover pack index |
 | `docs/go-live/03-GO-LIVE-PLAN.md` | Steps and roles |
 | `docs/go-live/04-ACCEPTANCE.md` | Sign-off |
+| `docs/go-live/DOCKER-FIX-PLAN.md` | Known challenges and fix order (do not rush) |
 | `docs/GO-LIVE-RUNBOOK.md` | Residual flags detail |
+
+## 10. Known open deploy gaps (summary)
+
+See **DOCKER-FIX-PLAN.md** for the full register. Highest priority before trusting Docker go-live:
+
+1. PDF engine buildable from this git repo alone (D1)  
+2. PDF image smoke under Docker (D2)  
+3. Persistent storage volume for uploads/PDFs (D3)  
+4. TLS path without public DNS for staging (D4)  
+
+Work those in order. Do not claim compose is dual-proved until that plan’s phases pass.
