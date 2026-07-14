@@ -962,3 +962,24 @@ Repository events (status/hazard/region/year nonsense → **n=0**). Anticipatory
 - ME `level=region` n=12; garbage level/period **422**
 - INFORM risk council n=195; garbage level **422** (portal too)
 - Hazard-area Dodoma **200**; bad coords **422**
+
+
+## 31. Careful audit — content logs / reports / bidding / geo (2026-07-14)
+
+User direction: *proceed very carefully.*
+
+### Productive without change
+Email/SMS logs status/search nonsense → **n=0**; invalid dates → **400** (DB). Action-guide bad hazard → **n=0**. Incident reports status/severity/region NOPE → records **n=0**; inverted dates **422**. Generated reports type NOPE / bad incident → **n=0**. Bidding donations/open-needs nonsense → allocations **n=0**. DLNA bad incident → **n=0**. Geo resolve unknown → `resolved:false`. Approvals miss search → empty. Ops timeline `source=NOPE` → **422**.
+
+### Intentional soft behaviours (not defects)
+- Hazard registry `page≤0` clamped to page 1 (`Math.max(page,1)`).
+- Geo empty name → Spring **400** missing param.
+
+### Defect fixed
+| Surface | Issue | Fix |
+|---------|-------|-----|
+| `GET /v1/reports/early-warnings?from=&to=` | Non-ISO values silently expanded to 2000–2100 (full history) | Blank → defaults; invalid → **422**; `from>to` → **422** |
+
+### Live proof
+- EW wide range warnings n=16; `from=NOPE` **422**; inverted **422**; omit dates still **200**
+- Prior M&E/INFORM/notif/warehouse contracts hold

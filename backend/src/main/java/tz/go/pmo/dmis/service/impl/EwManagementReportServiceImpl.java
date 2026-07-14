@@ -1,5 +1,6 @@
 package tz.go.pmo.dmis.service.impl;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -8,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.service.EwManagementReportService;
@@ -45,8 +47,12 @@ public class EwManagementReportServiceImpl implements EwManagementReportService 
         if (jurisdiction.currentStakeholderId() != null) {
             throw new ResourceNotFoundException("Not found.");
         }
-        String fromD = (from != null && from.matches("\\d{4}-\\d{2}-\\d{2}")) ? from : "2000-01-01";
-        String toD = (to != null && to.matches("\\d{4}-\\d{2}-\\d{2}")) ? to : "2100-01-01";
+        // Blank = wide default window. Non-blank garbage must not silently expand to all-time.
+        String fromD = parseReportDate(from, "from", "2000-01-01");
+        String toD = parseReportDate(to, "to", "2100-01-01");
+        if (LocalDate.parse(fromD).isAfter(LocalDate.parse(toD))) {
+            throw new BusinessRuleException("from must not be after to.");
+        }
         // An area officer sees the EW picture for their OWN region; national sees the whole country.
         Long myRegion = areaRegion();
 
@@ -362,5 +368,22 @@ public class EwManagementReportServiceImpl implements EwManagementReportService 
         if (n.contains("fire")) return "fire";
         if (n.contains("earthquake") || n.contains("tsunami") || n.contains("volcan")) return "geophysical";
         return null;
+    }
+
+    /** Blank → default; non-blank must be YYYY-MM-DD (never silently treat garbage as all-time). */
+    private static String parseReportDate(String raw, String label, String defaultValue) {
+        if (raw == null || raw.isBlank()) {
+            return defaultValue;
+        }
+        String s = raw.trim();
+        if (!s.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            throw new BusinessRuleException(label + " must be YYYY-MM-DD.");
+        }
+        try {
+            LocalDate.parse(s);
+        } catch (Exception e) {
+            throw new BusinessRuleException("Invalid " + label + " date '" + raw + "' — use YYYY-MM-DD.");
+        }
+        return s;
     }
 }
