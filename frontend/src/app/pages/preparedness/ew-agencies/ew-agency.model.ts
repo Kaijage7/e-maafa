@@ -19,37 +19,53 @@ export const ALERT_LEVELS: AlertDef[] = [
 ];
 export const ALERT_RANK: Record<string, number> = { ADVISORY: 1, WARNING: 2, MAJOR_WARNING: 3 };
 export const ALERT_COLOR: Record<string, string> = { ADVISORY: '#FFFF00', WARNING: '#FFA500', MAJOR_WARNING: '#FF0000', NONE: '#E5E7EB' };
-export const alertColor = (lvl?: string | null) => ALERT_COLOR[(lvl ?? 'NONE').toUpperCase()] ?? '#F5F5F5';
+
+/** Normalize level keys: "major warning" / "Major_Warning" → MAJOR_WARNING. */
+export function normalizeAlertLevel(lvl?: string | null): string {
+  const key = String(lvl ?? 'NONE').trim().toUpperCase().replace(/[\s-]+/g, '_');
+  if (key === 'MAJOR' || key === 'MAJORWARNING') { return 'MAJOR_WARNING'; }
+  if (key in ALERT_COLOR) { return key; }
+  return 'NONE';
+}
+
+export const alertColor = (lvl?: string | null) => ALERT_COLOR[normalizeAlertLevel(lvl)] ?? '#F5F5F5';
 
 /**
- * Leaflet.Draw shapeOptions that match the active alert palette (yellow / orange / red).
- * Used while drawing AND after commit so the preview stroke/fill is never neutral grey.
+ * Leaflet path options for drawn shapes — PDF-matching level shade:
+ * yellow / orange / red fill, black stroke (map_generator edgecolor="#000000"), alpha ~0.55.
  */
 export function leafletDrawShapeOptions(level?: string | null): {
-  color: string; fillColor: string; fillOpacity: number; weight: number; opacity: number;
+  color: string; fillColor: string; fill: boolean; fillOpacity: number; weight: number; opacity: number;
+  dashArray?: string | null;
 } {
-  const col = alertColor(level);
-  const none = (level ?? '').toUpperCase() === 'NONE';
+  const key = normalizeAlertLevel(level);
+  const col = ALERT_COLOR[key] ?? '#F5F5F5';
+  const none = key === 'NONE';
   return {
-    color: col,
+    // Stroke black like the PDF engine so yellow/orange fills read clearly on light basemap.
+    color: '#000000',
     fillColor: col,
-    fillOpacity: none ? 0.18 : 0.45,
-    weight: 2.5,
+    fill: true,
+    fillOpacity: none ? 0.12 : 0.55,
+    weight: 2,
     opacity: 1,
+    dashArray: null,
   };
 }
 
 /** Full Leaflet.Draw control options: colour-matched draw tools + edit/remove for optional clean-up. */
 export function leafletDrawControlOptions(featureGroup: any, level?: string | null): any {
   const so = leafletDrawShapeOptions(level);
+  // Leaflet.Draw copies shapeOptions at tool-start; include both stroke fillColor explicitly.
+  const drawSo = { ...so, color: so.color, fillColor: so.fillColor, fillOpacity: so.fillOpacity, fill: true };
   return {
     position: 'topleft',
     edit: { featureGroup, edit: true, remove: true },
     draw: {
-      polygon: { shapeOptions: { ...so }, showArea: false, allowIntersection: true },
-      polyline: { shapeOptions: { ...so } },
-      rectangle: { shapeOptions: { ...so } },
-      circle: { shapeOptions: { ...so } },
+      polygon: { shapeOptions: { ...drawSo }, showArea: false, allowIntersection: true },
+      polyline: { shapeOptions: { color: drawSo.fillColor, weight: 3, opacity: 1 } },
+      rectangle: { shapeOptions: { ...drawSo }, showArea: false },
+      circle: { shapeOptions: { ...drawSo } },
       marker: false,
       circlemarker: false,
     },

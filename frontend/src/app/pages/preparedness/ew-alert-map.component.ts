@@ -10,7 +10,7 @@ import { loadCrossAgencyRef, renderCrossAgencyRef, RefMarker } from './ew-agenci
 import { EwCrossAgencyPanelComponent } from './ew-agencies/ew-cross-agency-panel.component';
 import { EwPreviewModalComponent } from './ew-agencies/ew-preview-modal.component';
 import { EntityTaskingsComponent } from './ew-agencies/entity-taskings.component';
-import { leafletDrawControlOptions, leafletDrawShapeOptions, alertColor as paletteAlertColor } from './ew-agencies/ew-agency.model';
+import { leafletDrawControlOptions, leafletDrawShapeOptions } from './ew-agencies/ew-agency.model';
 
 declare const L: any;
 
@@ -185,25 +185,22 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
             <i class="fas fa-diagram-project" style="color:#94a3b8"></i> Show what other entities issued — reference only
           </label>
         }
-        <!-- Active painting level — clicking the map paints each area at THIS level (each area keeps its own) -->
+        <!-- Level drives BOTH region paint and drawn shape shade (yellow / orange / red). -->
         <div class="paint-bar">
-          <span class="paint-lbl">Painting level:</span>
+          <span class="paint-lbl">Alert level (areas + shapes):</span>
           @for (l of paintLevels; track l.key) {
             <button type="button" class="paint-btn" [class.on]="activeLevel() === l.key"
               [style.background]="activeLevel() === l.key ? l.color : 'transparent'"
               [style.color]="activeLevel() === l.key ? l.text : 'var(--text-mid)'" [style.border-color]="l.color"
-              (click)="activeLevel.set(l.key)">{{ l.label }}</button>
+              (click)="setPaintLevel(l.key)">{{ l.label }}</button>
           }
-          <span class="paint-sep"></span>
-          <span class="paint-lbl">Shape level:</span>
-          <select class="paint-select" [value]="drawLevel()" (change)="setDrawLevel($any($event.target).value)">
-            @for (l of paintLevels; track l.key) { <option [value]="l.key">{{ l.label }}</option> }
-          </select>
+          <span class="paint-swatch" [style.background]="colorOf(activeLevel())" title="Shape fill colour"></span>
+          <span class="paint-hint-inline">Shapes shade this colour</span>
         </div>
         <div #alertMap class="alert-map"></div>
         <div class="map-hint"><i class="fas fa-hand-pointer"></i>
-          Active card paints <b>{{ activeLevelLabel() }}</b> for <b>{{ activeTypeLabel() }}</b> only.
-          Other hazards keep their areas. Day {{ activeDay() + 1 }}.
+          Active: <b>{{ activeTypeLabel() }}</b> · level <b>{{ activeLevelLabel() }}</b>
+          (regions + drawn shapes). Other hazard cards keep their own colours. Day {{ activeDay() + 1 }}.
         </div>
         @if (status()) { <div class="map-status" [class.err]="statusErr()">{{ status() }}</div> }
       </div>
@@ -250,9 +247,12 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
     .paint-bar { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 0.4rem 0.6rem; margin-bottom: 0.5rem; }
     .paint-lbl { font-size: 0.75rem; color: var(--text-mid); font-weight: 600; }
     .paint-btn { border: 1.5px solid; border-radius: 7px; padding: 0.28rem 0.7rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; background: transparent; }
-    .paint-sep { width: 1px; height: 20px; background: var(--border); margin: 0 0.3rem; }
-    .paint-select { border: 1px solid var(--border); border-radius: 7px; padding: 0.25rem 0.4rem; font-size: 0.78rem; }
+    .paint-swatch { width: 18px; height: 18px; border-radius: 4px; border: 2px solid #000; flex-shrink: 0; }
+    .paint-hint-inline { font-size: 0.72rem; color: var(--text-mid); }
     .alert-map { height: calc(100vh - 285px); min-height: 480px; border-radius: 16px; border: 1px solid var(--border); background: #eef2f5; z-index: 1; }
+    /* Ensure Leaflet vector fills are not stripped by global SVG rules */
+    :host ::ng-deep .leaflet-overlay-pane path,
+    :host ::ng-deep .leaflet-pane path { pointer-events: auto; }
     .map-hint { position: absolute; bottom: 12px; left: 12px; background: rgba(255,255,255,0.92); border-radius: 10px; padding: 0.5rem 0.8rem; font-size: 0.8rem; color: var(--text-mid); z-index: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.08); max-width: 70%; }
     .map-status { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 0.45rem 0.9rem; border-radius: 20px; font-size: 0.78rem; z-index: 600; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
     .map-status.err { background: #dc2626; }
@@ -277,8 +277,8 @@ export class EwAlertMapComponent {
   days = signal<DayData[]>(this.buildDays());
   activeDay = signal(0);
   activeId = signal(0);
-  activeLevel = signal('ADVISORY');   // level new map-clicks paint at (the "pen")
-  drawLevel = signal('WARNING');      // level assigned to a newly-drawn delineation shape
+  activeLevel = signal('ADVISORY');   // level for region paint AND new drawn shapes (shared pen)
+  drawLevel = signal('ADVISORY');     // kept in sync with activeLevel — shape fill uses this
   generating = signal(false);
   pushing = signal(false);
   clearing = signal(false);
@@ -719,41 +719,80 @@ export class EwAlertMapComponent {
       const isActive = h.id === this.activeId();
       for (const dln of h.delineations) {
         const lyr = this.layerFromDelineation(dln, isActive);
-        if (lyr) { this.drawnGroup.addLayer(lyr); }
+        if (lyr) {
+          this.drawnGroup.addLayer(lyr);
+          // Force style after add — some Leaflet builds ignore fill at construct time on custom panes.
+          try { lyr.setStyle(this.shapeStyle(dln.level, isActive, dln.kind)); } catch { /* ignore */ }
+        }
       }
     }
+    try { this.drawnGroup.bringToFront?.(); } catch { /* ignore */ }
     this.renderHazardIcons();
   }
-  private layerFromDelineation(dln: Delineation, isActive = true): any {
-    const base = leafletDrawShapeOptions(dln.level);
-    const style = {
-      ...base,
+
+  /** PDF-like level shade for a shape: yellow/orange/red fill + black edge. */
+  private shapeStyle(level: string, isActive = true, kind = 'polygon'): any {
+    const base = leafletDrawShapeOptions(level);
+    const isLine = kind === 'polyline' || kind === 'line' || kind === 'LineString';
+    if (isLine) {
+      return {
+        pane: 'delineation-pane',
+        color: this.colorOf(level),
+        weight: isActive ? 4 : 3,
+        opacity: isActive ? 1 : 0.75,
+        fill: false,
+        dashArray: isActive ? null : '6 4',
+      };
+    }
+    return {
       pane: 'delineation-pane',
-      // Active card shapes match PDF fill strength; other hazards stay visible but quieter.
-      fillOpacity: isActive ? base.fillOpacity : Math.min(0.28, base.fillOpacity),
-      weight: isActive ? base.weight : 2,
-      dashArray: isActive ? undefined : '4 3',
+      fill: true,
+      fillColor: base.fillColor,
+      // Active shapes: full PDF alpha; other cards slightly quieter but still clearly coloured.
+      fillOpacity: isActive ? 0.58 : 0.38,
+      color: '#000000',
+      weight: isActive ? 2.2 : 1.6,
+      opacity: 1,
+      dashArray: isActive ? null : '5 3',
     };
+  }
+
+  private layerFromDelineation(dln: Delineation, isActive = true): any {
+    const style = this.shapeStyle(dln.level, isActive, dln.kind);
     const geom = dln.geojson?.geometry;
     let lyr: any = null;
-    if (dln.kind === 'circle' && geom?.type === 'Point') {
+    if ((dln.kind === 'circle' || dln.geojson?.properties?.kind === 'circle') && geom?.type === 'Point') {
       const [lng, lat] = geom.coordinates;
-      lyr = L.circle([lat, lng], { radius: dln.radius ?? 10000, ...style });
+      const radius = dln.radius ?? dln.geojson?.properties?.radius ?? 10000;
+      lyr = L.circle([lat, lng], { radius, ...style });
     } else if (dln.kind === 'point' && geom?.type === 'Point') {
       const [lng, lat] = geom.coordinates;
-      lyr = L.circleMarker([lat, lng], { radius: 7, ...style, fillOpacity: isActive ? 0.9 : 0.5 });
-    } else if (geom?.type === 'Polygon') {
-      lyr = L.polygon(geom.coordinates.map((ring: any[]) => ring.map(([lng, lat]: number[]) => [lat, lng])), style);
-    } else if (geom?.type === 'LineString') {
-      lyr = L.polyline(geom.coordinates.map(([lng, lat]: number[]) => [lat, lng]), style);
+      lyr = L.circleMarker([lat, lng], { radius: 8, ...style, fillOpacity: isActive ? 0.9 : 0.55 });
+    } else if (geom?.type === 'Polygon' || dln.kind === 'polygon' || dln.kind === 'rectangle') {
+      const rings = geom?.type === 'Polygon'
+        ? geom.coordinates.map((ring: any[]) => ring.map(([lng, lat]: number[]) => [lat, lng]))
+        : [];
+      if (rings.length) { lyr = L.polygon(rings, style); }
+    } else if (geom?.type === 'LineString' || dln.kind === 'polyline') {
+      const pts = (geom?.coordinates ?? []).map(([lng, lat]: number[]) => [lat, lng]);
+      if (pts.length) { lyr = L.polyline(pts, style); }
     }
-    if (lyr) { lyr._dlnId = dln.id; }
+    if (lyr) {
+      lyr._dlnId = dln.id;
+      lyr._dlnLevel = dln.level;
+    }
     return lyr;
   }
   private drawControl: any;
-  setDrawLevel(key: string): void {
+
+  /** One pen for regions and shapes — keeps shape shade in lockstep with the level buttons. */
+  setPaintLevel(key: string): void {
+    this.activeLevel.set(key);
     this.drawLevel.set(key);
     this.rebuildDrawControl();
+  }
+  setDrawLevel(key: string): void {
+    this.setPaintLevel(key);
   }
   private rebuildDrawControl(): void {
     if (!this.map || !this.drawnGroup || !(L.Control && L.Control.Draw)) return;
@@ -765,21 +804,23 @@ export class EwAlertMapComponent {
   private onDrawCreated(e: any): void {
     const layer = e.layer;
     const type = e.layerType;
-    const lvl = this.drawLevel();
-    try { if (layer.setStyle) layer.setStyle(leafletDrawShapeOptions(lvl)); } catch { /* ignore */ }
-    const col = paletteAlertColor(lvl);
+    // Use the shared paint level so shape shade always matches the selected Advisory/Warning/Major button.
+    const lvl = this.activeLevel() || this.drawLevel();
+    const style = this.shapeStyle(lvl, true, type);
+    try { if (layer.setStyle) { layer.setStyle(style); } } catch { /* ignore */ }
+    const col = this.colorOf(lvl);
     let dln: Delineation;
     if (type === 'circle') {
       const c = layer.getLatLng();
       dln = { id: ++this.shapeSeq, kind: 'circle', level: lvl, radius: Math.round(layer.getRadius()),
-        geojson: { type: 'Feature', properties: { kind: 'circle', radius: Math.round(layer.getRadius()), level: lvl, fill: col, color: col }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
+        geojson: { type: 'Feature', properties: { kind: 'circle', radius: Math.round(layer.getRadius()), level: lvl, fill: col, color: col, fillColor: col }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
     } else if (type === 'marker' || type === 'circlemarker') {
       const c = layer.getLatLng();
       dln = { id: ++this.shapeSeq, kind: 'point', level: lvl,
-        geojson: { type: 'Feature', properties: { kind: 'point', level: lvl, fill: col, color: col }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
+        geojson: { type: 'Feature', properties: { kind: 'point', level: lvl, fill: col, color: col, fillColor: col }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
     } else {
       const gj = layer.toGeoJSON();
-      gj.properties = { ...(gj.properties || {}), kind: type, level: lvl, fill: col, color: col };
+      gj.properties = { ...(gj.properties || {}), kind: type, level: lvl, fill: col, color: col, fillColor: col };
       dln = { id: ++this.shapeSeq, kind: type, level: lvl, geojson: gj };
     }
     if (!this.activeHazard()) { this.addHazard(); }
