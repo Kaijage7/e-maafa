@@ -11,6 +11,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.service.UserManagementService;
 import tz.go.pmo.dmis.settings.RoleCatalogue;
 
@@ -77,9 +78,11 @@ public class UserManagementServiceImpl implements UserManagementService {
             where.append(" and coalesce(u.seeded_officer, false) = ?");
             args.add(seeded);
         }
-        // Smart account groups — keeps the 900+ area seats from drowning MDA/partner focals
+        // Smart account groups — keeps the 900+ area seats from drowning MDA/partner focals.
+        // Known codes only; garbage must not silently mean "all accounts".
         if (accountGroup != null && !accountGroup.isBlank()) {
             switch (accountGroup.trim().toLowerCase()) {
+                case "all" -> { /* no extra filter */ }
                 case "mda", "sector" -> where.append(" and u.agency_id is not null");
                 case "partner", "stakeholder" -> where.append(" and u.stakeholder_id is not null");
                 case "area", "area_seats" -> where.append(
@@ -90,7 +93,9 @@ public class UserManagementServiceImpl implements UserManagementService {
                                 + " and u.region_id is null and u.district_id is null and u.council_id is null");
                 case "institution" -> where.append(
                         " and (u.agency_id is not null or u.stakeholder_id is not null)");
-                default -> { /* all */ }
+                default -> throw new BusinessRuleException(
+                        "Unknown accountGroup '" + accountGroup.trim()
+                                + "'. Use all, institution, mda, partner, national or area.");
             }
         }
         List<Map<String, Object>> users = jdbc.queryForList(

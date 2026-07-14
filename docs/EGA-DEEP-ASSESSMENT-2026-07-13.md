@@ -1021,3 +1021,26 @@ Portal public (landing/threats/regions/education/shelters/calendar) **200**. Con
 - ADVISORY **92** / WARNING **103**; garbage level **422**
 - TMA history OK; unknown agency **422**; limit clamp **1–200**
 - flood focus OK; garbage focus **422**; auto still resolves
+
+
+## 34. Careful edge audit — users accountGroup + ME institutionClass (2026-07-14)
+
+User direction: *proceed very carefully please.*
+
+### Productive without change
+Go-live readiness / integrity-summary / integration-registry **200**. Portal public stats/structure/i18n **200**. Users scopeLevel/roleCategory NOPE → **n=0**. Institutions source NOPE → **n=0**. Support needs, training/declaration 404 walls, channel-test unauth **401**. Prior action-guide / impact focus / notif contracts hold.
+
+### Notes (not defects)
+- ME `activeOnly` true/false both 127 — all catalogue rows active (filter productive, data-uniform).
+- OH / hazards `page≤0` soft-clamp to first page (existing pattern).
+
+### Defects fixed
+| Surface | Issue | Fix |
+|---------|-------|-----|
+| Users `accountGroup=NOPE` / `staff` | `default → all` (full 1693) | Controlled codes only; unknown → **422**; explicit `all` allowed |
+| ME workbench `institutionClass=NOPE` | Accepted; left unrestricted indicators | Must exist on agency/stakeholder → **422** |
+
+### Live proof
+- mda **211**, partner **165**, national **16**, area **1301**, institution **376**, all **1693**
+- garbage accountGroup / institutionClass → **422**
+- Ministry class workbench **38** indicators

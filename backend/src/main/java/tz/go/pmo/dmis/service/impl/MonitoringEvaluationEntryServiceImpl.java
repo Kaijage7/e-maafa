@@ -1435,7 +1435,22 @@ public class MonitoringEvaluationEntryServiceImpl implements MonitoringEvaluatio
         if (raw == null || raw.isBlank() || "all".equalsIgnoreCase(raw.trim())) {
             return null;
         }
-        return raw.trim();
+        String cls = raw.trim();
+        // Must exist on at least one active agency or stakeholder — never invent a filter key.
+        Integer n = jdbc.queryForObject("""
+                select (
+                    select count(*) from public.agencies
+                    where institution_class = ? and coalesce(is_active, true) = true
+                ) + (
+                    select count(*) from public.stakeholders
+                    where institution_class = ? and coalesce(is_active, true) = true
+                )
+                """, Integer.class, cls, cls);
+        if (n == null || n == 0) {
+            throw new BusinessRuleException(
+                    "Unknown institutionClass '" + cls + "'. Use a class from the workbench chips, or omit/all.");
+        }
+        return cls;
     }
 
     private Map<String, String> levelLabels() {
