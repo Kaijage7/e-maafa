@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.geo.GeoAliasService;
 import tz.go.pmo.dmis.service.HazardAreaContextService;
 
@@ -50,6 +51,15 @@ public class HazardAreaContextServiceImpl implements HazardAreaContextService {
                 "Context links only. No satellite AI classification in DMIS. OpenStreetMap and Esri World Imagery "
                         + "are third-party basemaps; Google Maps / Street View open externally under Google ToS. "
                         + "Do not treat linked imagery as an official damage assessment.");
+
+        // Absolute geographic validity when either coordinate is supplied.
+        if (lat != null || lng != null) {
+            if (lat == null || lng == null
+                    || lat.isNaN() || lng.isNaN() || lat.isInfinite() || lng.isInfinite()
+                    || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                throw new BusinessRuleException("lat must be between -90 and 90, lng between -180 and 180 (both required when either is set).");
+            }
+        }
 
         // ── Resolve centre ─────────────────────────────────────────────────
         Double cLat = lat;

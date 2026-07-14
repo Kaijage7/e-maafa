@@ -39,7 +39,9 @@ public class InformController {
     /** The area registry. {@code ?level=council} scopes to one administrative tier. */
     @GetMapping("/areas")
     public List<Area> areas(@RequestParam(required = false) String level) {
-        if (level != null && !level.isBlank()) return areas.findByLevel(level);
+        if (level != null && !level.isBlank()) {
+            return areas.findByLevel(InformService.requireAreaLevel(level));
+        }
         return areas.findAll();
     }
 

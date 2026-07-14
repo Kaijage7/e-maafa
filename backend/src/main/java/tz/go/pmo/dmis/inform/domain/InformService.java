@@ -3,6 +3,7 @@ package tz.go.pmo.dmis.inform.domain;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.inform.engine.IndicatorSpec;
 import tz.go.pmo.dmis.inform.engine.InformEngine;
@@ -225,6 +226,21 @@ public class InformService {
         return out;
     }
 
+    private static final Set<String> AREA_LEVELS = Set.of("national", "region", "district", "council");
+
+    /** Controlled vocabulary for batch area queries (never silently empty on garbage). */
+    public static String requireAreaLevel(String level) {
+        if (level == null || level.isBlank()) {
+            return "council";
+        }
+        String lv = level.trim().toLowerCase();
+        if (!AREA_LEVELS.contains(lv)) {
+            throw new BusinessRuleException(
+                    "Unknown area level '" + level.trim() + "'. Use national, region, district or council.");
+        }
+        return lv;
+    }
+
     /** Batch strategic risk for every area at a level (e.g. all 195 councils) in ONE call — replaces the map's N+1. */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> riskByLevel(String level) {
@@ -235,8 +251,9 @@ public class InformService {
      *  each row also carries {@code value} = that lens's 0–10 score, so the map + ranked table can colour by ANY lens. */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> riskByLevel(String level, String metric) {
+        String lv = requireAreaLevel(level);
         List<Map<String, Object>> out = new ArrayList<>();
-        for (Area a : areas.findByLevel(level)) {
+        for (Area a : areas.findByLevel(lv)) {
             RiskResult r = riskFor(a.code);
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("area", a.code);
@@ -274,8 +291,9 @@ public class InformService {
     /** Batch operational signals for every area at a level — one call for the whole hazard-signal map layer. */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> signalsByLevel(String level) {
+        String lv = requireAreaLevel(level);
         List<Map<String, Object>> out = new ArrayList<>();
-        for (Area a : areas.findByLevel(level)) {
+        for (Area a : areas.findByLevel(lv)) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("area", a.code);
             m.put("name", a.name);

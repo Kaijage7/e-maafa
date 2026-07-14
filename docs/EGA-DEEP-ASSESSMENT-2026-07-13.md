@@ -940,3 +940,25 @@ One Health events/directives/disseminations nonsense filters → primary `data` 
 ### Live proof
 - movements `NOPE` → **422**; `zonal` n=57 / `temporary` n=11 (productive split)
 - evac TZ **200**; impossible coords **422**; London soft note **200**
+
+
+## 30. Careful audit — M&E / INFORM / plans / hazard-area (2026-07-14)
+
+User direction: *proceed very carefully.*
+
+### Productive without change
+Repository events (status/hazard/region/year nonsense → **n=0**). Anticipatory/contingency/public-reports nonsense → **n=0**. Portal publications type NOPE → **n=0**. ME domain/search nonsense → **n=0**. Unauth M&E/repo/plans/inform → **401**. Prior notif/scanner/warehouse/evac contracts hold.
+
+### Defects fixed
+| Surface | Issue | Fix |
+|---------|-------|-----|
+| M&E `level=NOPE` | Silently fell back → full catalogue (127) / default workbench level | Controlled vocab → **422** |
+| M&E `period=NOPE` | Accepted as literal period | Must match `YYYY-Qn` or `YYYY` → **422** |
+| INFORM/portal risk+signals `level=NOPE` | Empty **200** (looked fine, not honest) | `national\|region\|district\|council` → **422** |
+| INFORM areas `level=NOPE` | Same empty list | **422** |
+| Hazard-area `lat=999` | Accepted | Absolute lat/lng bounds → **422** |
+
+### Live proof
+- ME `level=region` n=12; garbage level/period **422**
+- INFORM risk council n=195; garbage level **422** (portal too)
+- Hazard-area Dodoma **200**; bad coords **422**

@@ -17,6 +17,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
@@ -1590,17 +1591,30 @@ public class MonitoringEvaluationEntryServiceImpl implements MonitoringEvaluatio
                 """, id);
     }
 
+    /**
+     * Blank → fallback (null for full catalogue list APIs, defaultLevel for workbench).
+     * Non-blank unknown → 422 (never silently treat garbage as national/full list).
+     */
     private String cleanLevel(String raw, String fallback) {
         if (raw == null || raw.isBlank()) {
             return fallback;
         }
         String level = raw.trim().toLowerCase(Locale.ROOT);
-        return LEVELS.contains(level) ? level : fallback;
+        if (LEVELS.contains(level)) {
+            return level;
+        }
+        throw new BusinessRuleException(
+                "Unknown level '" + raw.trim() + "'. Use national, region, district, council, agency, stakeholder, incident or warning.");
     }
 
     private String cleanPeriod(String period) {
         if (period != null && !period.isBlank()) {
-            return period.trim();
+            String p = period.trim();
+            // Productive labels: YYYY-Qn (matches seeded me_indicator_values) or calendar year YYYY.
+            if (p.matches("\\d{4}-Q[1-4]") || p.matches("\\d{4}")) {
+                return p;
+            }
+            throw new BusinessRuleException("period must look like 2026-Q3 or 2026.");
         }
         LocalDate now = LocalDate.now();
         int quarter = ((now.getMonthValue() - 1) / 3) + 1;
