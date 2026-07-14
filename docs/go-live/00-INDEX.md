@@ -20,13 +20,18 @@ Read in order. Each document has one job. Details live in the source tree when c
 | 6 | [Docker deploy](./DOCKER-DEPLOY.md) | Compose, PDF, TLS edge, image tags, secrets |
 | 7 | [Docker fix plan](./DOCKER-FIX-PLAN.md) | Challenges + ordered fixes (one at a time) |
 
+**Easy deploy (start here for standing the stack up):** [../DEPLOYMENT.md](../DEPLOYMENT.md)  
+Helper: `scripts/deploy-quickstart.sh` (laptop Path A / TLS-local Path B).
+
 ## Related operational files (existing)
 
 | File | Use |
 |------|-----|
+| `docs/DEPLOYMENT.md` | **Primary deploy guide** — Paths A/B/C, smoke, day-2, troubleshooting |
 | `docs/GO-LIVE-RUNBOOK.md` | Detailed env vars and residual flags |
 | `docs/env.prod.example` | Production environment template |
 | `docs/LOCAL-TEST-PASSWORD.md` | Local seed password only; revoke on prod |
+| `scripts/deploy-quickstart.sh` | One-command laptop / staging TLS start |
 | `scripts/go-live-smoke.sh` | Automated smoke after deploy |
 
 ## Local stack (developer machine)

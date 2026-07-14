@@ -21,42 +21,44 @@ java -jar target/dmis-platform-0.1.0.jar --spring.profiles.active=local
 cd frontend && npm install && npm start
 ```
 
-## Docker
+## Deploy (recommended)
 
-Compose is packaging, not a go-live certificate. Guide: **`docs/go-live/DOCKER-DEPLOY.md`**.
+**Full step-by-step guide:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
-```bash
-cp .env.example .env   # set DMIS_AUTH_JWT_SECRET (and strong DB_PASSWORD for anything beyond laptop)
-docker compose up --build
-# UI http://localhost:8081  (API via /api, PDF via /ew-api)
-```
+| Path | Use | How |
+|------|-----|-----|
+| **A — Laptop** | Lab / first look | `./scripts/deploy-quickstart.sh` → http://localhost:8081 |
+| **B — Staging HTTPS** | No public DNS | `./scripts/deploy-quickstart.sh --tls-local` → https://localhost:8443 |
+| **C — Production** | Real hostname + TLS | Image tags + `docker-compose.prod.yml` (see guide) |
 
-Production-style (image tags + TLS edge):
-
-```bash
-./scripts/docker-release.sh 2026.07.14
-# on server: set image env + secrets, then
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
-
-Staging HTTPS without public DNS:
+Compose is **packaging**, not a go-live certificate. Technical Docker notes: `docs/go-live/DOCKER-DEPLOY.md`.
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.tls-local.yml up -d
+# Path A — easiest
+cd dmis-platform
+./scripts/deploy-quickstart.sh
+# UI → http://localhost:8081
+
+# Path B — internal HTTPS (browser cert warning expected)
+./scripts/deploy-quickstart.sh --tls-local
 curl -k https://localhost:8443/
+
+# Path C — production (build host)
+./scripts/docker-release.sh 2026.07.14
+# on server: .env from docs/env.prod.example, then
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 ## Production cutover
 
-Start with the go-live document set (SRS, SDD, plan, acceptance, honesty, Docker):
+Deploy the stack with **`docs/DEPLOYMENT.md`** (Path C), then complete acceptance:
 
 **`docs/go-live/00-INDEX.md`**
-
-Then:
 
 1. Copy `docs/env.prod.example` to the secret store (JWT, CORS, DB, optional M-Gov/SMTP).
 2. Follow `docs/GO-LIVE-RUNBOOK.md` for env detail.
 3. Smoke: `./scripts/go-live-smoke.sh`.
+4. Sign `docs/go-live/04-ACCEPTANCE.md` before claiming go-live.
 
 ## Key ops APIs
 

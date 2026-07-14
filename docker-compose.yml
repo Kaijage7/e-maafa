@@ -2,7 +2,7 @@
 #
 # HONESTY: `docker compose up` is NOT a production go-live certificate.
 # You still need real JWT, CORS, TLS, SMS/SMTP (or signed residual accepts),
-# and signed acceptance (docs/go-live/). See docs/go-live/DOCKER-DEPLOY.md.
+# and signed acceptance (docs/go-live/). Easy guide: docs/DEPLOYMENT.md
 #
 # Local/staging (build from source):
 #   cp .env.example .env   # set secrets

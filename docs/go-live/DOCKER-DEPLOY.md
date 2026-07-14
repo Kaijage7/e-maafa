@@ -3,6 +3,9 @@
 **Product:** e-MAAFA / DMIS  
 **Audience:** PMO ICT / deploy operators
 
+**Start here for a step-by-step easy path:** [`docs/DEPLOYMENT.md`](../DEPLOYMENT.md)  
+(This file is the technical Docker reference: secrets, TLS modes, storage, image tags.)
+
 ## 1. Honesty first
 
 `docker compose up` is a **packaging and process tool**. It is **not**:
