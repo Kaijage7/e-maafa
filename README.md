@@ -23,10 +23,15 @@ cd frontend && npm install && npm start
 
 ## Production cutover
 
-1. Copy `docs/env.prod.example` → secret store (JWT, CORS, DB, optional M-Gov/SMTP).
-2. Follow **`docs/GO-LIVE-RUNBOOK.md`**.
-3. Assessment: **`docs/space02-go-live-assessment.md`**.
-4. Smoke: `./scripts/go-live-smoke.sh` · residual board: `./scripts/resolve-cutover-residuals.sh`.
+Start with the go-live document set (SRS, SDD, plan, acceptance, honesty):
+
+**`docs/go-live/00-INDEX.md`**
+
+Then:
+
+1. Copy `docs/env.prod.example` to the secret store (JWT, CORS, DB, optional M-Gov/SMTP).
+2. Follow `docs/GO-LIVE-RUNBOOK.md` for env detail.
+3. Smoke: `./scripts/go-live-smoke.sh`.
 
 ## Key ops APIs
 
