@@ -216,6 +216,7 @@ Suggested migration order:
 69. ~~**Residual content / repository domain / INFORM web**~~ — **DONE** (email/sms logs, action guide, disaster events + Sendai analytics services, INFORM controllers)
 70. ~~**One Health residual package empty**~~ — **DONE** (`OneHealthEventService` → `service.support`; `OhEventWriteRequest` → `dto.request`; `onehealth/` package-info only)
 71. ~~**Emptied package markers**~~ — **DONE** (`finance/`, `recovery/` package-info only — same pattern as preparedness/onehealth)
+72. ~~**Deep residual thin warehouse controllers + hub package-info**~~ — **DONE** (no JdbcTemplate left in controllers; intentional hubs documented)
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).

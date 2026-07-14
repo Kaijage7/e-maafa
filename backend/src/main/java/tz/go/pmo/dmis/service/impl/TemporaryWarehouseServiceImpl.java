@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.common.sql.SafeIdentifiers;
 import tz.go.pmo.dmis.dto.request.TemporaryWarehouseWriteRequest;
 import tz.go.pmo.dmis.dto.response.TemporaryWarehouseResponse;
 import tz.go.pmo.dmis.entity.TemporaryWarehouse;
@@ -22,6 +24,7 @@ import tz.go.pmo.dmis.service.TemporaryWarehouseService;
 /**
  * Temporary warehouse registry: jurisdiction-scoped reads, JDBC writes (entity immutable).
  * Deactivate blocked while residual stock remains on inventory_items.
+ * Area bind + visibility live here (not in the controller).
  */
 @Service
 @RequiredArgsConstructor
@@ -32,6 +35,7 @@ public class TemporaryWarehouseServiceImpl implements TemporaryWarehouseService 
     private final TemporaryWarehouseRepository repo;
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
+    private final AreaGuard areaGuard;
 
     @Override
     @Transactional(readOnly = true)
@@ -62,6 +66,7 @@ public class TemporaryWarehouseServiceImpl implements TemporaryWarehouseService 
     @Override
     @Transactional
     public Map<String, Object> create(TemporaryWarehouseWriteRequest req) {
+        req = bindArea(req);
         if (req.name() == null || req.name().isBlank() || req.level() == null || req.level().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name and level are required");
         }
@@ -90,6 +95,7 @@ public class TemporaryWarehouseServiceImpl implements TemporaryWarehouseService 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> detail(long id) {
+        areaGuard.assertWarehouseVisible("public.temporary_warehouses", id);
         TemporaryWarehouse w = repo.findById(id).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Temporary warehouse not found"));
         Map<String, Object> m = new HashMap<>();
@@ -112,6 +118,8 @@ public class TemporaryWarehouseServiceImpl implements TemporaryWarehouseService 
     @Override
     @Transactional
     public Map<String, Object> update(long id, TemporaryWarehouseWriteRequest req) {
+        areaGuard.assertWarehouseVisible("public.temporary_warehouses", id);
+        req = bindArea(req);
         if (req.name() == null || req.name().isBlank() || req.level() == null || req.level().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name and level are required");
         }
@@ -149,6 +157,38 @@ public class TemporaryWarehouseServiceImpl implements TemporaryWarehouseService 
 
     private static String blank(String v) {
         return (v == null || v.isBlank()) ? null : v.trim();
+    }
+
+    /** Area officers may only create/update temp warehouses stamped to their own region/district. */
+    private TemporaryWarehouseWriteRequest bindArea(TemporaryWarehouseWriteRequest req) {
+        JurisdictionScope.Tier tier = jurisdiction.currentTier();
+        if (tier != JurisdictionScope.Tier.REGION && tier != JurisdictionScope.Tier.DISTRICT) {
+            return req;
+        }
+        Map<String, Object> area = jurisdiction.currentArea();
+        if (tier == JurisdictionScope.Tier.DISTRICT) {
+            String districtName = nameOf("districts", area.get("district_id"));
+            String regionName = nameOf("regions", area.get("region_id"));
+            return withArea(req, regionName, districtName);
+        }
+        return withArea(req, nameOf("regions", area.get("region_id")), req.district());
+    }
+
+    private static TemporaryWarehouseWriteRequest withArea(
+            TemporaryWarehouseWriteRequest r, String region, String district) {
+        return new TemporaryWarehouseWriteRequest(r.name(), r.level(), region, district, r.council(),
+                r.locationDescription(), r.contactPersonName(), r.contactPersonPhone(), r.operationalStatus(),
+                r.latitude(), r.longitude());
+    }
+
+    private String nameOf(String table, Object id) {
+        if (id == null) {
+            return null;
+        }
+        List<String> names = jdbc.queryForList(
+                "select name from " + SafeIdentifiers.publicQualified(table) + " where id = ?",
+                String.class, id);
+        return names.isEmpty() ? null : names.get(0);
     }
 
     private Long resolveRegion(String name) {

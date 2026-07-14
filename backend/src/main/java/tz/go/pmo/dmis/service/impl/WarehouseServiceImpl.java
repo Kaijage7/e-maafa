@@ -10,8 +10,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.AreaLookup;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
+import tz.go.pmo.dmis.common.sql.SafeIdentifiers;
 import tz.go.pmo.dmis.dto.request.WarehouseWriteRequest;
 import tz.go.pmo.dmis.dto.response.WarehouseResponse;
 import tz.go.pmo.dmis.entity.Warehouse;
@@ -20,7 +22,7 @@ import tz.go.pmo.dmis.service.WarehouseService;
 
 /**
  * Warehouse registry: jurisdiction-scoped reads, JDBC writes (entity stays immutable).
- * Stock units match warehouse-ops ledger predicate.
+ * Stock units match warehouse-ops ledger predicate. Area bind for officers lives here (not in controller).
  */
 @Service
 @RequiredArgsConstructor
@@ -30,6 +32,7 @@ public class WarehouseServiceImpl implements WarehouseService {
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
     private final AreaLookup areaLookup;
+    private final AreaGuard areaGuard;
 
     @Override
     @Transactional(readOnly = true)
@@ -52,6 +55,7 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Override
     @Transactional
     public Map<String, Object> create(WarehouseWriteRequest req) {
+        req = bindToCallerArea(req);
         if (req.name() == null || req.name().isBlank() || req.zone() == null || req.zone().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name and zone are required");
         }
@@ -73,6 +77,7 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> show(long id) {
+        areaGuard.assertWarehouseVisible("public.warehouses", id);
         var rows = jdbc.queryForList("""
                 select w.id, w.name, w.zone, w.city_or_region as "cityOrRegion",
                        w.location_address as "locationAddress",
@@ -93,6 +98,8 @@ public class WarehouseServiceImpl implements WarehouseService {
     @Override
     @Transactional
     public Map<String, Object> update(long id, WarehouseWriteRequest req) {
+        areaGuard.assertWarehouseVisible("public.warehouses", id);
+        req = bindToCallerArea(req);
         if (req.name() == null || req.name().isBlank() || req.zone() == null || req.zone().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name and zone are required");
         }
@@ -111,6 +118,39 @@ public class WarehouseServiceImpl implements WarehouseService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Warehouse not found");
         }
         return Map.of("id", id, "message", "Warehouse updated");
+    }
+
+    /** Area officers may only create/update warehouses stamped to their own region/district. */
+    private WarehouseWriteRequest bindToCallerArea(WarehouseWriteRequest req) {
+        JurisdictionScope.Tier tier = jurisdiction.currentTier();
+        if (tier != JurisdictionScope.Tier.REGION && tier != JurisdictionScope.Tier.DISTRICT) {
+            return req;
+        }
+        Map<String, Object> area = jurisdiction.currentArea();
+        String regionName = nameOf("regions", area.get("region_id"));
+        String districtName = tier == JurisdictionScope.Tier.DISTRICT
+                ? nameOf("districts", area.get("district_id"))
+                : null;
+        if (regionName == null && area.get("district_id") != null) {
+            List<String> names = jdbc.queryForList(
+                    "select r.name from public.regions r join public.districts d on d.region_id = r.id where d.id = ?",
+                    String.class, area.get("district_id"));
+            regionName = names.isEmpty() ? null : names.get(0);
+        }
+        return new WarehouseWriteRequest(
+                req.name(), req.zone(), req.cityOrRegion(), req.locationAddress(), req.storageCapacitySqm(),
+                req.contactPersonName(), req.contactPersonPhone(), req.operationalStatus(),
+                req.latitude(), req.longitude(), regionName, districtName);
+    }
+
+    private String nameOf(String table, Object id) {
+        if (id == null) {
+            return null;
+        }
+        List<String> names = jdbc.queryForList(
+                "select name from " + SafeIdentifiers.publicQualified(table) + " where id = ?",
+                String.class, id);
+        return names.isEmpty() ? null : names.get(0);
     }
 
     private static String blankToNull(String v) {

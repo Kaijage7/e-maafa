@@ -1082,3 +1082,27 @@ inventory, warehouses, temp warehouses, alert-subscriptions, locations, roles, a
 
 ### Controllers outside controller/
 **0**
+
+
+## 37. Deep residual hunt — thin warehouse controllers + hub markers (2026-07-14)
+
+### Hunt results
+| Check | Result |
+|-------|--------|
+| Controllers outside `controller/` | **0** |
+| `@RestController` outside controller | **0** |
+| Controllers with `JdbcTemplate` (before) | **3** (inventory, warehouses, temporary-warehouses) |
+| Controllers with `JdbcTemplate` (after) | **0** |
+| Feature packages with leftover domain sources | **0** (emptied roots package-info only) |
+| Stale imports to emptied feature packages | **0** |
+
+### Resolved
+1. **InventoryController** — removed duplicate JDBC area guard (already in `InventoryServiceImpl`); pure thin delegate.
+2. **WarehouseController** / **TemporaryWarehouseController** — moved area bind + visibility into service.impl; controllers thin.
+3. **Hub package-info** added for `notification`, `ew`, `inform`, `mitigation`, `local`, `integration`, `common` (document intentional non-layer homes).
+
+### Live smoke
+inventory / reference / warehouses / temporary-warehouses → **200**; missing ids → **404**.
+
+### Intentionally not moved
+mitigation JPA models, notification delivery spine, EW helpers, INFORM engine, local seeders, integration export.
