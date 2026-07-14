@@ -1,73 +1,130 @@
-# DMIS / e-MAAFA — reproducible local/staging stack: Postgres + Spring backend + Angular/nginx frontend.
-#   1. Copy .env.example to .env and set a strong secret:  DMIS_AUTH_JWT_SECRET=<>=32 random bytes>
-#   2. docker compose up --build
+# e-MAAFA / DMIS — Docker stack (dev/staging and base for production overlays).
 #
-# The backend runs the PRODUCTION security chain (real role-gated @PreAuthorize — NO X-Local-Roles persona)
-# and applies ALL Flyway migrations on boot, including the area-specific schema (V92–V94: users / incidents /
-# stakeholders region_id+district_id and jurisdiction scoping) and the NDMF fund ledger (V89) — nothing to
-# configure for those, they apply automatically.
+# HONESTY: `docker compose up` is NOT a production go-live certificate.
+# You still need real JWT, CORS, TLS, SMS/SMTP (or signed residual accepts),
+# and signed acceptance (docs/go-live/). See docs/go-live/DOCKER-DEPLOY.md.
 #
-# NOT bundled here: the Early-Warning engine (Streamlit :8501 + generate API :8600) runs as SEPARATE
-# services. To serve EW from this stack, add those services and the frontend nginx /ew-engine (ws) and
-# /ew-api proxy routes — see frontend/nginx.conf.
+# Local/staging (build from source):
+#   cp .env.example .env   # set secrets
+#   docker compose up --build
+#
+# Production (immutable image tags — preferred):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Services: db, backend, frontend, ew-pdf. Production overlay adds Caddy TLS edge.
+
 services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_DB: dmis
-      POSTGRES_USER: dmis_app
+      POSTGRES_DB: ${DB_NAME:-dmis}
+      POSTGRES_USER: ${DB_USERNAME:-dmis_app}
+      # Staging default only. Production overlay requires DB_PASSWORD with no weak default.
       POSTGRES_PASSWORD: ${DB_PASSWORD:-dmis_pass}
     volumes:
       - dmis_pgdata:/var/lib/postgresql/data
-      # Fresh-install baseline: on a NEW volume only, Postgres runs this once so the schema starts
-      # at V122 and the backend (Spring Boot, no Laravel) boots without replaying migrations from V1.
-      # See db/baseline/README.md.
       - ./db/baseline/baseline.sql:/docker-entrypoint-initdb.d/01-baseline.sql:ro
     ports:
-      - "5440:5432"
+      - "${DMIS_DB_PUBLISH_PORT:-5440}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dmis_app -d dmis"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-dmis_app} -d ${DB_NAME:-dmis}"]
       interval: 5s
       timeout: 5s
       retries: 20
+    networks:
+      - dmis_net
 
   backend:
-    build: ./backend
+    image: ${DMIS_IMAGE_BACKEND:-emaafa/dmis-backend:local}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     depends_on:
       db:
         condition: service_healthy
+      ew-pdf:
+        condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       DB_HOST: db
       DB_PORT: "5432"
-      DB_NAME: dmis
-      DB_USERNAME: dmis_app
+      DB_NAME: ${DB_NAME:-dmis}
+      DB_USERNAME: ${DB_USERNAME:-dmis_app}
       DB_PASSWORD: ${DB_PASSWORD:-dmis_pass}
-      # Required — supplied from the environment / .env, NEVER committed. Compose refuses to start if it is
-      # unset, and the app fail-fasts on a weak/short (<32-byte) secret outside the 'local' profile.
-      DMIS_AUTH_JWT_SECRET: ${DMIS_AUTH_JWT_SECRET:?set a real >=32-byte JWT secret in .env (never commit it)}
-      # Gateways — OPTIONAL. Set them in .env to send real SMS (M-Gov) and email (SMTP); left blank, the
-      # app degrades gracefully and logs sends as 'pending' (no crash). Values stay in .env (git-ignored).
+      # Required outside local profile (>= 32 bytes). Compose fails if unset when using ? syntax in prod overlay.
+      DMIS_AUTH_JWT_SECRET: ${DMIS_AUTH_JWT_SECRET:-}
+      DMIS_AUTH_JWT_ISSUER: ${DMIS_AUTH_JWT_ISSUER:-dmis}
+      DMIS_AUTH_JWT_TTL_MINUTES: ${DMIS_AUTH_JWT_TTL_MINUTES:-30}
+      DMIS_SECURITY_CORS_ALLOWED_ORIGINS: ${DMIS_SECURITY_CORS_ALLOWED_ORIGINS:-}
+      DMIS_AUTH_FORCE_2FA_ROLES: ${DMIS_AUTH_FORCE_2FA_ROLES:-Super Admin,Director,Asst. Director,Secretary,EOCC,ICT Admin}
+      # PDF health probe (GoLiveOps) — internal Docker DNS name
+      DMIS_EW_PDF_HEALTH_URL: ${DMIS_EW_PDF_HEALTH_URL:-http://ew-pdf:8600/health}
       MGOV_API_KEY: ${MGOV_API_KEY:-}
       MGOV_SYSTEM_ID: ${MGOV_SYSTEM_ID:-}
       MGOV_SMS_URL: ${MGOV_SMS_URL:-}
       MGOV_MOBILE_SERVICE_ID: ${MGOV_MOBILE_SERVICE_ID:-}
       MGOV_SENDER_ID: ${MGOV_SENDER_ID:-}
-      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      DMIS_MGOV_DLR_SECRET: ${DMIS_MGOV_DLR_SECRET:-}
+      MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-e-MAAFA}
+      DMIS_GO_LIVE_ACCEPT_SMS_DEFERRED: ${DMIS_GO_LIVE_ACCEPT_SMS_DEFERRED:-false}
+      DMIS_GO_LIVE_ACCEPT_EMAIL_DEFERRED: ${DMIS_GO_LIVE_ACCEPT_EMAIL_DEFERRED:-false}
+      DMIS_GO_LIVE_ACCEPT_SPARSE_PHONES: ${DMIS_GO_LIVE_ACCEPT_SPARSE_PHONES:-false}
+      DMIS_GO_LIVE_ACCEPT_PDF_SIDECAR: ${DMIS_GO_LIVE_ACCEPT_PDF_SIDECAR:-false}
+      DMIS_GO_LIVE_ACCEPT_STORAGE_PARTIAL: ${DMIS_GO_LIVE_ACCEPT_STORAGE_PARTIAL:-false}
+      DMIS_SCENARIO_INJECTS_ENABLED: ${DMIS_SCENARIO_INJECTS_ENABLED:-false}
+      DMIS_ALLOW_DEMO_ACCOUNTS_IN_PROD: ${DMIS_ALLOW_DEMO_ACCOUNTS_IN_PROD:-false}
+    # Staging convenience only. Production overlay does not publish backend to the host.
     ports:
-      - "8080:8080"
+      - "${DMIS_BACKEND_PUBLISH_PORT:-8080}:8080"
+    networks:
+      - dmis_net
+    restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    image: ${DMIS_IMAGE_FRONTEND:-emaafa/dmis-frontend:local}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     depends_on:
       - backend
+      - ew-pdf
     ports:
-      - "8081:80"
+      - "${DMIS_FRONTEND_PUBLISH_PORT:-8081}:80"
+    networks:
+      - dmis_net
+    restart: unless-stopped
+
+  # Bulletin PDF generator (722e4 / multirisk / agency kinds). Not AI.
+  ew-pdf:
+    image: ${DMIS_IMAGE_EW_PDF:-emaafa/ew-pdf:local}
+    build:
+      # Engine lives next to dmis-platform under the monorepo root (maafa/).
+      context: ..
+      dockerfile: dmis-platform/deploy/ew-pdf/Dockerfile
+    environment:
+      EWS_PDF_PORT: "8600"
+    # Do not publish 8600 to the public internet. Frontend nginx proxies /ew-api only.
+    expose:
+      - "8600"
+    networks:
+      - dmis_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8600/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+networks:
+  dmis_net:
+    driver: bridge
 
 volumes:
   dmis_pgdata:

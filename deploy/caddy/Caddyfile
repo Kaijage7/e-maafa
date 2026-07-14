@@ -1,0 +1,33 @@
+# TLS edge for e-MAAFA. Place behind real DNS when using automatic HTTPS.
+# Env substituted by Caddy:
+#   DMIS_PUBLIC_HOST  e.g. emaafa.pmo.go.tz  (required for ACME)
+#   Optional: CADDY_EMAIL for Let's Encrypt account
+
+{
+	email {$CADDY_EMAIL:ops@example.invalid}
+}
+
+# Automatic HTTPS when DMIS_PUBLIC_HOST is a real public hostname with DNS to this host.
+{$DMIS_PUBLIC_HOST:localhost} {
+	encode gzip
+
+	# SPA + /api + /ew-api are served by the frontend nginx container (see frontend/nginx.conf).
+	reverse_proxy frontend:80 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

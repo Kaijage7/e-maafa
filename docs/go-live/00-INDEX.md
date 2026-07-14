@@ -17,6 +17,7 @@ Read in order. Each document has one job. Details live in the source tree when c
 | 3 | [Go-live plan](./03-GO-LIVE-PLAN.md) | Cutover steps, gates, roles |
 | 4 | [Acceptance](./04-ACCEPTANCE.md) | Pass/fail checks for release |
 | 5 | [Ops and honesty](./05-OPS-AND-HONESTY.md) | What is live, planned, or deferred |
+| 6 | [Docker deploy](./DOCKER-DEPLOY.md) | Compose, PDF, TLS edge, image tags, secrets |
 
 ## Related operational files (existing)
 

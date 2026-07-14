@@ -9,10 +9,10 @@ National disaster management information system (Tanzania PMO-DMD): Spring Boot 
 - **No AI product** in this stack; impact-support uses deterministic INFORM joins.
 - Deploy with **`prod`** profile only on the public edge. Never expose `local`.
 
-## Quick start (local)
+## Quick start (local process)
 
 ```bash
-# Postgres on :5440 (see docker-compose.yml)
+# Postgres on :5440 (docker compose db service or start-all.sh)
 # Backend
 cd backend && mvn -DskipTests package
 java -jar target/dmis-platform-0.1.0.jar --spring.profiles.active=local
@@ -21,9 +21,27 @@ java -jar target/dmis-platform-0.1.0.jar --spring.profiles.active=local
 cd frontend && npm install && npm start
 ```
 
+## Docker
+
+Compose is packaging, not a go-live certificate. Guide: **`docs/go-live/DOCKER-DEPLOY.md`**.
+
+```bash
+cp .env.example .env   # set DMIS_AUTH_JWT_SECRET (and strong DB_PASSWORD for anything beyond laptop)
+docker compose up --build
+# UI http://localhost:8081  (API via /api, PDF via /ew-api)
+```
+
+Production-style (image tags + TLS edge):
+
+```bash
+./scripts/docker-release.sh 2026.07.14
+# on server: set image env + secrets, then
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
 ## Production cutover
 
-Start with the go-live document set (SRS, SDD, plan, acceptance, honesty):
+Start with the go-live document set (SRS, SDD, plan, acceptance, honesty, Docker):
 
 **`docs/go-live/00-INDEX.md`**
 

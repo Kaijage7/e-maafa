@@ -136,6 +136,9 @@ dmis:
   # Email sender identity (Gmail SMTP). From-address falls back to spring.mail.username.
   mail:
     from-name: ${MAIL_FROM_NAME:e-MAAFA DMIS}
+  # EW bulletin PDF sidecar health (Docker: http://ew-pdf:8600/health). Env: DMIS_EW_PDF_HEALTH_URL
+  ew:
+    pdf-health-url: ${DMIS_EW_PDF_HEALTH_URL:http://127.0.0.1:8600/health}
   # Careful cutover residual accept flags (ops sign-off only — never invent live national systems).
   # Env: DMIS_GO_LIVE_ACCEPT_SMS_DEFERRED / _EMAIL_DEFERRED / _SPARSE_PHONES / _PDF_SIDECAR / _STORAGE_PARTIAL
   go-live:
