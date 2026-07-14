@@ -31,7 +31,15 @@ interface PortalWarning {
 interface PortalIncident {
   id: number; title: string; severityLevel: string; status: string;
   latitude: number | null; longitude: number | null; regionName?: string | null; districtName?: string | null;
-  pinnedToMap?: boolean;
+  pinnedToMap?: boolean; responseActive?: boolean; workflowStatus?: string;
+}
+interface NationalSituation {
+  summaryLine?: string;
+  responseInProgress?: Array<{
+    id: number; title: string; status: string; severityLevel?: string;
+    regionName?: string; districtName?: string;
+  }>;
+  mapIncidents?: number; mapWarnings?: number; mapBulletins?: number;
 }
 interface PortalAreaPoint { name: string; lat: number; lng: number; level: string; }
 interface PortalBulletin {
@@ -53,7 +61,7 @@ interface PortalBulletin {
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;margin-bottom:1rem;">
         <div>
           <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0;">{{ L.t('lbl_portal') }}</h1>
-          <p style="color:var(--text-secondary, #64748b);margin:0.2rem 0 0;">{{ L.t('lbl_live_monitoring') }} — {{ warnings().length + bulletins().length }} {{ L.t('lbl_active_warnings') }}</p>
+          <p style="color:var(--text-secondary, #64748b);margin:0.2rem 0 0;">{{ L.t('lbl_live_monitoring') }} — {{ warnings().length + bulletins().length }} {{ L.t('lbl_active_warnings') }}@if (incidents().length) { · {{ incidents().length }} {{ L.lang()==='sw' ? 'matukio' : 'incidents' }} }</p>
         </div>
         <div style="display:flex;gap:0.6rem;align-items:center;">
           @if (view() === 'live') {
@@ -83,6 +91,15 @@ interface PortalBulletin {
       @if (view() === 'inform') {
         <public-inform-explorer [embedded]="true" />
       } @else {
+      @if (situationLine()) {
+        <div style="display:flex;flex-wrap:wrap;gap:0.55rem;align-items:center;margin:0 0 1rem;padding:0.75rem 1rem;border-radius:12px;border:1px solid rgba(0,51,102,0.12);background:linear-gradient(90deg,#f0f7ff,#f8fafc);">
+          <span style="font-size:0.78rem;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#003366;"><i class="fas fa-satellite-dish me-1"></i>{{ L.lang()==='sw' ? 'Hali ya nchi' : 'National situation' }}</span>
+          <span style="font-size:0.92rem;font-weight:600;color:#334155;">{{ situationLine() }}</span>
+          @if (responseCards().length) {
+            <span style="margin-left:auto;font-size:0.85rem;font-weight:700;color:#b45309;"><i class="fas fa-truck-medical me-1"></i>{{ responseCards().length }} {{ L.lang()==='sw' ? 'maitikio yanayoendelea' : 'response(s) in progress' }}</span>
+          }
+        </div>
+      }
       <div style="display:grid;grid-template-columns:minmax(0,1fr) clamp(420px, 32vw, 540px);gap:1.2rem;align-items:start;">
         <!-- Live map -->
         <div style="position:relative;">
@@ -239,7 +256,27 @@ interface PortalBulletin {
               }
             </div>
           }
-          @if (!warnings().length && !bulletins().length) {
+          @if (responseCards().length) {
+            <div style="font-size:0.78rem;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#9a3412;margin-top:0.4rem;">
+              <i class="fas fa-helmet-safety me-1"></i>{{ L.lang()==='sw' ? 'Maitikio yanayoendelea' : 'Response in progress' }}
+            </div>
+          }
+          @for (inc of responseCards(); track inc.id) {
+            <div style="border:1px solid #fed7aa;border-radius:14px;background:#fff7ed;padding:1rem 1.15rem;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:0.75rem;font-weight:800;padding:0.15rem 0.5rem;border-radius:999px;background:#ea580c;color:#fff;">{{ inc.status }}</span>
+                @if (inc.severityLevel) {
+                  <span style="font-size:0.8rem;font-weight:700;color:#9a3412;">{{ inc.severityLevel }}</span>
+                }
+              </div>
+              <div style="font-size:1.05rem;font-weight:700;color:#111827;margin:0.45rem 0 0.2rem;">{{ inc.title }}</div>
+              <div style="font-size:0.88rem;color:#64748b;"><i class="fas fa-map-marker-alt me-1"></i>{{ inc.regionName }}@if (inc.districtName) { · {{ inc.districtName }} }</div>
+              <a [routerLink]="['/incident', inc.id]" style="display:inline-flex;margin-top:0.5rem;font-size:0.88rem;font-weight:700;color:#c2410c;text-decoration:none;">
+                <i class="fas fa-arrow-right me-1"></i>{{ L.lang()==='sw' ? 'Angalia maendeleo' : 'View response progress' }}
+              </a>
+            </div>
+          }
+          @if (!warnings().length && !bulletins().length && !responseCards().length) {
             <div style="text-align:center;color:var(--text-secondary, #64748b);padding:2rem;border:1px dashed rgba(0,0,0,0.12);border-radius:14px;">
               <i class="fas fa-check-circle" style="font-size:1.8rem;color:#4ade80;"></i>
               <p style="margin:0.6rem 0 0;font-size:0.95rem;">{{ L.t('lbl_no_active_alerts') }}</p>
@@ -316,6 +353,14 @@ export class PublicLivePortalComponent {
   warnings = signal<PortalWarning[]>([]);
   bulletins = signal<PortalBulletin[]>([]);
   incidents = signal<PortalIncident[]>([]);
+  situation = signal<NationalSituation | null>(null);
+  situationLine = computed(() => this.situation()?.summaryLine || '');
+  responseCards = computed(() => {
+    const fromSit = this.situation()?.responseInProgress ?? [];
+    if (fromSit.length) { return fromSit; }
+    return this.incidents().filter(i =>
+      i.responseActive || i.status === 'Active Response' || i.status === 'Escalated');
+  });
   shelters = signal<Shelter[]>([]);
   /**
    * Map layer:
@@ -348,10 +393,14 @@ export class PublicLivePortalComponent {
 
   constructor() {
     document.title = 'Live Portal — e-MAAFA';
-    this.http.get<{ warnings: PortalWarning[]; bulletins?: PortalBulletin[]; incidents?: PortalIncident[] }>('/api/v1/portal/landing').subscribe(d => {
+    this.http.get<{
+      warnings: PortalWarning[]; bulletins?: PortalBulletin[]; incidents?: PortalIncident[];
+      nationalSituation?: NationalSituation;
+    }>('/api/v1/portal/landing').subscribe(d => {
       this.warnings.set(d.warnings);
       this.bulletins.set(d.bulletins ?? []);
       this.incidents.set(d.incidents ?? []);
+      this.situation.set(d.nationalSituation ?? null);
       this.loadedAt.set(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       setTimeout(() => this.initMap(), 0);
     });

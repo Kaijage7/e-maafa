@@ -170,7 +170,7 @@ public class EwProductsServiceImpl implements EwProductsService {
         boolean published = toPublications || toMap;
 
         List<Map<String, Object>> rows = jdbc.queryForList(
-                "select id, title, pdf_path, description, issue_date from public.ew_generated_products where id = ?", id);
+                "select id, title, pdf_path, description, issue_date, warning_code from public.ew_generated_products where id = ?", id);
         if (rows.isEmpty()) {
             throw new ResourceNotFoundException("Bulletin product not found.");
         }
@@ -182,6 +182,33 @@ public class EwProductsServiceImpl implements EwProductsService {
                 set is_published = ?, show_on_map = ?, published_at = case when ? then now() else null end,
                     published_by = ? where id = ?
                 """, published, toMap, published, userId, id);
+
+        // Keep early_warnings portal map in step with published bulletins so the citizen portal
+        // shows the same national picture (warning pins + PDF) without a second manual map toggle.
+        String warningCode = b.get("warning_code") == null ? null : String.valueOf(b.get("warning_code")).trim();
+        if (warningCode != null && !warningCode.isBlank()) {
+            if (toMap) {
+                jdbc.update("""
+                        update public.early_warnings
+                        set show_on_map = true, updated_at = now()
+                        where warning_code = ? and status = 'active'
+                        """, warningCode);
+            } else {
+                // Only clear map pins when no other published product for this code remains on the map.
+                Integer stillOnMap = jdbc.queryForObject("""
+                        select count(*)::int from public.ew_generated_products
+                        where warning_code = ? and coalesce(is_published,false)=true
+                          and coalesce(show_on_map,false)=true and id <> ?
+                        """, Integer.class, warningCode, id);
+                if (stillOnMap == null || stillOnMap == 0) {
+                    jdbc.update("""
+                            update public.early_warnings
+                            set show_on_map = false, updated_at = now()
+                            where warning_code = ? and status = 'active'
+                            """, warningCode);
+                }
+            }
+        }
 
         // Publications target: upsert (or remove) a public 'Bulletin' document keyed back to this product.
         String repoKey = "EOCC-BULLETIN-" + id;

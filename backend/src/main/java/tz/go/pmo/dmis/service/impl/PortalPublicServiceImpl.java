@@ -48,7 +48,9 @@ public class PortalPublicServiceImpl implements PortalPublicService {
     @Override
 
     public Map<String, Object> landing() {
-        // Active warnings for the hero map (flat early_warnings table — EarlyWarning::onMap)
+        // Active warnings for the hero map (flat early_warnings).
+        // Shown when: operator toggled show_on_map, OR a published EOCC/PMO bulletin is already on the map
+        // for the same warning_code (so the portal reflects what is really published nationally).
         List<Map<String, Object>> warnings = jdbc.queryForList(
                 "select ew.id, ew.warning_code as \"warningCode\", ew.hazard_type as \"hazardType\","
                         + " ew.severity_level as \"severityLevel\", ew.alert_message as \"alertMessage\","
@@ -64,7 +66,21 @@ public class PortalPublicServiceImpl implements PortalPublicService {
                         + " left join lateral (select pdf_path, description from public.ew_generated_products gp"
                         + "     where gp.warning_code = ew.warning_code and gp.pdf_path is not null"
                         + "     order by gp.generated_at desc limit 1) p on true"
-                        + " where ew.show_on_map = true and ew.status = 'active'");
+                        + " where ew.status = 'active'"
+                        + "   and ("
+                        + "        coalesce(ew.show_on_map, false) = true"
+                        + "        or exists ("
+                        + "            select 1 from public.ew_generated_products gp2"
+                        + "            where gp2.warning_code = ew.warning_code"
+                        + "              and coalesce(gp2.is_published, false) = true"
+                        + "              and coalesce(gp2.show_on_map, false) = true"
+                        + "        )"
+                        + "   )");
+
+        // Multirisk/EOCC products often have a warning_code that never landed in early_warnings
+        // (ingest path). Surface public-safe pins from published map products so the portal list
+        // matches the national bulletin picture.
+        enrichWarningsFromPublishedProducts(warnings);
 
         // Hero-map status panel stats (emergency/warning/watch counts + people at risk)
         Map<String, Object> stats = new HashMap<>();
@@ -74,21 +90,31 @@ public class PortalPublicServiceImpl implements PortalPublicService {
         stats.put("peopleAtRisk", warnings.stream()
                 .mapToLong(w -> w.get("peopleAtRisk") == null ? 0 : ((Number) w.get("peopleAtRisk")).longValue()).sum());
 
-        // Incidents on the public map — READ-ONLY consumption of the Response module's table.
-        // PUBLIC-SAFE columns only (no casualty/reporter fields). Like the EW warnings, the public map
-        // shows ONLY incidents an operator EXPLICITLY pinned (show_on_portal_map = true) — no auto-show by
-        // status/approval — and only while still active: Closed/Resolved incidents drop off the public map.
+        // Incidents on the public map — public-safe columns only.
+        // Include: (1) operator-pinned, or (2) live response proceeding (Active Response / Escalated)
+        // with coordinates. Draft/Reported-only workbench rows stay private until pinned or escalated.
         List<Map<String, Object>> incidents = safeList(
                 "select id, title, severity_level as \"severityLevel\", status,"
                         + " workflow_status as \"workflowStatus\","
                         + " latitude, longitude, region_name as \"regionName\", district_name as \"districtName\","
-                        + " show_on_portal_map as \"pinnedToMap\""
+                        + " show_on_portal_map as \"pinnedToMap\","
+                        + " case when lower(coalesce(status,'')) in ('active response','escalated') then true else false end"
+                        + "   as \"responseActive\""
                         + " from public.incidents"
                         + " where latitude is not null"
-                        + "   and show_on_portal_map = true"             // operator explicitly pinned it
-                        + "   and status not in ('Closed', 'Resolved')"  // and the situation is still active
                         + "   and coalesce(is_simulation, false) = false"
-                        + " order by reported_at desc");
+                        + "   and lower(coalesce(status,'')) not in ('closed','resolved','cancelled','closed_rumor')"
+                        + "   and ("
+                        + "        coalesce(show_on_portal_map, false) = true"
+                        + "        or lower(coalesce(status,'')) in ('active response','escalated')"
+                        + "   )"
+                        + " order by"
+                        + "   case lower(coalesce(status,''))"
+                        + "     when 'active response' then 0"
+                        + "     when 'escalated' then 1"
+                        + "     else 2 end,"
+                        + "   reported_at desc nulls last"
+                        + " limit 80");
 
         // Bulletins an operator has explicitly published to the portal map (EOCC Bulletin → Publish → Map).
         // areaPoints carries one coordinate per PMO-selected district (name/lat/lng/level) so the map can
@@ -97,7 +123,9 @@ public class PortalPublicServiceImpl implements PortalPublicService {
                 "select id, title, severity, centroid_lat as \"centroidLat\", centroid_lng as \"centroidLng\","
                         + " '/api/storage/' || pdf_path as \"pdfUrl\","
                         + " envelope->>'area_points' as \"areaPointsJson\","
-                        + " envelope->'days'->0->'hazards'->0->>'type' as \"hazardType\""
+                        + " envelope->'days'->0->'hazards'->0->>'type' as \"hazardType\","
+                        + " warning_code as \"warningCode\","
+                        + " to_char(generated_at, 'YYYY-MM-DD HH24:MI') as \"generatedAt\""
                         + " from public.ew_generated_products"
                         + " where is_published = true and show_on_map = true"
                         + "   and centroid_lat is not null and centroid_lng is not null"
@@ -112,11 +140,21 @@ public class PortalPublicServiceImpl implements PortalPublicService {
             b.put("areaPoints", parsed == null ? List.of() : parsed);
         }
 
+        // National operational picture — aggregates from live Response + EW registers (public-safe).
+        Map<String, Object> nationalSituation = buildNationalSituation(warnings, incidents, bulletins);
+        stats.put("bulletinOnMapCount", bulletins.size());
+        stats.put("responseIncidentCount", incidents.stream()
+                .filter(i -> Boolean.TRUE.equals(i.get("responseActive")) || "Active Response".equals(i.get("status"))
+                        || "Escalated".equals(i.get("status")))
+                .count());
+        stats.put("openIncidentOnMapCount", incidents.size());
+
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("warnings", warnings);
         payload.put("incidents", incidents);
         payload.put("bulletins", bulletins);
         payload.put("stats", stats);
+        payload.put("nationalSituation", nationalSituation);
         payload.put("hazards", safeList("select id, name, type from public.hazards where is_active = true order by name"));
         payload.put("slides", safeList("select title, subtitle, slide_type as \"slideType\", background_image as \"backgroundImage\""
                 + " from public.portal_slides where is_active = true order by sort_order"));
@@ -124,10 +162,13 @@ public class PortalPublicServiceImpl implements PortalPublicService {
                 + " marquee_row as \"marqueeRow\" from public.portal_gallery where is_active = true"
                 + " order by marquee_row, sort_order"), "imagePath"));
         payload.put("settings", settingsMap());
+        // Exclude internal smoke/test articles from the citizen-facing news strip.
         payload.put("latestNews", resolveImages(safeList("select title, slug, excerpt, image, category,"
                 + " title_sw as \"title_sw\", excerpt_sw as \"excerpt_sw\","
                 + " to_char(published_at, 'Mon DD, YYYY') as \"publishedAt\""
                 + " from public.portal_news where is_active = true and published_at <= now()"
+                + "   and lower(coalesce(title,'')) not like '%smoke test%'"
+                + "   and lower(coalesce(title,'')) not like '%ega training smoke%'"
                 + " order by published_at desc limit 6"), "image"));
         payload.put("latestPublications", safeList("select id, document_name as \"documentName\","
                 + " document_type as \"documentType\", year_of_approval as \"yearOfApproval\","
@@ -143,6 +184,187 @@ public class PortalPublicServiceImpl implements PortalPublicService {
         payload.put("capabilities", readJsonList("capabilities.items"));
         payload.put("emergencyNumbers", readJsonList("emergency.numbers"));
         return payload;
+    }
+
+    /**
+     * Add map-list warning rows from published products when early_warnings has no matching code.
+     * Uses bulletin centroid + severity; keeps PDF link for pure citizen view.
+     */
+    private void enrichWarningsFromPublishedProducts(List<Map<String, Object>> warnings) {
+        java.util.Set<String> present = new java.util.HashSet<>();
+        for (Map<String, Object> w : warnings) {
+            Object code = w.get("warningCode");
+            if (code != null && !String.valueOf(code).isBlank()) {
+                present.add(String.valueOf(code));
+            }
+        }
+        try {
+            for (Map<String, Object> p : jdbc.queryForList("""
+                    select id, warning_code, title, severity, centroid_lat, centroid_lng, pdf_path, description,
+                           envelope->>'area_points' as area_points_json
+                    from public.ew_generated_products
+                    where coalesce(is_published,false)=true and coalesce(show_on_map,false)=true
+                      and warning_code is not null and pdf_path is not null
+                    order by generated_at desc
+                    limit 40
+                    """)) {
+                String code = String.valueOf(p.get("warning_code"));
+                if (present.contains(code)) {
+                    continue;
+                }
+                present.add(code);
+                String engineSev = String.valueOf(p.get("severity") == null ? "ADVISORY" : p.get("severity"));
+                String publicSev = switch (engineSev.toUpperCase(Locale.ROOT)) {
+                    case "MAJOR_WARNING", "EMERGENCY" -> "Emergency";
+                    case "WARNING" -> "Warning";
+                    default -> "Watch";
+                };
+                // Prefer first district point for pin when available
+                Double lat = p.get("centroid_lat") instanceof Number n ? n.doubleValue() : null;
+                Double lng = p.get("centroid_lng") instanceof Number n ? n.doubleValue() : null;
+                String regions = null;
+                Object apRaw = p.get("area_points_json");
+                if (apRaw != null) {
+                    try {
+                        List<?> pts = json.readValue(String.valueOf(apRaw), List.class);
+                        java.util.List<String> names = new java.util.ArrayList<>();
+                        for (Object o : pts) {
+                            if (o instanceof Map<?, ?> m && m.get("name") != null) {
+                                names.add(String.valueOf(m.get("name")));
+                            }
+                            if (lat == null && o instanceof Map<?, ?> m2 && m2.get("lat") instanceof Number la
+                                    && m2.get("lng") instanceof Number ln) {
+                                lat = la.doubleValue();
+                                lng = ln.doubleValue();
+                            }
+                        }
+                        if (!names.isEmpty()) {
+                            regions = String.join(", ", names.stream().limit(8).toList());
+                        }
+                    } catch (Exception ignored) {
+                        // leave centroid
+                    }
+                }
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("id", -((Number) p.get("id")).longValue()); // synthetic negative id (product-sourced)
+                row.put("warningCode", code);
+                row.put("hazardType", "Multi-hazard");
+                row.put("severityLevel", publicSev);
+                row.put("alertMessage", p.get("title"));
+                row.put("affectedRegions", regions);
+                row.put("affectedDistricts", null);
+                row.put("latitude", lat);
+                row.put("longitude", lng);
+                row.put("peopleAtRisk", null);
+                row.put("bulletinUrl", "/api/storage/" + p.get("pdf_path"));
+                row.put("bulletinDescription", p.get("description"));
+                row.put("source", "published_bulletin");
+                warnings.add(row);
+            }
+        } catch (Exception ignored) {
+            // optional enrichment
+        }
+    }
+
+    /**
+     * Public-safe national rollup so the portal shows what is really happening:
+     * open response load, published EW bulletins, agency bus freshness — not invented satellite layers.
+     */
+    private Map<String, Object> buildNationalSituation(List<Map<String, Object>> warnings,
+                                                       List<Map<String, Object>> incidents,
+                                                       List<Map<String, Object>> bulletins) {
+        Map<String, Object> sit = new LinkedHashMap<>();
+        sit.put("asOf", java.time.OffsetDateTime.now().toString());
+        sit.put("honesty",
+                "Public-safe operational picture from live DMIS registers. "
+                        + "No private casualty rolls on the map strip; full snapshot only for published/response incidents.");
+
+        Map<String, Object> incidentLoad = new LinkedHashMap<>();
+        try {
+            incidentLoad.put("openTotal", jdbc.queryForObject("""
+                    select count(*) from public.incidents
+                    where coalesce(is_simulation,false)=false
+                      and lower(coalesce(status,'')) not in ('closed','resolved','cancelled','closed_rumor')
+                    """, Long.class));
+            incidentLoad.put("activeResponse", jdbc.queryForObject("""
+                    select count(*) from public.incidents
+                    where coalesce(is_simulation,false)=false
+                      and lower(coalesce(status,'')) = 'active response'
+                    """, Long.class));
+            incidentLoad.put("escalated", jdbc.queryForObject("""
+                    select count(*) from public.incidents
+                    where coalesce(is_simulation,false)=false
+                      and lower(coalesce(status,'')) = 'escalated'
+                    """, Long.class));
+            incidentLoad.put("byRegion", jdbc.queryForList("""
+                    select coalesce(nullif(trim(region_name),''), 'Unspecified') as region,
+                           count(*)::int as "openIncidents",
+                           count(*) filter (where lower(coalesce(status,'')) in ('active response','escalated'))::int
+                               as "inResponse"
+                    from public.incidents
+                    where coalesce(is_simulation,false)=false
+                      and lower(coalesce(status,'')) not in ('closed','resolved','cancelled','closed_rumor')
+                    group by 1
+                    order by 2 desc, 1
+                    limit 20
+                    """));
+        } catch (Exception e) {
+            incidentLoad.put("error", "incident aggregates unavailable");
+        }
+        sit.put("incidents", incidentLoad);
+        sit.put("mapIncidents", incidents.size());
+        sit.put("mapWarnings", warnings.size());
+        sit.put("mapBulletins", bulletins.size());
+
+        try {
+            sit.put("agencyBus", jdbc.queryForList("""
+                    select agency, count(*)::int as submissions,
+                           max(created_at) as latestAt
+                    from public.ew_agency_submissions
+                    where created_at >= now() - interval '7 days'
+                    group by agency
+                    order by latestAt desc nulls last
+                    limit 12
+                    """));
+        } catch (Exception e) {
+            sit.put("agencyBus", List.of());
+        }
+
+        try {
+            sit.put("publishedBulletins7d", jdbc.queryForObject("""
+                    select count(*) from public.ew_generated_products
+                    where coalesce(is_published,false)=true
+                      and generated_at >= now() - interval '7 days'
+                    """, Long.class));
+            sit.put("productsWithPdf", jdbc.queryForObject(
+                    "select count(*) from public.ew_generated_products where pdf_path is not null", Long.class));
+        } catch (Exception e) {
+            sit.put("publishedBulletins7d", 0);
+        }
+
+        List<Map<String, Object>> responseCards = incidents.stream()
+                .filter(i -> Boolean.TRUE.equals(i.get("responseActive"))
+                        || "Active Response".equals(i.get("status"))
+                        || "Escalated".equals(i.get("status")))
+                .limit(12)
+                .map(i -> {
+                    Map<String, Object> c = new LinkedHashMap<>();
+                    c.put("id", i.get("id"));
+                    c.put("title", i.get("title"));
+                    c.put("status", i.get("status"));
+                    c.put("severityLevel", i.get("severityLevel"));
+                    c.put("regionName", i.get("regionName"));
+                    c.put("districtName", i.get("districtName"));
+                    c.put("snapshotUrl", "/api/v1/portal/incidents/" + i.get("id"));
+                    return c;
+                })
+                .toList();
+        sit.put("responseInProgress", responseCards);
+        sit.put("summaryLine", String.format(Locale.US,
+                "%d open incident(s) nationally · %d on public map · %d published bulletin(s) on map · %d warning pin(s)",
+                incidentLoad.get("openTotal") instanceof Number n ? n.intValue() : 0,
+                incidents.size(), bulletins.size(), warnings.size()));
+        return sit;
     }
 
     /** Parses a JSON-list portal setting (capabilities.items / emergency.numbers). */
@@ -226,6 +448,7 @@ public class PortalPublicServiceImpl implements PortalPublicService {
                         + " left join public.incident_types it on it.id = i.incident_type_id"
                         + " where i.id = ? and coalesce(i.is_simulation, false) = false"
                         + "   and (coalesce(i.show_on_portal_map, false) = true"
+                        + "        or lower(coalesce(i.status,'')) in ('active response','escalated')"
                         + "        or exists(select 1 from public.portal_news n"
                         + "             where n.id = i.portal_news_id and n.is_active = true"
                         + "               and n.published_at <= now()))", id);

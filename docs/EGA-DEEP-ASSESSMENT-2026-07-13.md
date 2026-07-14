@@ -1157,3 +1157,38 @@ Impact-support also enriched: warehouses + inventory units in readiness/reasons 
 - exposure summary limit=5 with national totals (15 EC / 251800 capacity / 15 WH / 30 inventory / 397 INFORM areas)
 - unauth catalogue/exposure **401**
 - go-live board INT-NBS/NIDA/LATRA/NAPA/EXP-01 → **PLATFORM_OK** (adapter present; feed not live)
+
+
+## 39. EW pure + portal shows real national response (2026-07-14)
+
+User direction: *early warning should work perfectly (PDF generation etc. pure); portal showing what is really going on in the country as response proceeds.*
+
+### EW / PDF
+| Check | Result |
+|-------|--------|
+| PDF sidecar `:8600/health` | **ok** — kinds 722e4/tma/multirisk/mow/gst/moh/moa/nemc/mlf/dmd |
+| `POST /generate/722e4` (example JSON) | **200** real PDF (~419 KB, 2 pages) |
+| Stored bulletin via `/api/storage/ew-products/…` | **200** real PDF (~332 KB, 7 pages) |
+| Go-live `gl09_ewPdfEngine` | **ok** when sidecar running |
+| EW consolidated / products / impact-support / warnings | **200** |
+
+Start with `start-all.sh` step [4/5] or:  
+`cd extracted/maafa.pmo.go.tz/ew && EWS_PDF_PORT=8600 python pdf_service.py`
+
+### Portal — real situation (not smoke)
+| Change | Detail |
+|--------|--------|
+| **Warnings on map** | Active `early_warnings` with `show_on_map` **or** code has published product on map; plus synthetic pins from published multirisk products (when no early_warnings row) with PDF link |
+| **Response incidents** | Map/list: operator-pinned **or** status `Active Response` / `Escalated` with coordinates (public-safe) |
+| **`nationalSituation`** | Open totals, by-region load, agency bus 7d, published bulletins, response-in-progress cards |
+| **Bulletin publish → map** | `setPublished(map=true)` also sets `early_warnings.show_on_map` for that `warning_code` |
+| **Smoke news** | V207 deactivates `*smoke test*` titles; landing filters them out |
+| **Incident snapshot** | Public for pinned **or** Active Response/Escalated (resources + updates) |
+| **FE `/portal`** | National situation strip + response-in-progress cards → `/incident/:id` |
+
+### Live proof (portal landing)
+- **warnings 2** (product-sourced multirisk with PDF), **incidents 2** (response/escalated), **bulletins 2**
+- summary: *15 open incident(s) nationally · 2 on public map · 2 published bulletin(s) on map · 2 warning pin(s)*
+- byRegion openIncidents/inResponse productive (Dodoma 4/2 …)
+- latestNews first item real El Niño guidance (smoke article inactive)
+- PDF engine health **200**; go-live PDF probe **ok**
