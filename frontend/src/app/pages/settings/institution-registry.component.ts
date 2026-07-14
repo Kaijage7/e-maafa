@@ -55,12 +55,22 @@ interface GlossaryTerm {
   template: `
     <dmis-page-header title="Institution Registry" icon="fa-sitemap"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Institution Registry'}]">
+      @if (canManage()) {
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+          <button class="btn-add" type="button" (click)="openCreate('agency')">
+            <i class="fas fa-plus"></i> Add agency / MDA
+          </button>
+          <button class="btn-add" type="button" style="background:#0f766e;" (click)="openCreate('stakeholder')">
+            <i class="fas fa-plus"></i> Add partner
+          </button>
+        </div>
+      }
     </dmis-page-header>
 
     <div class="honest-note">
-      <strong>Honest count note:</strong> Class totals are <em>active registry rows</em>, not a pure official gazette list.
-      Ministries (~83) include EN/SW variants and some invite-list offices; LGAs (~393) exceed the councils table (~195) because regional/LGA workbook rows and legacy LGA sheets were imported.
-      Use this screen to rename, reclassify, deactivate duplicates, and fix contacts. M&amp;E workbench follows these records.
+      <strong>Registry note:</strong> Class totals are <em>active registry rows</em>, not a pure official gazette list.
+      Use this screen to add, edit, remove (soft deactivate), restore, reclassify, and fix contacts.
+      M&amp;E quarterly disaster reporting indicators apply to all institution classes (no class restriction).
     </div>
 
     <div class="stats-row">
@@ -102,6 +112,10 @@ interface GlossaryTerm {
         @for (c of classOptions(); track c) { <option [value]="c">{{ c }}</option> }
       </select>
       <input class="form-control" style="max-width:210px;" placeholder="Sector tag" [value]="sector()" (input)="sector.set($any($event.target).value); reload()">
+      <label class="checkline" style="white-space:nowrap;">
+        <input type="checkbox" [checked]="includeInactive()" (change)="includeInactive.set($any($event.target).checked); reload()">
+        Show removed
+      </label>
     </div>
 
     <div class="seg-tabs">
@@ -119,10 +133,10 @@ interface GlossaryTerm {
             @if (items().length) {
               <div style="overflow-x:auto;">
                 <table class="r-table">
-                  <thead><tr><th>Institution</th><th>Class</th><th>Sector Tags</th><th>Source</th><th>M&E</th>@if (canManage()) { <th>Actions</th> }</tr></thead>
+                  <thead><tr><th>Institution</th><th>Class</th><th>Sector Tags</th><th>Source</th><th>M&E</th><th>Status</th>@if (canManage()) { <th>Actions</th> }</tr></thead>
                   <tbody>
                     @for (item of items(); track item.kind + ':' + item.id) {
-                      <tr class="data-row">
+                      <tr class="data-row" [style.opacity]="item.is_active === false ? '0.65' : '1'">
                         <td>
                           <div class="r-title">{{ item.name }}</div>
                           <div class="r-subtitle">
@@ -145,9 +159,17 @@ interface GlossaryTerm {
                           @if (item.source_file) { <div class="r-subtitle">{{ item.source_file }}{{ item.source_sheet ? ' / ' + item.source_sheet : '' }}</div> }
                         </td>
                         <td><span class="r-badge" [class.badge-approved]="item.me_required" [class.badge-pending]="!item.me_required">{{ item.me_required ? 'Required' : 'Optional' }}</span></td>
+                        <td><span class="r-badge" [class.badge-approved]="item.is_active !== false" [class.badge-pending]="item.is_active === false">{{ item.is_active === false ? 'Removed' : 'Active' }}</span></td>
                         @if (canManage()) {
-                          <td>
-                            <button class="icon-btn" type="button" title="Govern classification" (click)="openEditor(item, $event)"><i class="fas fa-sliders"></i></button>
+                          <td style="white-space:nowrap;">
+                            <button class="icon-btn" type="button" title="Edit institution" (click)="openEditor(item, $event)"><i class="fas fa-sliders"></i></button>
+                            @if (item.is_active !== false) {
+                              <button class="icon-btn" type="button" title="Remove from registry" style="color:#b91c1c;margin-left:0.25rem;"
+                                      (click)="removeInstitution(item, $event)"><i class="fas fa-trash-alt"></i></button>
+                            } @else {
+                              <button class="icon-btn" type="button" title="Restore institution" style="color:#0f766e;margin-left:0.25rem;"
+                                      (click)="restoreInstitution(item, $event)"><i class="fas fa-undo"></i></button>
+                            }
                           </td>
                         }
                       </tr>
@@ -225,15 +247,26 @@ interface GlossaryTerm {
       </dmis-panel>
     }
 
-    @if (editorOpen() && selected()) {
+    @if (editorOpen()) {
       <div class="modal-backdrop" (click)="editorOpen.set(false)">
         <div class="govern-modal wide" (click)="$event.stopPropagation()">
-          <h5>Edit institution (System Settings)</h5>
+          <h5>{{ createMode() ? 'Add institution' : 'Edit institution' }} (System Settings)</h5>
           <div class="modal-sub">
-            {{ selected()?.kind === 'agency' ? 'MDA / Agency registry' : 'Partner / Stakeholder registry' }}
-            · id {{ selected()?.id }}
-            @if (selected()?.source_register) { · source: {{ selected()?.source_register }} }
+            {{ createMode()
+                ? (createKind() === 'agency' ? 'New MDA / Agency registry row' : 'New Partner / Stakeholder registry row')
+                : ((selected()?.kind === 'agency' ? 'MDA / Agency registry' : 'Partner / Stakeholder registry')
+                    + (selected()?.id ? ' · id ' + selected()?.id : '')) }}
+            @if (!createMode() && selected()?.source_register) { · source: {{ selected()?.source_register }} }
           </div>
+          @if (createMode()) {
+            <label style="display:grid;gap:4px;font-size:0.72rem;font-weight:800;color:#475569;text-transform:uppercase;margin-bottom:0.6rem;">
+              Registry
+              <select class="form-control" [value]="createKind()" (change)="createKind.set($any($event.target).value)">
+                <option value="agency">Agency / MDA</option>
+                <option value="stakeholder">Stakeholder / Partner</option>
+              </select>
+            </label>
+          }
           <div class="form-grid">
             <label class="wide">Official name
               <input class="form-control" [value]="fName()" (input)="fName.set($any($event.target).value)" placeholder="Name">
@@ -277,16 +310,24 @@ interface GlossaryTerm {
           </div>
           <div class="check-row">
             <label class="checkline"><input type="checkbox" [checked]="fMeRequired()" (change)="fMeRequired.set($any($event.target).checked)"> M&amp;E required</label>
-            <label class="checkline"><input type="checkbox" [checked]="fActive()" (change)="fActive.set($any($event.target).checked)"> Active</label>
+            @if (!createMode()) {
+              <label class="checkline"><input type="checkbox" [checked]="fActive()" (change)="fActive.set($any($event.target).checked)"> Active</label>
+            }
           </div>
           <textarea class="form-control" rows="3" placeholder="Role / mandate summary" [value]="fSummary()" (input)="fSummary.set($any($event.target).value)"></textarea>
           <textarea class="form-control" rows="2" placeholder="Source reference" [value]="fSourceReference()" (input)="fSourceReference.set($any($event.target).value)"></textarea>
           @if (error()) { <div class="error-line">{{ error() }}</div> }
           <div class="modal-actions">
             <button class="btn" type="button" (click)="editorOpen.set(false)">Cancel</button>
-            <button class="btn-add" type="button" [disabled]="saving() || !fName().trim()" (click)="saveProfile()">
-              <i class="fas" [class.fa-save]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i> Save profile
-            </button>
+            @if (createMode()) {
+              <button class="btn-add" type="button" [disabled]="saving() || !fName().trim()" (click)="createInstitution()">
+                <i class="fas" [class.fa-plus]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i> Add institution
+              </button>
+            } @else {
+              <button class="btn-add" type="button" [disabled]="saving() || !fName().trim()" (click)="saveProfile()">
+                <i class="fas" [class.fa-save]="!saving()" [class.fa-spinner]="saving()" [class.fa-spin]="saving()"></i> Save profile
+              </button>
+            }
           </div>
         </div>
       </div>
@@ -352,8 +393,11 @@ export class InstitutionRegistryComponent {
   kind = signal('');
   klass = signal('');
   sector = signal('');
+  includeInactive = signal(false);
   tab = signal<'registry' | 'breakdown' | 'roles' | 'glossary' | 'duplicates'>('registry');
   editorOpen = signal(false);
+  createMode = signal(false);
+  createKind = signal<'agency' | 'stakeholder'>('agency');
   selected = signal<InstitutionItem | null>(null);
   fName = signal(''); fAcronym = signal(''); fType = signal('');
   fClass = signal(''); fSubclass = signal(''); fSectors = signal(''); fRoleCode = signal('');
@@ -380,6 +424,7 @@ export class InstitutionRegistryComponent {
     if (this.kind()) { params.kind = this.kind(); }
     if (this.klass()) { params.institutionClass = this.klass(); }
     if (this.sector().trim()) { params.sector = this.sector().trim(); }
+    if (this.includeInactive()) { params.includeInactive = true; }
     this.http.get<any>(this.base, { params }).subscribe(r => {
       this.stats.set(r.stats ?? this.stats());
       this.items.set(r.items ?? []);
@@ -390,6 +435,83 @@ export class InstitutionRegistryComponent {
       this.duplicates.set(r.duplicates ?? []);
       this.reportingPaths.set(r.reportingPaths ?? []);
       this.classBreakdown.set(r.classBreakdown ?? []);
+    });
+  }
+
+  openCreate(kind: 'agency' | 'stakeholder'): void {
+    if (!this.canManage()) { return; }
+    this.createMode.set(true);
+    this.createKind.set(kind);
+    this.selected.set(null);
+    this.fName.set('');
+    this.fAcronym.set('');
+    this.fType.set(kind === 'agency' ? 'Government' : 'NGO');
+    this.fClass.set(kind === 'agency' ? 'Government Institution' : 'NGO');
+    this.fSubclass.set('');
+    this.fSectors.set('');
+    this.fRoleCode.set('');
+    this.fContact.set('');
+    this.fEmail.set('');
+    this.fPhone.set('');
+    this.fAddress.set('');
+    this.fWebsite.set('');
+    this.fMeRequired.set(true);
+    this.fActive.set(true);
+    this.fSummary.set('');
+    this.fSourceReference.set('');
+    this.error.set('');
+    this.editorOpen.set(true);
+  }
+
+  createInstitution(): void {
+    if (!this.canManage() || !this.fName().trim()) {
+      this.error.set('Name is required.');
+      return;
+    }
+    this.saving.set(true);
+    this.http.post(`${this.base}/${this.createKind()}`, {
+      name: this.fName().trim(),
+      acronym: this.fAcronym().trim() || null,
+      type: this.fType().trim() || null,
+      institutionClass: this.fClass() || null,
+      institutionSubclass: this.fSubclass() || null,
+      sectorTags: this.fSectors() || null,
+      policyRoleCode: this.fRoleCode() || null,
+      roleSummary: this.fSummary() || null,
+      sourceReference: this.fSourceReference() || null,
+      contactPersonName: this.fContact() || null,
+      contactPersonEmail: this.fEmail() || null,
+      contactPersonPhone: this.fPhone() || null,
+      address: this.fAddress() || null,
+      website: this.fWebsite() || null,
+      meRequired: this.fMeRequired(),
+    }).subscribe({
+      next: () => { this.saving.set(false); this.editorOpen.set(false); this.createMode.set(false); this.reload(); },
+      error: e => {
+        this.saving.set(false);
+        this.error.set(e?.error?.detail || e?.error?.message || 'Could not add institution.');
+      },
+    });
+  }
+
+  removeInstitution(item: InstitutionItem, event: Event): void {
+    event.stopPropagation();
+    if (!this.canManage()) { return; }
+    if (!confirm(`Remove "${item.name}" from the active registry?\n\nThis soft-deactivates the row (can be restored). It does not delete M&E history.`)) {
+      return;
+    }
+    this.http.delete(`${this.base}/${item.kind}/${item.id}`).subscribe({
+      next: () => this.reload(),
+      error: e => alert(e?.error?.detail || e?.error?.message || 'Could not remove institution.'),
+    });
+  }
+
+  restoreInstitution(item: InstitutionItem, event: Event): void {
+    event.stopPropagation();
+    if (!this.canManage()) { return; }
+    this.http.post(`${this.base}/${item.kind}/${item.id}/restore`, {}).subscribe({
+      next: () => this.reload(),
+      error: e => alert(e?.error?.detail || e?.error?.message || 'Could not restore institution.'),
     });
   }
 
@@ -410,6 +532,7 @@ export class InstitutionRegistryComponent {
 
   openEditor(item: InstitutionItem, event: Event): void {
     event.stopPropagation();
+    this.createMode.set(false);
     this.selected.set(item);
     this.fName.set(item.name ?? '');
     this.fAcronym.set(item.acronym ?? '');
@@ -466,5 +589,5 @@ export class InstitutionRegistryComponent {
   saveGovernance(): void { this.saveProfile(); }
 
   @HostListener('document:keydown.escape')
-  closeOnEscape(): void { this.editorOpen.set(false); }
+  closeOnEscape(): void { this.editorOpen.set(false); this.createMode.set(false); }
 }

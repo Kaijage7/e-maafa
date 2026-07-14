@@ -1,6 +1,7 @@
 package tz.go.pmo.dmis.service.impl;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +10,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.dto.request.InstitutionClassificationRequest;
+import tz.go.pmo.dmis.dto.request.InstitutionCreateRequest;
 import tz.go.pmo.dmis.dto.request.InstitutionProfileRequest;
 import tz.go.pmo.dmis.service.InstitutionRegistryService;
 
@@ -27,9 +30,13 @@ public class InstitutionRegistryServiceImpl implements InstitutionRegistryServic
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> index(String kind, String institutionClass, String sector, String source,
-                                     String search, int limit) {
+                                     String search, int limit, Boolean includeInactive) {
         List<Object> args = new ArrayList<>();
         StringBuilder where = new StringBuilder(" where 1=1");
+        // Default: active registry only. includeInactive=true shows removed rows for restore.
+        if (!Boolean.TRUE.equals(includeInactive)) {
+            where.append(" and coalesce(is_active, true) = true");
+        }
         if (kind != null && !kind.isBlank()) {
             where.append(" and kind = ?");
             args.add(kind.trim());
@@ -60,20 +67,165 @@ public class InstitutionRegistryServiceImpl implements InstitutionRegistryServic
         }
         int safeLimit = Math.max(50, Math.min(limit, 2500));
         args.add(safeLimit);
-        return Map.of(
-                "stats", stats(),
-                "classes", classes(),
-                "sources", sources(),
-                "policyRoles", policyRoles(),
-                "glossary", glossary(),
-                "duplicates", duplicates(),
-                "reportingPaths", reportingPaths(),
-                "classBreakdown", classBreakdown(),
-                "items", jdbc.queryForList("""
-                        select *
-                        from (""" + unionSql() + """
-                        ) x
-                        """ + where + "\n order by kind, coalesce(institution_class,'zz'), name limit ?", args.toArray()));
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("stats", stats());
+        out.put("classes", classes());
+        out.put("sources", sources());
+        out.put("policyRoles", policyRoles());
+        out.put("glossary", glossary());
+        out.put("duplicates", duplicates());
+        out.put("reportingPaths", reportingPaths());
+        out.put("classBreakdown", classBreakdown());
+        out.put("includeInactive", Boolean.TRUE.equals(includeInactive));
+        out.put("items", jdbc.queryForList("""
+                select *
+                from (""" + unionSql() + """
+                ) x
+                """ + where + "\n order by kind, coalesce(is_active,true) desc, coalesce(institution_class,'zz'), name limit ?",
+                args.toArray()));
+        return out;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> create(String kind, InstitutionCreateRequest req) {
+        assertKind(kind);
+        if (req == null || req.name() == null || req.name().isBlank()) {
+            throw new BusinessRuleException("name is required to add an institution");
+        }
+        String name = req.name().trim();
+        if (name.length() < 2 || name.length() > 255) {
+            throw new BusinessRuleException("name length must be between 2 and 255 characters");
+        }
+        boolean meRequired = req.meRequired() == null || Boolean.TRUE.equals(req.meRequired());
+        Long id;
+        if ("agency".equals(kind)) {
+            // Reject exact active duplicate names (case-insensitive).
+            Integer dup = jdbc.queryForObject("""
+                    select count(*)::int from public.agencies
+                    where lower(trim(name)) = lower(?) and coalesce(is_active,true)
+                    """, Integer.class, name);
+            if (dup != null && dup > 0) {
+                throw new BusinessRuleException("An active agency with this name already exists");
+            }
+            id = jdbc.queryForObject("""
+                    insert into public.agencies(
+                        name, acronym, agency_type, institution_class, institution_subclass, sector_tags,
+                        policy_role_code, role_summary, mandate_description, source_reference, source_register,
+                        contact_person_name, contact_person_email, contact_person_phone, office_address, website,
+                        me_required, is_active, created_at, updated_at)
+                    values (?,?,?,?,?,?,?,?,?,?, 'System Settings',
+                            ?,?,?,?,?,
+                            ?, true, now(), now())
+                    returning id
+                    """, Long.class,
+                    name,
+                    blankToNull(req.acronym()),
+                    blankToNull(req.type()),
+                    blankToNull(req.institutionClass()),
+                    blankToNull(req.institutionSubclass()),
+                    blankToNull(req.sectorTags()),
+                    blankToNull(req.policyRoleCode()),
+                    blankToNull(req.roleSummary()),
+                    blankToNull(req.roleSummary()),
+                    blankToNull(req.sourceReference()),
+                    blankToNull(req.contactPersonName()),
+                    blankToNull(req.contactPersonEmail()),
+                    blankToNull(req.contactPersonPhone()),
+                    blankToNull(req.address()),
+                    blankToNull(req.website()),
+                    meRequired);
+        } else {
+            Integer dup = jdbc.queryForObject("""
+                    select count(*)::int from public.stakeholders
+                    where lower(trim(coalesce(organization, name))) = lower(?) and coalesce(is_active,true)
+                    """, Integer.class, name);
+            if (dup != null && dup > 0) {
+                throw new BusinessRuleException("An active stakeholder with this name already exists");
+            }
+            String type = normalizeStakeholderType(
+                    req.type() == null || req.type().isBlank() ? "NGO" : req.type());
+            id = jdbc.queryForObject("""
+                    insert into public.stakeholders(
+                        name, organization, type, institution_class, institution_subclass, sector_tags, sector,
+                        policy_role_code, role_summary, source_reference, source_register,
+                        contact_person_name, contact_person_email, contact_person_phone, address,
+                        me_required, is_active, created_at, updated_at)
+                    values (?,?,?,?,?,?,?,?,?,?,'System Settings',
+                            ?,?,?,?,
+                            ?, true, now(), now())
+                    returning id
+                    """, Long.class,
+                    name, name, type,
+                    blankToNull(req.institutionClass()),
+                    blankToNull(req.institutionSubclass()),
+                    blankToNull(req.sectorTags()),
+                    blankToNull(req.sectorTags()),
+                    blankToNull(req.policyRoleCode()),
+                    blankToNull(req.roleSummary()),
+                    blankToNull(req.sourceReference()),
+                    blankToNull(req.contactPersonName()),
+                    blankToNull(req.contactPersonEmail()),
+                    blankToNull(req.contactPersonPhone()),
+                    blankToNull(req.address()),
+                    meRequired);
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("success", true);
+        out.put("kind", kind);
+        out.put("id", id);
+        out.put("message", "Institution added to the " + kind + " registry");
+        return out;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> remove(String kind, long id) {
+        assertKind(kind);
+        // Soft remove only: keep history and FK integrity (users, M&E values, resources).
+        int n = jdbc.update(
+                "update " + table(kind) + " set is_active = false, updated_at = now() where id = ? and coalesce(is_active,true) = true",
+                id);
+        if (n == 0) {
+            // Distinguish missing vs already removed
+            Integer exists = jdbc.queryForObject(
+                    "select count(*)::int from " + table(kind) + " where id = ?", Integer.class, id);
+            if (exists == null || exists == 0) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Institution not found.");
+            }
+            throw new BusinessRuleException("Institution is already removed from the active registry");
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("success", true);
+        out.put("kind", kind);
+        out.put("id", id);
+        out.put("removed", true);
+        out.put("message", "Institution removed from the active registry (soft deactivate). Restore if needed.");
+        return out;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> restore(String kind, long id) {
+        assertKind(kind);
+        int n = jdbc.update(
+                "update " + table(kind) + " set is_active = true, updated_at = now() where id = ? and coalesce(is_active,true) = false",
+                id);
+        if (n == 0) {
+            Integer exists = jdbc.queryForObject(
+                    "select count(*)::int from " + table(kind) + " where id = ?", Integer.class, id);
+            if (exists == null || exists == 0) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Institution not found.");
+            }
+            throw new BusinessRuleException("Institution is already active");
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("success", true);
+        out.put("kind", kind);
+        out.put("id", id);
+        out.put("restored", true);
+        out.put("message", "Institution restored to the active registry");
+        return out;
     }
 
     @Override
