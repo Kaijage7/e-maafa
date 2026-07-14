@@ -457,10 +457,17 @@ public class GoLiveOpsServiceImpl implements GoLiveOpsService {
         reg.add(issue("F114", "DEFERRED", "Satellite / full exposure AI", "DEFERRED",
                 "Prevention two-panel GIBS exposure compare LIVE; full scene SoR / AI change-detect deferred"));
         reg.add(issue("F116", "DEFERRED", "Executable multiscale contracts", "DEFERRED", "Monolith API contracts enough for cutover"));
-        reg.add(issue("INT-NIDA-01", "INT", "NIDA verify adapter", "PLANNED", "Registry only; legal + API required"));
-        reg.add(issue("INT-LATRA-01", "INT", "LATRA logistics adapter", "PLANNED", "Registry only"));
-        reg.add(issue("INT-NAPA-01", "INT", "NAPA programme mapping", "PLANNED", "Registry only"));
+        reg.add(issue("INT-NBS-01", "INT", "NBS population request adapter", "PLATFORM_OK",
+                "POST /v1/ops/integrations/nbs/population-request + contract; not live census API"));
+        reg.add(issue("INT-NIDA-01", "INT", "NIDA verify adapter", "PLATFORM_OK",
+                "POST /v1/ops/integrations/nida/verify-request (hash only); feed not live; legal + API still required"));
+        reg.add(issue("INT-LATRA-01", "INT", "LATRA logistics adapter", "PLATFORM_OK",
+                "POST /v1/ops/integrations/latra/logistics-snapshot; live corridor feed not connected"));
+        reg.add(issue("INT-NAPA-01", "INT", "NAPA programme mapping", "PLATFORM_OK",
+                "POST /v1/ops/integrations/napa/programme-map-export; external ERP not live"));
         reg.add(issue("INT-FIN-01", "INT", "IFMIS commitment export", "PLATFORM_OK", "Export + audit path; not live IFMIS post"));
+        reg.add(issue("EXP-01", "INT", "Area exposure best-effort", "PLATFORM_OK",
+                "GET /v1/ops/exposure/area + /summary — INFORM + DMIS assets; no footprint∩pop / satellite claim"));
         reg.add(issue("INT-EW-01", "INT", "Agency bus credentials", "PLATFORM_OK", "In-platform bus ready; per-agency prod keys ops"));
 
         // Pre-deploy campaign dual-proofs (2026-07-12) — captured, not hidden

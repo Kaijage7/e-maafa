@@ -114,6 +114,8 @@ public class DmdImpactSupportService {
             int ecCount = rd == null ? 0 : rd[0];
             int ecCap = rd == null ? 0 : rd[1];
             int openInc = rd == null ? 0 : rd[2];
+            int warehouseCount = rd == null || rd.length < 4 ? 0 : rd[3];
+            int inventoryUnits = rd == null || rd.length < 5 ? 0 : rd[4];
 
             // exp: [nbs, nida, latra, napa, ifmi] 0–10 style where known
 
@@ -223,7 +225,16 @@ public class DmdImpactSupportService {
             } else if (ecCap > 0) {
                 reasons.add("Evacuation capacity ~" + ecCap + " people (" + ecCount + " centre(s))");
             }
+            if (warehouseCount > 0) {
+                reasons.add(warehouseCount + " warehouse(s) registered"
+                        + (inventoryUnits > 0 ? "; stock units ~" + inventoryUnits : ""));
+            } else if (entityPts >= 25) {
+                opsPts += 2;
+                reasons.add("No permanent warehouse registered for district (+2 ops stress)");
+            }
             scoreBreak.put("opsPts", opsPts);
+            scoreBreak.put("warehouseCount", warehouseCount);
+            scoreBreak.put("inventoryUnits", inventoryUnits);
 
             double score = Math.min(100, entityPts + informPts + focusPts + exposurePts + multiPts + opsPts);
             String suggested = suggestFromScore(score);
@@ -263,6 +274,9 @@ public class DmdImpactSupportService {
             row.put("evacuationCentres", ecCount);
             row.put("evacuationCapacity", ecCap);
             row.put("openIncidents", openInc);
+            row.put("warehouses", warehouseCount);
+            row.put("inventoryUnits", inventoryUnits);
+            row.put("physicalExposureSource", "DMIS registers (EC/warehouse/inventory/incidents) — not footprint∩population");
             row.put("multiHazard", multiHaz);
             row.put("reasons", reasons);
             row.put("suggestedDirectives", directives);
@@ -516,6 +530,10 @@ public class DmdImpactSupportService {
         return new double[]{nbs, nida, latra, napa, ifmi};
     }
 
+    /**
+     * Per-district readiness: [ecCount, ecCapacityPeople, openIncidents, warehouseCount, inventoryUnits].
+     * Live DMIS registers only — not footprint∩population.
+     */
     private Map<String, int[]> loadReadinessByNormalizedName() {
         Map<String, int[]> map = new LinkedHashMap<>();
         try {
@@ -532,7 +550,7 @@ public class DmdImpactSupportService {
                 map.put(normalizeName(d), new int[]{
                         ((Number) r.get("n")).intValue(),
                         ((Number) r.get("cap")).intValue(),
-                        0
+                        0, 0, 0
                 });
             }
             for (Map<String, Object> r : jdbc.queryForList("""
@@ -544,8 +562,44 @@ public class DmdImpactSupportService {
                     group by 1
                     """)) {
                 String d = normalizeName(String.valueOf(r.get("d")));
-                int[] cur = map.getOrDefault(d, new int[]{0, 0, 0});
+                int[] cur = map.getOrDefault(d, new int[]{0, 0, 0, 0, 0});
                 cur[2] = ((Number) r.get("n")).intValue();
+                map.put(d, cur);
+            }
+            // Permanent warehouses by district name (region/district FK)
+            for (Map<String, Object> r : jdbc.queryForList("""
+                    select lower(trim(coalesce(d.name, w.city_or_region, ''))) as d,
+                           count(*)::int as n
+                    from public.warehouses w
+                    left join public.districts d on d.id = w.district_id
+                    where lower(coalesce(w.operational_status,'')) not in ('closed','decommissioned')
+                      and coalesce(d.name, w.city_or_region, '') <> ''
+                    group by 1
+                    """)) {
+                String d = normalizeName(String.valueOf(r.get("d")));
+                if (d.isBlank()) {
+                    continue;
+                }
+                int[] cur = map.getOrDefault(d, new int[]{0, 0, 0, 0, 0});
+                cur[3] = ((Number) r.get("n")).intValue();
+                map.put(d, cur);
+            }
+            // Inventory units sitting in warehouses of each district
+            for (Map<String, Object> r : jdbc.queryForList("""
+                    select lower(trim(coalesce(d.name, w.city_or_region, ''))) as d,
+                           coalesce(sum(ii.quantity),0)::int as units
+                    from public.inventory_items ii
+                    join public.warehouses w on w.id = ii.warehouse_id
+                    left join public.districts d on d.id = w.district_id
+                    where coalesce(d.name, w.city_or_region, '') <> ''
+                    group by 1
+                    """)) {
+                String d = normalizeName(String.valueOf(r.get("d")));
+                if (d.isBlank()) {
+                    continue;
+                }
+                int[] cur = map.getOrDefault(d, new int[]{0, 0, 0, 0, 0});
+                cur[4] = ((Number) r.get("units")).intValue();
                 map.put(d, cur);
             }
         } catch (DataAccessException ignored) {

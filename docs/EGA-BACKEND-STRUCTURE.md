@@ -217,6 +217,7 @@ Suggested migration order:
 70. ~~**One Health residual package empty**~~ — **DONE** (`OneHealthEventService` → `service.support`; `OhEventWriteRequest` → `dto.request`; `onehealth/` package-info only)
 71. ~~**Emptied package markers**~~ — **DONE** (`finance/`, `recovery/` package-info only — same pattern as preparedness/onehealth)
 72. ~~**Deep residual thin warehouse controllers + hub package-info**~~ — **DONE** (no JdbcTemplate left in controllers; intentional hubs documented)
+73. ~~**Exposure + national integration adapters**~~ — **DONE** (`NationalIntegrationController` + `AreaExposureController`; NBS/NIDA/LATRA/NAPA contracts/handoffs; area exposure INFORM+DMIS assets; V206; see EGA-DEEP §38)
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).

@@ -2,7 +2,9 @@
 
 > **Honesty contract:** This document describes **what data should integrate where**, **how**, and **with what legal/technical gates**.  
 > It does **not** claim that NIDA, NBS, LATRA, NAPA, IDSR, TMA pull APIs, or satellite exposure are **live** in DMIS today.  
-> Current platform status: EW **agency bus** + **impact-support (INFORM)** + integration **registry** (`planned` / `configured`) + geo/INFORM harmonisation.  
+> Current platform status: EW **agency bus** + **impact-support (INFORM)** + integration **registry** (`planned` / `configured`) + geo/INFORM harmonisation  
+> + productive adapter endpoints under `/v1/ops/integrations/*` (NBS/NIDA/LATRA/NAPA/IFMIS handoff packages)  
+> + best-effort area exposure under `/v1/ops/exposure/*` (INFORM structural + DMIS assets; **not** footprint∩population / satellite SoR).  
 > **Mark `integration_endpoints.status = live` only after MoU + dual-proved adapter.**
 
 **Audience:** PMO-DMD, TMA, MoH, MoW, NBS, NIDA, LATRA, VPO/DoE (NAPA/NAP), ICT implementers  

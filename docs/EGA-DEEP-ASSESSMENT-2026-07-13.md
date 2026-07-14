@@ -1106,3 +1106,54 @@ inventory / reference / warehouses / temporary-warehouses → **200**; missing i
 
 ### Intentionally not moved
 mitigation JPA models, notification delivery spine, EW helpers, INFORM engine, local seeders, integration export.
+
+
+## 38. Exposure resolve — honest integration + best-effort physical (2026-07-14)
+
+User direction: *where no institutional exposure, create good integration endpoints; where there is, do the best on exposure.*
+
+### Verdict (unchanged honesty)
+
+| Question | Verdict after work |
+|----------|--------------------|
+| Structural exposure (who is vulnerable, hazard load, coping) | **Yes — well** (INFORM H/V/C + components + EO signals via `/v1/ops/exposure/*` and impact-support) |
+| Physical exposure (people/assets under flood footprint) | **No — incomplete** (F114 deferred). **Best effort:** DMIS EC capacity, warehouses, inventory, open incidents, infrastructure, strategic projects |
+| Institution exposures (NBS/NIDA/LATRA/NAPA/IFMIS) live registry feeds? | **No** — INFORM proxies + **honest adapter endpoints** (not labelled live) |
+| Full satellite exposure claimed? | **No** (and should not) |
+
+### Integration endpoints (no live feed claims)
+
+| Method | Path | Productive behaviour |
+|--------|------|----------------------|
+| GET | `/v1/ops/integrations/catalogue` | NBS/NIDA/LATRA/NAPA/IFMIS cards + honesty + actions |
+| GET | `/v1/ops/integrations/{system}/status` | Registry row, messages, `liveFeed=false` unless status=live |
+| GET | `/v1/ops/integrations/{system}/contract` | Mode / payload sketch / landing tables |
+| POST | `/v1/ops/integrations/nbs/population-request` | Bulk-request package + interim INFORM scores; `integration_messages` |
+| POST | `/v1/ops/integrations/nida/verify-request` | Hash-only NIN verify package; **never stores raw NIN** |
+| POST | `/v1/ops/integrations/latra/logistics-snapshot` | DMIS warehouses/EC/infra snapshot + corridor request shape |
+| POST | `/v1/ops/integrations/napa/programme-map-export` | `strategic_projects` + identity-map slots |
+| POST | `/v1/ops/integrations/ifmis/export-commitments` | Existing (unchanged) |
+
+Unknown system / bad purpose / bad areaLevel → **422**. Unauth → **401**.
+
+### Exposure endpoints (max real DMIS + INFORM)
+
+| Method | Path | Productive behaviour |
+|--------|------|----------------------|
+| GET | `/v1/ops/exposure/area?name=` | Resolve area → INFORM structural + institution proxies (labelled) + live DMIS assets; explicit `peopleUnderHazardFootprint=null` |
+| GET | `/v1/ops/exposure/summary` | Multi-area EC/warehouse/incident rollup + INFORM risk when matched |
+
+Impact-support also enriched: warehouses + inventory units in readiness/reasons (still no footprint∩pop).
+
+### Schema
+- Flyway **V206** — seed `NBS` integration_endpoint; honesty notes on NIDA/LATRA/NAPA.
+
+### Live proof
+- catalogue / status / contracts **200**; `NOPE` system **422**
+- NBS population-request **200** (`liveFeed:false`); areaLevel=NOPE **422**
+- NIDA verify-request **200** (hash + last4 only; raw NIN leak count **0**); empty nin / bad purpose **422**
+- LATRA snapshot (Arusha) warehouses+EC **200**; NAPA programme map **200**
+- exposure Temeke: INFORM matched, EC capacity 60000, coverage `peopleUnderFootprint=not_captured`
+- exposure summary limit=5 with national totals (15 EC / 251800 capacity / 15 WH / 30 inventory / 397 INFORM areas)
+- unauth catalogue/exposure **401**
+- go-live board INT-NBS/NIDA/LATRA/NAPA/EXP-01 → **PLATFORM_OK** (adapter present; feed not live)
