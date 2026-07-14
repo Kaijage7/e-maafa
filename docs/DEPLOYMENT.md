@@ -93,7 +93,13 @@ DB_PASSWORD=dmis_pass
 DMIS_SECURITY_CORS_ALLOWED_ORIGINS=http://localhost:8081
 ```
 
-Or use the helper (creates `.env` and starts Path A):
+Optional hygiene (warns on lab defaults; does not block laptop):
+
+```bash
+./scripts/check-deploy-secrets.sh
+```
+
+Or use the helper (creates `.env`, generates JWT, starts Path A):
 
 ```bash
 ./scripts/deploy-quickstart.sh
@@ -206,7 +212,7 @@ chmod 600 .env
 Minimum production `.env` values:
 
 ```bash
-DB_PASSWORD=          # strong, unique
+DB_PASSWORD=          # strong, unique — never dmis_pass
 DMIS_AUTH_JWT_SECRET= # openssl rand -base64 48
 DMIS_SECURITY_CORS_ALLOWED_ORIGINS=https://emaafa.pmo.go.tz
 DMIS_PUBLIC_HOST=emaafa.pmo.go.tz
@@ -216,6 +222,14 @@ DMIS_IMAGE_BACKEND=registry.your.gov/emaafa/dmis-backend:2026.07.14
 DMIS_IMAGE_FRONTEND=registry.your.gov/emaafa/dmis-frontend:2026.07.14
 DMIS_IMAGE_EW_PDF=registry.your.gov/emaafa/ew-pdf:2026.07.14
 ```
+
+Refuse lab secrets before start:
+
+```bash
+DMIS_ENFORCE_STRONG_SECRETS=1 ./scripts/check-deploy-secrets.sh --enforce
+```
+
+Full pre-cutover operator table (Flyway, CORS, seats, RAM, NTP, registry): **`docs/go-live/DOCKER-DEPLOY.md` §10**.
 
 SMS / email may stay blank only if residual accepts are **written and signed**:
 
@@ -350,10 +364,11 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 | Document | Use |
 |----------|-----|
 | **This file** (`docs/DEPLOYMENT.md`) | Easy deploy paths A/B/C |
-| `docs/go-live/DOCKER-DEPLOY.md` | Docker technical detail (TLS, storage, PDF) |
+| `docs/go-live/DOCKER-DEPLOY.md` | Docker detail + **operator checklist D5–D12** |
 | `docs/env.prod.example` | Full production env template |
 | `.env.example` | Compose env starter |
-| `scripts/deploy-quickstart.sh` | Path A helper |
+| `scripts/deploy-quickstart.sh` | Path A/B helper |
+| `scripts/check-deploy-secrets.sh` | Secret hygiene (D5) |
 | `scripts/docker-release.sh` | Immutable image build/push |
 | `scripts/go-live-smoke.sh` | Post-deploy smoke pack |
 | `docs/go-live/00-INDEX.md` | Full go-live document set |

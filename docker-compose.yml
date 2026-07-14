@@ -6,13 +6,16 @@
 #
 # Local/staging (build from source):
 #   cp .env.example .env   # set secrets
+#   ./scripts/check-deploy-secrets.sh   # optional; --enforce refuses dmis_pass
 #   docker compose up --build
 #
 # Production (immutable image tags — preferred):
+#   DMIS_ENFORCE_STRONG_SECRETS=1 ./scripts/check-deploy-secrets.sh --enforce
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # Services: db, backend, frontend, ew-pdf. Production overlay adds Caddy TLS edge.
+# DB_PASSWORD default dmis_pass is LAPTOP ONLY — prod overlay requires a strong secret.
 
 services:
   db:

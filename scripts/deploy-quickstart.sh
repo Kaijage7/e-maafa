@@ -74,6 +74,15 @@ if grep -qE '^DMIS_SECURITY_CORS_ALLOWED_ORIGINS=$' .env 2>/dev/null; then
   fi
 fi
 
+# Phase F / D5 — secret hygiene (warn by default; --enforce or DMIS_ENFORCE_STRONG_SECRETS=1 refuses)
+if [[ -x ./scripts/check-deploy-secrets.sh ]]; then
+  if [[ "${DMIS_ENFORCE_STRONG_SECRETS:-0}" == "1" || "${DMIS_ENFORCE_STRONG_SECRETS:-}" == "true" ]]; then
+    ./scripts/check-deploy-secrets.sh --enforce
+  else
+    ./scripts/check-deploy-secrets.sh || true
+  fi
+fi
+
 COMPOSE=(docker compose -f docker-compose.yml)
 if [[ "$TLS_LOCAL" -eq 1 ]]; then
   COMPOSE+=(-f docker-compose.tls-local.yml)

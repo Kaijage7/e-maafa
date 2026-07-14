@@ -26,16 +26,28 @@ Use `docs/go-live/04-ACCEPTANCE.md` for go/no-go. Use `docs/go-live/05-OPS-AND-H
 | `ew-pdf` | Bulletin PDF generator (localhost-style, internal only) |
 | `edge` (prod overlay) | Caddy TLS terminator on 80/443 |
 
-## 3. Secrets (public edge)
+## 3. Secrets (laptop vs public edge)
 
 Never deploy with empty JWT or default database password on a public host.
 
-| Variable | Rule |
-|----------|------|
-| `DMIS_AUTH_JWT_SECRET` | Required, random, >= 32 bytes (`openssl rand -base64 48`) |
-| `DB_PASSWORD` | Required strong password on prod overlay (no `dmis_pass`) |
-| `DMIS_SECURITY_CORS_ALLOWED_ORIGINS` | Required on prod (e.g. `https://emaafa.pmo.go.tz`) |
-| `DMIS_PUBLIC_HOST` | Required for Caddy TLS (DNS must point to the host) |
+| Variable | Laptop / lab | Public edge / prod overlay |
+|----------|--------------|----------------------------|
+| `DMIS_AUTH_JWT_SECRET` | Required random ≥ 32 bytes | Same; refuse placeholder |
+| `DB_PASSWORD` | May be `dmis_pass` for convenience | **Strong only** (overlay has no default) |
+| `DMIS_SECURITY_CORS_ALLOWED_ORIGINS` | e.g. `http://localhost:8081` | Exact public HTTPS origin |
+| `DMIS_PUBLIC_HOST` | Optional | Required for Caddy ACME |
+
+### 3.1 Check before you start
+
+```bash
+# Warn on lab defaults (exit 0 even if DB is dmis_pass)
+./scripts/check-deploy-secrets.sh
+
+# Refuse weak DB password / short JWT (shared host / pre-prod)
+DMIS_ENFORCE_STRONG_SECRETS=1 ./scripts/check-deploy-secrets.sh --enforce
+```
+
+`docker-compose.prod.yml` still independently fails if `DB_PASSWORD` or JWT is unset.
 
 Templates:
 
@@ -154,24 +166,45 @@ curl -fsS -o /dev/null -w "%{http_code}\n" https://$DMIS_PUBLIC_HOST/
 # curl -H "Authorization: Bearer …" https://$DMIS_PUBLIC_HOST/api/v1/ops/go-live-readiness
 ```
 
-## 10. Related documents
+## 10. Operator checklist (D5–D12)
+
+Use before any shared or public host. Tick in runbook or acceptance pack.
+
+| ID | Check | How |
+|----|-------|-----|
+| D5 | Strong secrets | `./scripts/check-deploy-secrets.sh --enforce`; prod overlay; no `dmis_pass` on public edge |
+| D6 | Database migration safety | Prefer empty volume or **stage-clone** of prod DB first. Do not point Flyway at an unknown non-empty schema without a backup. First boot runs baseline init + Flyway; surprises are ops, not silent rewrites of arbitrary DBs. |
+| D7 | SMS / email honesty | Blank keys → pending logs. Set residual accepts only after **written** sign-off (`DMIS_GO_LIVE_ACCEPT_SMS_DEFERRED`, `…_EMAIL_DEFERRED`). |
+| D8 | CORS with same-origin edge | Even when Caddy serves SPA + API on one host, set `DMIS_SECURITY_CORS_ALLOWED_ORIGINS` to the **exact** public HTTPS origin (e.g. `https://emaafa.pmo.go.tz`). |
+| D9 | Seat prep / 2FA | Real Super Admin; force password change; 2FA roles as configured; revoke demo passwords (`docs/LOCAL-TEST-PASSWORD.md`). Docker uses **prod** profile — local test password seeder does not run. |
+| D10 | Host resources | **≥ 8 GB RAM** recommended (≥ 16 GB safer); **≥ 20 GB** free disk (PDF image + LibreOffice is large). Under-resourced hosts fail PDF or OOM the API. |
+| D11 | Image registry | Build on CI/build host: `REGISTRY=… PUSH=1 ./scripts/docker-release.sh <tag>`. Server **pulls** immutable tags; login to registry first (`docker login`). |
+| D12 | Host clock | NTP/chrony healthy. Skew breaks JWT expiry and TLS (ACME and clients). |
+| D13 | Release script path | `docker-release.sh` builds `deploy/ew-pdf` from **in-repo** engine only (no monorepo parent). |
+
+Optional residual flags (sign-off only): sparse phones, PDF sidecar accept, storage partial — see `docs/GO-LIVE-RUNBOOK.md`.
+
+## 11. Related documents
 
 | Doc | Use |
 |-----|-----|
+| `docs/DEPLOYMENT.md` | Easy Paths A/B/C |
 | `docs/go-live/00-INDEX.md` | Full cutover pack index |
 | `docs/go-live/03-GO-LIVE-PLAN.md` | Steps and roles |
 | `docs/go-live/04-ACCEPTANCE.md` | Sign-off |
-| `docs/go-live/DOCKER-FIX-PLAN.md` | Known challenges and fix order (do not rush) |
+| `docs/go-live/DOCKER-FIX-PLAN.md` | Challenge register (Phases A–F closed) |
 | `docs/GO-LIVE-RUNBOOK.md` | Residual flags detail |
+| `scripts/check-deploy-secrets.sh` | D5 secret hygiene |
+| `scripts/docker-release.sh` | Immutable images (D11/D13) |
 
-## 11. Known open deploy gaps (summary)
+## 12. Fix-plan status (summary)
 
-See **DOCKER-FIX-PLAN.md**. Remaining after B/C/D:
+Phases **A–F** of **DOCKER-FIX-PLAN.md** are closed (D1–D5, D13 code/docs; D6–D12 documented above).
 
-1. ~~PDF engine in git (D1)~~ done  
-2. ~~PDF generate smoke (D2)~~ done  
-3. ~~Storage volume (D3)~~ done  
-4. ~~TLS without public DNS (D4)~~ done (`docker-compose.tls-local.yml`)  
-5. Secrets polish (D5 / Phase F) — next  
+Still **not** claimed by packaging alone:
 
-Do not claim full Docker dual-proof until the fix plan’s remaining phases pass.
+- Full dual-proved cutover on a named production host  
+- Live national feeds (NIDA/NBS/LATRA)  
+- Signed acceptance without ICT review  
+
+Use `docs/go-live/04-ACCEPTANCE.md` for go/no-go.

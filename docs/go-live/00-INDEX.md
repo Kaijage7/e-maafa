@@ -21,8 +21,9 @@ Read in order. Each document has one job. Details live in the source tree when c
 | 7 | [Docker fix plan](./DOCKER-FIX-PLAN.md) | Challenges + ordered fixes (one at a time) |
 
 **Easy deploy (start here for standing the stack up):** [../DEPLOYMENT.md](../DEPLOYMENT.md)  
-Helper: `scripts/deploy-quickstart.sh` (laptop Path A / TLS-local Path B).
-
+Helper: `scripts/deploy-quickstart.sh` (laptop Path A / TLS-local Path B).  
+Secrets: `scripts/check-deploy-secrets.sh` (use `--enforce` before shared/public hosts).  
+Docker fix plan (A–F closed): [DOCKER-FIX-PLAN.md](./DOCKER-FIX-PLAN.md).
 ## Related operational files (existing)
 
 | File | Use |

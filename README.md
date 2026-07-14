@@ -31,7 +31,8 @@ cd frontend && npm install && npm start
 | **B — Staging HTTPS** | No public DNS | `./scripts/deploy-quickstart.sh --tls-local` → https://localhost:8443 |
 | **C — Production** | Real hostname + TLS | Image tags + `docker-compose.prod.yml` (see guide) |
 
-Compose is **packaging**, not a go-live certificate. Technical Docker notes: `docs/go-live/DOCKER-DEPLOY.md`.
+Compose is **packaging**, not a go-live certificate. Technical Docker notes + operator checklist: `docs/go-live/DOCKER-DEPLOY.md`.  
+Secret check (refuse lab defaults on shared hosts): `./scripts/check-deploy-secrets.sh --enforce`
 
 ```bash
 # Path A — easiest
