@@ -268,23 +268,36 @@ public class InformService {
         return out;
     }
 
-    /** Resolve a lens key (risk | dim:hazard|vulnerability|coping | cat:&lt;name&gt; | comp:&lt;name&gt; | ind:&lt;id&gt;) to its 0–10 score. */
+    /**
+     * Resolve a lens key to its 0–10 score.
+     * Blank / {@code risk} → overall risk. Unknown shape or dim must 422 (never silently re-label as risk).
+     * Unknown cat/comp/ind keys return null (honest empty lens).
+     */
     private Double metricValue(RiskResult r, String metric) {
-        if (metric == null || metric.isBlank() || "risk".equals(metric)) return r.risk();
-        int i = metric.indexOf(':');
-        if (i < 0) return r.risk();
-        String kind = metric.substring(0, i), key = metric.substring(i + 1);
+        if (metric == null || metric.isBlank() || "risk".equalsIgnoreCase(metric.trim())) {
+            return r.risk();
+        }
+        String m = metric.trim();
+        int i = m.indexOf(':');
+        if (i <= 0 || i == m.length() - 1) {
+            throw new BusinessRuleException(
+                    "Unknown metric '" + metric + "'. Use risk, dim:hazard|vulnerability|coping, cat:<name>, comp:<name> or ind:<id>.");
+        }
+        String kind = m.substring(0, i).toLowerCase();
+        String key = m.substring(i + 1);
         return switch (kind) {
-            case "dim" -> switch (key) {
+            case "dim" -> switch (key.toLowerCase()) {
                 case "hazard" -> r.hazard();
                 case "vulnerability" -> r.vulnerability();
                 case "coping" -> r.coping();
-                default -> r.risk();
+                default -> throw new BusinessRuleException(
+                        "Unknown dim metric '" + key + "'. Use hazard, vulnerability or coping.");
             };
             case "cat" -> r.category().get(key);
             case "comp" -> r.component().get(key);
             case "ind" -> r.score().get(key);
-            default -> r.risk();
+            default -> throw new BusinessRuleException(
+                    "Unknown metric kind '" + kind + "'. Use risk, dim:, cat:, comp: or ind:.");
         };
     }
 

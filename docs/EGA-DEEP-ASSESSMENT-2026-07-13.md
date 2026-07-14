@@ -983,3 +983,21 @@ Email/SMS logs status/search nonsense → **n=0**; invalid dates → **400** (DB
 ### Live proof
 - EW wide range warnings n=16; `from=NOPE` **422**; inverted **422**; omit dates still **200**
 - Prior M&E/INFORM/notif/warehouse contracts hold
+
+
+## 32. Careful audit — EW products/taskings + Sendai year + INFORM metric (2026-07-14)
+
+User direction: *proceed very carefully.*
+
+### Productive without change
+EW products severity/type NOPE → **n=0**. Scanner entity-taskings status/agency NOPE → **n=0**. Agency updates nonsense → updates **n=0**. INFORM pending/values owner/area NOPE → **n=0**. Stakeholders/declarations/EOCC live **200**. Strategic sector NOPE → **n=0**. Agency `exclude` unknown name excludes nothing (productive). Prior EW report dates / M&E / notif / warehouse contracts hold.
+
+### Defects fixed
+| Surface | Issue | Fix |
+|---------|-------|-----|
+| `GET /v1/repository/analytics?year=` | Accepted `-1`, `0`, `9999`, `1899` as real years | Year must be **1990–2100**; omit → latest data year |
+| Portal/INFORM `metric=NOPE` / `dim:NOPE` | Silently re-coloured as overall risk | Unknown metric shape or dim → **422**; missing cat/comp/ind → `value:null` (honest) |
+
+### Live proof
+- analytics default year=2026; 2024 OK; garbage years **422**
+- `dim:hazard` value matches hazard; garbage metrics **422**

@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tz.go.pmo.dmis.common.error.BusinessRuleException;
 
 /**
  * SENDAI ANALYTICS — turns the validated disaster repository into the figures the
@@ -39,7 +40,15 @@ public class SendaiAnalyticsServiceImpl implements SendaiAnalyticsService {
     @Transactional(readOnly = true)
     @Override
     public Map<String, Object> dashboard(Integer yearParam) {
-        int year = yearParam == null ? currentDataYear() : yearParam;
+        // Blank/omit → latest data year. Explicit garbage (-1, 9999) must not silently run as a real year.
+        int year;
+        if (yearParam == null) {
+            year = currentDataYear();
+        } else if (yearParam < 1990 || yearParam > 2100) {
+            throw new BusinessRuleException("year must be between 1990 and 2100.");
+        } else {
+            year = yearParam;
+        }
         double population = baseline("population", year, 61_741_120);
         double gdpTzs = baseline("gdp_tzs", year, 196_000_000_000_000.0);
 
