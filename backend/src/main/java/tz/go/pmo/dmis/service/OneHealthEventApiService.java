@@ -3,7 +3,7 @@ package tz.go.pmo.dmis.service;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
-import tz.go.pmo.dmis.onehealth.OhEventWriteRequest;
+import tz.go.pmo.dmis.dto.request.OhEventWriteRequest;
 
 /** eGA service — paths unchanged (/v1/onehealth/events). */
 public interface OneHealthEventApiService {

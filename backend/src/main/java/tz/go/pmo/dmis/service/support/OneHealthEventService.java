@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.onehealth;
+package tz.go.pmo.dmis.service.support;
 
 import java.sql.Date;
 import java.sql.Timestamp;
@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
+import tz.go.pmo.dmis.dto.request.OhEventWriteRequest;
 
 /**
  * Port of the source's OneHealthService event behaviours plus the OhEvent /

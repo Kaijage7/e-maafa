@@ -1044,3 +1044,23 @@ Go-live readiness / integrity-summary / integration-registry **200**. Portal pub
 - mda **211**, partner **165**, national **16**, area **1301**, institution **376**, all **1693**
 - garbage accountGroup / institutionClass → **422**
 - Ministry class workbench **38** indicators
+
+
+## 35. Careful residual — empty onehealth feature package (2026-07-14)
+
+User direction: *proceed very carefully please.*
+
+### Change (import-only blast radius)
+| Before | After |
+|--------|--------|
+| `onehealth/OneHealthEventService` | `service.support.OneHealthEventService` |
+| `onehealth/OhEventWriteRequest` | `dto.request.OhEventWriteRequest` |
+| `onehealth/` domain sources | `package-info` only (legacy emptied) |
+
+HTTP paths/JSON unchanged. Controllers and service.impl import updates only.
+
+### Live smoke
+OH events / dashboard / directives / disseminations / form-data → **200**; status=NOPE → **n=0**.
+
+### Intentionally not moved (still hubs)
+`notification/`, `ew/`, `inform/`, `mitigation/` entities, `integration/`, `local/` seeders.

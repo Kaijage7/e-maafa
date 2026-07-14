@@ -13,7 +13,7 @@ import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
-import tz.go.pmo.dmis.onehealth.OneHealthEventService;
+import tz.go.pmo.dmis.service.support.OneHealthEventService;
 import tz.go.pmo.dmis.service.OneHealthDashboardService;
 
 /**

@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.common.security.AreaGuard;
-import tz.go.pmo.dmis.onehealth.OneHealthEventService;
+import tz.go.pmo.dmis.service.support.OneHealthEventService;
 import tz.go.pmo.dmis.service.OneHealthActionTrackingService;
 
 /**

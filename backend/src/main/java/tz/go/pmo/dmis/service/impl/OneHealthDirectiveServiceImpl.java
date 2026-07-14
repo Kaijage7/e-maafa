@@ -15,7 +15,7 @@ import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.ew.MgovSmsService;
 import org.springframework.stereotype.Service;
 import tz.go.pmo.dmis.notification.MailService;
-import tz.go.pmo.dmis.onehealth.OneHealthEventService;
+import tz.go.pmo.dmis.service.support.OneHealthEventService;
 import tz.go.pmo.dmis.service.OneHealthDirectiveService;
 
 /**

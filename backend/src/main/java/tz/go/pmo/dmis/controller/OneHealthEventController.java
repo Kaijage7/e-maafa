@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import tz.go.pmo.dmis.onehealth.OhEventWriteRequest;
+import tz.go.pmo.dmis.dto.request.OhEventWriteRequest;
 import tz.go.pmo.dmis.service.OneHealthEventApiService;
 
 /**

@@ -214,6 +214,7 @@ Suggested migration order:
 67. ~~**ops/IAM (auth + go-live ops)**~~ — **DONE** (thin controllers + `AuthServiceImpl` / `GoLiveOpsServiceImpl`; `TotpService` in `service.support`; `iam/` + `ops/` packages empty)
 68. Progressive eGA of primary fat domains complete
 69. ~~**Residual content / repository domain / INFORM web**~~ — **DONE** (email/sms logs, action guide, disaster events + Sendai analytics services, INFORM controllers)
+70. ~~**One Health residual package empty**~~ — **DONE** (`OneHealthEventService` → `service.support`; `OhEventWriteRequest` → `dto.request`; `onehealth/` package-info only)
 
 
 Full coupling map: [`EGA-INTERLINKAGE-MAP.md`](./EGA-INTERLINKAGE-MAP.md).

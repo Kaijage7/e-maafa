@@ -26,7 +26,7 @@ import tz.go.pmo.dmis.notification.ExternalDeliveryService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.notification.MailService;
-import tz.go.pmo.dmis.onehealth.OneHealthEventService;
+import tz.go.pmo.dmis.service.support.OneHealthEventService;
 import tz.go.pmo.dmis.service.OneHealthDisseminationService;
 
 /**

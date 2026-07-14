@@ -1,4 +1,4 @@
-package tz.go.pmo.dmis.onehealth;
+package tz.go.pmo.dmis.dto.request;
 
 import java.util.List;
 import java.util.Map;
