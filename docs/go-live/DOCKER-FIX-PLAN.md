@@ -113,8 +113,8 @@ Do **not** treat the untracked engine copy as “fixed” until Phase B proof pa
 | Phase | Date | Operator | Pass/Fail | Notes |
 |-------|------|----------|-----------|-------|
 | A Document freeze | 2026-07-14 | | Pass (document written) | Wait before B |
-| B D1 Vendor + Dockerfile | | | | |
-| C D2 PDF smoke | | | | |
+| B D1 Vendor + Dockerfile | 2026-07-14 | | **Pass** | In-repo `deploy/ew-pdf/engine`; build context `./deploy/ew-pdf`; image `emaafa/ew-pdf:local` ~1.27GB; health 200 |
+| C D2 PDF smoke | | | Partial | Health done in B; full generate left for C |
 | D D3 Storage volume | | | | |
 | E D4 TLS fallback | | | | |
 | F Docs / secrets polish | | | | |

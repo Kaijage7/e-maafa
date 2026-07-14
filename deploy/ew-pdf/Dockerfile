@@ -1,34 +1,41 @@
-# EW bulletin PDF sidecar — thin HTTP wrapper around the engine under extracted/…/ew.
-# Build from monorepo root (maafa), not from dmis-platform alone:
-#   docker build -f dmis-platform/deploy/ew-pdf/Dockerfile -t emaafa/ew-pdf:local .
+# EW bulletin PDF sidecar — buildable from dmis-platform git alone (Phase B / D1).
 #
-# Binds to 0.0.0.0 inside the container network only; publish to host only if needed.
+#   cd dmis-platform
+#   docker build -t emaafa/ew-pdf:local -f deploy/ew-pdf/Dockerfile deploy/ew-pdf
+#
+# Prefer prebuilt Python wheels (no long GDAL source compile). Runtime libs only.
 
 FROM python:3.12-slim-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential \
-      gdal-bin libgdal-dev \
-      libgeos-dev \
       curl \
+      libexpat1 \
+      libgdal32 \
+      libgeos-c1v5 \
+      libproj25 \
+      libspatialindex-c6 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /ew
 
-# Engine tree (pipeline + builders). Keep path stable with local start-all.sh layout.
-COPY extracted/maafa.pmo.go.tz/ew/requirements.txt /ew/requirements.txt
-RUN pip install --no-cache-dir -r /ew/requirements.txt
+COPY engine/requirements.txt /ew/requirements.txt
 
-COPY extracted/maafa.pmo.go.tz/ew/ /ew/
+# Wheels first — avoids multi-hour gdal/fiona compiles on slim images.
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir --only-binary=:all: \
+      "numpy" "pandas" "shapely" "pyproj" "pyogrio" "geopandas" "matplotlib" "Pillow" "PyMuPDF" \
+ || pip install --no-cache-dir --only-binary=:all: \
+      "numpy" "pandas" "shapely" "pyproj" "fiona" "geopandas" "matplotlib" "Pillow" "PyMuPDF" \
+ && pip install --no-cache-dir -r /ew/requirements.txt
+
+COPY engine/ /ew/
 
 ENV EWS_PDF_PORT=8600
 EXPOSE 8600
 
-# Health: GET /health
-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=5 \
   CMD curl -fsS "http://127.0.0.1:${EWS_PDF_PORT}/health" || exit 1
 
-# Listen on all interfaces inside the container network (not host-public by default).
 CMD ["python", "-c", "\
 import os; from http.server import HTTPServer; \
 import pdf_service as p; \

@@ -12,11 +12,16 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-MONOREPO="$(cd "$ROOT/.." && pwd)"
 TAG="${1:-$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || date +%Y%m%d)}"
 REGISTRY="${REGISTRY:-}"
 PREFIX="${IMAGE_PREFIX:-emaafa}"
 PUSH="${PUSH:-0}"
+
+if [[ ! -f "${ROOT}/deploy/ew-pdf/engine/pdf_service.py" ]]; then
+  echo "Missing vendored EW engine at deploy/ew-pdf/engine/ (Phase B / D1)." >&2
+  echo "See deploy/ew-pdf/README.md" >&2
+  exit 1
+fi
 
 name() {
   local short="$1"
@@ -39,7 +44,8 @@ echo
 
 docker build -t "${BACKEND_IMG}" -f "${ROOT}/backend/Dockerfile" "${ROOT}/backend"
 docker build -t "${FRONTEND_IMG}" -f "${ROOT}/frontend/Dockerfile" "${ROOT}/frontend"
-docker build -t "${PDF_IMG}" -f "${ROOT}/deploy/ew-pdf/Dockerfile" "${MONOREPO}"
+# PDF: context is deploy/ew-pdf (in-repo engine/). No monorepo parent required.
+docker build -t "${PDF_IMG}" -f "${ROOT}/deploy/ew-pdf/Dockerfile" "${ROOT}/deploy/ew-pdf"
 
 # Also tag :local for compose default when testing images without prod overlay
 docker tag "${BACKEND_IMG}" "${PREFIX}/dmis-backend:local"

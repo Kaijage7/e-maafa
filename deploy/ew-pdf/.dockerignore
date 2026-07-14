@@ -1,0 +1,8 @@
+# Keep image build context small; engine is already trimmed of output/documents.
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/output
+**/documents
+**/.streamlit
+.git

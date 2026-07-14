@@ -101,12 +101,12 @@ services:
     restart: unless-stopped
 
   # Bulletin PDF generator (722e4 / multirisk / agency kinds). Not AI.
+  # Build context is in-repo: deploy/ew-pdf/engine (Phase B / D1).
   ew-pdf:
     image: ${DMIS_IMAGE_EW_PDF:-emaafa/ew-pdf:local}
     build:
-      # Engine lives next to dmis-platform under the monorepo root (maafa/).
-      context: ..
-      dockerfile: dmis-platform/deploy/ew-pdf/Dockerfile
+      context: ./deploy/ew-pdf
+      dockerfile: Dockerfile
     environment:
       EWS_PDF_PORT: "8600"
     # Do not publish 8600 to the public internet. Frontend nginx proxies /ew-api only.
