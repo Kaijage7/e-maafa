@@ -7,6 +7,8 @@
 
 FROM python:3.12-slim-bookworm
 
+# Runtime GIS libs + LibreOffice headless (DOCX → PDF in converters/pdf_converter.py).
+# libreoffice is required for Phase C generate smoke; without it /generate/* returns 500.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       libexpat1 \
@@ -14,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libgeos-c1v5 \
       libproj25 \
       libspatialindex-c6 \
+      libreoffice-writer-nogui \
+      fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /ew

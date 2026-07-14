@@ -45,7 +45,12 @@ Then rebuild the image. Prefer committing the vendored tree so CI and servers do
 ```bash
 docker run --rm -d --name ew-pdf-smoke -p 18600:8600 emaafa/ew-pdf:local
 curl -fsS http://127.0.0.1:18600/health
+# full generate (needs LibreOffice in the image — included in Dockerfile)
+curl -fsS -m 300 -o /tmp/t.pdf -H 'Content-Type: application/json' \
+  -d @engine/examples/722e4_example.json \
+  http://127.0.0.1:18600/generate/722e4
+file /tmp/t.pdf   # expect: PDF document
 docker stop ew-pdf-smoke
 ```
 
-Generate smoke is Phase C in `docs/go-live/DOCKER-FIX-PLAN.md`.
+Image must include `libreoffice-writer-nogui` (DOCX→PDF). Without it, `/generate/*` returns 500.

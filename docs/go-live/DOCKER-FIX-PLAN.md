@@ -48,16 +48,19 @@ Do **not** parallelise. Each phase ends only when its proof column passes.
 
 **Stop after Phase A until operator continues.**
 
-### Phase B — D1 Vendor PDF engine + Dockerfile
+### Phase B — D1 Vendor PDF engine + Dockerfile — **DONE 2026-07-14**
 
-1. Keep/confirm `deploy/ew-pdf/engine/` (runtime only: src, assets, examples, pdf_service, requirements; no output/documents bulk).  
-2. Rewrite `deploy/ew-pdf/Dockerfile` to `COPY engine/` from `dmis-platform` context.  
-3. Update `docker-compose.yml` ew-pdf build context to `./deploy/ew-pdf` (or `.` with dockerfile path).  
-4. Update `scripts/docker-release.sh` accordingly.  
-5. Add short `deploy/ew-pdf/README.md` (sync note if source tree still exists outside git).  
-6. Commit engine + Dockerfile only.  
+1. ~~Keep/confirm `deploy/ew-pdf/engine/`~~ done (~22M, no output/documents)  
+2. ~~Rewrite Dockerfile~~ context `deploy/ew-pdf`, wheel-first pip (avoid GDAL source compile)  
+3. ~~Update compose~~ `context: ./deploy/ew-pdf`  
+4. ~~Update `docker-release.sh`~~ builds from in-repo path; fails if engine missing  
+5. ~~README~~ `deploy/ew-pdf/README.md`  
+6. Commit engine + Dockerfile + scripts  
 
-**Proof:** build from clean context without `../extracted`.
+**Proof:**  
+`docker build -t emaafa/ew-pdf:local -f deploy/ew-pdf/Dockerfile deploy/ew-pdf` → exit 0, image ~1.27GB  
+`docker run` + `GET /health` → `{"status":"ok","kinds":[...722e4,multirisk,...]}`  
+No monorepo `extracted/` path required.
 
 ### Phase C — D2 Build and smoke PDF image
 
@@ -113,8 +116,8 @@ Do **not** treat the untracked engine copy as “fixed” until Phase B proof pa
 | Phase | Date | Operator | Pass/Fail | Notes |
 |-------|------|----------|-----------|-------|
 | A Document freeze | 2026-07-14 | | Pass (document written) | Wait before B |
-| B D1 Vendor + Dockerfile | 2026-07-14 | | **Pass** | In-repo `deploy/ew-pdf/engine`; build context `./deploy/ew-pdf`; image `emaafa/ew-pdf:local` ~1.27GB; health 200 |
-| C D2 PDF smoke | | | Partial | Health done in B; full generate left for C |
+| B D1 Vendor + Dockerfile | 2026-07-14 | | **Pass** | In-repo engine; image builds from repo alone |
+| C D2 PDF smoke | 2026-07-14 | | **Pass** | LibreOffice in image; `POST /generate/722e4` → PDF 389891 bytes, 2 pages |
 | D D3 Storage volume | | | | |
 | E D4 TLS fallback | | | | |
 | F Docs / secrets polish | | | | |
