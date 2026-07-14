@@ -227,8 +227,67 @@ class Seven22E4Builder(BaseBulletinBuilder):
         }
         return mapping.get(level, "")
 
-    def _build_key_section(self, cell):
-        """Build the KEY section: hazard icon + solid colour chips (official TMA layout).
+    # Icon file stems under assets/icons (same set the map_generator uses).
+    _HAZARD_ICON_STEM = {
+        HazardType.HEAVY_RAIN: "heavy_rain",
+        HazardType.STRONG_WIND: "strong_wind",
+        HazardType.LARGE_WAVES: "large_waves",
+        HazardType.EXTREME_TEMPERATURE: "extreme_temperature",
+        HazardType.FLOODS: "floods",
+        HazardType.LANDSLIDES: "landslides",
+    }
+    # Translation key for the KEY strip label (falls back to hazard_type name).
+    _HAZARD_KEY_I18N = {
+        HazardType.HEAVY_RAIN: "heavy_rain_key",
+        HazardType.STRONG_WIND: "strong_wind_key",
+        HazardType.LARGE_WAVES: "large_waves_key",
+        HazardType.EXTREME_TEMPERATURE: "extreme_temperature_key",
+        HazardType.FLOODS: "hazard_floods",
+        HazardType.LANDSLIDES: "hazard_landslides",
+    }
+
+    def _bulletin_hazard_types(self, day: FiveDayEntry = None) -> list:
+        """Ordered unique hazard types present on a day (or the whole bulletin).
+
+        The KEY must show the hazards that were actually authored / drawn — not a
+        hard-coded Heavy rain icon when the operator issued wind or waves.
+        """
+        seen = []
+        days = [day] if day is not None else list(self.bulletin.days)
+        for d in days:
+            if d is None:
+                continue
+            for h in (d.hazards or []):
+                ht = getattr(h, "hazard_type", None)
+                if ht is None:
+                    continue
+                if ht not in seen:
+                    seen.append(ht)
+        return seen
+
+    def _hazard_icon_path(self, hazard_type: HazardType) -> Path | None:
+        stem = self._HAZARD_ICON_STEM.get(hazard_type)
+        if not stem:
+            return None
+        icons = Path(__file__).parent.parent.parent / "assets" / "icons"
+        for name in (f"{stem}.png", f"{stem}_128.png", f"{stem}_64.png"):
+            p = icons / name
+            if p.exists():
+                return p
+        return None
+
+    def _hazard_key_label(self, hazard_type: HazardType) -> str:
+        i18n_key = self._HAZARD_KEY_I18N.get(hazard_type)
+        if i18n_key:
+            label = t(i18n_key, "en")
+            # t() may return the key itself when missing — fall back to readable name.
+            if label and label != i18n_key:
+                return label
+        name = getattr(hazard_type, "name", None) or str(hazard_type)
+        return name.replace("_", " ").title()
+
+    def _build_key_section(self, cell, day: FiveDayEntry = None):
+        """Build the KEY section: one icon+label per hazard actually present, then colour chips.
 
         Uses in-paragraph shaded runs (not nested tables) so the Day-1 two-column
         map | forecast layout is not disturbed.
@@ -238,20 +297,29 @@ class Seven22E4Builder(BaseBulletinBuilder):
         p.paragraph_format.space_after = Pt(2)
         _add_run(p, t("key_label", "en"), size=SIZE_LABEL, bold=True)
 
+        # Prefer hazards on the day whose map sits above this KEY; else whole bulletin.
+        hazard_types = self._bulletin_hazard_types(day)
+        if not hazard_types:
+            hazard_types = self._bulletin_hazard_types(None)
+
         p = cell.add_paragraph()
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(4)
 
-        icon_path = Path(__file__).parent.parent.parent / "assets" / "icons" / "heavy_rain.png"
-        if icon_path.exists():
-            run = p.add_run()
-            run.add_picture(str(icon_path), width=Cm(0.8), height=Cm(0.8))
+        if not hazard_types:
+            # NO WARNING day — still show a neutral KEY line (no false Heavy-rain claim).
+            _add_run(p, " " + t("no_warning", "en"), size=SIZE_BODY)
         else:
-            run = p.add_run("\u26A0 ")
-            run.font.name = FONT_PRIMARY
-            run.font.size = Pt(14)
-
-        _add_run(p, " " + t("heavy_rain_key", "en"), size=SIZE_BODY)
+            for ht in hazard_types:
+                icon_path = self._hazard_icon_path(ht)
+                if icon_path is not None and icon_path.exists():
+                    run = p.add_run()
+                    run.add_picture(str(icon_path), width=Cm(0.75), height=Cm(0.75))
+                else:
+                    run = p.add_run("\u26A0")
+                    run.font.name = FONT_PRIMARY
+                    run.font.size = Pt(12)
+                _add_run(p, " " + self._hazard_key_label(ht) + "   ", size=SIZE_BODY)
 
         # Legend chips: yellow / orange / red boxes + labels (Downloads/tma KEY strip)
         p = cell.add_paragraph()
@@ -344,8 +412,8 @@ class Seven22E4Builder(BaseBulletinBuilder):
         p.paragraph_format.space_before = Pt(4)
         self._add_image_or_placeholder(p, day1.map_image, MAP_DAY1_WIDTH, MAP_DAY1_HEIGHT)
 
-        # KEY section below map
-        self._build_key_section(left_cell)
+        # KEY section below map — icons/labels for hazards actually on Day 1 (not hard-coded rain)
+        self._build_key_section(left_cell, day=day1)
 
         # Right cell: Forecast content
         right_cell = content_table.cell(0, 1)

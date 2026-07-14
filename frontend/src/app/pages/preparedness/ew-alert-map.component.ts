@@ -1139,8 +1139,13 @@ export class EwAlertMapComponent {
     // centroid = average of the painted regions' layer centres (the map already holds the geometry)
     let lat = 0, lng = 0, n = 0;
     for (const r of regions) { const ly = this.regionLayers.get(r); if (ly) { const c = ly.getBounds().getCenter(); lat += c.lat; lng += c.lng; n++; } }
-    const firstType = this.hazardTypes.find(t => t.key === this.days().flatMap(d => d.hazards)[0]?.type)?.label ?? 'Multi-hazard';
-    const title = `${firstType} — ${LEVELS.find(l => l.key === best)?.label} (${regions.slice(0, 2).join(', ')}${regions.length > 2 ? '…' : ''})`;
+    // Title lists every hazard type actually present (not always Heavy Rain).
+    const typeKeys = [...new Set(this.days().flatMap(d => d.hazards.map(h => h.type)).filter(Boolean))];
+    const typeLabels = typeKeys.map(k => this.typeLabel(k));
+    const typeTitle = typeLabels.length === 0 ? 'Multi-hazard'
+      : typeLabels.length === 1 ? typeLabels[0]
+      : typeLabels.slice(0, 3).join(' + ') + (typeLabels.length > 3 ? '…' : '');
+    const title = `${typeTitle} — ${LEVELS.find(l => l.key === best)?.label} (${regions.slice(0, 2).join(', ')}${regions.length > 2 ? '…' : ''})`;
     const fd = new FormData();
     fd.append('pdf', blob, 'bulletin.pdf');
     fd.append('payload', JSON.stringify({

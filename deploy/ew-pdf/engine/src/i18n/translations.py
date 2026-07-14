@@ -29,6 +29,7 @@ TRANSLATIONS = {
         "heavy_rain_key": "Heavy rain",
         "strong_wind_key": "Strong wind",
         "large_waves_key": "Large Waves",
+        "extreme_temperature_key": "Extreme temperature",
 
         # --- 722E_4 Footer ---
         "correspondence": "All correspondences should be directed to:",
