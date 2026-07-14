@@ -60,6 +60,8 @@ services:
       DMIS_AUTH_FORCE_2FA_ROLES: ${DMIS_AUTH_FORCE_2FA_ROLES:-Super Admin,Director,Asst. Director,Secretary,EOCC,ICT Admin}
       # PDF health probe (GoLiveOps) — internal Docker DNS name
       DMIS_EW_PDF_HEALTH_URL: ${DMIS_EW_PDF_HEALTH_URL:-http://ew-pdf:8600/health}
+      # Persist uploads / bulletin PDFs across container recreate (Phase D / D3)
+      DMIS_STORAGE_PUBLIC_ROOT: ${DMIS_STORAGE_PUBLIC_ROOT:-/app/storage/public}
       MGOV_API_KEY: ${MGOV_API_KEY:-}
       MGOV_SYSTEM_ID: ${MGOV_SYSTEM_ID:-}
       MGOV_SMS_URL: ${MGOV_SMS_URL:-}
@@ -82,6 +84,9 @@ services:
     # Staging convenience only. Production overlay does not publish backend to the host.
     ports:
       - "${DMIS_BACKEND_PUBLISH_PORT:-8080}:8080"
+    volumes:
+      # Survives docker compose down/up and image replace (named volume, not bind-mount).
+      - dmis_storage:/app/storage
     networks:
       - dmis_net
     restart: unless-stopped
@@ -128,3 +133,5 @@ networks:
 
 volumes:
   dmis_pgdata:
+  # Bulletin PDFs, publications, portal uploads (maps to /app/storage in backend)
+  dmis_storage:

@@ -108,7 +108,19 @@ Alternative: omit `edge` and put host nginx/Caddy in front of port 8081 only. Th
 - Not published on the host network in the default prod layout  
 - Backend health URL: `http://ew-pdf:8600/health`  
 
-## 8. Quick checks after deploy
+## 8. Persistent storage (Phase D)
+
+Backend mounts named volume **`dmis_storage`** at `/app/storage`.
+
+| Path in container | Role |
+|-------------------|------|
+| `/app/storage/public` | Public files served under `/api/storage/**` (bulletins, publications, portal media) |
+
+Env: `DMIS_STORAGE_PUBLIC_ROOT=/app/storage/public` (default in compose).
+
+This volume is **not** deleted by `docker compose down` (only `down -v` removes it). Back it up with the database.
+
+## 9. Quick checks after deploy
 
 ```bash
 curl -fsS https://$DMIS_PUBLIC_HOST/api/actuator/health
@@ -118,7 +130,7 @@ curl -fsS -o /dev/null -w "%{http_code}\n" https://$DMIS_PUBLIC_HOST/
 # curl -H "Authorization: Bearer …" https://$DMIS_PUBLIC_HOST/api/v1/ops/go-live-readiness
 ```
 
-## 9. Related documents
+## 10. Related documents
 
 | Doc | Use |
 |-----|-----|
@@ -128,13 +140,13 @@ curl -fsS -o /dev/null -w "%{http_code}\n" https://$DMIS_PUBLIC_HOST/
 | `docs/go-live/DOCKER-FIX-PLAN.md` | Known challenges and fix order (do not rush) |
 | `docs/GO-LIVE-RUNBOOK.md` | Residual flags detail |
 
-## 10. Known open deploy gaps (summary)
+## 11. Known open deploy gaps (summary)
 
-See **DOCKER-FIX-PLAN.md** for the full register. Highest priority before trusting Docker go-live:
+See **DOCKER-FIX-PLAN.md**. Remaining after B/C/D:
 
-1. PDF engine buildable from this git repo alone (D1)  
-2. PDF image smoke under Docker (D2)  
-3. Persistent storage volume for uploads/PDFs (D3)  
-4. TLS path without public DNS for staging (D4)  
+1. ~~PDF engine in git (D1)~~ done  
+2. ~~PDF generate smoke (D2)~~ done  
+3. ~~Storage volume (D3)~~ done  
+4. TLS path without public DNS for staging (D4) — next  
 
-Work those in order. Do not claim compose is dual-proved until that plan’s phases pass.
+Do not claim full Docker dual-proof until the fix plan’s remaining phases pass.

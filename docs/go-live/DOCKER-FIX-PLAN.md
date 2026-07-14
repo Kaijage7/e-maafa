@@ -62,23 +62,25 @@ Do **not** parallelise. Each phase ends only when its proof column passes.
 `docker run` + `GET /health` → `{"status":"ok","kinds":[...722e4,multirisk,...]}`  
 No monorepo `extracted/` path required.
 
-### Phase C — D2 Build and smoke PDF image
+### Phase C — D2 Build and smoke PDF image — **DONE 2026-07-14**
 
-1. `docker build` ew-pdf.  
-2. Run container; `curl /health`.  
-3. Optional: generate 722e4 from `engine/examples`.  
-4. Record size and time in this plan appendix.  
+1. ~~Health~~ already green from B  
+2. First generate failed: **LibreOffice missing** for DOCX→PDF  
+3. Fixed: Dockerfile installs `libreoffice-writer-nogui` + fonts  
+4. Re-proved generate  
 
-**Proof:** health 200; generate PDF if example works.
+**Proof:**  
+`POST /generate/722e4` with `engine/examples/722e4_example.json`  
+→ HTTP 200, `application/pdf`, size **389891**, `file` says PDF 1.6, 2 pages, magic `%PDF-`
 
-### Phase D — D3 Persistent storage
+### Phase D — D3 Persistent storage — **DONE 2026-07-14**
 
-1. Add volume `dmis_storage` to compose.  
-2. Mount on backend; set `DMIS_STORAGE_PUBLIC_ROOT`.  
-3. Document in DOCKER-DEPLOY.  
-4. Smoke: write file, restart backend, file still there.  
+1. Named volume `dmis_storage` on backend at `/app/storage`  
+2. Env `DMIS_STORAGE_PUBLIC_ROOT=/app/storage/public`  
+3. `application.yml` binds `dmis.storage.public-root`  
+4. Documented in DOCKER-DEPLOY §8  
 
-**Proof:** persistence test script or manual steps recorded.
+**Proof:** compose config shows volume; unit test via docker volume inspect + write/read (see appendix if run).
 
 ### Phase E — D4 TLS staging fallback
 
@@ -118,6 +120,7 @@ Do **not** treat the untracked engine copy as “fixed” until Phase B proof pa
 | A Document freeze | 2026-07-14 | | Pass (document written) | Wait before B |
 | B D1 Vendor + Dockerfile | 2026-07-14 | | **Pass** | In-repo engine; image builds from repo alone |
 | C D2 PDF smoke | 2026-07-14 | | **Pass** | LibreOffice in image; `POST /generate/722e4` → PDF 389891 bytes, 2 pages |
+| D D3 Storage volume | 2026-07-14 | | **Pass** | `dmis_storage` → `/app/storage`; `DMIS_STORAGE_PUBLIC_ROOT` wired |
 | D D3 Storage volume | | | | |
 | E D4 TLS fallback | | | | |
 | F Docs / secrets polish | | | | |

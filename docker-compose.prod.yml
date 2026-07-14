@@ -24,6 +24,8 @@ services:
       DMIS_AUTH_JWT_SECRET: ${DMIS_AUTH_JWT_SECRET:?DMIS_AUTH_JWT_SECRET must be >=32 random bytes}
       DMIS_SECURITY_CORS_ALLOWED_ORIGINS: ${DMIS_SECURITY_CORS_ALLOWED_ORIGINS:?set public SPA origins e.g. https://emaafa.pmo.go.tz}
       DMIS_EW_PDF_HEALTH_URL: http://ew-pdf:8600/health
+      DMIS_STORAGE_PUBLIC_ROOT: /app/storage/public
+    # Storage volume inherited from base compose (dmis_storage → /app/storage).
     # No direct host publish — only via Caddy → frontend → backend.
     ports: !reset []
     restart: unless-stopped

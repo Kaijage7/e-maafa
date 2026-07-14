@@ -136,6 +136,10 @@ dmis:
   # Email sender identity (Gmail SMTP). From-address falls back to spring.mail.username.
   mail:
     from-name: ${MAIL_FROM_NAME:e-MAAFA DMIS}
+  # File storage (bulletin PDFs, publications, uploads). Docker mounts a named volume here.
+  # Env: DMIS_STORAGE_PUBLIC_ROOT  (default: ./storage/public under process cwd)
+  storage:
+    public-root: ${DMIS_STORAGE_PUBLIC_ROOT:${user.dir}/storage/public}
   # EW bulletin PDF sidecar health (Docker: http://ew-pdf:8600/health). Env: DMIS_EW_PDF_HEALTH_URL
   ew:
     pdf-health-url: ${DMIS_EW_PDF_HEALTH_URL:http://127.0.0.1:8600/health}
