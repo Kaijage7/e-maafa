@@ -72,6 +72,101 @@ export function leafletDrawControlOptions(featureGroup: any, level?: string | nu
   };
 }
 
+/**
+ * Final path style for a stored delineation — used by TMA, region-picker, MoW, DMD.
+ * Always PDF-matching: level fill + black edge. Safe defaults never throw.
+ */
+export function shapeLeafletStyle(
+  level?: string | null,
+  opts?: { pane?: string; faded?: boolean; kind?: string },
+): Record<string, unknown> {
+  const base = leafletDrawShapeOptions(level);
+  const faded = !!opts?.faded;
+  const kind = String(opts?.kind || '').toLowerCase();
+  const isLine = kind === 'polyline' || kind === 'line' || kind === 'linestring';
+  if (isLine) {
+    return {
+      pane: opts?.pane,
+      color: base.fillColor,
+      weight: faded ? 2.5 : 3.5,
+      opacity: faded ? 0.75 : 1,
+      fill: false,
+      dashArray: faded ? '6 4' : null,
+    };
+  }
+  return {
+    pane: opts?.pane,
+    fill: true,
+    fillColor: base.fillColor,
+    fillOpacity: faded ? 0.35 : 0.55,
+    color: '#000000',
+    weight: faded ? 1.6 : 2.2,
+    opacity: 1,
+    dashArray: faded ? '5 3' : null,
+  };
+}
+
+/**
+ * Deep-tag a GeoJSON Feature for the PDF engine (level + fill colours + optional hazard).
+ * Never mutates the input. Returns null for empty input.
+ */
+export function tagShapeForPdf(geojson: any, level?: string | null, extra?: Record<string, unknown>): any | null {
+  if (!geojson) { return null; }
+  try {
+    const feat = JSON.parse(JSON.stringify(geojson));
+    const lv = normalizeAlertLevel(level);
+    const col = alertColor(lv);
+    feat.properties = {
+      ...(feat.properties || {}),
+      level: lv,
+      fill: col,
+      fillColor: col,
+      color: col,
+      ...(extra || {}),
+    };
+    return feat;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build a Leaflet vector layer from a stored delineation { kind, geojson, radius?, level }.
+ * Returns null if geometry is unusable — callers must tolerate that (never throw).
+ */
+export function leafletLayerFromDelineation(L: any, s: any, style: Record<string, unknown>): any | null {
+  if (!L || !s) { return null; }
+  try {
+    const geom = s.geojson?.geometry;
+    const kind = String(s.kind || s.geojson?.properties?.kind || '').toLowerCase();
+    if ((kind === 'circle' || s.geojson?.properties?.radius) && geom?.type === 'Point') {
+      const [lng, lat] = geom.coordinates;
+      const radius = s.radius ?? s.geojson?.properties?.radius ?? 10000;
+      return L.circle([lat, lng], { radius, ...style });
+    }
+    if (geom?.type === 'Point') {
+      const [lng, lat] = geom.coordinates;
+      return L.circleMarker([lat, lng], { radius: 8, ...style, fillOpacity: Math.max(0.55, Number(style['fillOpacity'] ?? 0.55)) });
+    }
+    if (geom?.type === 'Polygon') {
+      const rings = geom.coordinates.map((ring: any[]) => ring.map(([lng, lat]: number[]) => [lat, lng]));
+      return L.polygon(rings, style);
+    }
+    if (geom?.type === 'LineString') {
+      const pts = geom.coordinates.map(([lng, lat]: number[]) => [lat, lng]);
+      return L.polyline(pts, style);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/** Apply style after addTo — some Leaflet builds ignore fill on construct for custom panes. */
+export function forceLayerStyle(lyr: any, style: Record<string, unknown>): void {
+  try { if (lyr?.setStyle) { lyr.setStyle(style); } } catch { /* ignore */ }
+}
+
 export type AgencyKey = 'tma' | 'mow' | 'gst' | 'moh' | 'moa' | 'nemc' | 'mlf';
 
 export interface AgencyDef {

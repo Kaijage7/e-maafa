@@ -9,7 +9,11 @@ import { EwCrossAgencyPanelComponent } from './ew-cross-agency-panel.component';
 import { EwPreviewModalComponent } from './ew-preview-modal.component';
 import { EntityTaskingsComponent } from './entity-taskings.component';
 import { CATCHMENT_BASINS, BASIN_BY_KEY } from './catchment-basins';
-import { ALERT_LEVELS, ALERT_RANK, alertColor, AGENCIES, HAZ_ICON, LIKELIHOOD, IMPACT, leafletDrawControlOptions, leafletDrawShapeOptions } from './ew-agency.model';
+import {
+  ALERT_LEVELS, ALERT_RANK, alertColor, AGENCIES, HAZ_ICON, LIKELIHOOD, IMPACT,
+  leafletDrawControlOptions, leafletDrawShapeOptions, shapeLeafletStyle,
+  leafletLayerFromDelineation, forceLayerStyle, tagShapeForPdf,
+} from './ew-agency.model';
 import { loadCrossAgencyRef, renderCrossAgencyRef, RefMarker } from './cross-agency-ref';
 import { escapeHtml } from '../../../core/html';
 import { addDmisBaseLayer } from '../../../core/tz-map';
@@ -349,17 +353,25 @@ export class MowFloodComponent implements OnInit, OnDestroy {
     const target = this.current().assessments.find(a => a.basins.length) ?? this.current().assessments[0];
     if (!target) return;
     const layer = e.layer, type = e.layerType, lvl = target.alert_level;
-    try { if (layer.setStyle) layer.setStyle(leafletDrawShapeOptions(lvl)); } catch { /* ignore */ }
-    const col = alertColor(lvl);
+    const style = shapeLeafletStyle(lvl, { pane: 'ewshapes', kind: type });
+    try { if (layer.setStyle) layer.setStyle(style); } catch { /* ignore */ }
     let s: any;
     if (type === 'circle') {
       const c = layer.getLatLng();
-      s = { id: ++this.shapeSeq, kind: 'circle', level: lvl, radius: Math.round(layer.getRadius()),
-        geojson: { type: 'Feature', properties: { kind: 'circle', radius: Math.round(layer.getRadius()), level: lvl, fill: col, color: col }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
+      const radius = Math.round(layer.getRadius());
+      s = {
+        id: ++this.shapeSeq, kind: 'circle', level: lvl, radius,
+        geojson: tagShapeForPdf(
+          { type: 'Feature', properties: { kind: 'circle', radius }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } },
+          lvl, { kind: 'circle', radius, hazard_type: 'FLOODS' },
+        ),
+      };
     } else {
       const gj = layer.toGeoJSON();
-      gj.properties = { ...(gj.properties || {}), kind: type, level: lvl, fill: col, color: col };
-      s = { id: ++this.shapeSeq, kind: type, level: lvl, geojson: gj };
+      s = {
+        id: ++this.shapeSeq, kind: type, level: lvl,
+        geojson: tagShapeForPdf(gj, lvl, { kind: type, hazard_type: 'FLOODS' }),
+      };
     }
     target.drawn_shapes = [...(target.drawn_shapes ?? []), s];
     this.days.set([...this.days()]); this.renderShapes();
@@ -369,14 +381,26 @@ export class MowFloodComponent implements OnInit, OnDestroy {
     this.drawnGroup.clearLayers();
     for (const a of this.current().assessments) {
       for (const s of (a.drawn_shapes ?? [])) {
-        const col = alertColor(s.level); const style = { ...leafletDrawShapeOptions(s.level), pane: 'ewshapes' };
-        const geom = s.geojson?.geometry; let lyr: any = null;
-        if (s.kind === 'circle' && geom?.type === 'Point') { const [lng, lat] = geom.coordinates; lyr = L.circle([lat, lng], { radius: s.radius ?? 10000, ...style }); }
-        else if (geom?.type === 'Polygon') { lyr = L.polygon(geom.coordinates.map((r: any[]) => r.map(([lng, lat]: number[]) => [lat, lng])), style); }
-        else if (geom?.type === 'LineString') { lyr = L.polyline(geom.coordinates.map(([lng, lat]: number[]) => [lat, lng]), style); }
-        if (!lyr) continue; lyr._shapeId = s.id; this.drawnGroup.addLayer(lyr);
-        const c = lyr.getBounds ? lyr.getBounds().getCenter() : null;
-        if (c) { this.drawnGroup.addLayer(L.marker([c.lat, c.lng], { icon: L.divIcon({ className: 'mow-haz', html: `<div style="width:28px;height:28px;border-radius:50%;border:3px solid ${col};background:#fff;display:flex;align-items:center;justify-content:center"><img src="${HAZ_ICON('floods.png')}" style="width:18px;height:18px"></div>`, iconSize: [28, 28], iconAnchor: [14, 14] }) })); }
+        const col = alertColor(s.level);
+        const style = shapeLeafletStyle(s.level, { pane: 'ewshapes', kind: s.kind });
+        const lyr = leafletLayerFromDelineation(L, s, style);
+        if (!lyr) continue;
+        lyr._shapeId = s.id;
+        this.drawnGroup.addLayer(lyr);
+        forceLayerStyle(lyr, style);
+        try {
+          const c = lyr.getBounds ? lyr.getBounds().getCenter() : null;
+          if (c) {
+            this.drawnGroup.addLayer(L.marker([c.lat, c.lng], {
+              icon: L.divIcon({
+                className: 'mow-haz',
+                html: `<div style="width:28px;height:28px;border-radius:50%;border:3px solid ${col};background:#fff;display:flex;align-items:center;justify-content:center"><img src="${HAZ_ICON('floods.png')}" style="width:18px;height:18px" alt=""></div>`,
+                iconSize: [28, 28], iconAnchor: [14, 14],
+              }),
+              interactive: false,
+            }));
+          }
+        } catch { /* ignore */ }
       }
     }
   }
@@ -389,7 +413,12 @@ export class MowFloodComponent implements OnInit, OnDestroy {
       const byLevel = new Map<string, { basins: string[]; shapes: any[] }>();
       const bucket = (lv: string) => { if (!byLevel.has(lv)) { byLevel.set(lv, { basins: [], shapes: [] }); } return byLevel.get(lv)!; };
       for (const bk of (a.basins ?? [])) { const lv = (a.basinLevels?.[bk]) || a.alert_level; if (lv && lv !== 'NONE') { bucket(lv).basins.push(bk); } }
-      for (const s of (a.drawn_shapes ?? [])) { const lv = s.level || a.alert_level; if (lv && lv !== 'NONE') { bucket(lv).shapes.push(s.geojson); } }
+      for (const s of (a.drawn_shapes ?? [])) {
+        const lv = s.level || a.alert_level;
+        if (!lv || lv === 'NONE') { continue; }
+        const tagged = tagShapeForPdf(s.geojson, lv, { kind: s.kind, radius: s.radius, hazard_type: 'FLOODS' });
+        if (tagged) { bucket(lv).shapes.push(tagged); }
+      }
       return [...byLevel.entries()].map(([lv, g]) => ({
         basins: g.basins, alert_level: lv, districts: this.expandDistricts(g.basins),
         regions: [], description: a.description, likelihood: a.likelihood, impact: a.impact,

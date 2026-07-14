@@ -6,7 +6,11 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { EwAgencyService, Consolidated } from './ew-agency.service';
 import { EwCrossAgencyPanelComponent } from './ew-cross-agency-panel.component';
 import { EwPreviewModalComponent } from './ew-preview-modal.component';
-import { ALERT_LEVELS, alertColor, AGENCIES, AGENCY_HAZARDS, HAZ_ICON, leafletDrawControlOptions, leafletDrawShapeOptions } from './ew-agency.model';
+import {
+  ALERT_LEVELS, alertColor, AGENCIES, AGENCY_HAZARDS, HAZ_ICON,
+  leafletDrawControlOptions, leafletDrawShapeOptions, shapeLeafletStyle,
+  leafletLayerFromDelineation, forceLayerStyle, tagShapeForPdf,
+} from './ew-agency.model';
 import { escapeHtml } from '../../../core/html';
 import { addLocalVectorBase } from '../../../core/tz-map';
 
@@ -2014,7 +2018,12 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
     const num = `${String(issue.getFullYear()).slice(2)}${(issue.getMonth() + 1).toString().padStart(2, '0')}${issue.getDate().toString().padStart(2, '0')}`;
     return {
       bulletin_number: num, issue_date: iso(issue), issue_time: issue.toTimeString().slice(0, 5),
-      drawn_shapes: this.pmoShapes().filter(s => s.level !== 'NONE').map(s => s.geojson),
+      drawn_shapes: this.pmoShapes()
+        .filter(s => s.level && s.level !== 'NONE')
+        .map(s => tagShapeForPdf(s.geojson, s.level, {
+          kind: s.kind, radius: s.radius, hazard_type: this.stmtHazard() || 'multi_risk',
+        }))
+        .filter(Boolean),
       language: 'en', header_variant: 'new', days, district_summaries: districtSummaries,
     };
   }
@@ -2866,17 +2875,25 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
   }
   private onPmoDraw(e: any): void {
     const layer = e.layer, type = e.layerType, lvl = this.drawLevel();
-    try { if (layer.setStyle) layer.setStyle(leafletDrawShapeOptions(lvl)); } catch { /* ignore */ }
-    const col = alertColor(lvl);
+    const style = shapeLeafletStyle(lvl, { pane: 'ewshapes', kind: type });
+    try { if (layer.setStyle) layer.setStyle(style); } catch { /* ignore */ }
     let s: any;
     if (type === 'circle') {
       const c = layer.getLatLng();
-      s = { id: ++this.shapeSeq, kind: 'circle', level: lvl, radius: Math.round(layer.getRadius()),
-        geojson: { type: 'Feature', properties: { kind: 'circle', radius: Math.round(layer.getRadius()), level: lvl, fill: col, color: col }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } } };
+      const radius = Math.round(layer.getRadius());
+      s = {
+        id: ++this.shapeSeq, kind: 'circle', level: lvl, radius,
+        geojson: tagShapeForPdf(
+          { type: 'Feature', properties: { kind: 'circle', radius }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } },
+          lvl, { kind: 'circle', radius, hazard_type: this.stmtHazard() || 'multi_risk' },
+        ),
+      };
     } else {
       const gj = layer.toGeoJSON();
-      gj.properties = { ...(gj.properties || {}), kind: type, level: lvl, fill: col, color: col };
-      s = { id: ++this.shapeSeq, kind: type, level: lvl, geojson: gj };
+      s = {
+        id: ++this.shapeSeq, kind: type, level: lvl,
+        geojson: tagShapeForPdf(gj, lvl, { kind: type, hazard_type: this.stmtHazard() || 'multi_risk' }),
+      };
     }
     this.pmoShapes.set([...this.pmoShapes(), s]); this.renderPmoShapes();
   }
@@ -2884,14 +2901,26 @@ export class DmdConsolidatedComponent implements OnInit, OnDestroy {
     if (!this.drawnGroup || typeof L === 'undefined') return;
     this.drawnGroup.clearLayers();
     for (const s of this.pmoShapes()) {
-      const col = alertColor(s.level); const style = { ...leafletDrawShapeOptions(s.level), pane: 'ewshapes' };
-      const geom = s.geojson?.geometry; let lyr: any = null;
-      if (s.kind === 'circle' && geom?.type === 'Point') { const [lng, lat] = geom.coordinates; lyr = L.circle([lat, lng], { radius: s.radius ?? 10000, ...style }); }
-      else if (geom?.type === 'Polygon') { lyr = L.polygon(geom.coordinates.map((r: any[]) => r.map(([lng, lat]: number[]) => [lat, lng])), style); }
-      else if (geom?.type === 'LineString') { lyr = L.polyline(geom.coordinates.map(([lng, lat]: number[]) => [lat, lng]), style); }
-      if (!lyr) continue; lyr._shapeId = s.id; this.drawnGroup.addLayer(lyr);
-      const c = lyr.getBounds ? lyr.getBounds().getCenter() : null;
-      if (c) { this.drawnGroup.addLayer(L.marker([c.lat, c.lng], { icon: L.divIcon({ className: 'pmo-haz', html: `<div style="width:28px;height:28px;border-radius:50%;border:3px solid ${col};background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)"><i class="fas fa-triangle-exclamation" style="color:${col};font-size:13px"></i></div>`, iconSize: [28, 28], iconAnchor: [14, 14] }) })); }
+      const col = alertColor(s.level);
+      const style = shapeLeafletStyle(s.level, { pane: 'ewshapes', kind: s.kind });
+      const lyr = leafletLayerFromDelineation(L, s, style);
+      if (!lyr) continue;
+      lyr._shapeId = s.id;
+      this.drawnGroup.addLayer(lyr);
+      forceLayerStyle(lyr, style);
+      try {
+        const c = lyr.getBounds ? lyr.getBounds().getCenter() : null;
+        if (c) {
+          this.drawnGroup.addLayer(L.marker([c.lat, c.lng], {
+            icon: L.divIcon({
+              className: 'pmo-haz',
+              html: `<div style="width:28px;height:28px;border-radius:50%;border:3px solid ${col};background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.3)"><i class="fas fa-triangle-exclamation" style="color:${col};font-size:13px"></i></div>`,
+              iconSize: [28, 28], iconAnchor: [14, 14],
+            }),
+            interactive: false,
+          }));
+        }
+      } catch { /* ignore */ }
     }
   }
 

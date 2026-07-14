@@ -9,7 +9,7 @@ import { EwCrossAgencyPanelComponent } from './ew-cross-agency-panel.component';
 import { EntityTaskingsComponent } from './entity-taskings.component';
 import { RegionPickerComponent } from './region-picker.component';
 import { EwPreviewModalComponent } from './ew-preview-modal.component';
-import { ALERT_LEVELS, ALERT_RANK, AGENCIES, AGENCY_HAZARDS, AgencyKey, HazardDef, HAZ_ICON, alertColor, LIKELIHOOD, IMPACT, REPORT_PERIODS } from './ew-agency.model';
+import { ALERT_LEVELS, ALERT_RANK, AGENCIES, AGENCY_HAZARDS, AgencyKey, HazardDef, HAZ_ICON, alertColor, LIKELIHOOD, IMPACT, REPORT_PERIODS, tagShapeForPdf } from './ew-agency.model';
 
 export type FieldType = 'select' | 'multiselect' | 'number' | 'textarea' | 'text';
 export interface FieldDef {
@@ -119,10 +119,12 @@ export interface ConsoleConfig {
 
           @if (cur(); as it) {
             @if (config.typeOptions) {
-              <div class="lbl">{{ def.unit }} type</div>
+              <div class="lbl">{{ def.unit }} type
+                <span style="font-weight:500;text-transform:none;color:#94a3b8">— areas stay with this type; picking another type with work opens a new {{ def.unit.toLowerCase() }}</span>
+              </div>
               <div class="types">
                 @for (t of config.typeOptions; track t.key) {
-                  <button class="tbtn" [class.on]="it.type === t.key" (click)="it.type = t.key">
+                  <button class="tbtn" [class.on]="it.type === t.key" (click)="setItemType(it, t.key)">
                     <img [src]="hazIcon(t.icon)" [alt]="t.label">{{ t.label }}</button>
                 }
               </div>
@@ -286,6 +288,39 @@ export class AgencyEventConsoleComponent implements OnInit {
   addItem(): void { this.items.set([...this.items(), this.make()]); this.active.set(this.items().length - 1); }
   removeItem(i: number): void { const a = [...this.items()]; a.splice(i, 1); this.items.set(a); this.active.set(Math.max(0, i - 1)); }
 
+  /**
+   * Hazard type change for multi-type entities (e.g. GST).
+   * Never rewrites a card that already has regions/shapes — forks a new item instead
+   * so earthquake areas do not become volcano when the operator switches type.
+   */
+  setItemType(it: any, newType: string): void {
+    if (!it || it.type === newType) { return; }
+    const hasWork = (it.regions?.length ?? 0) > 0 || (it.delineations?.length ?? 0) > 0;
+    if (!hasWork) {
+      it.type = newType;
+      this.items.set([...this.items()]);
+      return;
+    }
+    // Prefer an existing empty-or-same-type card of this type.
+    const existingIdx = this.items().findIndex(x => x !== it && x.type === newType);
+    if (existingIdx >= 0) {
+      this.active.set(existingIdx);
+      this.flash.set({
+        msg: `Kept previous ${this.def.unit.toLowerCase()} unchanged. Switched to existing ${newType.replace(/_/g, ' ')} card.`,
+        err: false,
+      });
+      return;
+    }
+    const neu = this.make();
+    neu.type = newType;
+    this.items.set([...this.items(), neu]);
+    this.active.set(this.items().length - 1);
+    this.flash.set({
+      msg: `Kept previous ${this.def.unit.toLowerCase()} and its areas. New card for ${newType.replace(/_/g, ' ')} — paint its areas now.`,
+      err: false,
+    });
+  }
+
   toggleRegion(name: string): void {
     const it = this.cur(); if (!it) return;
     const regs: string[] = it.regions ?? [];
@@ -339,10 +374,27 @@ export class AgencyEventConsoleComponent implements OnInit {
       const bucket = (lv: string) => { if (!byLevel.has(lv)) byLevel.set(lv, { regions: [], shapes: [] }); return byLevel.get(lv)!; };
       const real = (lv?: string) => (lv && lv !== 'NONE') ? lv : null;   // white / "No alert" = cleared, never a tier
       for (const r of (it.regions ?? [])) { const lv = real((it.regionLevels?.[r]) || it.alert_level); if (lv) { bucket(lv).regions.push(r); } }
-      for (const s of (it.delineations ?? [])) { const lv = real(s.level || it.alert_level); if (lv) { bucket(lv).shapes.push(s.geojson); } }
+      for (const s of (it.delineations ?? [])) {
+        const lv = real(s.level || it.alert_level);
+        if (!lv) { continue; }
+        // Tag each shape for PDF (level colour + hazard type) — never send bare untyped geometry.
+        const tagged = tagShapeForPdf(s.geojson, lv, {
+          kind: s.kind,
+          radius: s.radius,
+          hazard_type: it.type || this.config.fixedType || '',
+        });
+        if (tagged) { bucket(lv).shapes.push(tagged); }
+      }
       for (const [lv, grp] of byLevel) {
         if (!grp.regions.length && !grp.shapes.length) { continue; }
-        const o: any = { ...it, alert_level: lv, regions: grp.regions, districts: it.districts ?? [], drawn_shapes: grp.shapes };
+        const o: any = {
+          ...it,
+          type: it.type || this.config.fixedType || '',
+          alert_level: lv,
+          regions: grp.regions,
+          districts: it.districts ?? [],
+          drawn_shapes: grp.shapes,
+        };
         delete o.regionLevels; delete o.delineations;
         // collapse the "Other" free-text into the base field (matches Python), then drop the helper key
         if (o.disease === 'Other' && o.specify_disease) o.disease = o.specify_disease;
