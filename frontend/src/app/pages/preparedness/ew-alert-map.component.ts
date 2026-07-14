@@ -111,20 +111,32 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
       <div class="haz-panel">
         <div class="haz-head">
           <span><i class="fas fa-layer-group"></i> Day {{ activeDay() + 1 }} hazards</span>
-          <button class="haz-add" type="button" (click)="addHazard()"><i class="fas fa-plus"></i> Add</button>
+          <button class="haz-add" type="button" (click)="addHazard()"><i class="fas fa-plus"></i> Add hazard</button>
+        </div>
+        <div class="haz-help">
+          Each card is <b>one hazard type</b> with its own areas. Rain on Dodoma stays rain — pick another type or
+          <b>Add hazard</b> for wind elsewhere. Changing type never rewrites a card that already has areas.
         </div>
         @for (h of activeHazards(); track h.id) {
           <div class="haz-card" [class.active]="h.id === activeId()" (click)="selectHazard(h.id)">
             <div class="haz-card-top">
               <span class="haz-ico" [style.border-color]="topColor(h)"><img [src]="hazIcon(h.type)" [alt]="h.type"></span>
-              <select [value]="h.type" (click)="$event.stopPropagation()" (change)="patch(h.id,{type:$any($event.target).value})">
-                @for (g of hazardGroups; track g.agency) {
-                  <optgroup [label]="g.agency">
-                    @for (t of g.types; track t.key) { <option [value]="t.key">{{ t.label }} · {{ t.labelSw }}</option> }
-                  </optgroup>
+              <div class="haz-type-wrap" (click)="$event.stopPropagation()">
+                <div class="haz-type-name">{{ typeLabel(h.type) }}</div>
+                <select class="haz-type-select" [value]="h.type"
+                  [title]="hazardHasWork(h) ? 'Has areas/shapes — choosing another type opens a new card and keeps this one' : 'Hazard type for this card'"
+                  (change)="onHazardTypeChange(h.id, $any($event.target).value, $any($event.target))">
+                  @for (g of hazardGroups; track g.agency) {
+                    <optgroup [label]="g.agency">
+                      @for (t of g.types; track t.key) { <option [value]="t.key">{{ t.label }} · {{ t.labelSw }}</option> }
+                    </optgroup>
+                  }
+                </select>
+                @if (hazardHasWork(h)) {
+                  <div class="haz-lock">Areas locked to this type — new type = new card</div>
                 }
-              </select>
-              <button class="haz-del" type="button" (click)="removeHazard(h.id,$event)"><i class="fas fa-times"></i></button>
+              </div>
+              <button class="haz-del" type="button" (click)="removeHazard(h.id,$event)" title="Remove this hazard card only"><i class="fas fa-times"></i></button>
             </div>
             <div class="haz-foot">
               <i class="fas fa-map-marker-alt"></i> {{ h.areas.length }} area(s){{ h.delineations.length ? ' · ' + h.delineations.length + ' shape(s)' : '' }}
@@ -134,7 +146,8 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
               <div class="haz-regions">
                 @for (a of h.areas; track a.name) {
                   <span class="haz-region" [style.background]="colorOf(a.level) + '33'" [style.border]="'1px solid ' + colorOf(a.level)">
-                    {{ a.name }}<i class="fas fa-times" (click)="unassign(h.id,a.name,$event)"></i>
+                    {{ a.name }} · {{ typeLabel(h.type) }}
+                    <i class="fas fa-times" (click)="unassign(h.id,a.name,$event)"></i>
                   </span>
                 }
               </div>
@@ -158,7 +171,7 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
           </div>
         }
         @if (!activeHazards().length) {
-          <div class="haz-empty">No hazards for this day — it will read <b>NO WARNING</b>. Click <b>Add</b> to issue one.</div>
+          <div class="haz-empty">No hazards for this day — it will read <b>NO WARNING</b>. Click <b>Add hazard</b> to issue one.</div>
         }
         <div class="legend">
           @for (l of levels; track l.key) { <div class="legend-row"><span class="legend-swatch" [style.background]="l.color"></span>{{ l.label }}</div> }
@@ -189,8 +202,8 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
         </div>
         <div #alertMap class="alert-map"></div>
         <div class="map-hint"><i class="fas fa-hand-pointer"></i>
-          <b>Add</b> one card per hazard (e.g. Heavy Rain vs Strong Wind). Click areas to paint <b>{{ activeLevelLabel() }}</b> on the selected card.
-          Multiple hazards may share a region. Shapes use the shape-level colour + hazard icon (PDF-matching). Day {{ activeDay() + 1 }}.
+          Active card paints <b>{{ activeLevelLabel() }}</b> for <b>{{ activeTypeLabel() }}</b> only.
+          Other hazards keep their areas. Day {{ activeDay() + 1 }}.
         </div>
         @if (status()) { <div class="map-status" [class.err]="statusErr()">{{ status() }}</div> }
       </div>
@@ -209,13 +222,17 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
     .haz-add { border: 0; background: var(--primary); color: #fff; border-radius: 8px; padding: 0.3rem 0.6rem; font-size: 0.78rem; cursor: pointer; }
     .haz-card { border: 1px solid var(--border); border-radius: 12px; padding: 0.6rem; margin-bottom: 0.6rem; cursor: pointer; }
     .haz-card.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0,51,102,0.1); }
-    .haz-card-top { display: flex; align-items: center; gap: 0.4rem; }
-    .haz-card-top select { flex: 1; border: 1px solid var(--border); border-radius: 7px; padding: 0.3rem; font-size: 0.8rem; }
+    .haz-help { font-size: 0.75rem; color: var(--text-mid); line-height: 1.35; margin: -0.2rem 0 0.65rem; padding: 0.45rem 0.55rem; background: #f0f7ff; border: 1px solid #d0e4f7; border-radius: 8px; }
+    .haz-card-top { display: flex; align-items: flex-start; gap: 0.4rem; }
+    .haz-type-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+    .haz-type-name { font-size: 0.78rem; font-weight: 700; color: var(--text-dark); }
+    .haz-type-select { width: 100%; border: 1px solid var(--border); border-radius: 7px; padding: 0.3rem; font-size: 0.8rem; }
+    .haz-lock { font-size: 0.68rem; color: #0f766e; font-weight: 600; }
     .haz-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0; }
-    .haz-ico { width: 30px; height: 30px; border-radius: 8px; border: 2px solid; background: #fff; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 2px; }
+    .haz-ico { width: 30px; height: 30px; border-radius: 8px; border: 2px solid; background: #fff; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 2px; margin-top: 2px; }
     .haz-ico img { width: 100%; height: 100%; object-fit: contain; }
     .haz-map-icon { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); pointer-events: none; }
-    .haz-del { border: 0; background: transparent; color: var(--text-light); cursor: pointer; }
+    .haz-del { border: 0; background: transparent; color: var(--text-light); cursor: pointer; margin-top: 2px; }
     .haz-foot { font-size: 0.75rem; color: var(--text-mid); margin-top: 0.5rem; display: flex; align-items: center; gap: 0.35rem; }
     .haz-active-tag { background: rgba(0,51,102,0.08); color: var(--primary); padding: 0.1rem 0.4rem; border-radius: 20px; font-size: 0.75rem; margin-left: auto; }
     .haz-regions { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem; }
@@ -308,6 +325,52 @@ export class EwAlertMapComponent {
   activeHazards = computed(() => this.days()[this.activeDay()]?.hazards ?? []);
   activeHazard = computed(() => this.activeHazards().find(h => h.id === this.activeId()) ?? null);
   activeLevelLabel = computed(() => LEVELS.find(l => l.key === this.activeLevel())?.label ?? '');
+  activeTypeLabel = computed(() => this.typeLabel(this.activeHazard()?.type ?? 'HEAVY_RAIN'));
+
+  typeLabel(type: string): string {
+    return this.hazardTypes.find(t => t.key === type)?.label
+      ?? HAZARD_TYPES.find(t => t.key === type)?.label
+      ?? type;
+  }
+
+  /** True when this card already owns map work that must not be retyped in place. */
+  hazardHasWork(h: Hazard | null | undefined): boolean {
+    if (!h) { return false; }
+    return (h.areas?.length ?? 0) > 0 || (h.delineations?.length ?? 0) > 0;
+  }
+
+  /** Deep-clone so cards never share area/shape arrays or GeoJSON by reference. */
+  private cloneHazard(h: Hazard): Hazard {
+    return {
+      id: h.id,
+      type: h.type,
+      description: h.description,
+      likelihood: h.likelihood,
+      impact: h.impact,
+      impactsExpected: h.impactsExpected,
+      areas: (h.areas ?? []).map(a => ({ name: a.name, level: a.level })),
+      delineations: (h.delineations ?? []).map(d => ({
+        id: d.id,
+        kind: d.kind,
+        level: d.level,
+        radius: d.radius,
+        geojson: d.geojson ? JSON.parse(JSON.stringify(d.geojson)) : d.geojson,
+      })),
+    };
+  }
+
+  private emptyHazard(type = 'HEAVY_RAIN'): Hazard {
+    return {
+      id: ++this.seq,
+      type,
+      areas: [],
+      delineations: [],
+      description: '',
+      likelihood: 'MEDIUM',
+      impact: 'MEDIUM',
+      impactsExpected: '',
+    };
+  }
 
   colorOf(level: string): string {
     // Normalize so "warning" / "MAJOR WARNING" still resolve to palette colours.
@@ -357,19 +420,29 @@ export class EwAlertMapComponent {
 
   private mutateActiveHazard(fn: (h: Hazard) => Hazard, restyle = true): void {
     const id = this.activeId();
-    this.days.update(days => days.map((d, i) => i === this.activeDay()
-      ? { ...d, hazards: d.hazards.map(h => h.id === id ? fn(h) : h) } : d));
+    this.days.update(days => days.map((d, i) => {
+      if (i !== this.activeDay()) { return d; }
+      return {
+        ...d,
+        // Clone every card so non-active hazards cannot share mutable nested state.
+        hazards: d.hazards.map(h => h.id === id ? this.cloneHazard(fn(this.cloneHazard(h))) : this.cloneHazard(h)),
+      };
+    }));
     if (restyle) { this.restyle(); }
   }
   private mutateDay(fn: (hz: Hazard[]) => Hazard[]): void {
-    this.days.update(days => days.map((d, i) => i === this.activeDay() ? { ...d, hazards: fn(d.hazards) } : d));
+    this.days.update(days => days.map((d, i) => {
+      if (i !== this.activeDay()) { return d; }
+      const next = fn(d.hazards.map(h => this.cloneHazard(h)));
+      return { ...d, hazards: next.map(h => this.cloneHazard(h)) };
+    }));
     this.restyle();
   }
 
-  addHazard(): void {
-    const id = ++this.seq;
-    this.mutateDay(hz => [...hz, { id, type: 'HEAVY_RAIN', areas: [], delineations: [], description: '', likelihood: 'MEDIUM', impact: 'MEDIUM', impactsExpected: '' }]);
-    this.activeId.set(id);
+  addHazard(type = 'HEAVY_RAIN'): void {
+    const h = this.emptyHazard(type);
+    this.mutateDay(hz => [...hz, h]);
+    this.activeId.set(h.id);
     this.renderDelineations();
   }
   removeHazard(id: number, e: Event): void {
@@ -378,19 +451,106 @@ export class EwAlertMapComponent {
     if (this.activeId() === id) { this.activeId.set(this.activeHazards()[0]?.id ?? 0); }
     this.renderDelineations();
   }
-  patch(id: number, p: Partial<Hazard>): void {
-    this.days.update(days => days.map((d, i) => i === this.activeDay()
-      ? { ...d, hazards: d.hazards.map(h => h.id === id ? { ...h, ...p } : h) } : d));
-    // Type change must swap map icons / shape markers immediately.
-    if (p.type !== undefined) {
+
+  /**
+   * Hazard type change — critical isolation rule:
+   * - Empty card: retype in place.
+   * - Card with areas/shapes: NEVER rewrite type (would convert rain areas into wind).
+   *   Instead open/focus another card for the new type; keep the earlier work intact.
+   */
+  onHazardTypeChange(id: number, newType: string, selectEl?: HTMLSelectElement): void {
+    const h = this.activeHazards().find(x => x.id === id);
+    if (!h || !newType || h.type === newType) { return; }
+
+    const oldLabel = this.typeLabel(h.type);
+    const newLabel = this.typeLabel(newType);
+
+    if (!this.hazardHasWork(h)) {
+      // In-place retype only when the card has no areas/shapes yet.
+      this.days.update(days => days.map((d, i) => {
+        if (i !== this.activeDay()) { return d; }
+        return {
+          ...d,
+          hazards: d.hazards.map(x => {
+            const c = this.cloneHazard(x);
+            if (c.id === id) { c.type = newType; }
+            return c;
+          }),
+        };
+      }));
+      this.selectHazard(id);
       this.restyle();
       this.renderDelineations();
+      return;
     }
+
+    // Revert the <select> UI to the locked type (work stays on this card).
+    if (selectEl) { selectEl.value = h.type; }
+
+    // Prefer an existing card of the requested type (same day).
+    const existing = this.activeHazards().find(x => x.id !== id && x.type === newType);
+    if (existing) {
+      this.selectHazard(existing.id);
+      this.flash(
+        `Kept ${oldLabel} on its areas. Switched to the existing ${newLabel} card — paint more areas there.`,
+        false,
+      );
+      return;
+    }
+
+    // Fork a brand-new empty card for the new type; do not touch the old card.
+    const created = this.emptyHazard(newType);
+    this.days.update(days => days.map((d, i) => {
+      if (i !== this.activeDay()) { return d; }
+      return {
+        ...d,
+        hazards: [...d.hazards.map(x => this.cloneHazard(x)), created],
+      };
+    }));
+    this.activeId.set(created.id);
+    this.restyle();
+    this.renderDelineations();
+    this.flash(
+      `Kept ${oldLabel} unchanged. New card for ${newLabel} — click regions for ${newLabel} only.`,
+      false,
+    );
+  }
+
+  /** Non-type field updates only. Type must go through onHazardTypeChange (never rewrite via patch). */
+  patch(id: number, p: Partial<Hazard>): void {
+    if (p.type !== undefined) {
+      this.onHazardTypeChange(id, String(p.type));
+      return;
+    }
+    this.days.update(days => days.map((d, i) => {
+      if (i !== this.activeDay()) { return d; }
+      return {
+        ...d,
+        hazards: d.hazards.map(h => {
+          if (h.id !== id) { return this.cloneHazard(h); }
+          const next = this.cloneHazard(h);
+          if (p.description !== undefined) { next.description = p.description; }
+          if (p.likelihood !== undefined) { next.likelihood = p.likelihood; }
+          if (p.impact !== undefined) { next.impact = p.impact; }
+          if (p.impactsExpected !== undefined) { next.impactsExpected = p.impactsExpected; }
+          return next;
+        }),
+      };
+    }));
   }
   unassign(id: number, name: string, e: Event): void {
     e.stopPropagation();
-    this.days.update(days => days.map((d, i) => i === this.activeDay()
-      ? { ...d, hazards: d.hazards.map(h => h.id === id ? { ...h, areas: h.areas.filter(a => a.name !== name) } : h) } : d));
+    this.days.update(days => days.map((d, i) => {
+      if (i !== this.activeDay()) { return d; }
+      return {
+        ...d,
+        hazards: d.hazards.map(h => {
+          const c = this.cloneHazard(h);
+          if (c.id === id) { c.areas = c.areas.filter(a => a.name !== name); }
+          return c;
+        }),
+      };
+    }));
     this.restyle();
   }
 
@@ -401,29 +561,41 @@ export class EwAlertMapComponent {
     this.renderDelineations();
   }
 
-  /** Select a hazard card — map keeps ALL hazards' areas/shapes visible (PDF-like); selected card is paint target. */
+  /** Select a hazard card — map keeps ALL hazards' areas/shapes visible; selected card is the only paint target. */
   selectHazard(id: number): void {
     this.activeId.set(id);
     this.restyle();
     this.renderDelineations();
   }
 
-  /** Paint an area onto the ACTIVE hazard card only (other hazard cards keep their own areas). */
+  /**
+   * Paint an area onto the ACTIVE hazard card only.
+   * Other cards' areas are never read-modified-written — each type keeps its own list.
+   */
   private paintArea(name: string): void {
     if (!this.activeHazard()) { this.addHazard(); }
+    const targetId = this.activeId();
     const lvl = this.activeLevel();
-    this.mutateActiveHazard(h => {
-      const existing = h.areas.find(a => a.name === name);
-      let areas: HazardArea[];
-      if (existing && existing.level === lvl) {
-        areas = h.areas.filter(a => a.name !== name);            // toggle off
-      } else if (existing) {
-        areas = h.areas.map(a => a.name === name ? { ...a, level: lvl } : a); // move to new level
-      } else {
-        areas = [...h.areas, { name, level: lvl }];              // add at active level
-      }
-      return { ...h, areas };
-    });
+    this.days.update(days => days.map((d, i) => {
+      if (i !== this.activeDay()) { return d; }
+      return {
+        ...d,
+        hazards: d.hazards.map(h => {
+          const c = this.cloneHazard(h);
+          if (c.id !== targetId) { return c; } // leave every other hazard untouched
+          const existing = c.areas.find(a => a.name === name);
+          if (existing && existing.level === lvl) {
+            c.areas = c.areas.filter(a => a.name !== name);
+          } else if (existing) {
+            c.areas = c.areas.map(a => a.name === name ? { name, level: lvl } : a);
+          } else {
+            c.areas = [...c.areas, { name, level: lvl }];
+          }
+          return c;
+        }),
+      };
+    }));
+    this.restyle();
   }
 
   private styleFor(name: string): any {
@@ -611,10 +783,30 @@ export class EwAlertMapComponent {
       dln = { id: ++this.shapeSeq, kind: type, level: lvl, geojson: gj };
     }
     if (!this.activeHazard()) { this.addHazard(); }
-    this.mutateActiveHazard(h => ({ ...h, delineations: [...h.delineations, dln] }), false);
+    const targetId = this.activeId();
+    const dlnCopy: Delineation = {
+      id: dln.id,
+      kind: dln.kind,
+      level: dln.level,
+      radius: dln.radius,
+      geojson: dln.geojson ? JSON.parse(JSON.stringify(dln.geojson)) : dln.geojson,
+    };
+    this.days.update(days => days.map((d, i) => {
+      if (i !== this.activeDay()) { return d; }
+      return {
+        ...d,
+        hazards: d.hazards.map(h => {
+          const c = this.cloneHazard(h);
+          if (c.id === targetId) {
+            c.delineations = [...c.delineations, dlnCopy];
+          }
+          return c;
+        }),
+      };
+    }));
     this.renderDelineations();
     const lvlLabel = LEVELS.find(l => l.key === lvl)?.label ?? lvl;
-    this.flash(`${dln.kind} drawn in ${lvlLabel} colour with hazard icon — trash tool removes if unwanted.`, false);
+    this.flash(`${dln.kind} on ${this.typeLabel(this.activeHazard()?.type ?? '')} (${lvlLabel}) — other hazards unchanged.`, false);
   }
 
   private initMap(): void {
@@ -671,15 +863,20 @@ export class EwAlertMapComponent {
         const ids = new Set<number>();
         e.layers.eachLayer((l: any) => { if (l._dlnId) { ids.add(l._dlnId); } });
         if (ids.size) {
-          // Shapes from any hazard card may be on the map — remove matching ids across the day.
-          this.days.update(days => days.map((d, i) => i === this.activeDay()
-            ? { ...d, hazards: d.hazards.map(h => ({
-                ...h,
-                delineations: h.delineations.filter(x => !ids.has(x.id)),
-              })) }
-            : d));
+          // Shapes from any hazard card may be on the map — remove matching ids only; clone every card.
+          this.days.update(days => days.map((d, i) => {
+            if (i !== this.activeDay()) { return d; }
+            return {
+              ...d,
+              hazards: d.hazards.map(h => {
+                const c = this.cloneHazard(h);
+                c.delineations = c.delineations.filter(x => !ids.has(x.id));
+                return c;
+              }),
+            };
+          }));
           this.renderDelineations();
-          this.flash(`${ids.size} shape(s) removed.`, false);
+          this.flash(`${ids.size} shape(s) removed — other hazards unchanged.`, false);
         }
       });
     }
