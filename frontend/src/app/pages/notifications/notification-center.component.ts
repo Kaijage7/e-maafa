@@ -30,10 +30,9 @@ type CategoryChip = { key: string; label: string; unread: number; total: number 
  * Productive filters (unread / category / severity / search) hit the server.
  */
 @Component({
-  selector: 'page-notification-center',
-  standalone: true,
-  imports: [FormsModule, RouterLink, DatePipe, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-notification-center',
+    imports: [FormsModule, RouterLink, DatePipe, PageHeaderComponent, PanelComponent],
+    styles: [`
     .toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px; }
     .chips { display:flex; flex-wrap:wrap; gap:6px; flex:1; }
     .chip { border:1px solid #e2e8f0; background:#fff; color:#334155; border-radius:999px; padding:5px 12px; font-size:0.78rem; font-weight:700; cursor:pointer; font-family:inherit; }
@@ -68,7 +67,7 @@ type CategoryChip = { key: string; label: string; unread: number; total: number 
     .err { background:#fee2e2; color:#991b1b; padding:10px 12px; border-radius:8px; margin-bottom:12px; }
     .sev-row { display:flex; gap:6px; flex-wrap:wrap; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Notification Centre" icon="fa-bell"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Notifications'}]">
     </dmis-page-header>
@@ -147,7 +146,7 @@ type CategoryChip = { key: string; label: string; unread: number; total: number 
         </div>
       }
     </dmis-panel>
-  `,
+  `
 })
 export class NotificationCenterComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);

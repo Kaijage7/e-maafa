@@ -11,13 +11,12 @@ import { PanelComponent } from '../../shell/panel.component';
  * no create UI at all, deliberately fixed here. Dual-mode create/edit by route param.
  */
 @Component({
-  selector: 'page-framework-form',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, RouterLink],
-  styles: [`
+    selector: 'page-framework-form',
+    imports: [PageHeaderComponent, PanelComponent, RouterLink],
+    styles: [`
     .nav-tabs .nav-link { font-weight: 600; color: var(--primary); border-radius: 0.5rem 0.5rem 0 0; cursor: pointer; }
   `],
-  template: `
+    template: `
     <dmis-page-header [title]="pageTitle" icon="fa-file-contract"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Risk Frameworks', url:'/m/content-management/frameworks'}, {label: crumb}]">
       <a routerLink="/m/content-management/frameworks" class="btn-add" style="background:var(--text-mid);">
@@ -173,7 +172,7 @@ import { PanelComponent } from '../../shell/panel.component';
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class FrameworkFormComponent {
   private http = inject(HttpClient);

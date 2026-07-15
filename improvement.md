@@ -1,12 +1,12 @@
 # e-MAAFA / DMIS — Improvement Plan & Progress Ledger
 
-> Living document. Source of truth for the honest full-system audit (`DMIS-LINKAGE-AUDIT.md`, 154 findings) and the fix campaign that follows it (`DMIS-AUDIT-FIX-LOG.md`). Last updated 2026-07-09.
+> Living document. Source of truth for the honest full-system audit (`DMIS-LINKAGE-AUDIT.md`, 154 findings) and the fix campaign that follows it (`DMIS-AUDIT-FIX-LOG.md`). Last updated 2026-07-15.
 
 ## 1. How to read this
 
 The audit graded every subsystem live (real API + SQL evidence, then an adversarial re-check of every serious accusation). Verdicts: **✅ WORKING** (verified) · **🟡 PARTIAL** (works, stated gaps) · **🔴 GAP** (designed, missing) · **🚨 FAKE** (pretends to work) · **⚫ DEAD** (unreachable/unused). Of 154 findings, **63 were already WORKING**; this plan tracks the **91 non-WORKING items** plus F92-F116 found during the fix campaign and fresh reassessments — each fixed item carries live verification evidence, not a claim.
 
-**Backlog health (2026-07-09, after Wave 3 + the RBAC trim + fresh reassessment pass + F06/F15/F17/F18/F19/F20/F22/F29/F30/F32/F33/F34/F37/F38/F39/F40/F41/F42/F43/F44/F45/F46/F47/F93/F94/F95/F100/F101/F103/F104/F106/F107/F108/F109/F110/F111/F112/F113/F115 live fixes):** 116 tracked (91 audit + F92/F93/F94 found during the campaign + F95-F116 fresh reassessment) — **62 resolved · 54 open** (🟡PARTIAL 30 · ⚫DEAD 12 · 🔴GAP 11 · ❔UNVERIFIED 1).
+**Backlog health (canonical reconciliation 2026-07-15):** 116 tracked — **113 resolved · 3 open** (**97.4% documented resolution**). Open: 🟡 PARTIAL 1 (`F116`) · 🔴 GAP 2 (`F105`, `F114`). F102 remains closed: isolated Docker-backed Java 21/PostgreSQL 16.13 release verification executed **186/186 with no failures, errors, or skips**. Flyway validated **197 schema-history entries**: the baseline marker plus **196 versioned SQL files through V212**. Dated sections below preserve campaign history; when an older “Remaining” bullet conflicts with this headline, the current `DMIS-AUDIT-FIX-LOG.md` status controls.
 
 | Status | Count |
 |---|---|
@@ -14,18 +14,29 @@ The audit graded every subsystem live (real API + SQL evidence, then an adversar
 | ✅ Fixed, live-verified + adversarially re-checked (Wave 2, committed `2abb5a5`) | 6 |
 | ✅ Fixed & live-verified + independent re-probes (Wave 3, committed `b7093f5`): F05, F12, F24, F35, F70, F87, F88, F89, F91 (already fixed, closed), F92 | 10 |
 | ✅ Fixed & live-verified (2026-07-08/09 continuation): F06, F15, F17, F18, F19, F20, F22, F29, F30, F32, F33, F34, F37, F38, F39, F40, F41, F42, F43, F44, F45, F46, F47, F93, F94, F95, F100, F101, F103, F104, F106, F107, F108, F109, F110, F111, F112, F113, F115 | 39 |
+| ✅ Fixed after the 2026-07-09 snapshot, including full-suite F102 closure | 51 |
 | ⬜ Remaining — P1 (severity 4) | 0 |
-| ⬜ Remaining — P2 (priority 2: severity 3 items; incl. new F96/F99/F102/F105/F114/F116) | 13 |
-| ⬜ Remaining — P3 (priority 3: severity 1–2 cleanup/polish; incl. new F97/F98) | 41 |
+| ⬜ Remaining — P2 (severity 3: F105/F114/F116) | 3 |
+| ⬜ Remaining — P3 | 0 |
 
-**Ledger reconciliation (2026-07-09):**
+**Ledger reconciliation (2026-07-14; supersedes older dated counts below):**
 - `DMIS-AUDIT-FIX-LOG.md` has **116 F-headings** and all 116 have status lines.
-- Status parity after the F29/F30 Command Post board closure: **62 fixed/closed**, **54 open**, zero missing/unknown statuses.
-- Open by type tag: **PARTIAL 30**, **DEAD 12**, **GAP 11**, **UNVERIFIED 1**.
-- Open by raw severity tag: **s4 = 0**, **s3 = 14**, **s2 = 39**, **s1 = 2**.
-- Fix-order buckets: **P1 = 0**, **P2 = 13**, **P3 = 41**.
-- Newer findings **F92-F116**: **17 fixed** (`F92`, `F93`, `F94`, `F95`, `F100`, `F101`, `F103`, `F104`, `F106`, `F107`, `F108`, `F109`, `F110`, `F111`, `F112`, `F113`, `F115`) and **8 open** (`F96-F99`, `F102`, `F105`, `F114`, `F116`).
+- Current parity: **113 fixed/closed**, **3 open**, zero missing/unknown statuses.
+- Open by type tag: **PARTIAL 1**, **GAP 2**. All three are severity 3 architecture/capability builds.
+- Newer findings **F92-F116**: **22 fixed** and **3 open** (`F105`, `F114`, `F116`).
 - This is exact for documented findings only; it is not a claim that no further issue can be discovered through deeper tests.
+
+**F102 current evidence (2026-07-15):** all ordinary Spring integration classes inherit the shared hermetic PostgreSQL base. Docker Engine 29.5.2 + PostgreSQL 16.13 loaded the baseline; Flyway validated 197 schema-history entries (the baseline marker plus 196 versioned SQL files through V212). One isolated Docker-backed run executed 40 suites / 186 tests with zero failures/errors/skips. The hermetic base disables scheduled scanner sweeps, scenario injects, and delivery retries so the test JVM cannot make unrelated external calls or linger after completion; manual scanner execution is unchanged. Live `start-all.sh` smoke remains a separate release gate because that script kills occupied ports and loads real SMS/SMTP credentials.
+
+**Final-source verification delta (2026-07-15):** JWT expiry now terminates an active GraphQL
+subscription even when the separate 10-minute socket limit has not elapsed, active streams poll the
+logout denylist, and V213 adds a caller-owned device-installation registry for future push addressing.
+Eight tests were added. The focused GraphQL/WebSocket/relay gate passes 25/25 and all 104 non-database
+tests pass; 90 PostgreSQL tests were skipped only because this restricted sandbox cannot access Docker.
+One Docker-backed 194/194 run, including V213 and its four device database tests, is still required
+before this final source can be promoted.
+
+**F116 mobile/web progress (2026-07-15; remains OPEN):** the best-fit hybrid keeps REST for commands/uploads/cursor recovery and uses protected GraphQL for the bounded `mobileHome` composite plus a content-free foreground native wake-up subscription. V210 makes incident creation retry-safe. V211 adds same-transaction incident change capture, commit-serialized cursor order, former-scope tombstones, actor/permission/area-bound scope keys, retained REST delta recovery, bounded authenticated REST/SSE web wake-up, and a GraphQL subscription over the same relay. V212 gives newly inserted notifications a separate per-user commit-ordered cursor with restored-server rejection and deleted-gap advancement. V213 adds a bounded caller-owned device registry for future push addressing, not a sender. PostgreSQL tests prove delayed commits, rollback atomicity, scope moves, foreign gaps, retention and paging; focused relay/browser/WebSocket tests cover capacity, protection, JWT expiry/revocation and 64-bit cursors. This remains incident-only and does not implement a native client or FCM/APNs delivery, general offline mutation queue, cross-domain delta/conflict contracts, a real outbox/broker, target-volume load/SLO proof, or idempotency across finance/stock/dispatch/publish commands.
 
 **Resolved-item confidence audit (2026-07-09):**
 - The 62 resolved IDs are: `F01`, `F02`, `F03`, `F04`, `F05`, `F06`, `F07`, `F08`, `F09`, `F10`, `F11`, `F12`, `F13`, `F14`, `F15`, `F16`, `F17`, `F18`, `F19`, `F20`, `F21`, `F22`, `F24`, `F29`, `F30`, `F32`, `F33`, `F34`, `F35`, `F37`, `F38`, `F39`, `F40`, `F41`, `F42`, `F43`, `F44`, `F45`, `F46`, `F47`, `F70`, `F87`, `F88`, `F89`, `F91`, `F92`, `F93`, `F94`, `F95`, `F100`, `F101`, `F103`, `F104`, `F106`, `F107`, `F108`, `F109`, `F110`, `F111`, `F112`, `F113`, `F115`.
@@ -216,8 +227,8 @@ No active P1 remains after F94 was closed by the V144/V154 area-role RBAC trim a
   - *Fixed 2026-07-09:* `BudgetController.ndmfDisburse()` requires a valid incident, applies strict incident area guard, and blocks table-top simulation incidents before cash moves. Live API/SQL smoke with a temporary real-login District Logistic Officer proved own-district NDMF cash-out succeeds, foreign incident ids resolve to 404, table-top simulation cash-out returns HTTP 422 with the simulation guard message, full-scale `allow_real_ops=true` drill cash-out is intentionally allowed, and all controlled disbursement/incident/user rows were cleaned to zero leftovers.
 
 ### Production readiness / CI, integrations & AI/ML
-- **F102** 🟡 — Backend regression tests are not self-contained; Spring tests still require a live dev Postgres even though Testcontainers dependencies exist
-  - *Fix:* Move `@SpringBootTest` suites to Testcontainers/dynamic datasource wiring, or split live-DB smoke tests from hermetic CI gates. The default developer command should compile and fail fast without a manually running `localhost:5440` database.
+- **F102** ✅ — Backend regression tests are self-contained through a shared PostgreSQL 16 Testcontainer
+  - *Fixed 2026-07-14; reverified 2026-07-15:* all Spring integration suites inherit `HermeticPostgresSupport`; the suite-level container remains alive across Spring context reuse, loads the baseline, and applies the post-baseline versioned files through V212. Flyway validates 197 schema-history entries (the baseline marker plus 196 versioned SQL files), and the support fails fast on missing baseline/database startup. Isolated Docker-backed verification executed 186/186 tests with no failures, errors, or skips. Scheduled scanner/scenario/retry jobs are disabled by the hermetic base to prevent unrelated external work from contaminating the gate. `ci.sh` requires Docker so database-test skips cannot masquerade as a release green.
 - **F105** 🔴 — AI/ML readiness is not architected yet: current analytics are real deterministic engines/scanners, not a governed model-inference platform
   - *Fix:* Add an ML integration contract before presenting AI-assisted features: model registry/versioning, feature snapshot references, prediction event/audit tables, confidence/explanation fields, human review/disposition, RBAC, retention policy, and an async integration bus that is actually wired.
 - **F114** 🔴 — DMD Impact Analysis lacks a real satellite/exposure geospatial layer and direct INFORM-context overlay
@@ -226,8 +237,8 @@ No active P1 remains after F94 was closed by the V144/V154 area-role RBAC trim a
   - *Fix:* Create a system-linkage control plane before extracting microservices or shipping AI: component dependency matrix, API/event contracts, wired outbox/event bus, shared rate limits/cache/read models, SLO/load-test profile for district/region/national/surge usage, AI feature-snapshot/prediction contracts, and operator-facing degradation states for external GIS/notification/AI dependencies.
 
 ### Supporting documentation / architecture control
-- **F99** 🟡 — System Design Document is materially stale against current migrations, RBAC, incident ladder and outbox reality
-  - *Fix:* Refresh the SDD from the current code/migrations before using it as an implementation contract: migration corpus is now V1-V151 (135 files), permission-matrix/`hasAuthority` gates are live, the incident ladder is DDMC→DED→RDMC→RAS→EOCC→Director→PS with skip-if-unstaffed automation, and the outbox is designed but still not wired as the actual module-integration backbone.
+- **F99** ✅ — System Design Document load-bearing claims were refreshed; residual prose drift remains possible
+  - *Fixed 2026-07-10; refreshed 2026-07-15:* the SDD now records 197 Flyway schema-history entries (the baseline marker plus 196 versioned SQL files through V212), the live permission matrix and jurisdiction model, the DDMC→DED→RDMC→RAS→EOCC→Director→PS incident ladder, removal of the dead outbox, and the incident-only V211/V212 convergence boundary. Code, migrations and the audit ledger still win if residual narrative prose drifts.
 
 ## 7. Target Architecture Plan — Linkage, AI, And Multiscale Scale-Up
 
@@ -375,7 +386,7 @@ These exceed a defect-fix — they are net-new capability the audit recommends f
 
 - **ICS command structure (M)** — incident commander / section chiefs / org chart per activation; today tasks assign to users but nobody commands the incident. (F05)
 - **Unified per-incident operations timeline (M)** — one master log merging workflow history + tasks + dispatch + warehouse movements + comms; today these are 3 disconnected trails. (F12)
-- **Push command tracing (M)** — F29 closed the Command Post board's 30s polling gap; SSE/WebSocket push delivery remains a future scale/latency choice under the F116 architecture track.
+- **Push command tracing (M)** — F29 remains closed; V211 adds incident-only REST/SSE invalidation with durable REST cursor recovery. Native APNs/FCM and other-domain convergence remain F116 work.
 - **System-linkage and AI control plane (L)** — component dependency map, event/API contracts, capacity model, read-model projections, and governed AI prediction workflow. (F105/F116)
 
 ## 10. Working method (the honesty gate)

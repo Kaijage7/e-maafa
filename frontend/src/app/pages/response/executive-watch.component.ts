@@ -11,10 +11,9 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
  * queue of declarations awaiting the executive's signature). Refreshes on a 30-second poll.
  */
 @Component({
-  selector: 'page-executive-watch',
-  standalone: true,
-  imports: [DecimalPipe, UpperCasePipe, RouterLink, PageHeaderComponent],
-  styles: [`
+    selector: 'page-executive-watch',
+    imports: [DecimalPipe, UpperCasePipe, RouterLink, PageHeaderComponent],
+    styles: [`
     .mode { border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
     .mode.monitoring { background: #065f46; color: #d1fae5; }
     .mode.activated { background: #7f1d1d; color: #fee2e2; }
@@ -47,7 +46,7 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
     .empty { color: #94a3b8; font-size: 0.82rem; text-align: center; padding: 16px 0; }
     .decl { background: #fef2f2; border-left: 3px solid #dc2626; border-radius: 8px; padding: 9px 11px; margin-bottom: 7px; font-size: 0.8rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Executive Watch — National Situation Picture" icon="fa-binoculars"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Executive Watch'}]">
       <a routerLink="/m/response/coordination" class="btn-add"><i class="fas fa-tower-broadcast"></i> Command Post</a>
@@ -143,7 +142,7 @@ import { PageHeaderComponent } from '../../shell/page-header.component';
         </div>
       </div>
     } @else { <div class="empty">Loading national picture…</div> }
-  `,
+  `
 })
 export class ExecutiveWatchComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);

@@ -33,10 +33,9 @@ interface DashboardStats {
  * Chart options are verbatim from the page's script block.
  */
 @Component({
-  selector: 'page-oh-dashboard',
-  standalone: true,
-  imports: [FormsModule, RouterLink, OhReportEventModalComponent],
-  styles: [`
+    selector: 'page-oh-dashboard',
+    imports: [FormsModule, RouterLink, OhReportEventModalComponent],
+    styles: [`
     :host { display: block; }
     .oh-breadcrumb { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-light); margin-bottom: 1rem; }
     .oh-breadcrumb a { color: var(--text-mid); text-decoration: none; }
@@ -194,7 +193,7 @@ interface DashboardStats {
     @media (max-width: 992px) { .oh-regions-grid { grid-template-columns: 1fr; } .oh-regions-right { border-left: none; border-top: 1px solid #f3f4f6; min-height: 280px; } .oh-map-container { border-radius: 0 0 6px 6px; } }
     @media (max-width: 768px) { .oh-events-header { flex-direction: column; align-items: flex-start; } .oh-sum-row, .oh-region-row { grid-template-columns: 1.5fr repeat(4, 1fr); font-size: 0.75rem; } }
   `],
-  template: `
+    template: `
     <nav class="oh-breadcrumb">
       <a routerLink="/home">Home</a>
       <span class="sep"><i class="fas fa-chevron-right"></i></span>
@@ -501,7 +500,7 @@ interface DashboardStats {
     }
 
     <oh-report-event-modal #reportModal (created)="load()" />
-  `,
+  `
 })
 export class OhDashboardComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);

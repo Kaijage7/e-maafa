@@ -4,10 +4,9 @@ import { AQI_LEVELS, POLLUTION_SOURCES, POLLUTANTS } from './ew-agency.model';
 
 /** NEMC — National Environment Management Council. Distinct fields: source, AQI level/value, pollutants. */
 @Component({
-  selector: 'page-nemc-air',
-  standalone: true,
-  imports: [AgencyEventConsoleComponent],
-  template: `<ew-agency-event-console [config]="config"></ew-agency-event-console>`,
+    selector: 'page-nemc-air',
+    imports: [AgencyEventConsoleComponent],
+    template: `<ew-agency-event-console [config]="config"></ew-agency-event-console>`
 })
 export class NemcAirComponent {
   config: ConsoleConfig = {

@@ -53,10 +53,9 @@ interface PortalBulletin {
  * citizen actions (report a hazard via the landing wizard, register as stakeholder).
  */
 @Component({
-  selector: 'public-live-portal',
-  standalone: true,
-  imports: [RouterLink, PublicInformExplorerComponent, DecimalPipe],
-  template: `
+    selector: 'public-live-portal',
+    imports: [RouterLink, PublicInformExplorerComponent, DecimalPipe],
+    template: `
     <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 6.5rem 1.5rem 3rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.8rem;margin-bottom:1rem;">
         <div>
@@ -343,7 +342,7 @@ interface PortalBulletin {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class PublicLivePortalComponent {
   L = inject(PortalLabels);

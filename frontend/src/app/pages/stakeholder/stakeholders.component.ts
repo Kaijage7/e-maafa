@@ -20,10 +20,9 @@ interface Stakeholder {
  * register drawer, and the Verify / Revoke action that drives is_verified/verified_at.
  */
 @Component({
-  selector: 'page-stakeholders',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RegionDistrictPickerComponent],
-  template: `
+    selector: 'page-stakeholders',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RegionDistrictPickerComponent],
+    template: `
     <dmis-page-header title="Stakeholder Portal" icon="fa-handshake"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Stakeholder Portal'}]">
       @if (canManage()) {
@@ -129,7 +128,7 @@ interface Stakeholder {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class StakeholdersComponent {
   private http = inject(HttpClient);

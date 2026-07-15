@@ -41,10 +41,9 @@ const STATUS_BADGE: Record<string, string> = {
  * plans surface automatically in the Command Post readiness panel during anticipatory activation.
  */
 @Component({
-  selector: 'page-anticipatory-plans',
-  standalone: true,
-  imports: [FormsModule, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-anticipatory-plans',
+    imports: [FormsModule, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Anticipatory Action Plans" icon="fa-clipboard-list"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Anticipatory Action Plans'}]">
       @if (canCreate()) {
@@ -263,7 +262,7 @@ const STATUS_BADGE: Record<string, string> = {
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
     .btn-mini { font-size: 0.78rem; padding: 0.35rem 0.8rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; cursor: pointer; margin-left: 4px; color: var(--text-dark); }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1500; display: flex; align-items: flex-start; justify-content: center; padding: 3vh 1rem; overflow-y: auto; }
@@ -298,7 +297,7 @@ const STATUS_BADGE: Record<string, string> = {
     .haz-fill { display: block; height: 100%; background: #7c3aed; border-radius: 5px; }
     .haz-n { font-size: 0.75rem; font-weight: 700; color: #7c3aed; text-align: right; }
     @media (max-width: 900px) { .cov { grid-template-columns: 1fr; } }
-  `],
+  `]
 })
 export class AnticipatoryPlansComponent implements OnDestroy {
   private http = inject(HttpClient);

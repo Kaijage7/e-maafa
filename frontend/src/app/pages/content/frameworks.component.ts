@@ -27,13 +27,12 @@ interface IndexResponse {
  * deliberately FIXED: it links to the working form page implementing frameworkStore's rules).
  */
 @Component({
-  selector: 'page-frameworks',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
-  styles: [`
+    selector: 'page-frameworks',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
+    styles: [`
     .alert-container { position: fixed; top: calc(var(--topbar-h) + 12px); right: 12px; z-index: 9999; width: 320px; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Risk Frameworks" icon="fa-file-contract"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Risk Frameworks'}]">
       @if (canManage()) {
@@ -215,7 +214,7 @@ interface IndexResponse {
         </div>
       }
     </div>
-  `,
+  `
 })
 export class FrameworksComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);

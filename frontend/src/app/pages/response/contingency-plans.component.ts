@@ -27,10 +27,9 @@ const STATUS_BADGE: Record<string, string> = {
  * ContingencyPlan admin: registry + create/edit + draft→pending→active→archived lifecycle.
  */
 @Component({
-  selector: 'page-contingency-plans',
-  standalone: true,
-  imports: [FormsModule, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-contingency-plans',
+    imports: [FormsModule, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Contingency Plans" icon="fa-folder-tree"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Contingency Plans'}]">
       @if (canManage()) {
@@ -168,7 +167,7 @@ const STATUS_BADGE: Record<string, string> = {
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
     .btn-mini { font-size: 0.78rem; padding: 0.35rem 0.8rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; cursor: pointer; margin-left: 4px; color: var(--text-dark); }
     .chip { display:inline-block; font-size: 0.75rem; padding: 2px 8px; border-radius: 20px; background: rgba(13,110,253,0.1); color: #0d6efd; }
@@ -177,7 +176,7 @@ const STATUS_BADGE: Record<string, string> = {
     .btn-cancel { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; }
     .btn-cancel:hover { background: #f1f5f9; }
     .badge-muted { background: rgba(100,116,139,0.14); color: #64748b; }
-  `],
+  `]
 })
 export class ContingencyPlansComponent {
   private http = inject(HttpClient);

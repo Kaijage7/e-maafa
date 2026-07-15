@@ -6,10 +6,9 @@ import { PanelComponent } from '../../shell/panel.component';
 
 /** Reproduction of admin/past_disasters/create.blade.php — single page-form, multipart upload. */
 @Component({
-  selector: 'page-past-disaster-create',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, RouterLink],
-  template: `
+    selector: 'page-past-disaster-create',
+    imports: [PageHeaderComponent, PanelComponent, RouterLink],
+    template: `
     <dmis-page-header title="New Past Disaster Record" icon="fa-plus-circle"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation'}, {label:'Disaster Repository', url:'/m/prevention-mitigation/past-disasters'}, {label:'New Record'}]" />
 
@@ -100,7 +99,7 @@ import { PanelComponent } from '../../shell/panel.component';
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class PastDisasterCreateComponent {
   private http = inject(HttpClient);

@@ -17,10 +17,9 @@ interface InvResponse {
 }
 
 @Component({
-  selector: 'page-inventory',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, DecimalPipe, RouterLink],
-  template: `
+    selector: 'page-inventory',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, DecimalPipe, RouterLink],
+    template: `
     <dmis-page-header title="Emergency Supplies" icon="fa-boxes"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Emergency Supplies'}]">
       <a class="btn-add" routerLink="/m/preparedness/inventory/create"><i class="fas fa-plus"></i> New Item</a>
@@ -108,7 +107,7 @@ interface InvResponse {
       </dmis-panel>
     </div>
   `,
-  styles: [`
+    styles: [`
     .alert-tabs { display: flex; gap: 0.35rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
     .alert-tab { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.85rem; border-radius: 50px; font-size: 0.78rem; font-weight: 600; text-decoration: none; transition: all 0.2s; border: 1px solid rgba(0,0,0,0.06); cursor: pointer; }
     .alert-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
@@ -123,7 +122,7 @@ interface InvResponse {
     .badge-damaged { background: rgba(220,38,38,0.12); color: #dc2626; }
     .badge-reserved { background: rgba(0,77,102,0.12); color: #004d66; }
     .badge-deployed { background: rgba(59,130,246,0.12); color: #2563eb; }
-  `],
+  `]
 })
 export class InventoryComponent {
   private http = inject(HttpClient);

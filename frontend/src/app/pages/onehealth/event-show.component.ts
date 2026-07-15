@@ -68,10 +68,9 @@ const WORKFLOW_STEPS = [
  * reachable for PMO sessions when progress hits 100%.
  */
 @Component({
-  selector: 'page-oh-event-show',
-  standalone: true,
-  imports: [FormsModule, RouterLink, NgTemplateOutlet],
-  styles: [`
+    selector: 'page-oh-event-show',
+    imports: [FormsModule, RouterLink, NgTemplateOutlet],
+    styles: [`
     /* ── Banner header (flat solid) ── */
     .oh-show-header { background: #0891b2; border-radius: 12px; padding: 1.25rem 1.5rem; color: #fff; margin-bottom: 1.5rem; }
     .oh-show-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; opacity: 0.8; }
@@ -221,7 +220,7 @@ const WORKFLOW_STEPS = [
     .badge.bg-primary { background: #0d6efd; color: #fff; }
     .badge.bg-info { background: #0dcaf0; color: #1e293b; }
   `],
-  template: `
+    template: `
     @if (data(); as d) {
       <!-- ═══ Banner Header (flat solid) ═══ -->
       <div class="oh-show-header">
@@ -1119,7 +1118,7 @@ const WORKFLOW_STEPS = [
         </div>
       </ng-template>
     }
-  `,
+  `
 })
 export class OhEventShowComponent implements OnInit {
   private http = inject(HttpClient);

@@ -9,10 +9,9 @@ import { qrcodegen } from '../shared/qrcodegen';
 
 /** Exact reproduction of home-v2.blade.php — the module hub landing. */
 @Component({
-  selector: 'page-module-hub',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'page-module-hub',
+    imports: [RouterLink],
+    template: `
     <div class="module-card" style="margin-bottom:0.85rem;">
       <div class="module-card-left">
         <div class="module-card-icon"><i class="fas fa-th-large"></i></div>
@@ -85,7 +84,7 @@ import { qrcodegen } from '../shared/qrcodegen';
       </a>
     }
   `,
-  styles: [`
+    styles: [`
     .module-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
     /* In-flow outreach card after the grid (was position:fixed, which floated over the module cards) */
     .hub-qr { margin:1.5rem 0 0.5rem; display:inline-flex; flex-direction:column; align-items:center; gap:.45rem;
@@ -122,7 +121,7 @@ import { qrcodegen } from '../shared/qrcodegen';
     .module-card-link:hover .card-arrow { color: var(--text-dark); transform: translateX(4px); }
     @media (max-width: 991px) { .module-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 575px) { .module-grid { grid-template-columns: 1fr; gap: 0.85rem; } .greeting h1 { font-size: 1.35rem; } }
-  `],
+  `]
 })
 export class ModuleHubComponent implements OnInit {
   auth = inject(AuthService);

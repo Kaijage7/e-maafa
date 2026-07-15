@@ -22,10 +22,9 @@ const POLL_MS = 30_000;
  * folded by category so Super Admin is not a wall of raw rows.
  */
 @Component({
-  selector: 'page-response-dashboard',
-  standalone: true,
-  imports: [DecimalPipe, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-response-dashboard',
+    imports: [RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.5rem; display: block; }
@@ -89,7 +88,7 @@ const POLL_MS = 30_000;
       .stat-strip { grid-template-columns: repeat(2, 1fr); }
     }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Response Dashboard" icon="fa-tachometer-alt"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Dashboard'}]">
       <span class="pill" [style.color]="live() ? '#16a34a' : '#dc2626'"><i class="fas fa-circle" style="font-size:0.7rem"></i> {{ live() ? 'System Online' : 'Reconnecting…' }} — {{ clock() }}</span>
@@ -235,7 +234,7 @@ const POLL_MS = 30_000;
         </dmis-panel>
       </div>
     </div>
-  `,
+  `
 })
 export class ResponseDashboardComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
@@ -340,10 +339,9 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
 }
 
 @Component({
-  selector: 'page-eocc-board',
-  standalone: true,
-  imports: [DecimalPipe, RouterLink, PageHeaderComponent],
-  styles: [`
+    selector: 'page-eocc-board',
+    imports: [DecimalPipe, RouterLink, PageHeaderComponent],
+    styles: [`
     :host { display: block; background: #0f172a; margin: -16px; padding: 16px; min-height: calc(100vh - 60px); }
     .tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 12px; }
     .tile { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 12px 14px; color: #e2e8f0; }
@@ -365,7 +363,7 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
     .activation { background: #14532d; border: 1px solid #16a34a; border-radius: 10px; padding: 10px 14px; color: #dcfce7; font-size: 0.82rem; margin-bottom: 12px; }
     .clock { color: #4ade80; font-weight: 700; font-size: 0.8rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="EOCC Command Center — Live Board" icon="fa-terminal"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'EOCC'}]">
       <span class="clock" [style.color]="live() ? '#4ade80' : '#f87171'"><i class="fas fa-satellite-dish"></i> {{ live() ? 'LIVE' : 'RECONNECTING…' }} — {{ clock() }}</span>
@@ -420,7 +418,7 @@ export class ResponseDashboardComponent implements OnInit, OnDestroy {
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class EoccBoardComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);

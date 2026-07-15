@@ -13,10 +13,9 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
  * deliberate, sanctioned deviation toward a standard system look.
  */
 @Component({
-  selector: 'page-login',
-  standalone: true,
-  imports: [FormsModule, RouterLink],
-  template: `
+    selector: 'page-login',
+    imports: [FormsModule, RouterLink],
+    template: `
     <a href="/" class="back-home"><i class="fas fa-arrow-left"></i> Home</a>
     <div class="font-scale-login" role="group" aria-label="Text size">
       <button type="button" class="fs-btn" (click)="font.decrease()" [disabled]="!font.canDecrease()" title="Smaller text">A−</button>
@@ -215,7 +214,7 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     :host { display:block; min-height:100vh; background:var(--bg); }
     .login-page { width:100vw; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.5rem; }
     .back-home { position:fixed; top:1.25rem; left:1.5rem; z-index:50; display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:6px; font-size:0.8rem; font-weight:600; color:var(--ink); text-decoration:none; background:var(--surface); border:1px solid var(--line); }
@@ -319,7 +318,7 @@ interface Showcase { src: string; tag: string; icon: string; title: string; desc
     .register-row a:hover { text-decoration:underline; }
     .card-footer-text { text-align:center; margin-top:0.85rem; padding-top:0.65rem; border-top:1px solid var(--line); font-size:0.75rem; color:var(--muted); }
     @media (max-width:780px) { .login-card { flex-direction:column; max-width:440px; } .card-left { width:100%; min-width:unset; height:200px; } .card-right { padding:1.5rem 1.75rem; } }
-  `],
+  `]
 })
 export class LoginComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);

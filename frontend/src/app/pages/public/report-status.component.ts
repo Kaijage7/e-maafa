@@ -25,10 +25,9 @@ interface ReportStatus {
 }
 
 @Component({
-  selector: 'public-report-status',
-  standalone: true,
-  imports: [FormsModule, RouterLink],
-  template: `
+    selector: 'public-report-status',
+    imports: [FormsModule, RouterLink],
+    template: `
     <div class="v2-page-content" style="max-width:min(980px,94vw);margin:0 auto;padding:7rem 1.5rem 4rem;">
       <a routerLink="/" style="color:#60a5fa;text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
 
@@ -104,7 +103,7 @@ interface ReportStatus {
         </section>
       }
     </div>
-  `,
+  `
 })
 export class ReportStatusComponent {
   L = inject(PortalLabels);

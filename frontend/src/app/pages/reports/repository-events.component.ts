@@ -39,10 +39,9 @@ const STATUS_BADGE: Record<string, string> = {
  * figures feed the Sendai Framework analytics.
  */
 @Component({
-  selector: 'page-repository-events',
-  standalone: true,
-  imports: [DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  styles: [`
+    selector: 'page-repository-events',
+    imports: [DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    styles: [`
     .flow-note {
       background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 14px;
       font-size: 0.8rem; color: #1e3a5f; margin-bottom: 12px; line-height: 1.45;
@@ -79,7 +78,7 @@ const STATUS_BADGE: Record<string, string> = {
     }
     .haz-sub > summary::-webkit-details-marker { display: none; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Disaster Repository — Loss Database" icon="fa-database"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Reports & Analytics'}, {label:'Disaster Repository'}]">
       <button class="btn-add" type="button" style="background:#64748b;margin-right:0.4rem;" (click)="exportCsv()"><i class="fas fa-download"></i> Export CSV</button>
@@ -338,7 +337,7 @@ const STATUS_BADGE: Record<string, string> = {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class RepositoryEventsComponent {
   private http = inject(HttpClient);

@@ -16,10 +16,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
  *   • Incident types — the hazard classification
  */
 @Component({
-  selector: 'page-response-settings',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-response-settings',
+    imports: [DecimalPipe, FormsModule, PageHeaderComponent, PanelComponent],
+    styles: [`
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
@@ -47,7 +46,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     .form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.1rem; }
     .icon-preview { margin-top: 8px; font-size: 0.82rem; color: #334155; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="System Settings" icon="fa-gears"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'System Settings'}]">
     </dmis-page-header>
@@ -239,7 +238,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
         </div>
       </div>
     }
-  `,
+  `
 })
 export class ResponseSettingsComponent implements OnInit {
   private readonly http = inject(HttpClient);

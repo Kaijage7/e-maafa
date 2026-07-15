@@ -15,10 +15,9 @@ interface EduItem {
  * Published items appear on the PUBLIC education portal (/education).
  */
 @Component({
-  selector: 'page-educational-content',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-educational-content',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Educational Content" icon="fa-graduation-cap"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Educational Content'}]">
       <button class="btn-add" type="button" (click)="openCreate()"><i class="fas fa-plus"></i> New Content</button>
@@ -130,7 +129,7 @@ interface EduItem {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class EducationalContentComponent {
   private http = inject(HttpClient);

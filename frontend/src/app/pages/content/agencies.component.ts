@@ -13,10 +13,9 @@ interface Agency {
 
 /** System Settings -> Agencies — partner agency registry (the EWE institutions + partners). */
 @Component({
-  selector: 'page-agencies',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-agencies',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Agencies" icon="fa-building"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Agencies'}]">
       @if (canManage()) {
@@ -97,7 +96,7 @@ interface Agency {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class AgenciesComponent {
   private http = inject(HttpClient);

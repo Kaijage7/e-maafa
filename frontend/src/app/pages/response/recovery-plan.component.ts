@@ -20,10 +20,9 @@ interface Rows { [k: string]: any; }
  * in the official chapter order for print.
  */
 @Component({
-  selector: 'page-recovery-plan',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-recovery-plan',
+    imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     label { display: block; font-size: 0.75rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
     input, textarea { width: 100%; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 9px; font-family: inherit; box-sizing: border-box; }
     .btn-sm { font-size: 0.78rem; padding: 6px 14px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
@@ -48,7 +47,7 @@ interface Rows { [k: string]: any; }
     .doc .foot { margin-top: 26px; padding-top: 10px; border-top: 1px solid #e3e6ed; font-size: 0.75rem; color: #6c757d; display: flex; justify-content: space-between; }
     @media print { .wf-strip, dmis-page-header { display: none !important; } .doc { border: none; padding: 0; } }
   `],
-  template: `
+    template: `
     @if (incident(); as inc) {
       <dmis-page-header [title]="'Recovery Implementation Plan — ' + inc.title" icon="fa-diagram-project"
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'DLNA', url:'/m/response/dlna'}, {label:'Recovery Plan'}]">
@@ -239,7 +238,7 @@ interface Rows { [k: string]: any; }
         </div>
       }
     }
-  `,
+  `
 })
 export class RecoveryPlanComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);

@@ -17,10 +17,9 @@ interface EduItem {
  * articles managed in Content Management → Educational Content.
  */
 @Component({
-  selector: 'public-education',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'public-education',
+    imports: [RouterLink],
+    template: `
     <div class="v2-page-content edu-wrap">
       <a routerLink="/" class="edu-back"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
 
@@ -242,7 +241,7 @@ interface EduItem {
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .edu-wrap { max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 2rem 4rem; }
     .edu-back { color: #60a5fa; text-decoration: none; font-size: 0.9rem; }
 
@@ -382,7 +381,7 @@ interface EduItem {
       .edu-pathway { grid-template-columns:1fr; }
       .edu-path-steps { grid-template-columns:repeat(2,minmax(0,1fr)); }
     }
-  `],
+  `]
 })
 export class EducationComponent {
   L = inject(PortalLabels);

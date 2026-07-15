@@ -25,11 +25,10 @@ const STATUS_BADGE: Record<string, string> = {
  * Overview backed by GET /v1/communication/overview.
  */
 @Component({
-  selector: 'page-communication-center',
-  standalone: true,
-  imports: [FormsModule, DatePipe, PageHeaderComponent, PanelComponent, StatCardComponent,
-    SmsManagementComponent, EmailManagementComponent],
-  template: `
+    selector: 'page-communication-center',
+    imports: [FormsModule, DatePipe, PageHeaderComponent, PanelComponent, StatCardComponent,
+        SmsManagementComponent, EmailManagementComponent],
+    template: `
     <dmis-page-header title="Communication Center" icon="fa-tower-broadcast"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Communication Center'}]">
     </dmis-page-header>
@@ -121,7 +120,7 @@ const STATUS_BADGE: Record<string, string> = {
     } @else {
       <page-email-management [embedded]="true" [canSend]="canSend()" />
     }
-  `,
+  `
 })
 export class CommunicationCenterComponent {
   private http = inject(HttpClient);

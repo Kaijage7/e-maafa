@@ -22,10 +22,9 @@ interface TaskRow {
  * a due-date calendar feed.
  */
 @Component({
-  selector: 'page-tasks',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-tasks',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.25rem; display: block; }
@@ -66,7 +65,7 @@ interface TaskRow {
     .modal-back { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1100; overflow-y: auto; }
     .modal-card { background: #fff; border-radius: 0.5rem; margin: 2rem auto; max-width: 680px; padding: 1.25rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Task Management" icon="fa-tasks"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Task Assignment'}]">
       <button type="button" class="btn-add" (click)="openCreate()"><i class="fas fa-plus"></i> New Task</button>
@@ -225,7 +224,7 @@ interface TaskRow {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class TasksComponent implements OnInit {
   private readonly http = inject(HttpClient);

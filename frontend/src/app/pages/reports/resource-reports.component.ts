@@ -24,10 +24,9 @@ const STATUS_BADGE: Record<string, string> = {
  * value + the allocation records table. The "Resource Reports" item under Reports & Analytics.
  */
 @Component({
-  selector: 'page-resource-reports',
-  standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-resource-reports',
+    imports: [FormsModule, DatePipe, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Resource Allocation Report" icon="fa-chart-bar"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Reports & Analytics'}, {label:'Resource Reports'}]">
       <button class="btn-add" style="background:#64748b;" type="button" (click)="print()"><i class="fas fa-print"></i> Print</button>
@@ -100,13 +99,13 @@ const STATUS_BADGE: Record<string, string> = {
       </dmis-panel>
     </div>
   `,
-  styles: [`
+    styles: [`
     .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
     .bar-row { display:flex; justify-content:space-between; padding:0.4rem 0; border-bottom:1px solid var(--border); font-size:0.86rem; }
     .bar-val { font-weight:700; color: var(--text-dark); }
     .empty-line { font-size:0.84rem; color: var(--text-light); font-style: italic; }
     @media print { .no-print, .btn-add { display:none !important; } }
-  `],
+  `]
 })
 export class ResourceReportsComponent {
   private http = inject(HttpClient);

@@ -18,10 +18,9 @@ type Tab = 'map' | 'registry' | 'analytics' | 'entry' | 'approvals';
  * NOTE: INFORM Severity is intentionally NOT part of v1 (deferred to version 2). v1 is Risk only.
  */
 @Component({
-  selector: 'page-inform-risk-index',
-  standalone: true,
-  imports: [PageHeaderComponent, InformMapComponent, InformRegistryComponent, InformEntryComponent, InformApprovalsComponent, InformAnalyticsComponent],
-  styles: [`
+    selector: 'page-inform-risk-index',
+    imports: [PageHeaderComponent, InformMapComponent, InformRegistryComponent, InformEntryComponent, InformApprovalsComponent, InformAnalyticsComponent],
+    styles: [`
     .tabbar { display:flex; gap:.25rem; flex-wrap:wrap; margin:.25rem 0 1.1rem; border-bottom:2px solid var(--line,#e2e8f0); }
     .tabbar button { font:inherit; font-size:.86rem; font-weight:700; padding:.6rem 1.1rem; border:none; background:transparent;
       color:var(--text-mid,#64748b); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; display:flex; align-items:center; gap:.45rem; }
@@ -29,7 +28,7 @@ type Tab = 'map' | 'registry' | 'analytics' | 'entry' | 'approvals';
     .tabbar button.on { color:var(--module-color,#0d6efd); border-bottom-color:var(--module-color,#0d6efd); }
     .tabbar button i { font-size:.8rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="INFORM Risk Index" icon="fa-layer-group"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Risk Index'}]" />
 
@@ -54,7 +53,7 @@ type Tab = 'map' | 'registry' | 'analytics' | 'entry' | 'approvals';
       @case ('entry') { <page-inform-entry /> }
       @case ('approvals') { <page-inform-approvals /> }
     }
-  `,
+  `
 })
 export class RiskIndexComponent implements OnInit {
   private auth = inject(AuthService);

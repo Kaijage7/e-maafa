@@ -22,10 +22,9 @@ const STATUS_BADGE: Record<string, string> = {
  * own page header). Port of the Laravel sms_logs module.
  */
 @Component({
-  selector: 'page-sms-management',
-  standalone: true,
-  imports: [FormsModule, DatePipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-sms-management',
+    imports: [FormsModule, DatePipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     @if (!embedded) {
       <dmis-page-header title="SMS Management" icon="fa-sms"
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'SMS Management'}]">
@@ -142,7 +141,7 @@ const STATUS_BADGE: Record<string, string> = {
         }
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class SmsManagementComponent {
   @Input() embedded = false;

@@ -14,10 +14,9 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
  * destroy, so they can never bleed into the authenticated admin shell.
  */
 @Component({
-  selector: 'public-layout',
-  standalone: true,
-  imports: [RouterOutlet, RouterLink],
-  template: `
+    selector: 'public-layout',
+    imports: [RouterOutlet, RouterLink],
+    template: `
     <!-- Emergency hotlines topbar -->
     <div class="emergency-topbar" id="emergencyTopbar">
       <div class="emergency-topbar-inner">
@@ -185,7 +184,7 @@ import { PortalDataService, EmergencyNumber } from './portal-data.service';
         <div class="footer-bottom" style="font-size: 0.9rem;">&copy; {{ year }} e-MAAFA — {{ L.t('lbl_prime_ministers_office') }}, {{ L.t('lbl_united_republic_of_tanzania') }}</div>
       </div>
     </footer>
-  `,
+  `
 })
 export class PublicLayoutComponent implements OnDestroy {
   L = inject(PortalLabels);

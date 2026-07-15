@@ -25,10 +25,9 @@ interface LandingFeed {
  * they need instead of scrolling one long mixed table.
  */
 @Component({
-  selector: 'stakeholder-issued-alerts',
-  standalone: true,
-  imports: [DecimalPipe, RouterLink],
-  styles: [`
+    selector: 'stakeholder-issued-alerts',
+    imports: [DecimalPipe, RouterLink],
+    styles: [`
     .flow {
       background:#f0fdfa; border:1px solid #99f6e4; border-radius:10px; padding:10px 14px;
       font-size:0.8rem; color:#115e59; margin:-4px 0 14px; line-height:1.45;
@@ -48,7 +47,7 @@ interface LandingFeed {
     .hint { font-size:0.74rem; color:#64748b; margin:0 0 8px; }
     .area { color:#64748b; font-size:0.78rem; }
   `],
-  template: `
+    template: `
     <div class="page-title">
       <h1>Issued Alerts &amp; Active Warnings</h1>
       <span class="badge b-muted">Read-only</span>
@@ -161,7 +160,7 @@ interface LandingFeed {
         }
       </div>
     </details>
-  `,
+  `
 })
 export class StakeholderIssuedAlertsComponent {
   private http = inject(HttpClient);

@@ -38,10 +38,9 @@ interface FormData {
  * OH-6 invariant kept: events lock after submission (no edit path).
  */
 @Component({
-  selector: 'page-oh-events',
-  standalone: true,
-  imports: [FormsModule, RouterLink, OhReportEventModalComponent],
-  styles: [`
+    selector: 'page-oh-events',
+    imports: [FormsModule, RouterLink, OhReportEventModalComponent],
+    styles: [`
     :host { display: block; }
     /* Breadcrumb */
     .ohe-breadcrumb { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.75rem; }
@@ -252,7 +251,7 @@ interface FormData {
     .is-invalid { border-color: #dc3545 !important; }
     @media (max-width: 576px) { .ohe-offcanvas { width: 100%; } .ohe-oc-grid { grid-template-columns: 1fr; } .ohe-oc-stats { grid-template-columns: repeat(2, 1fr); } .modal-progress-step span { display: none; } .modal-progress-line { width: 20px; } }
   `],
-  template: `
+    template: `
     <!-- ─── Page Header ─── -->
     <nav class="ohe-breadcrumb">
       <a routerLink="/home">Home</a>
@@ -651,7 +650,7 @@ interface FormData {
 
     <!-- ═══ Create Event Modal (4 steps) — shared component, also used by the dashboard ═══ -->
     <oh-report-event-modal #reportModal (created)="reload(1)" />
-  `,
+  `
 })
 export class OhEventsComponent implements OnInit {
   private http = inject(HttpClient);
@@ -852,7 +851,12 @@ export class OhEventsComponent implements OnInit {
     document.querySelector('.ohe-toast')?.remove();
     const toast = document.createElement('div');
     toast.className = 'ohe-toast';
-    toast.innerHTML = '<i class="fas fa-check-circle" style="margin-right:0.4rem;color:#10b981;"></i>' + msg;
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-check-circle';
+    icon.style.marginRight = '0.4rem';
+    icon.style.color = '#10b981';
+    icon.setAttribute('aria-hidden', 'true');
+    toast.append(icon, document.createTextNode(msg));
     document.body.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('show'));
     setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 2000);

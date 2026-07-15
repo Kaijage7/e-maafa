@@ -38,10 +38,9 @@ interface EwAnalysis {
  * DISTINCT warning. Backend: GET /v1/reports/early-warnings (EwManagementController).
  */
 @Component({
-  selector: 'page-ew-management',
-  standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, NgClass, PageHeaderComponent, PanelComponent, StatCardComponent],
-  styles: [`
+    selector: 'page-ew-management',
+    imports: [FormsModule, DatePipe, DecimalPipe, NgClass, PageHeaderComponent, PanelComponent, StatCardComponent],
+    styles: [`
     .ew-classbar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 4px 0 6px; }
     @media (max-width: 900px) { .ew-classbar { grid-template-columns: repeat(2, 1fr); } }
     .ew-q { border-radius: 12px; padding: 12px 14px; color: #fff; }
@@ -65,7 +64,7 @@ interface EwAnalysis {
     .banner { padding: 10px 14px; border-radius: 10px; font-size: 0.84rem; margin-bottom: 10px; }
     .banner.err { background: #fee2e2; color: #b91c1c; } .banner.load { background: #f1f5f9; color: #475569; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Early Warning Management" icon="fa-bullseye"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Reports & Analytics'}, {label:'Early Warning Management'}]">
       <button class="btn-add" style="background:#64748b;" type="button" (click)="print()"><i class="fas fa-print"></i> Print</button>
@@ -173,7 +172,7 @@ interface EwAnalysis {
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class EwManagementComponent {
   private http = inject(HttpClient);

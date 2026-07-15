@@ -17,10 +17,9 @@ import { PortalLabels } from './portal-i18n';
  * (`TR` + `t(key)`); data content carries bilingual `{ en, sw }` fields resolved through `tx(obj)`.
  */
 @Component({
-  selector: 'public-inform-education',
-  standalone: true,
-  imports: [RouterLink, NgTemplateOutlet],
-  styles: [`
+    selector: 'public-inform-education',
+    imports: [RouterLink, NgTemplateOutlet],
+    styles: [`
     :host { display:block; }
     .page { max-width:1100px; margin:0 auto; padding:6.5rem 1.5rem 4rem; color:#1a1a2e; font-size:16px; }
     .backlink { color:#60a5fa; text-decoration:none; font-size:0.88rem; display:inline-block; margin-bottom:1.4rem; }
@@ -684,7 +683,7 @@ import { PortalLabels } from './portal-i18n';
       .quiz-submit-btn, .quiz-continue-btn { width:100%; padding:14px 32px; font-size:16px; }
     }
   `],
-  template: `
+    template: `
     <div class="page">
       <a class="backlink" routerLink="/education">&#8592; {{ t('back_to_education') }}</a>
 
@@ -1780,7 +1779,7 @@ import { PortalLabels } from './portal-i18n';
         </div>
       </div>
     </ng-template>
-  `,
+  `
 })
 export class PublicInformEducationComponent {
   // ===== Bilingual plumbing =====

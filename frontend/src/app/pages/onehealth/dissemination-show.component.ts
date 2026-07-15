@@ -31,14 +31,13 @@ interface DissDetail {
  * the sidebar Approve & Send / Reject / Resend actions.
  */
 @Component({
-  selector: 'page-oh-dissemination-show',
-  standalone: true,
-  imports: [RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
-  styles: [`
+    selector: 'page-oh-dissemination-show',
+    imports: [RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
+    styles: [`
     .detail-label { font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
     .detail-value { font-size: 0.85rem; color: var(--text-dark); }
   `],
-  template: `
+    template: `
     @if (diss(); as d) {
       <dmis-page-header [title]="'Dissemination #' + d.id" icon="fa-bullhorn"
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'One Health'},
@@ -244,7 +243,7 @@ interface DissDetail {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class OhDisseminationShowComponent implements OnInit {
   private http = inject(HttpClient);

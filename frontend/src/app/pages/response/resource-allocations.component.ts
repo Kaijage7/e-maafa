@@ -29,10 +29,9 @@ interface FormData {
  * approved/active incidents — the entry point of the relief supply chain.
  */
 @Component({
-  selector: 'page-resource-allocations',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-resource-allocations',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
@@ -47,7 +46,7 @@ interface FormData {
     .req-foot { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.85rem 1.25rem; border-top: 1px solid #e9ecef; }
     .res-line { display: grid; grid-template-columns: auto 1fr 110px 90px; gap: 0.6rem; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.82rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Resource Allocation & Deployment" icon="fa-truck"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Resource Allocation'}]">
       <button type="button" class="btn-add" (click)="openRequest()"><i class="fas fa-plus"></i> Request Resources</button>
@@ -175,7 +174,7 @@ interface FormData {
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class ResourceAllocationsComponent implements OnInit {
   private http = inject(HttpClient);

@@ -13,10 +13,9 @@ const HAZARDS = ['Floods', 'Heavy Rainfall', 'Strong Winds', 'Drought', 'Large W
  * to the public portal API (no login needed — citizens use this from the landing CTA).
  */
 @Component({
-  selector: 'public-subscribe',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'public-subscribe',
+    imports: [RouterLink],
+    template: `
     <!-- Full-width band with the form centred at a readable width (per the design standard) -->
     <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 1.5rem 4rem;">
       <div style="max-width: 800px; margin: 0 auto;">
@@ -122,7 +121,7 @@ const HAZARDS = ['Floods', 'Heavy Rainfall', 'Strong Winds', 'Drought', 'Large W
       }
       </div>
     </div>
-  `,
+  `
 })
 export class SubscribeComponent {
   L = inject(PortalLabels);

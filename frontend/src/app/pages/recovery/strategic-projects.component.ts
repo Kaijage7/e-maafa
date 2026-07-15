@@ -27,10 +27,9 @@ const STATUS_BADGE: Record<string, string> = {
  * reconstruction tracking. Port of the Laravel strategic_projects module.
  */
 @Component({
-  selector: 'page-strategic-projects',
-  standalone: true,
-  imports: [FormsModule, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-strategic-projects',
+    imports: [FormsModule, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Reconstruction Projects" icon="fa-hammer"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Recovery'}, {label:'Reconstruction Projects'}]">
       <button class="btn-add" type="button" (click)="openForm()"><i class="fas fa-plus"></i> Register Project</button>
@@ -134,14 +133,14 @@ const STATUS_BADGE: Record<string, string> = {
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1500; display: flex; align-items: flex-start; justify-content: center; padding: 3vh 1rem; overflow-y: auto; }
     .modal-card { background: #fff; border-radius: 16px; max-width: 720px; width: 100%; padding: 1.4rem 1.5rem; }
     .btn-cancel { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; }
     .r-subtitle { font-size: 0.75rem; color: var(--text-light); }
     .badge-muted { background: rgba(100,116,139,0.14); color: #64748b; }
-  `],
+  `]
 })
 export class StrategicProjectsComponent {
   private http = inject(HttpClient);

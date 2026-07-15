@@ -117,11 +117,10 @@ const cleanName = (n: string) => n.replace(/\(.*\)/, '').trim();
  * public portal API. Styling comes from portal-landing.css (extracted verbatim).
  */
 @Component({
-  selector: 'public-landing',
-  standalone: true,
-  imports: [RouterLink, CountUpDirective, RevealDirective, DecimalPipe],
-  templateUrl: './landing.component.html',
-  styles: [`
+    selector: 'public-landing',
+    imports: [RouterLink, CountUpDirective, RevealDirective, DecimalPipe],
+    templateUrl: './landing.component.html',
+    styles: [`
     .ll-qr { position:fixed; left:18px; bottom:18px; z-index:40; display:flex; flex-direction:column; align-items:center; gap:.4rem;
       background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:.65rem .65rem .5rem; text-decoration:none;
       box-shadow:0 12px 30px rgba(0,51,102,0.20); transition:transform .2s ease, box-shadow .2s ease; }
@@ -142,7 +141,7 @@ const cleanName = (n: string) => n.replace(/\(.*\)/, '').trim();
       .hero-map-back, .hero-threats-strip { top: 14px !important; }
       .hero-live-summary { display: none !important; }
     }
-  `],
+  `]
 })
 export class LandingComponent implements OnDestroy {
   L = inject(PortalLabels);

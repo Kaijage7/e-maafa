@@ -17,10 +17,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
  * a verifier finalizes the DLNA, and the Annex 1 document is generated from the keyed data.
  */
 @Component({
-  selector: 'page-dlna-form',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, RegionDistrictPickerComponent],
-  styles: [`
+    selector: 'page-dlna-form',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, RegionDistrictPickerComponent],
+    styles: [`
     label { display: block; font-size: 0.75rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
     input, select, textarea { width: 100%; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 9px; font-family: inherit; box-sizing: border-box; }
     input:disabled, select:disabled, textarea:disabled { background: #f1f5f9; color: #64748b; }
@@ -57,7 +56,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     .hint { font-size: 0.78rem; color: #6c757d; }
     .rowline { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; padding: 3px 0; }
   `],
-  template: `
+    template: `
     @if (assessment(); as a) {
       <dmis-page-header [title]="(a.ref_no ?? 'DLNA #' + a.id) + ' — ' + (incident()?.title ?? '')" icon="fa-file-lines"
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'DLNA', url:'/m/response/dlna'}, {label: a.ref_no ?? ('#' + a.id)}]">
@@ -266,7 +265,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
         }
       }
     }
-  `,
+  `
 })
 export class DlnaFormComponent implements OnInit {
   private readonly http = inject(HttpClient);

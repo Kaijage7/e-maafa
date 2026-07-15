@@ -33,10 +33,9 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
  * Disaster Risk Financing and Implementation Plan 2025/26–2030/31).
  */
 @Component({
-  selector: 'public-threat-detail',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'public-threat-detail',
+    imports: [RouterLink],
+    template: `
     <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 1.5rem 4rem;">
       <a routerLink="/portal" style="color:#60a5fa;text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_portal') }}</a>
 
@@ -172,7 +171,7 @@ const STAKEHOLDER_TYPES = ['sector', 'region', 'lga', 'ras', 'partner'];
         }
       }
     </div>
-  `,
+  `
 })
 export class ThreatDetailComponent {
   L = inject(PortalLabels);

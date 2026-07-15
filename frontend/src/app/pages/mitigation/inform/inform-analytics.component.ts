@@ -15,10 +15,9 @@ function classOf(r: number | null | undefined) { if (r == null || !isFinite(r)) 
 /** INFORM tab — Analytics: class distribution + top-12 councils (SVG bar charts) + a ranked,
  *  class-filterable table. All from the live batch /risk. */
 @Component({
-  selector: 'page-inform-analytics',
-  standalone: true,
-  imports: [],
-  styles: [INFORM_STYLES, `
+    selector: 'page-inform-analytics',
+    imports: [],
+    styles: [INFORM_STYLES, `
     :host { display:block; }
     .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
     @media (max-width:1000px){ .grid2 { grid-template-columns:1fr; } }
@@ -31,7 +30,7 @@ function classOf(r: number | null | undefined) { if (r == null || !isFinite(r)) 
     .chip.on { color:#fff; border-color:transparent; }
     th.sortable { cursor:pointer; user-select:none; }
   `],
-  template: `
+    template: `
     @if (loading()) { <p class="muted">Loading analytics…</p> }
     @else {
       <div class="grid2">
@@ -96,7 +95,7 @@ function classOf(r: number | null | undefined) { if (r == null || !isFinite(r)) 
         </table>
       </div>
     }
-  `,
+  `
 })
 export class InformAnalyticsComponent {
   private svc = inject(InformService);

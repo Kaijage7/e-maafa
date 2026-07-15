@@ -28,10 +28,9 @@ const STATUS_BADGE: Record<string, string> = {
  * Real incidents only (simulations excluded server-side).
  */
 @Component({
-  selector: 'page-incident-reports',
-  standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-incident-reports',
+    imports: [FormsModule, DatePipe, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Incident Reports" icon="fa-file-alt"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Reports & Analytics'}, {label:'Incident Reports'}]">
       <button class="btn-add" style="background:#64748b;" type="button" (click)="print()"><i class="fas fa-print"></i> Print</button>
@@ -149,7 +148,7 @@ const STATUS_BADGE: Record<string, string> = {
       </dmis-panel>
     </div>
   `,
-  styles: [`
+    styles: [`
     .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
     .bar-row { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; padding:0.4rem 0; border-bottom:1px solid var(--border); font-size:0.86rem; }
     .bar-row > span:first-child { min-width:140px; }
@@ -159,7 +158,7 @@ const STATUS_BADGE: Record<string, string> = {
     .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
     .empty-line { font-size:0.84rem; color: var(--text-light); font-style: italic; }
     @media print { .no-print, .btn-add { display:none !important; } }
-  `],
+  `]
 })
 export class IncidentReportsComponent {
   private http = inject(HttpClient);

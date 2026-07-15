@@ -15,10 +15,9 @@ interface Translation { id: number; labelKey: string; group: string; en: string;
 	 * English.
  */
 @Component({
-  selector: 'page-translations',
-  standalone: true,
-  imports: [FormsModule, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-translations',
+    imports: [FormsModule, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
 	    <dmis-page-header title="Translations" icon="fa-language"
 	      [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Translations'}]">
       @if (canManage()) {
@@ -97,7 +96,7 @@ interface Translation { id: number; labelKey: string; group: string; en: string;
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .cell { width:100%; border:1px solid transparent; border-radius:6px; padding:0.3rem 0.5rem; font-size:0.84rem; background:transparent; }
     .cell:hover { border-color:var(--border); } .cell:focus { border-color:#0d6efd; background:#fff; outline:none; }
     .cell.flag { color:#d97706; font-style:italic; }
@@ -106,7 +105,7 @@ interface Translation { id: number; labelKey: string; group: string; en: string;
     .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1500; display:flex; align-items:flex-start; justify-content:center; padding:8vh 1rem; }
     .modal-card { background:var(--card-bg,#fff); border-radius:12px; max-width:480px; width:100%; padding:1.4rem 1.5rem; }
     .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:8px; padding:0.5rem 1rem; cursor:pointer; }
-  `],
+  `]
 })
 export class TranslationsComponent {
   private http = inject(HttpClient);

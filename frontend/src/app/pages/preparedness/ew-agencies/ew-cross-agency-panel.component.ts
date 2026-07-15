@@ -13,10 +13,9 @@ const CONSOLE_ROUTE: Record<string, string> = { tma: 'new-bulletin', mow: 'mow',
  * flood forecasting. Mirrors the Python render_agency_reference() panel, native + live.
  */
 @Component({
-  selector: 'ew-cross-agency-panel',
-  standalone: true,
-  imports: [NgClass, RouterLink],
-  styles: [`
+    selector: 'ew-cross-agency-panel',
+    imports: [NgClass, RouterLink],
+    styles: [`
     .xa-wrap { border: 1px solid #e3e6ed; border-radius: 12px; background: #fff; margin-bottom: 14px; overflow: hidden; }
     .xa-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #f8fafc; cursor: pointer; border-bottom: 1px solid #eef1f5; }
     .xa-head b { font-size: 0.86rem; color: #1f2d3d; } .xa-head .sub { font-size: 0.75rem; color: #6c757d; }
@@ -34,7 +33,7 @@ const CONSOLE_ROUTE: Record<string, string> = { tma: 'new-bulletin', mow: 'mow',
     .na { opacity: 0.5; } .na .xa-meta { font-style: italic; }
     @media (max-width: 1100px) { .xa-grid { flex-wrap: wrap; } .xa-card { flex: 1 1 140px; } }
   `],
-  template: `
+    template: `
     <div class="xa-wrap">
       <div class="xa-head" (click)="open.set(!open())">
         <div><b><i class="fas fa-diagram-project"></i> What other warning entities have reported</b>
@@ -72,7 +71,7 @@ const CONSOLE_ROUTE: Record<string, string> = { tma: 'new-bulletin', mow: 'mow',
         } @else { <div class="xa-empty">Loading other entities…</div> }
       }
     </div>
-  `,
+  `
 })
 export class EwCrossAgencyPanelComponent implements OnInit {
   @Input() current: AgencyKey | '' = '';

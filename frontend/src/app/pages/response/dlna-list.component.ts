@@ -14,10 +14,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
  * to an incident so the instrument stays linked throughout the system.
  */
 @Component({
-  selector: 'page-dlna-list',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-dlna-list',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
     th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
@@ -44,7 +43,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     .inc-opt { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; padding: 3px 0; cursor: pointer; }
     .inc-opt .haz { margin-left: auto; font-size: 0.75rem; font-weight: 600; color: #0d3b66; background: #eef4fb; border-radius: 8px; padding: 1px 8px; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Damage, Loss &amp; Needs Assessments (NDRF Annex 1)" icon="fa-file-lines"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'DLNA'}]">
     </dmis-page-header>
@@ -144,7 +143,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
         </tbody>
       </table>
     </dmis-panel>
-  `,
+  `
 })
 export class DlnaListComponent implements OnInit {
   private readonly http = inject(HttpClient);

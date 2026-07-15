@@ -29,10 +29,9 @@ interface IndexResponse {
  * source form posts nothing and always 500s).
  */
 @Component({
-  selector: 'page-oh-disseminations',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
-  styles: [`
+    selector: 'page-oh-disseminations',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
+    styles: [`
     .filter-bar select { padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.78rem; background: #fff; color: var(--text-dark); font-family: inherit; }
     .ctx-wrap { position: relative; display: inline-block; }
     .ctx-trigger { width: 28px; height: 28px; border: none; background: transparent; border-radius: 8px; color: var(--text-light); cursor: pointer; }
@@ -51,7 +50,7 @@ interface IndexResponse {
     .page-links span.active { background: #0891b2; color: #fff; font-weight: 700; }
     .page-links span.dim { opacity: 0.4; cursor: default; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="One Health Disseminations" icon="fa-bullhorn"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'One Health'}, {label:'Disseminations'}]" />
 
@@ -156,7 +155,7 @@ interface IndexResponse {
         }
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class OhDisseminationsComponent implements OnInit {
   private http = inject(HttpClient);

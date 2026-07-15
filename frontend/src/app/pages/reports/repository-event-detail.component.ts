@@ -84,10 +84,9 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
  * that freezes figures into the Sendai analytics.
  */
 @Component({
-  selector: 'page-repository-event-detail',
-  standalone: true,
-  imports: [DecimalPipe, PageHeaderComponent, PanelComponent],
-  template: `
+    selector: 'page-repository-event-detail',
+    imports: [DecimalPipe, PageHeaderComponent, PanelComponent],
+    template: `
     @if (card(); as e) {
       <dmis-page-header [title]="e.eventCode + ' — ' + e.name" icon="fa-database"
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Reports & Analytics'},
@@ -329,14 +328,14 @@ const FORM_GROUPS: { title: string; hint: string; fields: { key: string; label: 
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .f-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); }
     .f-value { font-size: 0.86rem; font-weight: 700; color: var(--text-dark); }
     .btn-icon { border: none; background: transparent; cursor: pointer; padding: 4px 7px; color: var(--text-mid); }
     .cost-line { padding: 0.4rem 0; font-size: 0.84rem; color: var(--text-mid); font-weight: 600; }
     .cost-note { font-size: 0.75rem; color: var(--text-light); font-weight: 400; }
     .cost-amt { padding: 0.4rem 0; text-align: right; font-weight: 800; font-size: 0.95rem; white-space: nowrap; vertical-align: top; }
-  `],
+  `]
 })
 export class RepositoryEventDetailComponent {
   private http = inject(HttpClient);

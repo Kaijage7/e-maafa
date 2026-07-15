@@ -15,10 +15,9 @@ interface AsResponse {
 }
 
 @Component({
-  selector: 'page-alert-subscriptions',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
-  template: `
+    selector: 'page-alert-subscriptions',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
+    template: `
     <dmis-page-header title="Alert Subscriptions" icon="fa-bell"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Alert Subscriptions'}]">
       <a class="btn-add" routerLink="/m/preparedness/alert-subscriptions/create"><i class="fas fa-plus"></i> New Subscriber</a>
@@ -82,7 +81,7 @@ interface AsResponse {
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class AlertSubscriptionsComponent {
   private http = inject(HttpClient);

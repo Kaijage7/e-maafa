@@ -23,10 +23,9 @@ interface ApprovalRow {
  * rollback / resubmit actions.
  */
 @Component({
-  selector: 'page-response-approvals',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-response-approvals',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .queue-tabs { display: flex; gap: 4px; background: #fff; border-bottom: 2px solid #e3e6ed; border-radius: 12px 12px 0 0; padding: 0 4px; margin-bottom: 12px; }
     .queue-tabs button { font-size: 0.82rem; font-weight: 600; color: #6c757d; border: none; background: none; padding: 10px 16px; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-family: inherit; }
     .queue-tabs button.active { color: #dc3545; border-bottom-color: #dc3545; }
@@ -59,7 +58,7 @@ interface ApprovalRow {
     .notif { font-size: 0.8rem; padding: 0.4rem 0; border-bottom: 1px solid #f1f5f9; }
     .notif.unread { font-weight: 600; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Resource Approval Workflow" icon="fa-clipboard-check"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Approvals'}]">
       <div class="search-box">
@@ -240,7 +239,7 @@ interface ApprovalRow {
         </div>
       }
     </div>
-  `,
+  `
 })
 export class ResponseApprovalsComponent implements OnInit {
   private http = inject(HttpClient);

@@ -8,15 +8,14 @@ import { EwFlowPipelineComponent } from './ew-flow-pipeline.component';
  * published from the EOCC Bulletin within the Dissemination stage, so no separate warning registry here.
  */
 @Component({
-  selector: 'page-early-warnings',
-  standalone: true,
-  imports: [PageHeaderComponent, EwFlowPipelineComponent],
-  template: `
+    selector: 'page-early-warnings',
+    imports: [PageHeaderComponent, EwFlowPipelineComponent],
+    template: `
     <dmis-page-header title="Early Warning Systems" icon="fa-exclamation-triangle"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Early Warning Systems'}]">
     </dmis-page-header>
 
     <ew-flow-pipeline></ew-flow-pipeline>
-  `,
+  `
 })
 export class EarlyWarningsComponent {}

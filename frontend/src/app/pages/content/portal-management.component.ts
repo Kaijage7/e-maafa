@@ -16,10 +16,9 @@ interface JsonItem { [k: string]: any; }
  * Every change here is immediately visible on the public site ("/").
  */
 @Component({
-  selector: 'page-portal-management',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent],
-  template: `
+    selector: 'page-portal-management',
+    imports: [PageHeaderComponent, PanelComponent],
+    template: `
     <dmis-page-header title="Portal Management" icon="fa-globe"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Portal Management'}]">
       <a class="btn-add" href="/" target="_blank"><i class="fas fa-external-link-alt"></i> View Public Site</a>
@@ -179,7 +178,7 @@ interface JsonItem { [k: string]: any; }
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class PortalManagementComponent {
   private http = inject(HttpClient);

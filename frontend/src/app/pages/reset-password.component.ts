@@ -8,10 +8,9 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
  * token; the new password must satisfy the shared policy (same rules as change-password).
  */
 @Component({
-  selector: 'page-reset-password',
-  standalone: true,
-  imports: [FormsModule, RouterLink],
-  styles: [`
+    selector: 'page-reset-password',
+    imports: [FormsModule, RouterLink],
+    styles: [`
     .wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f1f5f9; padding: 20px; }
     .card { width: 440px; max-width: 94vw; background: #fff; border: 1px solid #e3e6ed; border-radius: 12px; padding: 30px 34px; }
     h1 { font-size: 1.15rem; color: #0d3b66; margin: 0 0 6px; }
@@ -31,7 +30,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
     .back { display: inline-block; margin-top: 16px; font-size: 0.82rem; color: #0d3b66; font-weight: 600; text-decoration: none; }
     .back:hover { text-decoration: underline; }
   `],
-  template: `
+    template: `
     <div class="wrap">
       <div class="card">
         <h1><i class="fas fa-key" style="opacity:0.6; margin-right:6px"></i> Set a new password</h1>
@@ -73,7 +72,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
         }
       </div>
     </div>
-  `,
+  `
 })
 export class ResetPasswordComponent implements OnInit {
   private readonly http = inject(HttpClient);

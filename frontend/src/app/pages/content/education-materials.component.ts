@@ -31,10 +31,9 @@ const TYPES = [
  * to shared public storage.
  */
 @Component({
-  selector: 'page-education-materials',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-education-materials',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Public Awareness — Hazard Education Materials" icon="fa-bullhorn"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Public Awareness'}]">
       <button class="btn-add" type="button" (click)="openCreate()"><i class="fas fa-plus"></i> New Material</button>
@@ -170,7 +169,7 @@ const TYPES = [
         </div>
       </div>
     }
-  `,
+  `
 })
 export class EducationMaterialsComponent {
   private http = inject(HttpClient);

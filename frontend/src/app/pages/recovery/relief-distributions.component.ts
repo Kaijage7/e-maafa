@@ -30,10 +30,9 @@ interface StockSource {
  * Laravel relief_distributions module.
  */
 @Component({
-  selector: 'page-relief-distributions',
-  standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-relief-distributions',
+    imports: [FormsModule, DatePipe, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Relief Distribution" icon="fa-hand-holding-heart"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Recovery'}, {label:'Relief Distribution'}]">
       <button class="btn-add" type="button" (click)="openForm()"><i class="fas fa-plus"></i> Record Distribution</button>
@@ -154,13 +153,13 @@ interface StockSource {
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1500; display: flex; align-items: flex-start; justify-content: center; padding: 3vh 1rem; overflow-y: auto; }
     .modal-card { background: #fff; border-radius: 16px; max-width: 720px; width: 100%; padding: 1.4rem 1.5rem; }
     .btn-cancel { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; }
     .r-subtitle { font-size: 0.75rem; color: var(--text-light); }
-  `],
+  `]
 })
 export class ReliefDistributionsComponent {
   private http = inject(HttpClient);

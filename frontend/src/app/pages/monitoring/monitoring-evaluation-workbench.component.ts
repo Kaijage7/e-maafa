@@ -27,10 +27,9 @@ interface WorkbenchResponse {
 }
 
 @Component({
-  selector: 'page-monitoring-evaluation-workbench',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-monitoring-evaluation-workbench',
+    imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .me-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .btn-sm, .btn-primary { border:1px solid #cbd5e1; background:#fff; color:#334155; border-radius:7px; padding:7px 11px; font-size:0.78rem; font-weight:800; cursor:pointer; font-family:inherit; text-decoration:none; display:inline-flex; gap:7px; align-items:center; }
     .btn-primary { background:#0f766e; border-color:#0f766e; color:#fff; }
@@ -78,7 +77,7 @@ interface WorkbenchResponse {
       .filters .me-actions { justify-content:flex-start; }
     }
   `],
-  template: `
+    template: `
     <dmis-page-header title="M&E Data Workbench" icon="fa-table-cells"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Monitoring & Evaluation'}, {label:'Data Workbench'}]">
       <div class="me-actions">
@@ -307,7 +306,7 @@ interface WorkbenchResponse {
     </div>
 
     @if (loading()) { <div class="empty">Loading M&E workbench...</div> }
-  `,
+  `
 })
 export class MonitoringEvaluationWorkbenchComponent {
   private http = inject(HttpClient);

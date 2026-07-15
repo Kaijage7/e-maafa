@@ -29,15 +29,14 @@ interface IndexResponse {
 
 /** Reproduction of admin/past_disasters/index-v2.blade.php (Prevention & Mitigation → Disaster Repository). */
 @Component({
-  selector: 'page-past-disasters',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
-  styles: [`
+    selector: 'page-past-disasters',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
+    styles: [`
     .r-view.download { background: rgba(0,77,102,0.08); color: #004d66; }
     .r-view.download:hover { background: rgba(0,77,102,0.15); }
     .alert-container { position: fixed; top: calc(var(--topbar-h) + 12px); right: 12px; z-index: 9999; width: 320px; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Disaster Repository" icon="fa-history"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Disaster Repository'}]">
       @if (canEnter()) {
@@ -225,7 +224,7 @@ interface IndexResponse {
         </div>
       }
     </div>
-  `,
+  `
 })
 export class PastDisastersComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);

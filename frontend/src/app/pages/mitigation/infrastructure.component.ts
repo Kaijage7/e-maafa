@@ -31,17 +31,16 @@ interface IndexResponse {
 
 /** Reproduction of admin/infrastructure_items/index-v2.blade.php (Prevention & Mitigation → Strategic Infrastructure). */
 @Component({
-  selector: 'page-infrastructure',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink, DecimalPipe, KeyValuePipe],
-  styles: [`
+    selector: 'page-infrastructure',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink, DecimalPipe, KeyValuePipe],
+    styles: [`
     .st-operational { background: rgba(16,185,129,0.12); color: #059669; }
     .st-maintenance { background: rgba(245,158,11,0.12); color: #d97706; }
     .st-at-risk { background: rgba(220,38,38,0.12); color: #dc2626; }
     .st-closed { background: rgba(107,114,128,0.12); color: #6b7280; }
     .alert-container { position: fixed; top: calc(var(--topbar-h) + 12px); right: 12px; z-index: 9999; width: 320px; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Strategic Infrastructure" icon="fa-road"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Strategic Infrastructure'}]">
       @if (canManage()) {
@@ -218,7 +217,7 @@ interface IndexResponse {
         </div>
       }
     </div>
-  `,
+  `
 })
 export class InfrastructureComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);

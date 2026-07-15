@@ -8,10 +8,9 @@ const AUDIENCE = ['Community', 'Volunteers', 'LGAs', 'Staff', 'DRR Coordinators'
 
 /** Training Plans → New — a real create form that POSTs to the Spring Boot API (json scope/audience). */
 @Component({
-  selector: 'page-training-plan-create',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent],
-  template: `
+    selector: 'page-training-plan-create',
+    imports: [PageHeaderComponent, PanelComponent],
+    template: `
     <dmis-page-header title="New Training Plan" icon="fa-chalkboard-teacher"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Training Plans', url:'/m/preparedness/trainings'}, {label:'New'}]">
     </dmis-page-header>
@@ -89,7 +88,7 @@ const AUDIENCE = ['Community', 'Volunteers', 'LGAs', 'Staff', 'DRR Coordinators'
       </dmis-panel>
     </div>
   `,
-  styles: [`
+    styles: [`
     .form-body { padding: 1.1rem 1.2rem; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem 1.1rem; }
     .fg { display: flex; flex-direction: column; gap: 0.3rem; }
@@ -107,7 +106,7 @@ const AUDIENCE = ['Community', 'Volunteers', 'LGAs', 'Staff', 'DRR Coordinators'
     .btn-ghost { border: 1px solid var(--border); background: #fff; color: var(--text-mid); border-radius: 8px; padding: 0.5rem 1.1rem; font-size: 0.84rem; cursor: pointer; }
     .btn-ghost:hover { background: #f7f9fb; }
     .btn-add[disabled] { opacity: 0.55; cursor: not-allowed; }
-  `],
+  `]
 })
 export class TrainingPlanCreateComponent implements OnInit {
   private http = inject(HttpClient);

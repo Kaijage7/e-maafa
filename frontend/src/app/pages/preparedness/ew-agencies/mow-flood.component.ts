@@ -34,10 +34,9 @@ interface Day { day_number: number; assessments: Assessment[]; }
  * to the cross-agency bus so MoW/DMD and everyone else see it.
  */
 @Component({
-  selector: 'page-mow-flood',
-  standalone: true,
-  imports: [FormsModule, NgClass, RouterLink, EwCrossAgencyPanelComponent, EwPreviewModalComponent, EntityTaskingsComponent],
-  styles: [`
+    selector: 'page-mow-flood',
+    imports: [FormsModule, NgClass, RouterLink, EwCrossAgencyPanelComponent, EwPreviewModalComponent, EntityTaskingsComponent],
+    styles: [`
     .wrap { padding: 14px 18px 40px; }
     .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
     .hd .ic { width: 42px; height: 42px; border-radius: 11px; background: #e0f7fa; color: #00838f; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
@@ -76,7 +75,7 @@ interface Day { day_number: number; assessments: Assessment[]; }
     .flash.ok { background: #d1fae5; color: #065f46; } .flash.err { background: #fee2e2; color: #b91c1c; }
     .tma-note { font-size: 0.8rem; color: #0c5460; background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
   `],
-  template: `
+    template: `
     <div class="wrap">
       <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;color:#64748b;text-decoration:none;margin-bottom:10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
       <div class="hd">
@@ -181,7 +180,7 @@ interface Day { day_number: number; assessments: Assessment[]; }
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class MowFloodComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);

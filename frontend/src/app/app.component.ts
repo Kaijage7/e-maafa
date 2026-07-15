@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from './core/auth.service';
 import { FontScaleService } from './core/font-scale.service';
+import { RealtimeSyncService } from './core/realtime-sync.service';
 import { SidebarComponent } from './shell/sidebar.component';
 import { TopbarComponent } from './shell/topbar.component';
 import { WatermarkComponent } from './shell/watermark.component';
@@ -10,10 +11,9 @@ import { WatermarkComponent } from './shell/watermark.component';
 /** dmis-v2 layout. Early Warning is now fully native (the /engine route renders the flow hub and each
  *  entity has its own Angular console) — the old embedded Streamlit engine iframe has been retired. */
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [RouterOutlet, WatermarkComponent, TopbarComponent, SidebarComponent],
-  template: `
+    selector: 'app-root',
+    imports: [RouterOutlet, WatermarkComponent, TopbarComponent, SidebarComponent],
+    template: `
     @if (auth.user() && !isPublic()) {
       <app-watermark></app-watermark>
       <app-topbar></app-topbar>
@@ -29,12 +29,13 @@ import { WatermarkComponent } from './shell/watermark.component';
     } @else {
       <router-outlet></router-outlet>
     }
-  `,
+  `
 })
 export class AppComponent {
   auth = inject(AuthService);
   /** Eager-init: restores saved font size for whole app (incl. login/public). */
   private readonly fontScale = inject(FontScaleService);
+  private readonly realtimeSync = inject(RealtimeSyncService);
   private router = inject(Router);
 
   isHub = signal(true);
@@ -44,6 +45,10 @@ export class AppComponent {
   isPublic = signal(true);
 
   constructor() {
+    effect(() => {
+      if (this.auth.user()?.permissions?.includes('incidents.view')) this.realtimeSync.start();
+      else this.realtimeSync.stop();
+    });
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => this.sync());
     this.sync();
     // Reposition kebab (ctx) menus so edge rows / overflow tables never clip actions.

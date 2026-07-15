@@ -14,15 +14,14 @@ declare const Swal: any;
  * edit (the page no source UI linked to — deliberately fixed by wiring it everywhere).
  */
 @Component({
-  selector: 'page-risk-assessment-form',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, RouterLink],
-  styles: [`
+    selector: 'page-risk-assessment-form',
+    imports: [PageHeaderComponent, PanelComponent, RouterLink],
+    styles: [`
     .nav-tabs .nav-link { font-weight: 600; color: var(--primary); border-radius: 0.5rem 0.5rem 0 0; cursor: pointer; }
     .lake-label { background: transparent !important; border: none !important; box-shadow: none !important; color: #1565C0; font-size: 0.75rem; font-weight: 600; font-style: italic; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(255,255,255,0.8); }
     .region-tooltip { background: rgba(0,51,102,0.85); color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-weight: 600; }
   `],
-  template: `
+    template: `
     <dmis-page-header [title]="pageTitle" icon="fa-plus"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Risk Assessments', url:'/m/prevention-mitigation/risk-assessments'}, {label: crumb}]">
       <a routerLink="/m/prevention-mitigation/risk-assessments" class="btn-add" style="background:var(--text-mid);">
@@ -323,7 +322,7 @@ declare const Swal: any;
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class RiskAssessmentFormComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);

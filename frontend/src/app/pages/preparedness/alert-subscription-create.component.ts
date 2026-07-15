@@ -11,10 +11,9 @@ const HAZARDS = ['Floods', 'Heavy Rainfall', 'Strong Winds', 'Drought', 'Large W
 
 /** Alert Subscriptions → New Subscriber — a real create form that POSTs to the Spring Boot API. */
 @Component({
-  selector: 'page-alert-subscription-create',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, RegionDistrictPickerComponent],
-  template: `
+    selector: 'page-alert-subscription-create',
+    imports: [PageHeaderComponent, PanelComponent, RegionDistrictPickerComponent],
+    template: `
     <dmis-page-header title="New Subscriber" icon="fa-bell"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Alert Subscriptions', url:'/m/preparedness/alert-subscriptions'}, {label:'New Subscriber'}]">
     </dmis-page-header>
@@ -82,7 +81,7 @@ const HAZARDS = ['Floods', 'Heavy Rainfall', 'Strong Winds', 'Drought', 'Large W
       </dmis-panel>
     </div>
   `,
-  styles: [`
+    styles: [`
     .form-body { padding: 1.1rem 1.2rem; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem 1.1rem; }
     .fg { display: flex; flex-direction: column; gap: 0.3rem; }
@@ -102,7 +101,7 @@ const HAZARDS = ['Floods', 'Heavy Rainfall', 'Strong Winds', 'Drought', 'Large W
     .btn-ghost { border: 1px solid var(--border); background: #fff; color: var(--text-mid); border-radius: 8px; padding: 0.5rem 1.1rem; font-size: 0.84rem; cursor: pointer; }
     .btn-ghost:hover { background: #f7f9fb; }
     .btn-add[disabled] { opacity: 0.55; cursor: not-allowed; }
-  `],
+  `]
 })
 export class AlertSubscriptionCreateComponent implements OnInit {
   private http = inject(HttpClient);

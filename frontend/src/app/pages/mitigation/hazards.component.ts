@@ -26,10 +26,9 @@ interface HazardIndexResponse {
 
 /** Reproduction of admin/hazards/index-v2.blade.php (Prevention & Mitigation → Hazard Management). */
 @Component({
-  selector: 'page-hazards',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
-  styles: [`
+    selector: 'page-hazards',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
+    styles: [`
     .sev-low { background: rgba(16,185,129,0.12); color: #059669; }
     .sev-medium { background: rgba(245,158,11,0.12); color: #d97706; }
     .sev-high { background: rgba(220,38,38,0.12); color: #dc2626; }
@@ -42,7 +41,7 @@ interface HazardIndexResponse {
     .status-switch input:checked + .status-slider::before { transform: translateX(16px); }
     .alert-container { position: fixed; top: calc(var(--topbar-h) + 12px); right: 12px; z-index: 9999; width: 320px; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Hazard Management" icon="fa-exclamation-triangle"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Hazard Management'}]">
       @if (canManage()) {
@@ -270,7 +269,7 @@ interface HazardIndexResponse {
         </div>
       }
     </div>
-  `,
+  `
 })
 export class HazardsComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);

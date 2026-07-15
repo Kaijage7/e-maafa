@@ -20,10 +20,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
 let swalPromise: Promise<void> | null = null;
 
 @Component({
-  selector: 'page-training-plans',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
-  template: `
+    selector: 'page-training-plans',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
+    template: `
     <dmis-page-header title="Training Plans" icon="fa-chalkboard-teacher"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Training Plans'}]">
       <a class="btn-add" routerLink="/m/preparedness/trainings/create"><i class="fas fa-plus"></i> New Training Plan</a>
@@ -108,7 +107,7 @@ let swalPromise: Promise<void> | null = null;
       </dmis-panel>
     </div>
   `,
-  styles: [`
+    styles: [`
     .badge-planned { background: rgba(59,130,246,0.12); color: #2563eb; }
     .badge-ongoing { background: rgba(245,158,11,0.12); color: #d97706; }
     .badge-completed { background: rgba(16,185,129,0.12); color: #059669; }
@@ -121,7 +120,7 @@ let swalPromise: Promise<void> | null = null;
     .lb-sup { background: rgba(217,119,6,0.12); color: #b45309; }
     .ctx-sep { height: 1px; background: var(--border); margin: 0.25rem 0; }
     .ctx-item.warn { color: #b45309; }
-  `],
+  `]
 })
 export class TrainingPlansComponent {
   private http = inject(HttpClient);

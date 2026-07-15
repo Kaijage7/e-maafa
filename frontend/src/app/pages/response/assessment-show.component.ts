@@ -18,10 +18,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
  * requests this assessment pushed into the allocation pipeline.
  */
 @Component({
-  selector: 'page-assessment-show',
-  standalone: true,
-  imports: [DecimalPipe, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-assessment-show',
+    imports: [DecimalPipe, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.1rem; display: block; }
@@ -53,7 +52,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     .need-rec b { color: #334155; }
     @media print { .wf-strip button, .wf-strip a, .photo-x { display: none !important; } }
   `],
-  template: `
+    template: `
     @if (assessment(); as a) {
       <dmis-page-header [title]="'Assessment #' + a.id + ' — ' + (a.incident_title ?? '')" icon="fa-clipboard-check"
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Assessment', url:'/m/response/assessments'}, {label:'#' + a.id}]">
@@ -195,7 +194,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
         </dmis-panel>
       }
     }
-  `,
+  `
 })
 export class AssessmentShowComponent implements OnInit {
   private readonly http = inject(HttpClient);

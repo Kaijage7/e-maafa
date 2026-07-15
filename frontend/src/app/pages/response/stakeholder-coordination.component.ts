@@ -20,10 +20,9 @@ interface StakeRow {
  * warehouse / response / recovery" gap — every stakeholder is now traceable across the supply chain.
  */
 @Component({
-  selector: 'page-stakeholder-coordination',
-  standalone: true,
-  imports: [FormsModule, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-stakeholder-coordination',
+    imports: [FormsModule, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Stakeholder Coordination" icon="fa-users-between-lines"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Stakeholder Coordination'}]">
     </dmis-page-header>
@@ -132,7 +131,7 @@ interface StakeRow {
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .btn-mini { font-size: 0.78rem; padding: 0.35rem 0.8rem; border-radius: 7px; border: 1px solid var(--border); background: #fff; cursor: pointer; margin-left: 4px; color: var(--text-dark); }
     .btn-mini:hover { background: #f1f5f9; }
     .pill { display:inline-block; min-width:26px; padding:2px 8px; border-radius:20px; font-size:0.78rem; background:rgba(100,116,139,0.12); color:#64748b; }
@@ -148,7 +147,7 @@ interface StakeRow {
     .ms-l { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); }
     .empty-line { font-size: 0.82rem; color: var(--text-light); padding: 0.4rem 0; font-style: italic; }
     table.mini th { font-size: 0.75rem; } table.mini td { font-size: 0.82rem; }
-  `],
+  `]
 })
 export class StakeholderCoordinationComponent {
   private http = inject(HttpClient);

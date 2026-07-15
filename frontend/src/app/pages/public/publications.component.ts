@@ -16,10 +16,9 @@ interface Publication {
  * Switch language to see the other edition.
  */
 @Component({
-  selector: 'public-publications',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'public-publications',
+    imports: [RouterLink],
+    template: `
     <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 1.5rem 4rem;">
       <a routerLink="/" style="color:#60a5fa;text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
       <h1 style="font-weight:800;color:var(--text-primary, #2C3E50);margin:0.8rem 0 0.3rem;">{{ L.t('lbl_publication') }}</h1>
@@ -83,7 +82,7 @@ interface Publication {
         </div>
       }
     </div>
-  `,
+  `
 })
 export class PublicationsComponent {
   L = inject(PortalLabels);

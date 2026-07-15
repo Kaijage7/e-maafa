@@ -10,10 +10,9 @@ import { PanelComponent } from '../../shell/panel.component';
  * although this is a Prevention & Mitigation screen — reproduced as-is.
  */
 @Component({
-  selector: 'page-infrastructure-create',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, RouterLink],
-  template: `
+    selector: 'page-infrastructure-create',
+    imports: [PageHeaderComponent, PanelComponent, RouterLink],
+    template: `
     <dmis-page-header title="New Infrastructure Item" icon="fa-road"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Infrastructure Items', url:'/m/prevention-mitigation/infrastructure'}, {label:'New Item'}]" />
 
@@ -123,7 +122,7 @@ import { PanelComponent } from '../../shell/panel.component';
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class InfrastructureCreateComponent {
   protected http = inject(HttpClient);

@@ -4,10 +4,9 @@ import { DROUGHT_SEVERITY, AFFECTED_SECTORS } from './ew-agency.model';
 
 /** MoA — Ministry of Agriculture. Distinct fields: drought severity (D0–D4), rainfall %, NDVI, sectors. */
 @Component({
-  selector: 'page-moa-drought',
-  standalone: true,
-  imports: [AgencyEventConsoleComponent],
-  template: `<ew-agency-event-console [config]="config"></ew-agency-event-console>`,
+    selector: 'page-moa-drought',
+    imports: [AgencyEventConsoleComponent],
+    template: `<ew-agency-event-console [config]="config"></ew-agency-event-console>`
 })
 export class MoaDroughtComponent {
   config: ConsoleConfig = {

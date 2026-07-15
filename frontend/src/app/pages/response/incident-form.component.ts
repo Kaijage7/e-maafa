@@ -30,10 +30,9 @@ interface FormData {
  * Dual-mode create/edit by route param, save or save-and-new (source parity).
  */
 @Component({
-  selector: 'page-incident-form',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-incident-form',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .section-title { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #dc3545; margin: 1.1rem 0 0.6rem; }
     .section-title:first-child { margin-top: 0; }
     .form-label { font-size: 0.78rem; font-weight: 600; }
@@ -41,7 +40,7 @@ interface FormData {
     .photo-chip { display: inline-flex; align-items: center; gap: 0.4rem; background: #f1f5f9; border-radius: 8px; padding: 0.25rem 0.6rem; font-size: 0.75rem; margin: 0 0.3rem 0.3rem 0; }
     .photo-chip button { border: none; background: none; color: #dc3545; cursor: pointer; }
   `],
-  template: `
+    template: `
     <dmis-page-header [title]="isEdit() ? 'Edit Incident' : 'Log New Incident'" icon="fa-exclamation-triangle"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'},
         {label:'Incidents', url:'/m/response/incidents'}, {label: isEdit() ? 'Edit' : 'Create'}]">
@@ -225,7 +224,7 @@ interface FormData {
           <div class="section-title"><i class="fas fa-camera me-1"></i> Evidence</div>
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label">Photos (max 10, 5MB each)</label>
+              <label class="form-label">Photos (JPEG/PNG/GIF; max 10, 5MB each; 10MB combined media)</label>
               <input type="file" class="form-control" multiple accept="image/jpeg,image/png,image/gif" (change)="onPhotos($event)">
               @if (isEdit() && existingPhotos().length) {
                 <div class="mt-2">
@@ -238,7 +237,7 @@ interface FormData {
               }
             </div>
             <div class="col-md-6">
-              <label class="form-label">Video (max 50MB)</label>
+              <label class="form-label">Video (MP4/QuickTime/AVI; max 10MB)</label>
               <input type="file" class="form-control" accept="video/mp4,video/avi,video/quicktime" (change)="onVideo($event)">
             </div>
           </div>
@@ -256,7 +255,7 @@ interface FormData {
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class IncidentFormComponent implements OnInit, AfterViewInit {
   private locMapEl = viewChild<ElementRef>('locMap');
@@ -278,6 +277,7 @@ export class IncidentFormComponent implements OnInit, AfterViewInit {
   removedPhotos: string[] = [];
   photos: File[] = [];
   video: File | null = null;
+  private createIdempotencyKey: string | null = null;
 
   readonly casualtyGroups = [
     { prefix: 'deaths', label: 'Deaths (M / F / Total)' },
@@ -441,15 +441,19 @@ export class IncidentFormComponent implements OnInit, AfterViewInit {
     this.removedPhotos.forEach(p => fd.append('remove_photos', p));
 
     const id = this.route.snapshot.paramMap.get('id');
+    const key = id ? null : (this.createIdempotencyKey ??= this.newIdempotencyKey());
     const req = id
         ? this.http.put<any>(`/api/v1/response/incidents/${id}`, fd)
-        : this.http.post<any>('/api/v1/response/incidents', fd);
+        : this.http.post<any>('/api/v1/response/incidents', fd, {
+            headers: { 'Idempotency-Key': `"${key}"` },
+          });
 
     this.submitting.set(true);
     this.errors.set([]);
     req.subscribe({
       next: res => {
         this.submitting.set(false);
+        this.createIdempotencyKey = null;
         ensureSweetAlert().then(() => Swal.fire({ icon: 'success', title: 'Saved', text: res.message, timer: 2000, showConfirmButton: false })
           .then(() => {
             if (addAnother) { window.location.reload(); }
@@ -458,12 +462,28 @@ export class IncidentFormComponent implements OnInit, AfterViewInit {
       },
       error: err => {
         this.submitting.set(false);
+        // A transport/5xx failure may have committed server-side, so keep the key for a safe retry.
+        // Validation/auth failures did not leave an uncertain command; a corrected form gets a new key.
+        if (err.status >= 400 && err.status < 500 && err.status !== 409) {
+          this.createIdempotencyKey = null;
+        }
         this.errors.set(err.status === 422 && err.error?.errors
           ? Object.values(err.error.errors as Record<string, string[]>).flat()
           : [err.error?.message ?? 'An error occurred.']);
         window.scrollTo({ top: 0 });
       },
     });
+  }
+
+  private newIdempotencyKey(): string {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+      return globalThis.crypto.randomUUID();
+    }
+    const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
   }
 }
 

@@ -40,10 +40,9 @@ interface DirectiveDetail {
  * 500s on this path).
  */
 @Component({
-  selector: 'page-oh-directive-show',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
-  styles: [`
+    selector: 'page-oh-directive-show',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
+    styles: [`
     .progress { background: #e9ecef; border-radius: 0.375rem; overflow: hidden; display: flex; }
     .progress-bar { background: #0d6efd; color: #fff; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; white-space: nowrap; transition: width 0.6s ease; }
     .progress-bar.bg-success { background: #198754; }
@@ -60,7 +59,7 @@ interface DirectiveDetail {
     .detail-value { font-size: 0.85rem; color: var(--text-dark); }
     .form-range { width: 100%; }
   `],
-  template: `
+    template: `
     @if (directive(); as d) {
       <dmis-page-header [title]="d.directive_title" icon="fa-gavel"
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'One Health'},
@@ -486,7 +485,7 @@ interface DirectiveDetail {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class OhDirectiveShowComponent implements OnInit {
   private http = inject(HttpClient);

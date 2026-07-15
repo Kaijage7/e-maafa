@@ -8,10 +8,9 @@ export interface Breadcrumb {
 
 /** Exact reproduction of components/dmis/page-header.blade.php (module-card + breadcrumbs + action slot). */
 @Component({
-  selector: 'dmis-page-header',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'dmis-page-header',
+    imports: [RouterLink],
+    template: `
     <div class="module-card" style="margin-bottom:0.85rem;">
       <div class="module-card-left">
         <div class="module-card-icon"><i class="fas {{ icon() }}"></i></div>
@@ -37,7 +36,7 @@ export interface Breadcrumb {
       </div>
       <ng-content></ng-content>
     </div>
-  `,
+  `
 })
 export class PageHeaderComponent {
   title = input('');

@@ -52,10 +52,9 @@ interface MonitoringDashboard {
  * Charts use Chart.js (same vendor bundle as One Health / Sendai / Frameworks).
  */
 @Component({
-  selector: 'page-monitoring-evaluation-dashboard',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-monitoring-evaluation-dashboard',
+    imports: [DatePipe, DecimalPipe, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     :host { display:block; }
     .me-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .btn-sm {
@@ -200,7 +199,7 @@ interface MonitoringDashboard {
       .score-vals { text-align:left; }
     }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Monitoring & Evaluation" icon="fa-chart-line"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Monitoring & Evaluation'}, {label:'Dashboard'}]">
       <div class="me-toolbar">
@@ -599,7 +598,7 @@ interface MonitoringDashboard {
       <span>Scope: {{ scopeLabel() }} · Live system evidence only (no manual upload on this page)</span>
       <span>@if (loading()) { Loading… } @else { Ready }</span>
     </div>
-  `,
+  `
 })
 export class MonitoringEvaluationDashboardComponent implements OnDestroy {
   private http = inject(HttpClient);

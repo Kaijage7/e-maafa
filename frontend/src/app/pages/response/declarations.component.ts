@@ -14,10 +14,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
  * the authority declares → extend / revoke. Each step is journaled (declaration_events).
  */
 @Component({
-  selector: 'page-declarations',
-  standalone: true,
-  imports: [FormsModule, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-declarations',
+    imports: [FormsModule, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.5rem; display: block; }
@@ -42,7 +41,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     .drawer-body { padding: 16px 18px; }
     .ev { font-size: 0.78rem; padding: 8px 0; border-bottom: 1px dashed #e3e6ed; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Disaster Declarations" icon="fa-file-contract"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Declarations'}]">
       <button type="button" class="btn-add" (click)="propose()"><i class="fas fa-plus"></i> Propose Declaration</button>
@@ -127,7 +126,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
         </div>
       </div>
     }
-  `,
+  `
 })
 export class DeclarationsComponent implements OnInit {
   private readonly http = inject(HttpClient);

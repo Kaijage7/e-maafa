@@ -4,10 +4,9 @@ import { AGENCY_HAZARDS, GST_SEVERITY, VOLCANO_INDEX, VOLCANO_ACTIVITY, LANDSLID
 
 /** GST — Geological Survey. Distinct fields: magnitude/depth/severity (earthquake), volcanic index/activity. */
 @Component({
-  selector: 'page-gst-geo',
-  standalone: true,
-  imports: [AgencyEventConsoleComponent],
-  template: `<ew-agency-event-console [config]="config"></ew-agency-event-console>`,
+    selector: 'page-gst-geo',
+    imports: [AgencyEventConsoleComponent],
+    template: `<ew-agency-event-console [config]="config"></ew-agency-event-console>`
 })
 export class GstGeoComponent {
   config: ConsoleConfig = {

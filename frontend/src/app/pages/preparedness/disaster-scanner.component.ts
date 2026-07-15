@@ -60,10 +60,9 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
  * Impact Analysis. Incidents are the parallel escalation lane (approval flow). See EW-MONITORING-FLOW.md.
  */
 @Component({
-  selector: 'page-disaster-scanner',
-  standalone: true,
-  imports: [PageHeaderComponent, StatCardComponent, DatePipe, FormsModule, RegionDistrictPickerComponent],
-  template: `
+    selector: 'page-disaster-scanner',
+    imports: [PageHeaderComponent, StatCardComponent, DatePipe, FormsModule, RegionDistrictPickerComponent],
+    template: `
     <dmis-page-header title="Monitoring — EOCC" icon="fa-tower-broadcast"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Early Warning Systems', url:'/m/preparedness/early-warnings'}, {label:'Monitoring'}]">
     </dmis-page-header>
@@ -312,7 +311,7 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .vbox { background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px; padding:0.7rem 0.9rem; margin:0.3rem 0 0.8rem; }
     .vbox-hd { font-size:0.84rem; font-weight:800; color:#5b21b6; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .vn { font-size:0.75rem; background:#7c3aed; color:#fff; border-radius:20px; padding:0.1rem 0.55rem; }
@@ -391,7 +390,7 @@ const HAZARD_OPTS = ['flood', 'heavy_rain', 'strong_wind', 'cyclone', 'earthquak
     .dm-cancel { background:#fff; border:1px solid #cbd5e1; color:#475569; border-radius:8px; padding:0.45rem 1rem; font-weight:700; font-size:0.82rem; cursor:pointer; }
     .dm-go { background:#7c3aed; color:#fff; border:none; border-radius:8px; padding:0.45rem 1.1rem; font-weight:700; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
     .dm-go.inc { background:#0369a1; }
-  `],
+  `]
 })
 export class DisasterScannerComponent {
   private http = inject(HttpClient);

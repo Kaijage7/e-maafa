@@ -35,10 +35,9 @@ export interface ConsoleConfig {
  * event pages; the Python pages are untouched. Every submission is shared with all entities + PMO-DMD.
  */
 @Component({
-  selector: 'ew-agency-event-console',
-  standalone: true,
-  imports: [FormsModule, NgClass, RouterLink, EwCrossAgencyPanelComponent, RegionPickerComponent, EwPreviewModalComponent, EntityTaskingsComponent],
-  styles: [`
+    selector: 'ew-agency-event-console',
+    imports: [FormsModule, NgClass, RouterLink, EwCrossAgencyPanelComponent, RegionPickerComponent, EwPreviewModalComponent, EntityTaskingsComponent],
+    styles: [`
     .wrap { padding: 14px 18px 40px; }
     .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
     .hd .ic { width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff; }
@@ -73,7 +72,7 @@ export interface ConsoleConfig {
     .flash.ok { background: #d1fae5; color: #065f46; } .flash.err { background: #fee2e2; color: #b91c1c; }
     .x { border: none; background: none; color: #b91c1c; cursor: pointer; }
   `],
-  template: `
+    template: `
     <div class="wrap">
       <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;color:#64748b;text-decoration:none;margin-bottom:10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
       <div class="hd">
@@ -202,7 +201,7 @@ export interface ConsoleConfig {
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class AgencyEventConsoleComponent implements OnInit {
   @Input() config!: ConsoleConfig;

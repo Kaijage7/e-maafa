@@ -25,10 +25,9 @@ interface IndexResponse {
  * DELIBERATELY FIXED: View/Edit/Delete/Create all work here.
  */
 @Component({
-  selector: 'page-mitigation-measures',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
-  styles: [`
+    selector: 'page-mitigation-measures',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
+    styles: [`
     .status-ongoing { background: rgba(59,130,246,0.12); color: #2563eb; }
     .status-not-started { background: rgba(156,163,175,0.12); color: #6b7280; }
     .status-completed { background: rgba(16,185,129,0.12); color: #059669; }
@@ -67,7 +66,7 @@ interface IndexResponse {
     .inst-block .chev { color: #94a3b8; font-size: 0.75rem; }
     .inst-block[open] .chev { transform: rotate(180deg); }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Mitigation Measures" icon="fa-shield-virus"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Mitigation Measures'}]">
       @if (canManage()) {
@@ -291,7 +290,7 @@ interface IndexResponse {
         </div>
       }
     </div>
-  `,
+  `
 })
 export class MeasuresComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);

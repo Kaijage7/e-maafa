@@ -36,10 +36,9 @@ interface GisPayload {
 
 /** Reproduction of admin/gis_map/index-v2.blade.php — the reference GIS map (blueprint Part 6). */
 @Component({
-  selector: 'page-gis-map',
-  standalone: true,
-  imports: [PageHeaderComponent, StatCardComponent],
-  styles: [`
+    selector: 'page-gis-map',
+    imports: [PageHeaderComponent, StatCardComponent],
+    styles: [`
     .map-container { position: relative; }
     #gisMap { height: 60vh; min-height: 500px; z-index: 1; }
     .layer-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.85rem 1.15rem; border-top: 1px solid rgba(0,0,0,0.04); }
@@ -254,7 +253,7 @@ interface GisPayload {
       border-top: 1px solid #334155;
     }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Risk Mapping & GIS" icon="fa-map-marked-alt"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Risk Mapping'}]" />
 
@@ -464,7 +463,7 @@ interface GisPayload {
         }
       </div>
     </div>
-  `,
+  `
 })
 export class GisMapComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);

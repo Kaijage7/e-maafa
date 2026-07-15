@@ -31,10 +31,9 @@ type Mode = 'actual' | 'scores' | 'paste' | 'multiPaste';
  *  • multiPaste : paste many area/indicator scores from spreadsheet rows in one staged POST.
  *  All land PENDING for PMO approval. Sector officers reach this via risk_index.view + risk_index.create. */
 @Component({
-  selector: 'page-inform-entry',
-  standalone: true,
-  imports: [FormsModule],
-  styles: [INFORM_STYLES, `
+    selector: 'page-inform-entry',
+    imports: [FormsModule],
+    styles: [INFORM_STYLES, `
     :host { display:block; }
     .mode-row { display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:1rem; }
     .mode-row button { font:inherit; font-size:.78rem; font-weight:700; padding:.35rem .85rem; border-radius:50px; border:1.5px solid var(--line,#cbd5e1); background:#fff; color:var(--text-mid,#475569); cursor:pointer; }
@@ -67,7 +66,7 @@ type Mode = 'actual' | 'scores' | 'paste' | 'multiPaste';
     .honest-banner ol { margin:.35rem 0 0; padding-left:1.15rem; }
     @media (max-width: 900px) { .level-cards, .stage-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   `],
-  template: `
+    template: `
     <div class="honest-banner">
       <strong>Honest pipeline — paste does <em>not</em> colour the map immediately.</strong>
       <ol>
@@ -234,7 +233,7 @@ type Mode = 'actual' | 'scores' | 'paste' | 'multiPaste';
         @if (error()) { <span class="error">{{ error() }}</span> }
       </div>
     }
-  `,
+  `
 })
 export class InformEntryComponent implements OnInit {
   private svc = inject(InformService);

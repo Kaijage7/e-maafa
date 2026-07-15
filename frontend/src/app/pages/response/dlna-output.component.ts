@@ -13,10 +13,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
  * Print-formatted; every unanswered item shows an honest "—" rather than being hidden.
  */
 @Component({
-  selector: 'page-dlna-output',
-  standalone: true,
-  imports: [RouterLink],
-  styles: [`
+    selector: 'page-dlna-output',
+    imports: [RouterLink],
+    styles: [`
     .doc { max-width: 900px; margin: 0 auto; background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 34px 44px; font-size: 0.85rem; color: #1f2937; }
     .doc-head { text-align: center; border-bottom: 2px solid #0d3b66; padding-bottom: 14px; margin-bottom: 18px; }
     .doc-head .gov { font-weight: 800; letter-spacing: 0.5px; font-size: 0.9rem; }
@@ -42,7 +41,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     .foot { margin-top: 26px; padding-top: 10px; border-top: 1px solid #e3e6ed; font-size: 0.75rem; color: #6c757d; display: flex; justify-content: space-between; }
     @media print { .toolbar { display: none; } .doc { border: none; padding: 0; } }
   `],
-  template: `
+    template: `
     @if (assessment(); as a) {
       <div class="toolbar">
         <a class="btn-sm" [routerLink]="['/m/response/dlna', a.id]"><i class="fas fa-arrow-left"></i> Back to keying</a>
@@ -128,7 +127,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
         </div>
       </div>
     }
-  `,
+  `
 })
 export class DlnaOutputComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);

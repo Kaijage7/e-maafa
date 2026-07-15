@@ -24,10 +24,9 @@ interface SnapEscalation { action: string; from: string; to: string; role: strin
  * live/final updates timeline; it reflects the system as it is updated (re-fetched on each visit).
  */
 @Component({
-  selector: 'public-incident-snapshot',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'public-incident-snapshot',
+    imports: [RouterLink],
+    template: `
     <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 1.5rem 4rem;">
       @if (snap(); as s) {
         <a routerLink="/portal" style="color:#60a5fa;text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_portal') }}</a>
@@ -140,7 +139,7 @@ interface SnapEscalation { action: string; from: string; to: string; role: strin
         </div>
       }
     </div>
-  `,
+  `
 })
 export class IncidentSnapshotComponent {
   L = inject(PortalLabels);

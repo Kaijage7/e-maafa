@@ -10,10 +10,9 @@ interface Publication {
 
 /** Public publication detail ("/publications/:type/:id") — reproduces portal/publications/show. */
 @Component({
-  selector: 'public-publication-detail',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'public-publication-detail',
+    imports: [RouterLink],
+    template: `
     <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 1.5rem 4rem;">
       @if (pub(); as p) {
         <a [routerLink]="['/publications', p.documentType]" style="color:#60a5fa;text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_publication') }}</a>
@@ -53,7 +52,7 @@ interface Publication {
         </div>
       }
     </div>
-  `,
+  `
 })
 export class PublicationDetailComponent {
   L = inject(PortalLabels);

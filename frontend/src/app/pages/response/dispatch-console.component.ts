@@ -45,10 +45,9 @@ interface ProcurementRow {
  * yes/no queue — approving is the moment stock actually leaves the ledger.
  */
 @Component({
-  selector: 'page-dispatch-console',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-dispatch-console',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.5rem; display: block; }
@@ -86,7 +85,7 @@ interface ProcurementRow {
     .empty { text-align: center; color: #94a3b8; padding: 34px 0; font-size: 0.85rem; }
     .urg-critical { color: #b91c1c; font-weight: 700; } .urg-high { color: #c2410c; font-weight: 600; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Resource Dispatch" icon="fa-truck-fast"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Resource Dispatch'}]">
       <a routerLink="/m/response/warehouse-ops" class="btn-add"><i class="fas fa-warehouse"></i> Warehouse Ops</a>
@@ -357,7 +356,7 @@ interface ProcurementRow {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class DispatchConsoleComponent implements OnInit {
   private readonly http = inject(HttpClient);

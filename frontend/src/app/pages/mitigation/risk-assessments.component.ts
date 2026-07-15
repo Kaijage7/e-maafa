@@ -32,10 +32,9 @@ interface IndexResponse {
  * filters, the broken create/edit modals' observable outcomes, and a version history that never grows.
  */
 @Component({
-  selector: 'page-risk-assessments',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, SlicePipe],
-  styles: [`
+    selector: 'page-risk-assessments',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, SlicePipe],
+    styles: [`
     .filter-bar select { padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; background: #fff; color: var(--text-dark); }
     .ra-modal-backdrop { display: none; position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.5); overflow-y: auto; }
     .ra-modal-backdrop.open { display: block; }
@@ -52,7 +51,7 @@ interface IndexResponse {
     .timeline-item { margin-bottom: 20px; position: relative; padding-left: 60px; }
     .timeline-icon { position: absolute; left: 11px; top: 0; width: 30px; height: 30px; border-radius: 50%; background: #FFD700; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #003366; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Risk Assessment Management" icon="fa-shield-alt"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Admin'}, {label:'Risk Assessments'}]">
       <!-- Source broken create modal deliberately FIXED: opens the working form page. -->
@@ -356,7 +355,7 @@ interface IndexResponse {
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class RiskAssessmentsComponent {
   private http = inject(HttpClient);

@@ -4,13 +4,14 @@ import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../core/auth.service';
 import { FontScaleService } from '../core/font-scale.service';
+import { RealtimeSyncService } from '../core/realtime-sync.service';
+import { Subscription, auditTime } from 'rxjs';
 
 /** Exact reproduction of components/dmis/topbar.blade.php + the dmis-v2.js topbar behaviors. */
 @Component({
-  selector: 'app-topbar',
-  standalone: true,
-  imports: [RouterLink, FormsModule],
-  template: `
+    selector: 'app-topbar',
+    imports: [RouterLink, FormsModule],
+    template: `
     <div class="top-bar">
       <div class="top-bar-left">
         <button class="sidebar-toggle-btn" id="sidebarToggle" (click)="toggleSidebar()"><i class="fas fa-bars"></i></button>
@@ -184,7 +185,7 @@ import { FontScaleService } from '../core/font-scale.service';
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .font-scale {
       display: inline-flex; align-items: center; gap: 0;
       border: 1px solid rgba(0,0,0,0.08); border-radius: 999px;
@@ -265,13 +266,14 @@ import { FontScaleService } from '../core/font-scale.service';
     .pw-cancel { padding: 8px 14px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem; font-weight: 600; color: #475569; cursor: pointer; }
     .pw-save { padding: 8px 16px; background: #003366; border: 1px solid #003366; border-radius: 6px; font-size: 0.88rem; font-weight: 700; color: #fff; cursor: pointer; }
     .pw-save:disabled { opacity: 0.6; cursor: default; }
-  `],
+  `]
 })
 export class TopbarComponent implements OnInit, OnDestroy {
   auth = inject(AuthService);
   font = inject(FontScaleService);
   private router = inject(Router);
   private http = inject(HttpClient);
+  private realtimeSync = inject(RealtimeSyncService);
   menuOpen = signal(false);
 
   // Change-password modal (self-service, VAPT v).
@@ -302,15 +304,20 @@ export class TopbarComponent implements OnInit, OnDestroy {
   prefMsg = signal('');
   pref = { notify_in_app: true, notify_email: true, notify_sms: false, phone: '', email: '' };
   private pollTimer: any;
+  private syncSubscription: Subscription | null = null;
   private latestId: number | null = null;
 
   ngOnInit(): void {
     this.loadNotifs();
     this.pollTimer = setInterval(() => this.refreshUnread(), 30_000);
+    this.syncSubscription = this.realtimeSync.wakeups$.pipe(auditTime(750)).subscribe(() => {
+      this.refreshUnread();
+    });
   }
 
   ngOnDestroy(): void {
     clearInterval(this.pollTimer);
+    this.syncSubscription?.unsubscribe();
   }
 
   setBellFilter(f: string): void {

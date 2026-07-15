@@ -36,10 +36,9 @@ interface RoleGroup { category: string; count: number; roles: RoleDetail[]; }
  * stripped or deleted (a lockout rail).
  */
 @Component({
-  selector: 'page-user-management',
-  standalone: true,
-  imports: [FormsModule, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-user-management',
+    imports: [FormsModule, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="User Management" icon="fa-users"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'User Management'}]">
       @if (canManage()) {
@@ -240,7 +239,7 @@ interface RoleGroup { category: string; count: number; roles: RoleDetail[]; }
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .f-lbl { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.4px; color:var(--text-light); display:block; margin:0.7rem 0 3px; }
     .role-chip { font-size:0.78rem; font-weight:700; background:rgba(13,110,253,0.1); color:#0d6efd; border-radius:7px; padding:1px 8px; margin:0 4px 2px 0; display:inline-block; }
     .ctx-menu { position:absolute; top:100%; right:0; }
@@ -285,7 +284,7 @@ interface RoleGroup { category: string; count: number; roles: RoleDetail[]; }
       .filters { grid-template-columns:1fr; }
       .role-group-options { grid-template-columns:1fr; }
     }
-  `],
+  `]
 })
 export class UserManagementComponent {
   private http = inject(HttpClient);

@@ -17,10 +17,9 @@ interface NewsItem {
  * create-v2/edit (title, category, excerpt, body, image path, active toggle).
  */
 @Component({
-  selector: 'page-portal-news',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-portal-news',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="News & Events" icon="fa-newspaper"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'News & Events'}]">
       <button class="btn-add" type="button" (click)="openCreate()"><i class="fas fa-plus"></i> New Article</button>
@@ -122,7 +121,7 @@ interface NewsItem {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class PortalNewsComponent {
   private http = inject(HttpClient);

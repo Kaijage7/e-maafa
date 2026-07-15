@@ -33,10 +33,9 @@ function reliabilityOpacity(rel: string | undefined): number { return rel === 'H
 /** INFORM tab — national council choropleth with the two-product toggle (Strategic composite vs Operational
  *  EO hazard signals, reliability encoded as fill opacity). On polygon click, emits a drill-down request. */
 @Component({
-  selector: 'page-inform-map',
-  standalone: true,
-  imports: [StatCardComponent, DecimalPipe],
-  styles: [`
+    selector: 'page-inform-map',
+    imports: [StatCardComponent, DecimalPipe],
+    styles: [`
     :host { display:block; }
     #informMap { height: 60vh; min-height: 460px; z-index: 1; border-radius: 0 0 8px 8px; }
     .leaflet-container { background:#e8edf2; } .leaflet-control-attribution { display:none !important; }
@@ -71,7 +70,7 @@ function reliabilityOpacity(rel: string | undefined): number { return rel === 'H
     .drill-sig-head { display:flex; justify-content:space-between; font-size:.76rem; font-weight:700; }
     .drill-sig-meta { font-size:0.75rem; color:var(--text-mid,#64748b); margin-top:.1rem; }
   `],
-  template: `
+    template: `
     <div class="stats-row">
       <dmis-stat-card [value]="total()" label="Councils" icon="fa-map" color="#0d6efd" />
       <dmis-stat-card [value]="withData()" label="Scored" icon="fa-check-circle" color="#059669" />
@@ -134,7 +133,7 @@ function reliabilityOpacity(rel: string | undefined): number { return rel === 'H
         }
       </div>
     </div>
-  `,
+  `
 })
 export class InformMapComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);

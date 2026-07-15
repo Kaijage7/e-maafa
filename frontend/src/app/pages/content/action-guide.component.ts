@@ -10,10 +10,9 @@ import { AuthService } from '../../core/auth.service';
  * Edit impact/action rows (EN/SW) by hazard and colour level used by PMO-DMD statement proposals.
  */
 @Component({
-  selector: 'page-action-guide',
-  standalone: true,
-  imports: [FormsModule, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-action-guide',
+    imports: [FormsModule, PageHeaderComponent, PanelComponent],
+    styles: [`
     .filters { display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin-bottom:12px; }
     .filters label { display:grid; gap:4px; font-size:0.72rem; font-weight:800; color:#475569; text-transform:uppercase; }
     .filters select, .filters input, .filters textarea { border:1px solid #cbd5e1; border-radius:7px; padding:7px 9px; font:inherit; font-size:0.82rem; min-width:160px; }
@@ -33,7 +32,7 @@ import { AuthService } from '../../core/auth.service';
     .meta { font-size:0.75rem; color:#64748b; margin-bottom:10px; }
     .level-pill { display:inline-block; font-size:0.68rem; font-weight:800; border-radius:999px; padding:2px 8px; margin-left:6px; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Action Guide Book" icon="fa-book-open"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Action Guide'}]">
       @if (canManage()) {
@@ -121,7 +120,7 @@ import { AuthService } from '../../core/auth.service';
         }
       </div>
     </dmis-panel>
-  `,
+  `
 })
 export class ActionGuideComponent implements OnInit {
   private http = inject(HttpClient);

@@ -28,10 +28,9 @@ declare const L: any;
  * narrative. The Python DMD page remains the canonical authoring surface — this is the native overlay view.
  */
 @Component({
-  selector: 'page-dmd-consolidated',
-  standalone: true,
-  imports: [NgClass, DecimalPipe, RouterLink, EwCrossAgencyPanelComponent, EwPreviewModalComponent],
-  styles: [`
+    selector: 'page-dmd-consolidated',
+    imports: [NgClass, DecimalPipe, RouterLink, EwCrossAgencyPanelComponent, EwPreviewModalComponent],
+    styles: [`
     .wrap { padding: 12px 16px 36px; max-width: 1600px; margin: 0 auto; }
     .hd { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
     .hd .ic { width: 42px; height: 42px; border-radius: 11px; background: #ede7f6; color: #4527a0; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; }
@@ -303,7 +302,7 @@ declare const L: any;
     .evac-row a { color: #047857; font-weight: 700; text-decoration: none; }
     .evac-row a:hover { text-decoration: underline; }
   `],
-  template: `
+    template: `
     <div class="wrap ia-shell">
       <a routerLink="/m/preparedness/early-warnings" style="display:inline-flex;align-items:center;gap:6px;font-size:0.8rem;color:#64748b;text-decoration:none;margin-bottom:10px"><i class="fas fa-arrow-left"></i> Early Warning Systems</a>
 
@@ -996,7 +995,7 @@ declare const L: any;
         </div>
       </details>
     </div>
-  `,
+  `
 })
 export class DmdConsolidatedComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);

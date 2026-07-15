@@ -2,10 +2,9 @@ import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
-  selector: 'page-not-found',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'page-not-found',
+    imports: [RouterLink],
+    template: `
     <div style="min-height:70vh;display:flex;align-items:center;justify-content:center;padding:2rem;">
       <div style="max-width:560px;text-align:center;">
         <div style="font-size:3.2rem;color:#475569;margin-bottom:0.7rem;"><i class="fas fa-map-signs"></i></div>
@@ -18,7 +17,7 @@ import { RouterLink } from '@angular/router';
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class NotFoundComponent {
   constructor() {

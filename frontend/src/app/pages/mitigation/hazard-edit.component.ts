@@ -10,10 +10,9 @@ import { PanelComponent } from '../../shell/panel.component';
  * controller sets it from $request->has('is_active'), so updating a hazard deactivates it.
  */
 @Component({
-  selector: 'page-hazard-edit',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, RouterLink],
-  template: `
+    selector: 'page-hazard-edit',
+    imports: [PageHeaderComponent, PanelComponent, RouterLink],
+    template: `
     <dmis-page-header title="Edit Hazard" icon="fa-exclamation-triangle"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Admin'}, {label:'Hazards', url:'/m/prevention-mitigation/hazards'}, {label: name()}, {label:'Edit'}]" />
 
@@ -78,7 +77,7 @@ import { PanelComponent } from '../../shell/panel.component';
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class HazardEditComponent {
   private http = inject(HttpClient);

@@ -14,10 +14,9 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
  * template management and analytics.
  */
 @Component({
-  selector: 'page-communication',
-  standalone: true,
-  imports: [FormsModule, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-communication',
+    imports: [FormsModule, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.5rem; display: block; }
@@ -45,7 +44,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
     .empty { text-align: center; color: #94a3b8; padding: 26px 0; font-size: 0.85rem; }
     .preview { background: #f8f9fb; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px 12px; font-size: 0.8rem; margin-top: 8px; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Communication & Alert Center" icon="fa-bullhorn"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Alert Dissemination'}]">
       <button type="button" class="btn-add" style="background:#0f766e;margin-right:0.4rem;" (click)="testChannel('sms')"><i class="fas fa-sms"></i> Test SMS</button>
@@ -216,7 +215,7 @@ declare const Swal: any; // SweetAlert2, loaded on demand from the CDN like the 
         }
       </dmis-panel>
     }
-  `,
+  `
 })
 export class CommunicationComponent implements OnInit {
   private readonly http = inject(HttpClient);

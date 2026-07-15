@@ -44,10 +44,9 @@ const isEoccBulletin = (p: Product): boolean =>
  * lives in the EW module; this screen stores and serves the finished PDFs.
  */
 @Component({
-  selector: 'page-generated-bulletins',
-  standalone: true,
-  imports: [PageHeaderComponent, StatCardComponent, DatePipe, RouterLink],
-  template: `
+    selector: 'page-generated-bulletins',
+    imports: [PageHeaderComponent, StatCardComponent, DatePipe, RouterLink],
+    template: `
     <dmis-page-header title="EOCC Bulletin" icon="fa-file-pdf"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Early Warning Systems', url:'/m/preparedness/early-warnings'}, {label:'EOCC Bulletin'}]">
       <div style="display:flex;gap:0.45rem;flex-wrap:wrap;align-items:center">
@@ -201,7 +200,7 @@ const isEoccBulletin = (p: Product): boolean =>
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .gb-list { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 1rem; }
     .gb-list-head { font-weight: 700; color: var(--text-dark); margin-bottom: 0.8rem; font-size: 0.86rem; display: flex; align-items: center; gap: 0.4rem; }
     .gb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 0.7rem; }
@@ -254,7 +253,7 @@ const isEoccBulletin = (p: Product): boolean =>
     .dm-result ul { margin: 0.5rem 0 0.5rem 1.1rem; padding: 0; font-size: 0.8rem; color: var(--text-mid); }
     .dm-note { background: #fffbeb; color: #92400e; border-radius: 8px; padding: 0.5rem 0.7rem; font-size: 0.76rem; margin-bottom: 0.5rem; }
     .dm-link { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: #0d6efd; text-decoration: none; font-weight: 600; }
-  `],
+  `]
 })
 export class GeneratedBulletinsComponent {
   private http = inject(HttpClient);

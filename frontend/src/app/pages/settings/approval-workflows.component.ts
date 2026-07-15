@@ -26,10 +26,9 @@ interface RoleGroup { category: string; count: number; roles: RoleDetail[]; }
  * platform (the engine reads this configuration when it initializes a record's approval steps).
  */
 @Component({
-  selector: 'page-approval-workflows',
-  standalone: true,
-  imports: [FormsModule, PageHeaderComponent, PanelComponent],
-  template: `
+    selector: 'page-approval-workflows',
+    imports: [FormsModule, PageHeaderComponent, PanelComponent],
+    template: `
     <dmis-page-header title="Approval Workflows" icon="fa-sitemap"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Approval Workflows'}]">
     </dmis-page-header>
@@ -156,7 +155,7 @@ interface RoleGroup { category: string; count: number; roles: RoleDetail[]; }
     }
 
   `,
-  styles: [`
+    styles: [`
     .lvl { display:grid; grid-template-columns: 34px 2fr 1.3fr auto auto auto; gap:0.6rem; align-items:center;
            border:1px solid var(--border); border-radius:10px; padding:0.5rem 0.7rem; background:var(--card-bg,#fff); }
     .lvl.off { opacity:0.55; }
@@ -169,7 +168,7 @@ interface RoleGroup { category: string; count: number; roles: RoleDetail[]; }
     .addrow { display:flex; gap:0.6rem; align-items:center; margin-top:0.8rem; padding-top:0.8rem; border-top:1px dashed var(--border); }
     .autolvl { display:grid; grid-template-columns: 34px 1fr 210px; gap:0.7rem; align-items:center;
                border:1px solid var(--border); border-radius:10px; padding:0.5rem 0.7rem; background:var(--card-bg,#fff); }
-  `],
+  `]
 })
 export class ApprovalWorkflowsComponent {
   private http = inject(HttpClient);

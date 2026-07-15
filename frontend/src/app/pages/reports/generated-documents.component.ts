@@ -13,10 +13,9 @@ import { PanelComponent } from '../../shell/panel.component';
  * auth-protected /storage/reports/ prefix and opens through the token.
  */
 @Component({
-  selector: 'page-generated-documents',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-generated-documents',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
     th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: #6c757d; padding: 8px 10px; border-bottom: 2px solid #e3e6ed; }
     td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
@@ -30,7 +29,7 @@ import { PanelComponent } from '../../shell/panel.component';
     .btn-dl:hover { background: #eef4fb; }
     .empty { text-align: center; color: #94a3b8; padding: 30px 0; font-size: 0.85rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Generated Documents" icon="fa-file-pdf"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Reports & Analytics'}, {label:'Generated Documents'}]">
     </dmis-page-header>
@@ -68,7 +67,7 @@ import { PanelComponent } from '../../shell/panel.component';
         </tbody>
       </table>
     </dmis-panel>
-  `,
+  `
 })
 export class GeneratedDocumentsComponent implements OnInit {
   private readonly http = inject(HttpClient);

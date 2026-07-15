@@ -25,10 +25,9 @@ interface IndexResponse {
  * registry with acknowledgement counts and implementation progress bars.
  */
 @Component({
-  selector: 'page-oh-directives',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
-  styles: [`
+    selector: 'page-oh-directives',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
+    styles: [`
     .filter-bar select, .filter-bar input[type="date"] { padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.78rem; background: #fff; color: var(--text-dark); font-family: inherit; }
     .progress { background: #e9ecef; border-radius: 0.375rem; overflow: hidden; display: flex; }
     .progress-bar { background: #0d6efd; color: #fff; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; white-space: nowrap; transition: width 0.6s ease; }
@@ -51,7 +50,7 @@ interface IndexResponse {
     .page-links span.active { background: #0891b2; color: #fff; font-weight: 700; }
     .page-links span.dim { opacity: 0.4; cursor: default; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="One Health Directives" icon="fa-gavel"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'One Health'}, {label:'Directives'}]">
       @if (myPending() > 0) {
@@ -170,7 +169,7 @@ interface IndexResponse {
         }
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class OhDirectivesComponent implements OnInit {
   private http = inject(HttpClient);

@@ -29,10 +29,9 @@ interface ActionsResponse {
  * with edit mode and the live progress slider that rolls up into the event bar.
  */
 @Component({
-  selector: 'page-oh-action-tracking',
-  standalone: true,
-  imports: [FormsModule, RouterLink, NgTemplateOutlet, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-oh-action-tracking',
+    imports: [FormsModule, RouterLink, NgTemplateOutlet, PageHeaderComponent, PanelComponent],
+    styles: [`
     .progress { background: #e9ecef; border-radius: 0.375rem; overflow: hidden; display: flex; }
     .progress-bar { background: #198754; color: #fff; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; white-space: nowrap; transition: width 0.6s ease; }
     .list-group-item { padding: 0.85rem 1.1rem; border-bottom: 1px solid #f1f5f9; }
@@ -53,7 +52,7 @@ interface ActionsResponse {
     .oh-modal-body { padding: 1.25rem; }
     .oh-modal-footer { display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.85rem 1.25rem; border-top: 1px solid #e9ecef; }
   `],
-  template: `
+    template: `
     @if (data(); as d) {
       <dmis-page-header title="Action Tracking" icon="fa-tasks"
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'One Health'},
@@ -289,7 +288,7 @@ interface ActionsResponse {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class OhActionTrackingComponent implements OnInit {
   private http = inject(HttpClient);

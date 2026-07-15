@@ -26,10 +26,9 @@ interface NeedLine { immediate_needs: string; recommendations: string; }
  * Edit mode (/:id/edit) reloads a Draft/Pending assessment; Completed ones are immutable.
  */
 @Component({
-  selector: 'page-assessment-form',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, PageHeaderComponent, PanelComponent, RegionDistrictPickerComponent],
-  styles: [`
+    selector: 'page-assessment-form',
+    imports: [DecimalPipe, FormsModule, PageHeaderComponent, PanelComponent, RegionDistrictPickerComponent],
+    styles: [`
     label { display: block; font-size: 0.75rem; font-weight: 600; color: #334155; margin: 10px 0 3px; }
     input, select, textarea { width: 100%; font-size: 0.82rem; border: 1px solid #cbd5e1; border-radius: 7px; padding: 6px 9px; font-family: inherit; box-sizing: border-box; }
     input:disabled, select:disabled { background: #f1f5f9; color: #64748b; }
@@ -51,7 +50,7 @@ interface NeedLine { immediate_needs: string; recommendations: string; }
     .hint { font-size: 0.78rem; color: #6c757d; margin: 4px 0 8px; }
     .current-val { font-size: 0.78rem; color: #475569; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 7px; padding: 5px 9px; margin-top: 4px; }
   `],
-  template: `
+    template: `
     <dmis-page-header [title]="(editId ? 'Edit' : 'Create') + ' Disaster Needs Assessment'" icon="fa-clipboard-check"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Assessment', url:'/m/response/assessments'}, {label: editId ? ('#' + editId + ' — Edit') : 'Create'}]">
     </dmis-page-header>
@@ -182,7 +181,7 @@ interface NeedLine { immediate_needs: string; recommendations: string; }
       <button type="button" class="btn-sm b-red" [disabled]="saving()" (click)="save()">
         <i class="fas fa-save"></i> {{ saving() ? 'Saving…' : (editId ? 'Save Changes' : 'Save Assessment (Draft)') }}</button>
     </div>
-  `,
+  `
 })
 export class AssessmentFormComponent implements OnInit {
   private readonly http = inject(HttpClient);

@@ -32,10 +32,9 @@ interface Movement {
  * with stock_movements as the one audit journal.
  */
 @Component({
-  selector: 'page-warehouse-ops',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-warehouse-ops',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .alert-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
     .al { border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; }
     .al b { font-size: 1.25rem; display: block; }
@@ -76,7 +75,7 @@ interface Movement {
     .mv-Borrow { background: #ede9fe; color: #5b21b6; } .mv-Return { background: #d1fae5; color: #065f46; }
     .swal2-input-label { font-size: 0.78rem; color: #475569; margin: 6px 0 0; text-align: left; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Warehouse Operations" icon="fa-warehouse"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Warehouse Operations'}]">
       <a routerLink="/m/response/dispatch" class="btn-add"><i class="fas fa-truck-fast"></i> Dispatch Console</a>
@@ -270,7 +269,7 @@ interface Movement {
         </table>
       </dmis-panel>
     }
-  `,
+  `
 })
 export class WarehouseOpsComponent implements OnInit {
   private readonly http = inject(HttpClient);

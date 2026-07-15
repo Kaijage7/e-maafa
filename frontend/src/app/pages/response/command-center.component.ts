@@ -32,10 +32,9 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
  * Builds on the R11 DRF-lane board (72-hour clock, lanes, critical tasks, challenges, timeline).
  */
 @Component({
-  selector: 'page-command-center',
-  standalone: true,
-  imports: [FormsModule, RouterLink, UpperCasePipe, DecimalPipe, PageHeaderComponent],
-  styles: [`
+    selector: 'page-command-center',
+    imports: [FormsModule, RouterLink, UpperCasePipe, DecimalPipe, PageHeaderComponent],
+    styles: [`
     :host { display: block; background: #0f172a; margin: -16px; padding: 16px; min-height: calc(100vh - 60px); }
     .card { background: #1c2536; border: 1px solid #2c3a50; border-radius: 6px; padding: 13px 15px; color: #e2e8f0; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }
     .card h4 { margin: 0 0 9px; font-size: 0.75rem; text-transform: uppercase; color: #93a7c4; letter-spacing: 0.9px; font-weight: 800; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
@@ -186,7 +185,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
     .hub-quick a { font-size: 0.72rem; font-weight: 700; color: #7dd3fc; text-decoration: none; border: 1px solid #33485f; border-radius: 999px; padding: 3px 10px; background: #0f172a; }
     .hub-quick a:hover { border-color: #38bdf8; background: #1c2f4a; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Command Post — Disaster Response Coordination" icon="fa-tower-broadcast"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Command Post'}]">
       <a routerLink="/m/response/eocc" class="btn-add"><i class="fas fa-terminal"></i> EOCC Board</a>
@@ -991,7 +990,7 @@ const POSTURE_ORDER = ['monitoring', 'emergency', 'disaster', 'safeguard'];
         </div>
       </div>
     }
-  `,
+  `
 })
 export class CommandCenterComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);

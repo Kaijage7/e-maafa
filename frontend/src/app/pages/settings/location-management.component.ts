@@ -20,10 +20,9 @@ interface Ward { id: number; name: string; wardCode: string | null; isActive: bo
  * Add / edit / delete at each level, with the hierarchy delete-guards surfaced from the API.
  */
 @Component({
-  selector: 'page-location-management',
-  standalone: true,
-  imports: [FormsModule, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-location-management',
+    imports: [FormsModule, DecimalPipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Location Management" icon="fa-map-location-dot"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Location Management'}]" />
 
@@ -173,7 +172,7 @@ interface Ward { id: number; name: string; wardCode: string | null; isActive: bo
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .cols { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; align-items:start; }
     .lvl { display:flex; flex-direction:column; gap:6px; max-height:62vh; overflow-y:auto; }
     .node { border:1px solid var(--border); border-radius:9px; padding:0.5rem 0.7rem; cursor:pointer; position:relative; }
@@ -192,7 +191,7 @@ interface Ward { id: number; name: string; wardCode: string | null; isActive: bo
     .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:8px; padding:0.5rem 1rem; cursor:pointer; }
     @media (max-width:1280px){ .cols { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width:760px){ .cols { grid-template-columns:1fr; } }
-  `],
+  `]
 })
 export class LocationManagementComponent {
   private http = inject(HttpClient);

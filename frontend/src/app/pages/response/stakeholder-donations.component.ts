@@ -29,10 +29,9 @@ interface NdmfRow {
  * are the National Disaster Management Fund ledger.
  */
 @Component({
-  selector: 'page-stakeholder-donations',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-stakeholder-donations',
+    imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.3rem; display: block; }
@@ -66,7 +65,7 @@ interface NdmfRow {
     .c-pending { background: #fef3c7; color: #92400e; } .c-received { background: #d1fae5; color: #065f46; }
     .c-acknowledged { background: #dbeafe; color: #1e40af; } .c-paid { background: #d1fae5; color: #065f46; } .c-voided { background: #e2e8f0; color: #334155; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Stakeholder Donations" icon="fa-hand-holding-heart"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Stakeholder Donations'}]">
       @if (canViewInternal()) {
@@ -186,7 +185,7 @@ interface NdmfRow {
         </table>
       </dmis-panel>
     }
-  `,
+  `
 })
 export class StakeholderDonationsComponent implements OnInit {
   private readonly http = inject(HttpClient);

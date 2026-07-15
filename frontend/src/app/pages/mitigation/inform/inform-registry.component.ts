@@ -8,10 +8,9 @@ interface DimGroup { dimension: string; components: CompGroup[]; count: number }
 
 /** INFORM tab — Indicator Registry grouped by dimension → component (not one flat wall of IDs). */
 @Component({
-  selector: 'page-inform-registry',
-  standalone: true,
-  imports: [FormsModule],
-  styles: [INFORM_STYLES, `
+    selector: 'page-inform-registry',
+    imports: [FormsModule],
+    styles: [INFORM_STYLES, `
     :host { display:block; }
     .tools { display:flex; flex-wrap:wrap; gap:.55rem; align-items:flex-end; margin-bottom:.85rem; }
     .tools .field { min-width:180px; }
@@ -27,7 +26,7 @@ interface DimGroup { dimension: string; components: CompGroup[]; count: number }
     th { font-size:.72rem; text-transform:uppercase; color:#64748b; }
     .id { font-family:ui-monospace,monospace; font-size:.75rem; }
   `],
-  template: `
+    template: `
     <p class="muted">Standardised indicators that feed the INFORM risk model — grouped by dimension and component for a clear drill path. Owner/sector, tier, weight and source range shown per row.</p>
 
     <div class="tools">
@@ -92,7 +91,7 @@ interface DimGroup { dimension: string; components: CompGroup[]; count: number }
       }
       <p class="muted" style="margin-top:.5rem;">{{ filteredCount() }} of {{ all().length }} indicators shown.</p>
     }
-  `,
+  `
 })
 export class InformRegistryComponent implements OnInit {
   private svc = inject(InformService);

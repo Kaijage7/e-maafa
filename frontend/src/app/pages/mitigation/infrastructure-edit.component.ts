@@ -10,10 +10,9 @@ import { InfrastructureCreateComponent } from './infrastructure-create.component
  * Shares the form template/fields with the create reproduction, as the Blade views do.
  */
 @Component({
-  selector: 'page-infrastructure-edit',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, RouterLink],
-  template: `
+    selector: 'page-infrastructure-edit',
+    imports: [PageHeaderComponent, PanelComponent, RouterLink],
+    template: `
     <dmis-page-header title="Edit Infrastructure Item" icon="fa-road"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Infrastructure Items', url:'/m/prevention-mitigation/infrastructure'}, {label: name()}, {label:'Edit'}]" />
 
@@ -123,7 +122,7 @@ import { InfrastructureCreateComponent } from './infrastructure-create.component
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class InfrastructureEditComponent extends InfrastructureCreateComponent {
   private id: number;

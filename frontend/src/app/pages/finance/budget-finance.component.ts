@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -28,10 +28,9 @@ interface Opt { id: number; name: string; }
  * Everything is permission-gated to mirror the backend ({@code budget_and_finance.*}).
  */
 @Component({
-  selector: 'page-budget-finance',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-budget-finance',
+    imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.25rem; display: block; color: #0f5132; }
@@ -73,7 +72,7 @@ interface Opt { id: number; name: string; }
     .dn-error { background: #fee2e2; color: #991b1b; border-radius: 8px; padding: 0.5rem 0.7rem; font-size: 0.8rem; margin-bottom: 0.5rem; }
     .dn-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.3rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Budget & Finance" icon="fa-coins"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Budget & Finance'}]">
     </dmis-page-header>
@@ -246,7 +245,7 @@ interface Opt { id: number; name: string; }
           <button class="btn-pri" [disabled]="saving() || !dIncidentId || !dAmount || dAmount <= 0" (click)="saveDisburse()">{{ saving() ? 'Disbursing…' : 'Disburse' }}</button></div>
       </div></div>
     }
-  `,
+  `
 })
 export class BudgetFinanceComponent implements OnInit {
   private readonly http = inject(HttpClient);

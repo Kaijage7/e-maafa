@@ -12,10 +12,9 @@ const TYPES = ['Government Institution', 'Non-Governmental Organization (NGO)', 
  * pending-verification and sends a genuine confirmation email plus optional SMS via the shared delivery path.
  */
 @Component({
-  selector: 'public-register-partner',
-  standalone: true,
-  imports: [RouterLink],
-  styles: [`
+    selector: 'public-register-partner',
+    imports: [RouterLink],
+    styles: [`
     .rp-wrap { max-width: min(1560px, 94vw); margin: 0 auto; padding: 6.5rem 1.25rem 4rem; }
     .rp-inner { max-width: 860px; margin: 0 auto; }
     .rp-head { background: #0d3b66; color: #fff; border-radius: 18px 18px 0 0; padding: 1.6rem 1.6rem 1.4rem; position: relative; overflow: hidden; }
@@ -36,7 +35,7 @@ const TYPES = ['Government Institution', 'Non-Governmental Organization (NGO)', 
     .rp-step { font-size:.9rem; color:#475569; background:#f1f5f9; border-radius:30px; padding:.3rem .8rem; }
     .rp-done { text-align:center; background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:2.6rem 1.6rem; box-shadow:0 10px 30px rgba(13,59,102,.08); }
   `],
-  template: `
+    template: `
     <div class="rp-wrap">
       <!-- Full-width band; the form itself stays at a readable width -->
       <div class="rp-inner">
@@ -119,7 +118,7 @@ const TYPES = ['Government Institution', 'Non-Governmental Organization (NGO)', 
       }
       </div>
     </div>
-  `,
+  `
 })
 export class RegisterPartnerComponent {
   L = inject(PortalLabels);

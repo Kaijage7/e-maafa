@@ -13,10 +13,9 @@ type Row = Record<string, any>;
  * formulaAudit[] shows expression → substituted inputs → result for each step.
  */
 @Component({
-  selector: 'page-economics-of-disaster',
-  standalone: true,
-  imports: [DecimalPipe, DatePipe, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-economics-of-disaster',
+    imports: [DecimalPipe, DatePipe, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .intro { background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:0.88rem; color:#0c4a6e; line-height:1.5; }
     .intro strong { color:#0f172a; }
     .auto-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px; }
@@ -55,7 +54,7 @@ type Row = Record<string, any>;
     .expr { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:0.76rem; color:#334155; }
     .inputs { font-size:0.74rem; color:#64748b; max-width:280px; word-break:break-word; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Economics of Disaster" icon="fa-chart-line"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Budget & Finance', url:'/m/budget-finance/budgets'}, {label:'Economics of Disaster'}]">
     </dmis-page-header>
@@ -363,7 +362,7 @@ type Row = Record<string, any>;
         <p class="muted" style="margin-top:8px;">{{ d['disclaimer'] }}</p>
       </dmis-panel>
     }
-  `,
+  `
 })
 export class EconomicsOfDisasterComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);

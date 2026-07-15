@@ -23,10 +23,9 @@ interface ControlHint { title: string; scope: string; permissions: string; }
  * grants as authorities, so the matrix is the operational access-control surface.
  */
 @Component({
-  selector: 'page-roles-permissions',
-  standalone: true,
-  imports: [FormsModule, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-roles-permissions',
+    imports: [FormsModule, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Roles & Permissions" icon="fa-user-shield"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Roles & Permissions'}]">
       @if (canManage()) {
@@ -202,7 +201,7 @@ interface ControlHint { title: string; scope: string; permissions: string; }
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .split2 { display:grid; grid-template-columns:340px 1fr; gap:12px; align-items:start; }
     .rlist { display:flex; flex-direction:column; gap:6px; max-height:66vh; overflow-y:auto; }
     .role-band { display:grid; gap:5px; }
@@ -249,7 +248,7 @@ interface ControlHint { title: string; scope: string; permissions: string; }
     .btn-cancel { border:1px solid var(--border); background:#fff; border-radius:8px; padding:0.5rem 1rem; cursor:pointer; }
     @media (max-width:991px){ .split2 { grid-template-columns:1fr; } .control-map { grid-template-columns:1fr; } }
     @media (max-width:640px){ .role-form-grid { grid-template-columns:1fr; } }
-  `],
+  `]
 })
 export class RolesPermissionsComponent {
   private http = inject(HttpClient);

@@ -49,10 +49,9 @@ interface GlossaryTerm {
 }
 
 @Component({
-  selector: 'page-institution-registry',
-  standalone: true,
-  imports: [RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-institution-registry',
+    imports: [RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Institution Registry" icon="fa-sitemap"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'System Settings'}, {label:'Institution Registry'}]">
       @if (canManage()) {
@@ -333,7 +332,7 @@ interface GlossaryTerm {
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .seg-tabs { display:flex; flex-wrap:wrap; gap:0.4rem; margin:0.8rem 0 1rem; }
     .seg-tabs button { border:1px solid var(--border); background:#fff; color:var(--text-mid); border-radius:6px; padding:0.45rem 0.75rem; font-weight:700; cursor:pointer; }
     .seg-tabs button.active { background:#003366; color:#fff; border-color:#003366; }
@@ -373,7 +372,7 @@ interface GlossaryTerm {
     .btn-link { border:1px solid #cbd5e1; background:#fff; color:#334155; border-radius:6px; padding:0.35rem 0.65rem; font-size:0.75rem; font-weight:800; text-decoration:none; }
     .btn-link.primary { background:#0f766e; border-color:#0f766e; color:#fff; }
     @media (max-width: 680px) { .form-grid { grid-template-columns:1fr; } }
-  `],
+  `]
 })
 export class InstitutionRegistryComponent {
   private http = inject(HttpClient);

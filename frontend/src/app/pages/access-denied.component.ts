@@ -4,10 +4,9 @@ import { AuthService } from '../core/auth.service';
 
 /** Shown when a signed-in user opens a module/screen their role is not permitted to access. */
 @Component({
-  selector: 'page-access-denied',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'page-access-denied',
+    imports: [RouterLink],
+    template: `
     <div style="min-height:70vh;display:flex;align-items:center;justify-content:center;padding:2rem;">
       <div style="max-width:520px;text-align:center;">
         <div style="font-size:3.4rem;color:#dc2626;margin-bottom:0.6rem;"><i class="fas fa-lock"></i></div>
@@ -22,7 +21,7 @@ import { AuthService } from '../core/auth.service';
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class AccessDeniedComponent {
   private auth = inject(AuthService);

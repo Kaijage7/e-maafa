@@ -5,10 +5,9 @@ import { AGENCY_HAZARDS, LIVESTOCK_CONDITIONS, TRENDS } from './ew-agency.model'
 /** MoLF — Ministry of Livestock and Fisheries. Flows like MoH (event-based outbreaks): livestock disease /
  * fisheries condition, affected animals, deaths, trend, response actions. */
 @Component({
-  selector: 'page-mlf-livestock',
-  standalone: true,
-  imports: [AgencyEventConsoleComponent],
-  template: `<ew-agency-event-console [config]="config"></ew-agency-event-console>`,
+    selector: 'page-mlf-livestock',
+    imports: [AgencyEventConsoleComponent],
+    template: `<ew-agency-event-console [config]="config"></ew-agency-event-console>`
 })
 export class MlfLivestockComponent {
   config: ConsoleConfig = {

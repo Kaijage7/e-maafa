@@ -22,10 +22,9 @@ interface EcResponse {
 }
 
 @Component({
-  selector: 'page-evacuation-centers',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, DecimalPipe, RouterLink],
-  template: `
+    selector: 'page-evacuation-centers',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, DecimalPipe, RouterLink],
+    template: `
     <dmis-page-header title="Evacuation Centers" icon="fa-house-user"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Evacuation Centers'}]">
       @if (canManage()) {
@@ -127,7 +126,7 @@ interface EcResponse {
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class EvacuationCentersComponent {
   private http = inject(HttpClient);

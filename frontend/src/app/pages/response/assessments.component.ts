@@ -22,10 +22,9 @@ interface AssessmentRow {
  * is the read-only completed-reports view.
  */
 @Component({
-  selector: 'page-assessments',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-assessments',
+    imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.5rem; display: block; }
@@ -53,7 +52,7 @@ interface AssessmentRow {
     .clear-btn:hover { background: #f1f5f9; }
     .empty { text-align: center; color: #94a3b8; padding: 30px 0; font-size: 0.85rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header [title]="headerTitle" icon="fa-clipboard-check"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:headerCrumb}, {label:headerTitle}]">
       <a routerLink="/m/response/dlna" class="btn-add" style="background:#0d3b66;"><i class="fas fa-file-lines"></i> DLNA (NDRF Annex 1)</a>
@@ -156,7 +155,7 @@ interface AssessmentRow {
         </tbody>
       </table>
     </dmis-panel>
-  `,
+  `
 })
 export class AssessmentsComponent implements OnInit {
   private readonly http = inject(HttpClient);

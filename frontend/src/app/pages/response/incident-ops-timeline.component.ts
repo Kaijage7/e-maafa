@@ -26,10 +26,9 @@ const SOURCE_META: Record<string, { label: string; icon: string; color: string }
 const PAGE_SIZE = 30;
 
 @Component({
-  selector: 'dmis-incident-ops-timeline',
-  standalone: true,
-  imports: [PanelComponent],
-  styles: [`
+    selector: 'dmis-incident-ops-timeline',
+    imports: [PanelComponent],
+    styles: [`
     .ot-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0.75rem 0.85rem; border-bottom: 1px solid #eef1f5; }
     .ot-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #d7dce3; background: #fff;
                color: #3b4658; border-radius: 999px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600;
@@ -50,7 +49,7 @@ const PAGE_SIZE = 30;
     .ot-empty { padding: 1.4rem 1rem; text-align: center; color: var(--text-light); font-size: 0.85rem; }
     .ot-empty i { display: block; font-size: 1.4rem; margin-bottom: 0.4rem; color: #b8c2cf; }
   `],
-  template: `
+    template: `
     <dmis-panel title="Operations Timeline" icon="fa-timeline" [badge]="allCount() + ' entries'">
       <div class="panel-body" style="padding:0;">
         @if (allCount() > 0) {
@@ -104,7 +103,7 @@ const PAGE_SIZE = 30;
         }
       </div>
     </dmis-panel>
-  `,
+  `
 })
 export class IncidentOpsTimelineComponent {
   private readonly http = inject(HttpClient);

@@ -10,10 +10,9 @@ import { FormsModule } from '@angular/forms';
  * RETURNS it, the return note shows here and the entity revises & re-sends. All native e-MAAFA — no INFORM code.
  */
 @Component({
-  selector: 'dmis-entity-taskings',
-  standalone: true,
-  imports: [FormsModule, DatePipe],
-  template: `
+    selector: 'dmis-entity-taskings',
+    imports: [FormsModule, DatePipe],
+    template: `
     @if (open().length) {
       <div class="et-box">
         <div class="et-hd"><i class="fas fa-inbox"></i> Scanner tasking inbox <span class="et-n">{{ open().length }}</span>
@@ -63,7 +62,7 @@ import { FormsModule } from '@angular/forms';
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .et-box { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:0.7rem 0.9rem; margin:0.3rem 0 0.9rem; }
     .et-hd { font-size:0.9rem; font-weight:800; color:#166534; display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.3rem; }
     .et-n { font-size:0.75rem; background:#16a34a; color:#fff; border-radius:20px; padding:0.1rem 0.55rem; }
@@ -100,7 +99,7 @@ import { FormsModule } from '@angular/forms';
     .et-send { background:#0d3b66; color:#fff; border:none; border-radius:7px; padding:0.35rem 1rem; font-weight:700; font-size:0.8rem; cursor:pointer; } .et-send:disabled { opacity:0.5; cursor:default; }
     .et-flash { margin-top:0.5rem; font-size:0.8rem; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:8px; padding:0.4rem 0.7rem; }
     .et-flash.err { background:#fef2f2; color:#991b1b; border-color:#fecaca; }
-  `],
+  `]
 })
 export class EntityTaskingsComponent implements OnInit {
   agency = input.required<string>();

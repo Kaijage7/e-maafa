@@ -9,10 +9,9 @@ import { PanelComponent } from '../../shell/panel.component';
  * quirk DELIBERATELY FIXED (fields prefill).
  */
 @Component({
-  selector: 'page-past-disaster-edit',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, RouterLink],
-  template: `
+    selector: 'page-past-disaster-edit',
+    imports: [PageHeaderComponent, PanelComponent, RouterLink],
+    template: `
     <dmis-page-header title="Edit Past Disaster" icon="fa-edit"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation'}, {label:'Disaster Repository', url:'/m/prevention-mitigation/past-disasters'}, {label: eventName()}]" />
 
@@ -114,7 +113,7 @@ import { PanelComponent } from '../../shell/panel.component';
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class PastDisasterEditComponent {
   private http = inject(HttpClient);

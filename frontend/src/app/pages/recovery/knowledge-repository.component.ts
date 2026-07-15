@@ -27,10 +27,9 @@ const TYPE_COLOR: Record<string, string> = {
  * Approved review. Closes the cycle: learning feeds the next mitigation/preparedness round.
  */
 @Component({
-  selector: 'page-knowledge-repository',
-  standalone: true,
-  imports: [FormsModule, DatePipe, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-knowledge-repository',
+    imports: [FormsModule, DatePipe, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Lessons Learned" icon="fa-book"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Recovery'}, {label:'Lessons Learned'}]">
       <button class="btn-add" type="button" (click)="openForm()"><i class="fas fa-plus"></i> Add Entry</button>
@@ -147,7 +146,7 @@ const TYPE_COLOR: Record<string, string> = {
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .f-lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); display: block; margin-bottom: 3px; }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1500; display: flex; align-items: flex-start; justify-content: center; padding: 3vh 1rem; overflow-y: auto; }
     .modal-card { background: #fff; border-radius: 16px; max-width: 680px; width: 100%; padding: 1.4rem 1.5rem; }
@@ -156,7 +155,7 @@ const TYPE_COLOR: Record<string, string> = {
     .r-link { color: #0d6efd; text-decoration: none; font-weight: 700; }
     .doc-btn { border: 0; background: transparent; color: #0d6efd; padding: 0; font-size: 0.8rem; font-weight: 800; cursor: pointer; text-align: left; }
     .doc-btn.linklike { text-decoration: none; display: inline-flex; align-items: center; }
-  `],
+  `]
 })
 export class KnowledgeRepositoryComponent {
   private http = inject(HttpClient);

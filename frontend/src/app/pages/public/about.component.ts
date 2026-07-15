@@ -11,10 +11,9 @@ import { ABOUT_LABELS } from './about-i18n';
  * Laravel TranslationSeeder via ABOUT_LABELS (en/sw).
  */
 @Component({
-  selector: 'public-about',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'public-about',
+    imports: [RouterLink],
+    template: `
     <div class="v2-page-content" style="max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 1.5rem 4rem;">
       <a routerLink="/" style="color:#60a5fa;text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_home') }}</a>
 
@@ -72,7 +71,7 @@ import { ABOUT_LABELS } from './about-i18n';
         </div>
       </section>
     </div>
-  `,
+  `
 })
 export class AboutComponent {
   L = inject(PortalLabels);

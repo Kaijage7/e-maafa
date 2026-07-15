@@ -14,10 +14,9 @@ interface CalApiRow { hazardName: string; hazardNameSw: string | null; icon: str
  * bilingual name + icon/colour). Fully bilingual via PortalLabels.lang().
  */
 @Component({
-  selector: 'public-hazard-calendar',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'public-hazard-calendar',
+    imports: [RouterLink],
+    template: `
     <div class="v2-page-content cal-wrap">
       <a routerLink="/education" class="cal-back"><i class="fas fa-arrow-left me-1"></i> {{ t('back') }}</a>
       <h1 class="cal-title">
@@ -68,7 +67,7 @@ interface CalApiRow { hazardName: string; hazardNameSw: string | null; icon: str
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .cal-wrap { max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 2rem 4rem; }
     .cal-back { color: #60a5fa; text-decoration: none; font-size: 0.9rem; }
     .cal-title { font-weight: 800; color: var(--text-primary, #2C3E50); margin: 0.8rem 0 0.2rem; }
@@ -102,7 +101,7 @@ interface CalApiRow { hazardName: string; hazardNameSw: string | null; icon: str
     @media (max-width: 640px) {
       .cal-wrap { padding: 6rem 1rem 2.5rem; }
     }
-  `],
+  `]
 })
 export class HazardCalendarComponent {
   readonly L = inject(PortalLabels);

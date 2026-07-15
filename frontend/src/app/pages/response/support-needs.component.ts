@@ -17,10 +17,9 @@ interface PledgeRow { id: number; target_type: string; measure_title: string | n
  * see the review queue and accept/decline; accepting funds the item so it leaves the feed.
  */
 @Component({
-  selector: 'page-support-needs',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-support-needs',
+    imports: [DatePipe, DecimalPipe, FormsModule, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background:#fff; border:1px solid #e3e6ed; border-radius:10px; padding:10px 14px; }
     .stat b { font-size:1.3rem; display:block; } .stat span { font-size:0.75rem; color:#6c757d; text-transform:uppercase; letter-spacing:.4px; }
@@ -46,7 +45,7 @@ interface PledgeRow { id: number; target_type: string; measure_title: string | n
     .dn-l input, .dn-l select, .dn-l textarea { display:block; width:100%; margin-top:3px; box-sizing:border-box; font-size:.84rem; border:1px solid #cbd5e1; border-radius:7px; padding:6px 9px; font-family:inherit; background:#fff; }
     .dn-error { background:#fee2e2; color:#991b1b; border-radius:8px; padding:.5rem .7rem; font-size:.8rem; margin-bottom:.5rem; } .dn-actions { display:flex; justify-content:flex-end; gap:.5rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Support Needs" icon="fa-hand-holding-heart"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Stakeholder Portal'}, {label:'Support Needs'}]">
     </dmis-page-header>
@@ -139,7 +138,7 @@ interface PledgeRow { id: number; target_type: string; measure_title: string | n
           <button class="btn-pri" [disabled]="saving() || (pType==='cash' && (!pAmount || pAmount<=0)) || (!canPledge() && !pStakeholderId)" (click)="confirmPledge()">{{ saving() ? 'Submitting…' : 'Submit pledge' }}</button></div>
       </div></div>
     }
-  `,
+  `
 })
 export class SupportNeedsComponent implements OnInit {
   private readonly http = inject(HttpClient);

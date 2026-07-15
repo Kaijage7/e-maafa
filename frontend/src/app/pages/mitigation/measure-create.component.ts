@@ -9,10 +9,9 @@ import { PanelComponent } from '../../shell/panel.component';
  * no working create UI (deliberately fixed here); this page implements the intended flow.
  */
 @Component({
-  selector: 'page-measure-create',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, RouterLink],
-  template: `
+    selector: 'page-measure-create',
+    imports: [PageHeaderComponent, PanelComponent, RouterLink],
+    template: `
     <dmis-page-header [title]="pageTitle" icon="fa-shield-virus"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation', url:'/m/prevention-mitigation/dashboard'}, {label:'Mitigation Measures', url:'/m/prevention-mitigation/measures'}, {label: crumb}]">
       <a routerLink="/m/prevention-mitigation/measures" class="btn-add" style="background:var(--text-mid);">
@@ -165,7 +164,7 @@ import { PanelComponent } from '../../shell/panel.component';
         </div>
       </div>
     </form>
-  `,
+  `
 })
 export class MeasureCreateComponent {
   protected http = inject(HttpClient);

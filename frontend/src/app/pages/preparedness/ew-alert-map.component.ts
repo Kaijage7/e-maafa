@@ -64,10 +64,9 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
  * and posts to /ew-api which calls the UNCHANGED engine and returns the identical PDF.
  */
 @Component({
-  selector: 'page-ew-alert-map',
-  standalone: true,
-  imports: [PageHeaderComponent, DatePipe, EwCrossAgencyPanelComponent, EwPreviewModalComponent, RouterLink, EntityTaskingsComponent],
-  template: `
+    selector: 'page-ew-alert-map',
+    imports: [PageHeaderComponent, DatePipe, EwCrossAgencyPanelComponent, EwPreviewModalComponent, RouterLink, EntityTaskingsComponent],
+    template: `
     <dmis-page-header title="Early Warning — New Bulletin" icon="fa-satellite-dish"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Early Warning Systems', url:'/m/preparedness/early-warnings'}, {label:'New Bulletin'}]">
       <button class="btn-add" type="button" [disabled]="generating()" (click)="generate()">
@@ -206,7 +205,7 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .day-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
     .day-tab { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; border: 1px solid var(--border); background: #fff; border-radius: 10px; padding: 0.4rem 0.8rem; cursor: pointer; position: relative; min-width: 96px; }
     .day-tab.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0,51,102,0.1); }
@@ -257,7 +256,7 @@ const LIK = ['LOW', 'MEDIUM', 'HIGH'];
     .map-status { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 0.45rem 0.9rem; border-radius: 20px; font-size: 0.78rem; z-index: 600; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
     .map-status.err { background: #dc2626; }
     .leaflet-pane.delineation-pane { z-index: 650; }
-  `],
+  `]
 })
 export class EwAlertMapComponent {
   private http = inject(HttpClient);

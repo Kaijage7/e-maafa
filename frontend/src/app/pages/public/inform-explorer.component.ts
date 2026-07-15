@@ -58,10 +58,9 @@ const DIM_DESC: Record<string, string> = {
  * is fetched live from the read-only /v1/portal/inform endpoints — the public can never edit the model.
  */
 @Component({
-  selector: 'public-inform-explorer',
-  standalone: true,
-  imports: [],
-  styles: [`
+    selector: 'public-inform-explorer',
+    imports: [],
+    styles: [`
     :host { display:block; font-family:system-ui, -apple-system, "Segoe UI", sans-serif; color:#1e293b; }
     .wrap { max-width:min(1560px, 94vw); margin:0 auto; padding:1rem; }
     .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; }
@@ -184,7 +183,7 @@ const DIM_DESC: Record<string, string> = {
     .chart-card .sub { font-size:.85rem; color:#64748b; margin:.1rem 0 .5rem; }
     .note { font-size:.85rem; color:#64748b; margin-top:.6rem; }
   `],
-  template: `
+    template: `
     @if (!embedded()) {
     <div class="hero">
       <div class="hero-row">
@@ -593,7 +592,7 @@ const DIM_DESC: Record<string, string> = {
 
       <p class="note">{{ t('note_a') }} {{ stats().regions }} {{ t('note_regions') }} · {{ stats().councils }} {{ t('note_councils') }} · {{ stats().indicators }} {{ t('note_indicators') }}. {{ t('note_b') }}</p>
     </div>
-  `,
+  `
 })
 export class PublicInformExplorerComponent implements AfterViewInit, OnDestroy {
   /** When embedded inside the Portal page, suppress the standalone hero. */

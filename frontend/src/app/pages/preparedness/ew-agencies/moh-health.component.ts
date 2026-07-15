@@ -4,10 +4,9 @@ import { DISEASES, TRENDS } from './ew-agency.model';
 
 /** MoH — Ministry of Health. Distinct fields: disease, confirmed cases, deaths, trend, response actions. */
 @Component({
-  selector: 'page-moh-health',
-  standalone: true,
-  imports: [AgencyEventConsoleComponent],
-  template: `<ew-agency-event-console [config]="config"></ew-agency-event-console>`,
+    selector: 'page-moh-health',
+    imports: [AgencyEventConsoleComponent],
+    template: `<ew-agency-event-console [config]="config"></ew-agency-event-console>`
 })
 export class MohHealthComponent {
   config: ConsoleConfig = {

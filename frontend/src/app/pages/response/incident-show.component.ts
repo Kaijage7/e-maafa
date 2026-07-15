@@ -19,10 +19,9 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
  * tasks/allocations and periodic situation (history) reports.
  */
 @Component({
-  selector: 'page-incident-show',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent, IncidentOpsTimelineComponent],
-  styles: [`
+    selector: 'page-incident-show',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent, StatCardComponent, IncidentOpsTimelineComponent],
+    styles: [`
     .detail-label { font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
     .detail-value { font-size: 0.85rem; color: var(--text-dark); }
     .wf-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -39,7 +38,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
     .label-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
     .media-wait { display: inline-flex; align-items: center; justify-content: center; height: 84px; min-width: 84px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; color: #94a3b8; font-size: 0.78rem; }
   `],
-  template: `
+    template: `
     @if (data(); as d) {
       <dmis-page-header [title]="d.incident.title" icon="fa-exclamation-triangle"
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'},
@@ -379,7 +378,7 @@ declare const Swal: any; // SweetAlert2, loaded per-page from the CDN exactly as
         <dmis-incident-ops-timeline [incidentId]="d.incident.id" />
       </div>
     }
-  `,
+  `
 })
 export class IncidentShowComponent implements OnInit {
   private http = inject(HttpClient);

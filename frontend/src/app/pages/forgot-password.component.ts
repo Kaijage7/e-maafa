@@ -10,10 +10,9 @@ import { RouterLink } from '@angular/router';
  * so ops are not misled when SMTP is not wired.
  */
 @Component({
-  selector: 'page-forgot-password',
-  standalone: true,
-  imports: [FormsModule, RouterLink],
-  styles: [`
+    selector: 'page-forgot-password',
+    imports: [FormsModule, RouterLink],
+    styles: [`
     .wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f1f5f9; padding: 20px; }
     .card { width: 420px; max-width: 94vw; background: #fff; border: 1px solid #e3e6ed; border-radius: 12px; padding: 30px 34px; }
     h1 { font-size: 1.15rem; color: #0d3b66; margin: 0 0 6px; }
@@ -30,7 +29,7 @@ import { RouterLink } from '@angular/router';
     .back { display: inline-block; margin-top: 16px; font-size: 0.82rem; color: #0d3b66; font-weight: 600; text-decoration: none; }
     .back:hover { text-decoration: underline; }
   `],
-  template: `
+    template: `
     <div class="wrap">
       <div class="card">
         <h1><i class="fas fa-key" style="opacity:0.6; margin-right:6px"></i> Reset your password</h1>
@@ -64,7 +63,7 @@ import { RouterLink } from '@angular/router';
         <a class="back" routerLink="/login"><i class="fas fa-arrow-left"></i> Back to sign in</a>
       </div>
     </div>
-  `,
+  `
 })
 export class ForgotPasswordComponent {
   private readonly http = inject(HttpClient);

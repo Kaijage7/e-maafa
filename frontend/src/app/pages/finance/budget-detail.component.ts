@@ -25,10 +25,9 @@ interface Opt { id: number; name: string; }
  * Every action is permission-gated to match the backend; the queues here ARE the per-budget approval lists.
  */
 @Component({
-  selector: 'page-budget-detail',
-  standalone: true,
-  imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-budget-detail',
+    imports: [DecimalPipe, FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .recon { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 14px; }
     .recon .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .recon b { font-size: 1.2rem; display:block; } .recon span { font-size: 0.75rem; color:#6c757d; text-transform: uppercase; }
@@ -56,7 +55,7 @@ interface Opt { id: number; name: string; }
     .dn-error { background:#fee2e2; color:#991b1b; border-radius:8px; padding:0.5rem 0.7rem; font-size:0.8rem; margin-bottom:0.5rem; }
     .dn-actions { display:flex; justify-content:flex-end; gap:0.5rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header [title]="budget()?.title || ('Budget #' + id)" icon="fa-wallet"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Budget & Finance', url:'/m/budget-finance/budgets'}, {label:'Detail'}]">
     </dmis-page-header>
@@ -200,7 +199,7 @@ interface Opt { id: number; name: string; }
           <button class="btn-sm btn-pri" [disabled]="busy() || !vFrom || !vTo || vFrom === vTo || !vAmount || vAmount <= 0" (click)="saveVirement()">Request</button></div>
       </div></div>
     }
-  `,
+  `
 })
 export class BudgetDetailComponent implements OnInit {
   private readonly http = inject(HttpClient);

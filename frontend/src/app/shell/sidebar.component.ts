@@ -11,10 +11,9 @@ import { qrcodegen } from '../shared/qrcodegen';
  * Response list is not one flat wall of links.
  */
 @Component({
-  selector: 'app-sidebar',
-  standalone: true,
-  imports: [RouterLink],
-  styles: [`
+    selector: 'app-sidebar',
+    imports: [RouterLink],
+    styles: [`
     .sb-group { border-bottom: 1px solid rgba(255,255,255,0.06); }
     .sb-group-head {
       display: flex; align-items: center; gap: 8px; width: 100%;
@@ -40,7 +39,7 @@ import { qrcodegen } from '../shared/qrcodegen';
     }
     .sb-expand-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
   `],
-  template: `
+    template: `
     <div class="sidebar" id="sidebar">
       <div class="sidebar-scroll">
         <a routerLink="/home" class="sb-standalone sb-hub-panel" data-tip="All Modules">
@@ -108,7 +107,7 @@ import { qrcodegen } from '../shared/qrcodegen';
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class SidebarComponent {
   auth = inject(AuthService);

@@ -10,10 +10,9 @@ import { PanelComponent } from '../../shell/panel.component';
  * lists copied verbatim.
  */
 @Component({
-  selector: 'page-hazard-create',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, RouterLink],
-  template: `
+    selector: 'page-hazard-create',
+    imports: [PageHeaderComponent, PanelComponent, RouterLink],
+    template: `
     <dmis-page-header title="Register New Hazard" icon="fa-plus-circle"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Hazard Management', url:'/m/prevention-mitigation/hazards'}, {label:'Register New Hazard'}]">
       <a routerLink="/m/prevention-mitigation/hazards" class="btn-add" style="background:var(--text-mid);">
@@ -77,7 +76,7 @@ import { PanelComponent } from '../../shell/panel.component';
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class HazardCreateComponent {
   private http = inject(HttpClient);

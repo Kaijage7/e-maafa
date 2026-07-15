@@ -25,10 +25,9 @@ interface AnimalEntry { species: string; species_other: string; cases: number; d
  * OH-4 (event type option mismatch).
  */
 @Component({
-  selector: 'oh-report-event-modal',
-  standalone: true,
-  imports: [FormsModule],
-  styles: [`
+    selector: 'oh-report-event-modal',
+    imports: [FormsModule],
+    styles: [`
     .oh-modal-backdrop { display: none; position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.5); overflow-y: auto; }
     .oh-modal-backdrop.open { display: block; }
     .oh-modal { background: #fff; border-radius: 0.5rem; margin: 1.75rem auto; max-width: 1140px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); display: flex; flex-direction: column; max-height: calc(100vh - 3.5rem); }
@@ -58,7 +57,7 @@ interface AnimalEntry { species: string; species_other: string; cases: number; d
     .is-invalid { border-color: #dc3545 !important; }
     @media (max-width: 576px) { .modal-progress-step span { display: none; } .modal-progress-line { width: 20px; } }
   `],
-  template: `
+    template: `
     <div class="oh-modal-backdrop" [class.open]="isOpen()" (click)="backdropClose($event)">
       <div class="oh-modal" (click)="$event.stopPropagation()">
         <div class="oh-modal-header">
@@ -351,7 +350,7 @@ interface AnimalEntry { species: string; species_other: string; cases: number; d
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class OhReportEventModalComponent implements OnInit {
   private http = inject(HttpClient);

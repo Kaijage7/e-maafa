@@ -9,10 +9,9 @@ import { AuthService } from '../../core/auth.service';
  * which span every entity) are shown only to PMO/national/admin logins. Mirrors the backend read scoping.
  */
 @Component({
-  selector: 'ew-flow-pipeline',
-  standalone: true,
-  imports: [RouterLink],
-  styles: [`
+    selector: 'ew-flow-pipeline',
+    imports: [RouterLink],
+    styles: [`
     :host { display: block; }
     .flow { padding: 4px 2px 18px; }
     .lead { display: flex; align-items: flex-start; gap: 0.6rem; background: var(--surface, #f8fafc);
@@ -43,7 +42,7 @@ import { AuthService } from '../../core/auth.service';
     .card .nm { font-size: 0.88rem; font-weight: 700; color: var(--text-dark, #1f2d3d); line-height: 1.25; }
     .card .ds { font-size: 0.8rem; color: var(--text-light, #64748b); margin-top: 2px; line-height: 1.35; }
   `],
-  template: `
+    template: `
     <div class="flow">
       <div class="lead"><i class="fas fa-circle-info"></i>
         <span>The early-warning process runs top to bottom: each entity authors its bulletin and pushes to the EOCC; PMO-DMD consolidates every entity as a layer into one impact bulletin; the bulletin is disseminated to the affected areas; and Monitoring tracks it through to verification.</span>
@@ -90,7 +89,7 @@ import { AuthService } from '../../core/auth.service';
         }
       </div>
     </div>
-  `,
+  `
 })
 export class EwFlowPipelineComponent {
   private readonly auth = inject(AuthService);

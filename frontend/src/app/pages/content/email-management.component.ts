@@ -22,10 +22,9 @@ const STATUS_BADGE: Record<string, string> = {
  * Center via [embedded]="true". Mirror of SMS Management over email_logs.
  */
 @Component({
-  selector: 'page-email-management',
-  standalone: true,
-  imports: [FormsModule, DatePipe, PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-email-management',
+    imports: [FormsModule, DatePipe, PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     @if (!embedded) {
       <dmis-page-header title="Email Management" icon="fa-envelope"
         [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Email Management'}]">
@@ -153,7 +152,7 @@ const STATUS_BADGE: Record<string, string> = {
         }
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class EmailManagementComponent {
   @Input() embedded = false;

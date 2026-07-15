@@ -25,10 +25,9 @@ interface DashboardPayload {
 
 /** Reproduction of mitigation/index-v2.blade.php — the Prevention & Mitigation dashboard (S1). */
 @Component({
-  selector: 'page-mitigation-dashboard',
-  standalone: true,
-  imports: [PageHeaderComponent, RouterLink],
-  styles: [`
+    selector: 'page-mitigation-dashboard',
+    imports: [PageHeaderComponent, RouterLink],
+    styles: [`
     .hero-split { display: grid; grid-template-columns: 340px 1fr; gap: 0.85rem; margin-bottom: 1rem; }
     .hero-left { display: flex; flex-direction: column; gap: 0.7rem; }
     .stat-mini { background: #fff; border-radius: 6px; padding: 0.85rem 1rem; border: 1px solid var(--line, #e2e8f0); box-shadow: 0 1px 2px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 0.7rem; text-decoration: none; color: inherit; }
@@ -85,7 +84,7 @@ interface DashboardPayload {
     .r-time { color: var(--text-light); font-size: 0.8rem; }
     @media (max-width: 991px) { .hero-split { grid-template-columns: 1fr; } .hero-right { min-height: 350px; } .panel-row.two-col { grid-template-columns: 1fr; } }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Prevention & Mitigation" icon="fa-shield-alt"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Prevention & Mitigation'}, {label:'Dashboard'}]" />
 
@@ -284,7 +283,7 @@ interface DashboardPayload {
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class MitigationDashboardComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);

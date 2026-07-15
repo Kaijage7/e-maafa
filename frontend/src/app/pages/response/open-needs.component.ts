@@ -26,10 +26,9 @@ interface UnfundedTrainingRow {
  * unfunded. Partner-facing pledge flows stay on Resource Donations and Fund a Measure or Training.
  */
 @Component({
-  selector: 'page-open-needs',
-  standalone: true,
-  imports: [DatePipe, DecimalPipe, FormsModule, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-open-needs',
+    imports: [DatePipe, DecimalPipe, FormsModule, PageHeaderComponent, PanelComponent],
+    styles: [`
     .stat-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
     .stat { background: #fff; border: 1px solid #e3e6ed; border-radius: 10px; padding: 10px 14px; }
     .stat b { font-size: 1.3rem; display: block; }
@@ -67,7 +66,7 @@ interface UnfundedTrainingRow {
     .dn-error { background: #fee2e2; color: #991b1b; border-radius: 8px; padding: 0.5rem 0.7rem; font-size: 0.8rem; margin-bottom: 0.5rem; }
     .dn-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.3rem; }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Open Needs" icon="fa-hand-holding-heart"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Stakeholder Portal'}, {label:'PMO Open Needs'}]">
     </dmis-page-header>
@@ -198,7 +197,7 @@ interface UnfundedTrainingRow {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class OpenNeedsComponent implements OnInit {
   private readonly http = inject(HttpClient);

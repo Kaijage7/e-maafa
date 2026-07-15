@@ -35,10 +35,9 @@ const AUDIENCES = [
  * materials — all managed in Content Management → Public Awareness.
  */
 @Component({
-  selector: 'public-hazard-hub',
-  standalone: true,
-  imports: [RouterLink],
-  template: `
+    selector: 'public-hazard-hub',
+    imports: [RouterLink],
+    template: `
     <div class="v2-page-content hub-wrap">
       <a routerLink="/education" class="hub-back"><i class="fas fa-arrow-left me-1"></i> {{ L.t('lbl_education') }}</a>
 
@@ -182,7 +181,7 @@ const AUDIENCES = [
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .hub-wrap { max-width: min(1560px, 94vw); margin: 0 auto; padding: 7rem 2rem 4rem; }
     .hub-back { color: #60a5fa; text-decoration: none; font-size: 0.9rem; }
 
@@ -270,7 +269,7 @@ const AUDIENCES = [
       .hub-wrap { padding: 6rem 1rem 2.5rem; }
       .hub-head { flex-direction: column; align-items: flex-start; }
     }
-  `],
+  `]
 })
 export class HazardHubComponent {
   L = inject(PortalLabels);

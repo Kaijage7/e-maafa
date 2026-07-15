@@ -29,10 +29,9 @@ const TARGET_COLORS: Record<string, string> = {
  * arguments DMD uses with leadership, ministers and partners.
  */
 @Component({
-  selector: 'page-sendai-analytics',
-  standalone: true,
-  imports: [DecimalPipe, RouterLink, PageHeaderComponent, PanelComponent],
-  template: `
+    selector: 'page-sendai-analytics',
+    imports: [DecimalPipe, RouterLink, PageHeaderComponent, PanelComponent],
+    template: `
     <dmis-page-header title="Sendai Analytics — Disaster Loss & Target Progress" icon="fa-chart-pie"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Reports & Analytics'}, {label:'Sendai Analytics'}]">
       <select class="form-select" style="min-width:120px;" [value]="year()" (change)="setYear($any($event.target).value)">
@@ -153,7 +152,7 @@ const TARGET_COLORS: Record<string, string> = {
         </div>
       </dmis-panel>
     </div>
-  `,
+  `
 })
 export class SendaiAnalyticsComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);

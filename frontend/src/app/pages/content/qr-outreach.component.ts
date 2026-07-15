@@ -18,10 +18,9 @@ const ACTIONS: Action[] = [
  * right links whether served locally or from the live domain. Print them for posters, banners, ID cards.
  */
 @Component({
-  selector: 'page-qr-outreach',
-  standalone: true,
-  imports: [PageHeaderComponent],
-  styles: [`
+    selector: 'page-qr-outreach',
+    imports: [PageHeaderComponent],
+    styles: [`
     .qr-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.1rem; margin-top:.4rem; }
     .qr-card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.3rem; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
     .qr-card svg { width:210px; height:210px; }
@@ -34,7 +33,7 @@ const ACTIONS: Action[] = [
       .qr-grid { grid-template-columns:1fr 1fr; }
     }
   `],
-  template: `
+    template: `
     <dmis-page-header title="QR Outreach" icon="fa-qrcode"
       [breadcrumbs]="[{label:'Home',url:'/home'},{label:'Content Management'},{label:'QR Outreach'}]">
       <button class="btn-add no-print" type="button" (click)="print()"><i class="fas fa-print"></i> Print</button>
@@ -63,7 +62,7 @@ const ACTIONS: Action[] = [
         }
       </div>
     </div></div>
-  `,
+  `
 })
 export class QrOutreachComponent {
   origin = window.location.origin;

@@ -26,10 +26,9 @@ interface ThreatPlan {
  * is immediately reflected on the public threat strip, threat pages and Elimu.
  */
 @Component({
-  selector: 'page-threat-monitor',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
-  template: `
+    selector: 'page-threat-monitor',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent],
+    template: `
     <dmis-page-header title="Hazard Monitor — Threat Monitoring" icon="fa-satellite-dish"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Content Management'}, {label:'Hazard Monitor'}]">
       @if (canManage()) {
@@ -169,7 +168,7 @@ interface ThreatPlan {
         </div>
       </div>
     }
-  `,
+  `
 })
 export class ThreatMonitorComponent {
   private http = inject(HttpClient);

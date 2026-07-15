@@ -7,11 +7,10 @@ import { InformRefreshService } from './inform-refresh.service';
 /** INFORM tab — PMO Approvals queue (live GET /pending, approve/reject).
  *  Keyed values await sign-off here before they feed the strategic composite or hazard signals. */
 @Component({
-  selector: 'page-inform-approvals',
-  standalone: true,
-  imports: [FormsModule],
-  styles: [INFORM_STYLES, `:host { display:block; }`],
-  template: `
+    selector: 'page-inform-approvals',
+    imports: [FormsModule],
+    styles: [INFORM_STYLES, `:host { display:block; }`],
+    template: `
     <p class="muted">PMO approval queue — keyed values await sign-off before they feed the strategic composite or hazard signals.</p>
 
     <div class="row-controls">
@@ -52,7 +51,7 @@ import { InformRefreshService } from './inform-refresh.service';
     } @else {
       <p class="muted" style="padding:1.5rem 0;">No submissions pending approval.</p>
     }
-  `,
+  `
 })
 export class InformApprovalsComponent implements OnInit {
   private svc = inject(InformService);
