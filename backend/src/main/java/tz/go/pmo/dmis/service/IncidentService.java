@@ -14,6 +14,12 @@ public interface IncidentService {
 
     Map<String, Object> index(String statusFilter, Long hazardFilter, String workflowFilter, int page);
 
+    /**
+     * Same jurisdiction-scoped list as {@link #index(String, Long, String, int)} with an explicit
+     * page size (clamped by the implementation). Used by the GraphQL mobileHome composite.
+     */
+    Map<String, Object> index(String statusFilter, Long hazardFilter, String workflowFilter, int page, int perPage);
+
     Map<String, Object> formData();
 
     /** Success map, or validation failure with {@code errors} (controller returns 422). */

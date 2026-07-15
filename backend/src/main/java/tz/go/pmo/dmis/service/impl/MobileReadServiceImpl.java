@@ -33,6 +33,8 @@ import tz.go.pmo.dmis.service.UserNotificationService;
 public class MobileReadServiceImpl implements MobileReadService {
 
     private static final int MAX_NOTIFICATION_PAGE_SIZE = 50;
+    private static final int MAX_INCIDENT_PAGE_SIZE = 50;
+    private static final int DEFAULT_INCIDENT_PAGE_SIZE = 15;
 
     private final IncidentService incidentService;
     private final UserNotificationService notificationService;
@@ -48,9 +50,12 @@ public class MobileReadServiceImpl implements MobileReadService {
     @Override
     @Transactional(readOnly = true, timeout = 15, isolation = Isolation.REPEATABLE_READ)
     @PreAuthorize(Authz.PERM_INCIDENT_VIEW)
-    public MobileHomeResponse mobileHome(int incidentPage, int notificationLimit, Long notificationBeforeId) {
+    public MobileHomeResponse mobileHome(
+            int incidentPage, int incidentLimit, int notificationLimit, Long notificationBeforeId) {
         Authentication authentication = requireAuthentication();
         int safePage = Math.max(1, incidentPage);
+        int safeIncidentLimit = Math.min(MAX_INCIDENT_PAGE_SIZE,
+                Math.max(1, incidentLimit > 0 ? incidentLimit : DEFAULT_INCIDENT_PAGE_SIZE));
         int safeLimit = Math.min(MAX_NOTIFICATION_PAGE_SIZE, Math.max(1, notificationLimit));
         Long safeCursor = notificationBeforeId != null && notificationBeforeId > 0
                 ? notificationBeforeId
@@ -60,7 +65,7 @@ public class MobileReadServiceImpl implements MobileReadService {
         // the snapshot and later delta (safe duplicate), but it can never be absent from both (data loss).
         IncidentSyncService.SnapshotState syncState = syncService.snapshotState();
         // These services retain their existing jurisdiction and current-user restrictions.
-        Map<String, Object> incidents = incidentService.index(null, null, null, safePage);
+        Map<String, Object> incidents = incidentService.index(null, null, null, safePage, safeIncidentLimit);
         Map<String, Object> notifications = notificationService.feed(
                 safeLimit, false, null, null, null, null, safeCursor);
 

@@ -40,8 +40,8 @@ application-service layer.
 `POST /api/graphql` exposes the read-only `mobileHome` query. It combines:
 
 - the authenticated viewer and granted authorities;
-- the existing jurisdiction-scoped incident page; and
-- the existing current-user notification cursor feed.
+- the existing jurisdiction-scoped incident page (`incidentPage`, optional `incidentLimit` 1–50); and
+- the existing current-user notification cursor feed (`notificationLimit` 1–50).
 
 There are no GraphQL mutations or direct repository calls in this slice. The only subscription is
 the content-free `mobileSync(afterSequence)` foreground wake-up described below; it is not a second
@@ -211,6 +211,10 @@ and re-run the proxy/load/reconnect suite. Do not describe the present stream as
 - Maximum query complexity: 100, with a fixed cost for each `mobileHome` selection
 - Request timeout: 20 seconds (the composing transaction is limited to 15 seconds)
 - Request body: 64 KiB maximum, including chunked requests
+- HTTP body shape: a single JSON object only. JSON **batch arrays** (`[{...},{...}]`) are
+  rejected with **400** `batch_not_supported` before Jackson/GraphQL parse (avoids a 500 from
+  `SerializableGraphQlRequest` expecting an object). Empty bodies and non-object roots are also
+  rejected with 400. There are no GraphQL mutations on this surface — commands stay on REST.
 - Per-instance rate limit: 300 GraphQL requests per client address per 60 seconds
 - WebSocket text/binary frame buffers: 64 KiB / 1 KiB; 300 operations per authenticated actor per
   60 seconds, with JWT expiry/revocation and a 10-minute maximum authentication window rechecked

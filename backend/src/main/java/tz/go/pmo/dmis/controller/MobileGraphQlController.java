@@ -57,10 +57,12 @@ public class MobileGraphQlController {
     @PreAuthorize(Authz.PERM_INCIDENT_VIEW)
     public MobileHomeResponse mobileHome(
             @Argument Integer incidentPage,
+            @Argument Integer incidentLimit,
             @Argument Integer notificationLimit,
             @Argument Long notificationBeforeId) {
         return service.mobileHome(
                 incidentPage == null ? 1 : incidentPage,
+                incidentLimit == null ? 15 : incidentLimit,
                 notificationLimit == null ? 20 : notificationLimit,
                 notificationBeforeId);
     }

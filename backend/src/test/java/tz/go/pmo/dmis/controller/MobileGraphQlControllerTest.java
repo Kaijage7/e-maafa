@@ -68,12 +68,13 @@ class MobileGraphQlControllerTest {
     @Test
     @WithMockUser(authorities = "incidents.view")
     void authorizedIncidentViewerCanExecuteTheTypedMobileQuery() {
-        when(service.mobileHome(2, 5, 123L)).thenReturn(sample());
+        when(service.mobileHome(2, 10, 5, 123L)).thenReturn(sample());
 
         graphQlTester.document("""
-                        query MobileHome($page: Int!, $limit: Int!, $before: ID) {
+                        query MobileHome($page: Int!, $iLimit: Int!, $limit: Int!, $before: ID) {
                           mobileHome(
                             incidentPage: $page
+                            incidentLimit: $iLimit
                             notificationLimit: $limit
                             notificationBeforeId: $before
                           ) {
@@ -86,6 +87,7 @@ class MobileGraphQlControllerTest {
                         }
                         """)
                 .variable("page", 2)
+                .variable("iLimit", 10)
                 .variable("limit", 5)
                 .variable("before", "123")
                 .execute()
@@ -95,7 +97,7 @@ class MobileGraphQlControllerTest {
                 .path("mobileHome.viewer.id").entity(String.class).isEqualTo("42")
                 .path("mobileHome.notifications.unreadCount").entity(Integer.class).isEqualTo(0);
 
-        verify(service).mobileHome(2, 5, 123L);
+        verify(service).mobileHome(2, 10, 5, 123L);
     }
 
     @Test

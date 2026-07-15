@@ -21,7 +21,14 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/** Stops oversized GraphQL documents before JSON and GraphQL parsing. */
+/**
+ * Stops oversized GraphQL documents and illegal request shapes before Spring GraphQL parses them.
+ *
+ * <p>Spring GraphQL deserializes a single {@code SerializableGraphQlRequest} object. A JSON array
+ * (Apollo/HTTP batching) would otherwise throw {@code MismatchedInputException} and surface as a
+ * generic 500. DMIS does not support multi-operation batching on the shared endpoint — each
+ * mobileHome/mobileSync call is already an aggregated screen or wake-up.</p>
+ */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 5)
 public class GraphQlRequestSizeFilter extends OncePerRequestFilter {
@@ -48,22 +55,72 @@ public class GraphQlRequestSizeFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         if (request.getContentLengthLong() > maxRequestBytes) {
-            reject(response);
+            rejectTooLarge(response);
             return;
         }
         byte[] body = request.getInputStream().readNBytes(maxRequestBytes + 1);
         if (body.length > maxRequestBytes) {
-            reject(response);
+            rejectTooLarge(response);
+            return;
+        }
+        String shapeError = validateSingleObjectBody(body);
+        if (shapeError != null) {
+            rejectBadRequest(response, shapeError);
             return;
         }
         chain.doFilter(new CachedBodyRequest(request, body), response);
     }
 
-    private static void reject(HttpServletResponse response) throws IOException {
+    /**
+     * @return null when the body is a single JSON object; otherwise a stable client error code
+     */
+    static String validateSingleObjectBody(byte[] body) {
+        if (body == null || body.length == 0) {
+            return "empty_body";
+        }
+        int i = 0;
+        while (i < body.length) {
+            byte b = body[i];
+            if (b == ' ' || b == '\n' || b == '\r' || b == '\t') {
+                i++;
+                continue;
+            }
+            break;
+        }
+        if (i >= body.length) {
+            return "empty_body";
+        }
+        byte first = body[i];
+        if (first == '[') {
+            // Explicitly reject HTTP batch arrays so callers get 400, not a Jackson 500.
+            return "batch_not_supported";
+        }
+        if (first != '{') {
+            return "invalid_json_shape";
+        }
+        return null;
+    }
+
+    private static void rejectTooLarge(HttpServletResponse response) throws IOException {
         response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write(
                 "{\"error\":\"payload_too_large\",\"message\":\"GraphQL request is too large.\"}");
+    }
+
+    private static void rejectBadRequest(HttpServletResponse response, String error) throws IOException {
+        response.setStatus(HttpStatus.BAD_REQUEST.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        String message = switch (error) {
+            case "batch_not_supported" ->
+                    "GraphQL HTTP batch arrays are not supported. Send one operation object per request.";
+            case "empty_body" ->
+                    "GraphQL request body is empty.";
+            default ->
+                    "GraphQL request must be a single JSON object with a query (or subscription) document.";
+        };
+        response.getWriter().write(
+                "{\"error\":\"" + error + "\",\"message\":\"" + message + "\"}");
     }
 
     private static final class CachedBodyRequest extends HttpServletRequestWrapper {

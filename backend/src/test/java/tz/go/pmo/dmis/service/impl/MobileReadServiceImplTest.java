@@ -66,7 +66,8 @@ class MobileReadServiceImplTest {
                 Map.entry("allocations_count", 2L),
                 Map.entry("tasks_count", 3L),
                 Map.entry("response_active", true));
-        when(incidentService.index(isNull(), isNull(), isNull(), org.mockito.ArgumentMatchers.eq(1)))
+        when(incidentService.index(isNull(), isNull(), isNull(),
+                        org.mockito.ArgumentMatchers.eq(1), org.mockito.ArgumentMatchers.eq(50)))
                 .thenReturn(Map.of("data", List.of(incidentRow), "currentPage", 1, "lastPage", 2, "total", 16L));
 
         Map<String, Object> notificationRow = Map.ofEntries(
@@ -91,7 +92,8 @@ class MobileReadServiceImplTest {
                         "has_more", false,
                         "next_before_id", 77L));
 
-        MobileHomeResponse response = service.mobileHome(-5, 500, -10L);
+        // page and limits are clamped: page>=1, incident/notification limit max 50
+        MobileHomeResponse response = service.mobileHome(-5, 500, 500, -10L);
 
         assertEquals("42", response.viewer().id());
         assertEquals("314", response.syncCursor());
@@ -106,7 +108,7 @@ class MobileReadServiceImplTest {
         assertFalse(response.notifications().items().getFirst().read());
         assertFalse(Instant.parse(response.generatedAt()).isAfter(Instant.now()));
 
-        verify(incidentService).index(null, null, null, 1);
+        verify(incidentService).index(null, null, null, 1, 50);
         verify(notificationService).feed(50, false, null, null, null, null, null);
     }
 
@@ -114,7 +116,7 @@ class MobileReadServiceImplTest {
     void rejectsNonJwtAuthenticationBeforeAnyReadServiceRuns() {
         SecurityContextHolder.clearContext();
 
-        assertThrows(InsufficientAuthenticationException.class, () -> service.mobileHome(1, 20, null));
+        assertThrows(InsufficientAuthenticationException.class, () -> service.mobileHome(1, 15, 20, null));
         verifyNoInteractions(incidentService, notificationService, syncService);
     }
 
@@ -122,30 +124,30 @@ class MobileReadServiceImplTest {
     void rejectsNonPlatformJwtSubjectBeforeSystemActorFallbackCanRun() {
         authenticate("external-keycloak-uuid");
 
-        assertThrows(InsufficientAuthenticationException.class, () -> service.mobileHome(1, 20, null));
+        assertThrows(InsufficientAuthenticationException.class, () -> service.mobileHome(1, 15, 20, null));
         verifyNoInteractions(incidentService, notificationService, syncService);
     }
 
     @Test
     void requiredUpstreamShapeMismatchFailsInsteadOfReturningFakeEmptyData() {
-        when(incidentService.index(null, null, null, 1)).thenReturn(Map.of(
+        when(incidentService.index(null, null, null, 1, 15)).thenReturn(Map.of(
                 "currentPage", 1, "lastPage", 1, "total", 0));
         when(notificationService.feed(20, false, null, null, null, null, null)).thenReturn(Map.of(
                 "items", List.of(), "unread_count", 0, "has_more", false));
 
         IllegalStateException error = assertThrows(
-                IllegalStateException.class, () -> service.mobileHome(1, 20, null));
+                IllegalStateException.class, () -> service.mobileHome(1, 15, 20, null));
         assertEquals("Required read-model field is missing: data", error.getMessage());
     }
 
     @Test
     void nullableNotificationCursorRemainsNull() {
-        when(incidentService.index(null, null, null, 1)).thenReturn(Map.of(
+        when(incidentService.index(null, null, null, 1, 15)).thenReturn(Map.of(
                 "data", List.of(), "currentPage", 1, "lastPage", 1, "total", 0));
         when(notificationService.feed(20, false, null, null, null, null, null)).thenReturn(Map.of(
                 "items", List.of(), "unread_count", 0, "has_more", false));
 
-        MobileHomeResponse response = service.mobileHome(1, 20, null);
+        MobileHomeResponse response = service.mobileHome(1, 15, 20, null);
 
         assertNull(response.notifications().latestId());
         assertNull(response.notifications().nextBeforeId());

@@ -3,6 +3,8 @@ type Query {
   """Incident-capable user's scoped home screen."""
   mobileHome(
     incidentPage: Int = 1
+    """Page size for the incident list (1–50; default 15)."""
+    incidentLimit: Int = 15
     notificationLimit: Int = 20
     notificationBeforeId: ID
   ): MobileHome!

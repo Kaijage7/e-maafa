@@ -33,10 +33,45 @@ class GraphQlRequestSizeFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
-        filter.doFilter(request("/api/graphql", new byte[1025]), response, chain);
+        // Oversized body that still looks like a single object so shape validation is not the rejector.
+        byte[] oversized = ("{\"q\":\"" + "x".repeat(1020) + "\"}").getBytes(StandardCharsets.UTF_8);
+        org.junit.jupiter.api.Assertions.assertTrue(oversized.length > 1024);
+        filter.doFilter(request("/api/graphql", oversized), response, chain);
 
         assertEquals(HttpStatus.PAYLOAD_TOO_LARGE.value(), response.getStatus());
         assertEquals(null, chain.getRequest());
+    }
+
+    @Test
+    void rejectsHttpBatchArraysWithBadRequestInsteadOfInternalError() throws Exception {
+        GraphQlRequestSizeFilter filter = new GraphQlRequestSizeFilter(1024);
+        byte[] body = "[{\"query\":\"{ mobileHome { syncCursor } }\"}]".getBytes(StandardCharsets.UTF_8);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request("/api/graphql", body), response, chain);
+
+        assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatus());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                response.getContentAsString().contains("batch_not_supported"));
+        assertEquals(null, chain.getRequest());
+    }
+
+    @Test
+    void rejectsEmptyAndNonObjectBodies() throws Exception {
+        GraphQlRequestSizeFilter filter = new GraphQlRequestSizeFilter(1024);
+
+        MockHttpServletResponse emptyResponse = new MockHttpServletResponse();
+        filter.doFilter(request("/api/graphql", new byte[0]), emptyResponse, new MockFilterChain());
+        assertEquals(HttpStatus.BAD_REQUEST.value(), emptyResponse.getStatus());
+        org.junit.jupiter.api.Assertions.assertTrue(emptyResponse.getContentAsString().contains("empty_body"));
+
+        MockHttpServletResponse badResponse = new MockHttpServletResponse();
+        filter.doFilter(request("/api/graphql", "\"query\"".getBytes(StandardCharsets.UTF_8)),
+                badResponse, new MockFilterChain());
+        assertEquals(HttpStatus.BAD_REQUEST.value(), badResponse.getStatus());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                badResponse.getContentAsString().contains("invalid_json_shape"));
     }
 
     @Test

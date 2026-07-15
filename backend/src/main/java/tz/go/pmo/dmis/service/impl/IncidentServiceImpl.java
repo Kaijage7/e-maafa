@@ -98,6 +98,15 @@ public class IncidentServiceImpl implements IncidentService {
                                      Long hazardFilter,
                                      String workflowFilter,
                                      int page) {
+        return index(statusFilter, hazardFilter, workflowFilter, page, 15);
+    }
+
+    @Override
+    public Map<String, Object> index(String statusFilter,
+                                     Long hazardFilter,
+                                     String workflowFilter,
+                                     int page,
+                                     int perPage) {
         StringBuilder where = new StringBuilder("1=1");
         List<Object> params = new ArrayList<>();
         // Treat all/any/* as unfiltered — a literal status match of "all" yields zero rows (non-productive).
@@ -118,7 +127,8 @@ public class IncidentServiceImpl implements IncidentService {
 
         long total = jdbc.queryForObject("select count(*) from public.incidents i where " + where,
                 Long.class, params.toArray());
-        int perPage = 15;
+        // Bound page size so GraphQL/mobile clients cannot request unbounded composite reads.
+        perPage = Math.min(50, Math.max(1, perPage));
         int lastPage = (int) Math.max(1, Math.ceil(total / (double) perPage));
         int currentPage = Math.min(Math.max(1, page), lastPage);
         int offset = (currentPage - 1) * perPage;
