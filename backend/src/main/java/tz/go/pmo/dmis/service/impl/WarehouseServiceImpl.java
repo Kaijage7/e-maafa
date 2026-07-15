@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tz.go.pmo.dmis.common.geo.RegionCentroids;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.AreaLookup;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
@@ -28,11 +29,18 @@ import tz.go.pmo.dmis.service.WarehouseService;
 @RequiredArgsConstructor
 public class WarehouseServiceImpl implements WarehouseService {
 
+    /** Matches the preparedness map maxBounds so plotted markers are actually visible. */
+    private static final double TZ_LAT_MIN = -12.0;
+    private static final double TZ_LAT_MAX = -0.8;
+    private static final double TZ_LNG_MIN = 29.0;
+    private static final double TZ_LNG_MAX = 41.0;
+
     private final WarehouseRepository warehouses;
     private final JdbcTemplate jdbc;
     private final JurisdictionScope jurisdiction;
     private final AreaLookup areaLookup;
     private final AreaGuard areaGuard;
+    private final RegionCentroids regionCentroids;
 
     @Override
     @Transactional(readOnly = true)
@@ -61,6 +69,7 @@ public class WarehouseServiceImpl implements WarehouseService {
         }
         Long regionId = areaLookup.regionId(req.region());
         Long districtId = areaLookup.districtId(req.district(), regionId);
+        double[] coords = resolveMapCoordinates(req.latitude(), req.longitude(), req.region());
         Long id = jdbc.queryForObject(
                 "insert into public.warehouses(name,zone,city_or_region,location_address,storage_capacity_sqm,"
                         + "contact_person_name,contact_person_phone,operational_status,latitude,longitude,"
@@ -70,7 +79,7 @@ public class WarehouseServiceImpl implements WarehouseService {
                 req.name().trim(), req.zone(), blankToNull(req.cityOrRegion()), blankToNull(req.locationAddress()),
                 req.storageCapacitySqm(), blankToNull(req.contactPersonName()), blankToNull(req.contactPersonPhone()),
                 req.operationalStatus() == null || req.operationalStatus().isBlank() ? "Operational" : req.operationalStatus(),
-                req.latitude(), req.longitude(), regionId, districtId);
+                coords == null ? null : coords[0], coords == null ? null : coords[1], regionId, districtId);
         return Map.of("id", id, "message", "Warehouse created");
     }
 
@@ -105,6 +114,7 @@ public class WarehouseServiceImpl implements WarehouseService {
         }
         Long regionId = areaLookup.regionId(req.region());
         Long districtId = areaLookup.districtId(req.district(), regionId);
+        double[] coords = resolveMapCoordinates(req.latitude(), req.longitude(), req.region());
         int n = jdbc.update("""
                 update public.warehouses set name=?, zone=?, city_or_region=?, location_address=?,
                     storage_capacity_sqm=?, contact_person_name=?, contact_person_phone=?, operational_status=?,
@@ -113,11 +123,43 @@ public class WarehouseServiceImpl implements WarehouseService {
                 req.name().trim(), req.zone(), blankToNull(req.cityOrRegion()), blankToNull(req.locationAddress()),
                 req.storageCapacitySqm(), blankToNull(req.contactPersonName()), blankToNull(req.contactPersonPhone()),
                 req.operationalStatus() == null || req.operationalStatus().isBlank() ? "Operational" : req.operationalStatus(),
-                req.latitude(), req.longitude(), regionId, districtId, id);
+                coords == null ? null : coords[0], coords == null ? null : coords[1], regionId, districtId, id);
         if (n == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Warehouse not found");
         }
         return Map.of("id", id, "message", "Warehouse updated");
+    }
+
+    /**
+     * Coordinates are optional for the registry row, but when present they must fall inside the
+     * Tanzania map viewport; otherwise the marker is created and never visible. When both are
+     * blank and a known region is set, fall back to that region's centroid so area-stamped stores
+     * still appear on the preparedness map.
+     */
+    private double[] resolveMapCoordinates(Double latitude, Double longitude, String regionName) {
+        boolean hasLat = latitude != null;
+        boolean hasLng = longitude != null;
+        if (hasLat ^ hasLng) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Provide both latitude and longitude, or leave both empty.");
+        }
+        if (hasLat) {
+            double lat = latitude;
+            double lng = longitude;
+            if (lat < TZ_LAT_MIN || lat > TZ_LAT_MAX || lng < TZ_LNG_MIN || lng > TZ_LNG_MAX) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Coordinates must be inside Tanzania (lat about -12…-0.8, lng about 29…41). "
+                                + "Values outside this box are clipped by the map and look “missing”.");
+            }
+            return new double[] { lat, lng };
+        }
+        double[] centroid = regionCentroids.forRegion(regionName);
+        if (centroid != null
+                && centroid[0] >= TZ_LAT_MIN && centroid[0] <= TZ_LAT_MAX
+                && centroid[1] >= TZ_LNG_MIN && centroid[1] <= TZ_LNG_MAX) {
+            return centroid;
+        }
+        return null;
     }
 
     /** Area officers may only create/update warehouses stamped to their own region/district. */

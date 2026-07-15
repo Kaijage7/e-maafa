@@ -20,10 +20,9 @@ interface TwResponse {
 }
 
 @Component({
-  selector: 'page-temporary-warehouses',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
-  template: `
+    selector: 'page-temporary-warehouses',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, RouterLink],
+    template: `
     <dmis-page-header title="Temporary Warehouses" icon="fa-warehouse"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Temporary Warehouses'}]">
       <a class="btn-add" routerLink="/m/preparedness/temporary-warehouses/create"><i class="fas fa-plus"></i> New Temporary Warehouse</a>
@@ -100,11 +99,11 @@ interface TwResponse {
       </dmis-panel>
     </div>
   `,
-  styles: [`
+    styles: [`
     .badge-active { background: rgba(16,185,129,0.12); color: #059669; }
     .badge-inactive { background: rgba(156,163,175,0.15); color: #6b7280; }
     .badge-closed { background: rgba(220,38,38,0.12); color: #dc2626; }
-  `],
+  `]
 })
 export class TemporaryWarehousesComponent {
   private http = inject(HttpClient);

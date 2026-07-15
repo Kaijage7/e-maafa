@@ -22,10 +22,9 @@ interface WhResponse {
 }
 
 @Component({
-  selector: 'page-warehouses',
-  standalone: true,
-  imports: [PageHeaderComponent, PanelComponent, StatCardComponent, DecimalPipe, RouterLink],
-  template: `
+    selector: 'page-warehouses',
+    imports: [PageHeaderComponent, PanelComponent, StatCardComponent, DecimalPipe, RouterLink],
+    template: `
     <dmis-page-header title="Warehouses" icon="fa-warehouse"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Preparedness'}, {label:'Warehouses'}]">
       <a class="btn-add" routerLink="/m/preparedness/warehouses/create"><i class="fas fa-plus"></i> New Warehouse</a>
@@ -47,8 +46,16 @@ interface WhResponse {
     </div>
 
     <div class="panel-row" style="animation-delay:.2s;">
-      <dmis-panel title="Warehouse Locations" icon="fa-map-marked-alt" badge="Tanzania">
+      <dmis-panel title="Warehouse Locations" icon="fa-map-marked-alt" [badge]="mapBadge()">
         <div class="panel-body">
+          @if (unmappedCount() > 0) {
+            <div style="margin:0 0 10px;padding:8px 10px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;font-size:0.78rem;color:#9a3412;line-height:1.4">
+              <i class="fas fa-map-marker-alt"></i>
+              <b>{{ unmappedCount() }} warehouse(s) not plotted</b> — missing coordinates or coordinates outside Tanzania.
+              Edit the warehouse and set latitude/longitude inside Tanzania (lat ≈ −12…−0.8, lng ≈ 29…41),
+              or set Region so the server can use the region centroid.
+            </div>
+          }
           <div #warehouseMap id="warehouseMap" style="height:500px;width:100%;z-index:1;"></div>
         </div>
       </dmis-panel>
@@ -97,6 +104,9 @@ interface WhResponse {
                       <td>
                         <div style="font-size:0.82rem;color:var(--text-mid);">{{ w.cityOrRegion || '-' }}</div>
                         <div class="r-subtitle">{{ w.address }}</div>
+                        @if (!hasMapCoords(w)) {
+                          <div class="r-subtitle" style="color:#c2410c"><i class="fas fa-exclamation-triangle"></i> Not on map</div>
+                        }
                       </td>
                       <td><span class="r-badge" style="background:rgba(25,135,84,0.1);color:#198754;">{{ w.zone || '-' }}</span></td>
                       <td style="font-size:0.85rem;font-weight:600;color:var(--text-dark);">{{ w.capacitySqm ? (w.capacitySqm | number) : '-' }}</td>
@@ -128,7 +138,7 @@ interface WhResponse {
       </dmis-panel>
     </div>
   `,
-  styles: [`
+    styles: [`
     .badge-operational { background: rgba(16,185,129,0.12); color: #059669; }
     .badge-full { background: rgba(59,130,246,0.12); color: #2563eb; }
     .badge-under-renovation { background: rgba(245,158,11,0.12); color: #d97706; }
@@ -137,7 +147,7 @@ interface WhResponse {
     .badge-temporarily-closed { background: rgba(220,38,38,0.12); color: #dc2626; }
     .badge-standby { background: rgba(0,77,102,0.12); color: #004d66; }
     .badge-info { background: rgba(59,130,246,0.12); color: #2563eb; }
-  `],
+  `]
 })
 export class WarehousesComponent {
   private http = inject(HttpClient);
@@ -149,12 +159,20 @@ export class WarehousesComponent {
   zone = signal('');
   openMenu = signal<string | null>(null);
   private map: any;
+  private markersLayer: any;
+  private mapRenderAttempts = 0;
+
+  /** Same viewport as Leaflet maxBounds — markers outside never appear. */
+  private static readonly TZ_LAT_MIN = -12.0;
+  private static readonly TZ_LAT_MAX = -0.8;
+  private static readonly TZ_LNG_MIN = 29.0;
+  private static readonly TZ_LNG_MAX = 41.0;
 
   constructor() {
     this.http.get<WhResponse>('/api/v1/warehouses').subscribe(response => {
-      this.warehouses.set(response.warehouses);
+      this.warehouses.set(response.warehouses ?? []);
       this.stats.set(response.stats);
-      this.renderMap();
+      this.scheduleMapRender();
     });
   }
 
@@ -170,6 +188,23 @@ export class WarehousesComponent {
     });
   });
 
+  unmappedCount = computed(() => this.warehouses().filter(w => !this.hasMapCoords(w)).length);
+
+  mapBadge = computed(() => {
+    const plotted = this.warehouses().length - this.unmappedCount();
+    return `${plotted} plotted`;
+  });
+
+  hasMapCoords(w: WarehouseRow): boolean {
+    const lat = w.latitude;
+    const lng = w.longitude;
+    if (lat == null || lng == null || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) {
+      return false;
+    }
+    return lat >= WarehousesComponent.TZ_LAT_MIN && lat <= WarehousesComponent.TZ_LAT_MAX
+      && lng >= WarehousesComponent.TZ_LNG_MIN && lng <= WarehousesComponent.TZ_LNG_MAX;
+  }
+
   statusClass(status: string): string {
     return 'badge-' + (status || '').toLowerCase().replace(/ /g, '-');
   }
@@ -184,12 +219,27 @@ export class WarehousesComponent {
     this.openMenu.set(null);
   }
 
-  private renderMap(): void {
-    setTimeout(() => {
-      const el = this.mapEl()?.nativeElement;
-      if (!el || this.map || typeof L === 'undefined') {
+  /** Retry until the map host exists (API can resolve before the view child is ready). */
+  private scheduleMapRender(): void {
+    this.mapRenderAttempts = 0;
+    const tick = () => {
+      if (this.renderMap()) {
         return;
       }
+      this.mapRenderAttempts += 1;
+      if (this.mapRenderAttempts < 40) {
+        setTimeout(tick, 50);
+      }
+    };
+    setTimeout(tick, 0);
+  }
+
+  private renderMap(): boolean {
+    const el = this.mapEl()?.nativeElement;
+    if (!el || typeof L === 'undefined') {
+      return false;
+    }
+    if (!this.map) {
       this.map = L.map(el, {
         center: [-6.5, 35.0], zoom: 6, minZoom: 5, maxZoom: 12,
         maxBounds: [[-12.0, 29.0], [-0.8, 41.0]], maxBoundsViscosity: 1.0, attributionControl: false,
@@ -198,14 +248,37 @@ export class WarehousesComponent {
       this.map.getPane('siteMarkers').style.zIndex = 650;
       addTanzaniaGisBase(this.map, this.http);
       addMapNav(this.map, { home: [-6.5, 35.0, 6] });
-      for (const w of this.warehouses()) {
-        if (w.latitude && w.longitude) {
-          L.circleMarker([w.latitude, w.longitude], { pane: 'siteMarkers', radius: 8, fillColor: '#198754', color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.8 })
-            .addTo(this.map)
-            .bindPopup('<strong>' + escapeHtml(w.name) + '</strong><br>' + escapeHtml(w.zone || '') + '<br>Status: ' + escapeHtml(w.status || 'N/A')
-              + (w.capacitySqm ? '<br>Capacity: ' + w.capacitySqm.toLocaleString() + ' sqm' : ''));
-        }
+      this.markersLayer = L.layerGroup().addTo(this.map);
+    }
+    if (this.markersLayer) {
+      this.markersLayer.clearLayers();
+    }
+    const points: [number, number][] = [];
+    for (const w of this.warehouses()) {
+      if (!this.hasMapCoords(w)) {
+        continue;
       }
-    }, 0);
+      const lat = Number(w.latitude);
+      const lng = Number(w.longitude);
+      points.push([lat, lng]);
+      L.circleMarker([lat, lng], {
+        pane: 'siteMarkers', radius: 8, fillColor: '#198754', color: '#fff',
+        weight: 2, opacity: 1, fillOpacity: 0.8,
+      })
+        .addTo(this.markersLayer)
+        .bindPopup('<strong>' + escapeHtml(w.name) + '</strong><br>' + escapeHtml(w.zone || '')
+          + '<br>Status: ' + escapeHtml(w.status || 'N/A')
+          + (w.capacitySqm ? '<br>Capacity: ' + w.capacitySqm.toLocaleString() + ' sqm' : '')
+          + (w.region || w.district
+            ? '<br>' + escapeHtml([w.region, w.district].filter(Boolean).join(' · '))
+            : ''));
+    }
+    if (points.length === 1) {
+      this.map.setView(points[0], 8);
+    } else if (points.length > 1) {
+      this.map.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 9 });
+    }
+    setTimeout(() => this.map?.invalidateSize(), 100);
+    return true;
   }
 }
