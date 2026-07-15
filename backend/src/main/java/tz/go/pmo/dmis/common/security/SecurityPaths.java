@@ -1,7 +1,7 @@
 package tz.go.pmo.dmis.common.security;
 
 import java.util.Arrays;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
@@ -28,11 +28,10 @@ public final class SecurityPaths {
             // Operational liveness/readiness probes only (not /actuator root / env / beans).
             "/actuator/health",
             "/actuator/health/**",
-            // API docs — public only so local/dev can explore; production disables springdoc entirely
-            // (application-prod.yml). Never expose /actuator/env or similar.
+            // OpenAPI JSON — public only so controlled local/dev contract generation works;
+            // production disables springdoc entirely (application-prod.yml). Swagger UI browser
+            // assets are intentionally not packaged. Never expose /actuator/env or similar.
             "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html",
             // Citizen-facing portal — public by design (mirrors Laravel's public routes).
             "/v1/portal/**",
             // F59/F60: M-Gov (and compatible) SMS delivery-status callbacks — no JWT; optional shared secret.
@@ -61,9 +60,10 @@ public final class SecurityPaths {
      *   <li>{@code warnings/} — raw EW bulletin ingest attachments — EwBulletinIngestController</li>
      *   <li>{@code knowledge/} — Recovery knowledge repository documents — KnowledgeRepositoryController</li>
      * </ul>
-     * This enforces AUTHENTICATION only. Per-record jurisdiction scoping of the raw bytes (so a district
-     * cannot fetch another district's file by URL) needs an authorized download endpoint and is tracked
-     * as a follow-up — a static resource handler cannot check row ownership.
+     * The security chains enforce authentication for these prefixes before the static resource handler;
+     * {@link RestrictedStorageAccessFilter} then adds module permissions, area checks for assessment and
+     * mapped incident media, and fail-closed handling for unmapped incident-media filenames. Prefixes that
+     * represent national/module documents rather than an area-owned row retain their module-level guard.
      */
     public static final String[] RESTRICTED_STORAGE_PATHS = {
             "/storage/assessments/**",
@@ -76,25 +76,28 @@ public final class SecurityPaths {
             "/storage/reports/**",
     };
 
-    /** {@link #RESTRICTED_STORAGE_PATHS} as Ant matchers (same static-resource reason as {@link #publicMatchers()}). */
+    /** Restricted paths as path-pattern matchers (same static-resource reason as {@link #publicMatchers()}). */
     public static RequestMatcher[] restrictedStorageMatchers() {
+        PathPatternRequestMatcher.Builder paths = PathPatternRequestMatcher.withDefaults();
         return Arrays.stream(RESTRICTED_STORAGE_PATHS)
-                .map(AntPathRequestMatcher::antMatcher)
+                .map(paths::matcher)
                 .toArray(RequestMatcher[]::new);
     }
 
     /**
-     * The public paths as {@link AntPathRequestMatcher}s. We must NOT pass the raw strings to
+     * The public paths as path-pattern matchers. We must NOT pass the raw strings to
      * {@code requestMatchers(String...)}: with Spring MVC on the classpath that builds
      * {@code MvcRequestMatcher}, which only matches paths backed by an {@code @RequestMapping}. The
      * static-resource path {@code /storage/**} (served by {@code ResourceHttpRequestHandler}, see
      * {@code PublicStorageConfig}) is invisible to the MVC introspector, so it would fall through to
      * {@code anyRequest().authenticated()} and 401 anonymously (masked in {@code local} only
-     * because the persona authenticates the request). Ant matching is path-based and matches it.
+     * because the persona authenticates the request). Path-pattern matching is path-based and also
+     * avoids the deprecated Ant matcher scheduled for removal from Spring Security.
      */
     public static RequestMatcher[] publicMatchers() {
+        PathPatternRequestMatcher.Builder paths = PathPatternRequestMatcher.withDefaults();
         return Arrays.stream(PUBLIC_PATHS)
-                .map(AntPathRequestMatcher::antMatcher)
+                .map(paths::matcher)
                 .toArray(RequestMatcher[]::new);
     }
 }

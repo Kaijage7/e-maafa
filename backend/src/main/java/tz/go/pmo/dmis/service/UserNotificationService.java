@@ -20,6 +20,12 @@ public interface UserNotificationService {
     Map<String, Object> feed(int limit, boolean unreadOnly, String type, String category,
                              String severity, String q, Long beforeId);
 
+    /**
+     * New notification deliveries in stable ascending id order for reconnect/catch-up.
+     * This is a delivery stream, not a general domain-state replication log.
+     */
+    Map<String, Object> changes(long afterSequence, int limit);
+
     /** Unread badge + latest id (for efficient client poll) + severity breakdown. */
     Map<String, Object> unreadCount();
 

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import tz.go.pmo.dmis.common.security.Authz;
@@ -50,8 +51,10 @@ public class IncidentController {
             @RequestParam(name = "infrastructure_damage", required = false) List<String> infrastructureDamage,
             @RequestParam(name = "emergency_needs", required = false) List<String> emergencyNeeds,
             @RequestPart(name = "photos", required = false) List<MultipartFile> photos,
-            @RequestPart(name = "video", required = false) MultipartFile video) {
-        Map<String, Object> result = service.store(form, infrastructureDamage, emergencyNeeds, photos, video);
+            @RequestPart(name = "video", required = false) MultipartFile video,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey) {
+        Map<String, Object> result = service.store(
+                form, infrastructureDamage, emergencyNeeds, photos, video, idempotencyKey);
         if (result.containsKey("errors")) {
             return ResponseEntity.unprocessableEntity().body(result);
         }

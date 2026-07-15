@@ -11,7 +11,9 @@
 
 localhost, 127.0.0.1 {
 	tls internal
-	encode gzip
+	# Do not compress the indefinite SSE body; nginx and Caddy can then flush every event promptly.
+	@compressible not path /api/v1/sync/stream
+	encode @compressible gzip
 
 	reverse_proxy frontend:80 {
 		header_up Host {host}

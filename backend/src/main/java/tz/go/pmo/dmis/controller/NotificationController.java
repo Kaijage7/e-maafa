@@ -41,6 +41,17 @@ public class NotificationController {
         return service.feed(limit, unreadOnly, type, category, severity, q, before_id);
     }
 
+    /**
+     * Resumable mobile/web catch-up for newly delivered notices. The client persists
+     * {@code next_after_sequence} only after it has committed the returned page locally.
+     */
+    @PreAuthorize(Authz.AUTHENTICATED)
+    @GetMapping("/changes")
+    public Map<String, Object> changes(@RequestParam(defaultValue = "0") long after_sequence,
+                                       @RequestParam(defaultValue = "100") int limit) {
+        return service.changes(after_sequence, limit);
+    }
+
     @GetMapping("/unread-count")
     public Map<String, Object> unreadCount() {
         return service.unreadCount();

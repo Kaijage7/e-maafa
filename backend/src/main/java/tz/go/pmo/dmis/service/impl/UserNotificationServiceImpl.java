@@ -6,8 +6,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.time.Instant;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.service.UserNotificationService;
@@ -133,6 +138,58 @@ public class UserNotificationServiceImpl implements UserNotificationService {
                 "category", cat == null ? "" : cat,
                 "severity", sev == null ? "" : sev,
                 "q", q == null ? "" : q));
+        return out;
+    }
+
+    @Override
+    @Transactional(readOnly = true, timeout = 10, isolation = Isolation.REPEATABLE_READ)
+    public Map<String, Object> changes(long afterSequence, int limit) {
+        if (afterSequence < 0) {
+            throw new BusinessRuleException("after_sequence must be zero or a positive notification cursor.");
+        }
+        long uid = requireActor();
+        int lim = Math.min(Math.max(limit, 1), 100);
+        Long headValue = jdbc.queryForObject("""
+                select coalesce((select last_sequence
+                                   from platform.notification_sync_heads
+                                  where user_id = ?), 0)
+                """, Long.class, uid);
+        long latestSequence = headValue == null ? 0 : headValue;
+        if (afterSequence > latestSequence) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Notification cursor is ahead of this server; rebuild notification state from the current feed.");
+        }
+
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select id, sync_sequence, type, title, message, link, entity_type, entity_id,
+                       severity, is_read, created_at
+                  from public.resource_notifications
+                 where user_id = ? and sync_sequence > ? and sync_sequence <= ?
+                 order by sync_sequence asc
+                 limit ?
+                """, uid, afterSequence, latestSequence, lim + 1);
+        boolean hasMore = rows.size() > lim;
+        if (hasMore) {
+            rows = rows.subList(0, lim);
+        }
+        List<Map<String, Object>> items = new ArrayList<>(rows.size());
+        for (Map<String, Object> row : rows) {
+            items.add(enrich(row));
+        }
+        // Deleted notices leave legitimate gaps. Once this bounded page is exhausted, advancing to
+        // the captured per-user head prevents a client from polling the same empty gap forever.
+        long nextAfterSequence = hasMore && !items.isEmpty()
+                ? ((Number) items.getLast().get("sync_sequence")).longValue()
+                : Math.max(afterSequence, latestSequence);
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("items", items);
+        out.put("after_sequence", afterSequence);
+        out.put("next_after_sequence", nextAfterSequence);
+        out.put("latest_sequence", latestSequence);
+        out.put("has_more", hasMore);
+        out.put("limit", lim);
+        out.put("server_time", Instant.now().toString());
         return out;
     }
 

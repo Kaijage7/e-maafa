@@ -1,0 +1,88 @@
+"""Additive mobile/web query and content-free subscription API. Commands remain on REST."""
+type Query {
+  """Incident-capable user's scoped home screen."""
+  mobileHome(
+    incidentPage: Int = 1
+    notificationLimit: Int = 20
+    notificationBeforeId: ID
+  ): MobileHome!
+
+}
+
+"""Foreground mobile invalidation only; durable recovery always uses the committed cursor."""
+type Subscription {
+  mobileSync(afterSequence: ID!): SyncWakeup!
+}
+
+type SyncWakeup {
+  """Latest committed global cursor. It is an opaque 64-bit decimal string to clients."""
+  sequence: ID!
+  occurredAt: String!
+}
+
+type MobileHome {
+  generatedAt: String!
+  """Cursor captured before the snapshot reads, safe for subsequent delta recovery."""
+  syncCursor: ID!
+  """Hash of actor, permissions and jurisdiction; a change requires a fresh snapshot."""
+  syncScopeKey: String!
+  viewer: MobileViewer!
+  incidents: MobileIncidentPage!
+  notifications: MobileNotificationPage!
+}
+
+type MobileViewer {
+  id: ID!
+  name: String!
+  email: String
+  roles: [String!]!
+  permissions: [String!]!
+}
+
+type MobileIncidentPage {
+  items: [MobileIncident!]!
+  currentPage: Int!
+  lastPage: Int!
+  total: Int!
+}
+
+type MobileIncident {
+  id: ID!
+  title: String!
+  status: String
+  workflowStatus: String
+  workflowStatusLabel: String
+  severity: String
+  hazardName: String
+  districtName: String
+  regionName: String
+  locationDescription: String
+  reportedAt: String
+  allocationsCount: Int!
+  tasksCount: Int!
+  responseActive: Boolean!
+}
+
+type MobileNotificationPage {
+  items: [MobileNotification!]!
+  unreadCount: Int!
+  latestId: ID
+  hasMore: Boolean!
+  nextBeforeId: ID
+}
+
+type MobileNotification {
+  id: ID!
+  type: String
+  title: String!
+  message: String
+  link: String
+  entityType: String
+  entityId: ID
+  severity: String
+  read: Boolean!
+  createdAt: String
+  category: String
+  categoryLabel: String
+  categoryIcon: String
+}

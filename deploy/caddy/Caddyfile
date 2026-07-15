@@ -11,7 +11,9 @@
 }
 
 {$DMIS_PUBLIC_HOST:localhost} {
-	encode gzip
+	# Do not compress the indefinite SSE body; nginx and Caddy can then flush every event promptly.
+	@compressible not path /api/v1/sync/stream
+	encode @compressible gzip
 
 	# SPA + /api + /ew-api via frontend nginx (see frontend/nginx.conf).
 	reverse_proxy frontend:80 {
@@ -23,6 +25,8 @@
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://*.tile.openstreetmap.org https://gibs.earthdata.nasa.gov https://wvs.earthdata.nasa.gov https://server.arcgisonline.com; font-src 'self' data:; connect-src 'self'; frame-src blob: https://www.youtube-nocookie.com https://www.sat24.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+		X-Frame-Options DENY
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
 		-Server

@@ -3,7 +3,10 @@ package tz.go.pmo.dmis.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,16 +15,22 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import tz.go.pmo.dmis.common.error.BusinessRuleException;
 import tz.go.pmo.dmis.common.error.ResourceNotFoundException;
 import tz.go.pmo.dmis.common.geo.RegionCentroids;
+import tz.go.pmo.dmis.common.idempotency.ApiIdempotencyService;
 import tz.go.pmo.dmis.common.security.AreaGuard;
 import tz.go.pmo.dmis.common.security.SecurityUtils;
 import tz.go.pmo.dmis.common.security.JurisdictionScope;
@@ -45,6 +54,7 @@ public class IncidentServiceImpl implements IncidentService {
             DateTimeFormatter.ofPattern("dd MMM uuuu, HH:mm", Locale.ENGLISH);
     private static final Set<String> ASSIGNABLE_INCIDENT_PERMISSIONS = Set.of(
             "incidents.view", "incidents.create", "incidents.update", "incidents.approve", "incidents.close");
+    private static final long INCIDENT_MEDIA_TOTAL_MAX = 10L * 1024 * 1024;
 
 
     private final JdbcTemplate jdbc;
@@ -54,9 +64,11 @@ public class IncidentServiceImpl implements IncidentService {
     private final JurisdictionScope jurisdiction;
     private final AreaGuard areaGuard;
     private final RegionCentroids centroids;
+    private final ApiIdempotencyService idempotency;
 
     public IncidentServiceImpl(JdbcTemplate jdbc, IncidentWorkflowService workflow, ObjectMapper objectMapper,
                                JurisdictionScope jurisdiction, AreaGuard areaGuard, RegionCentroids centroids,
+                               ApiIdempotencyService idempotency,
                                @Value("${dmis.storage.public-root:${user.dir}/storage/public}") String publicRoot) {
         this.jdbc = jdbc;
         this.workflow = workflow;
@@ -64,6 +76,7 @@ public class IncidentServiceImpl implements IncidentService {
         this.jurisdiction = jurisdiction;
         this.areaGuard = areaGuard;
         this.centroids = centroids;
+        this.idempotency = idempotency;
         this.storageRoot = Path.of(publicRoot);
     }
 
@@ -198,7 +211,8 @@ public class IncidentServiceImpl implements IncidentService {
             List<String> infrastructureDamage,
             List<String> emergencyNeeds,
             List<MultipartFile> photos,
-            MultipartFile video) {
+            MultipartFile video,
+            String idempotencyKey) {
         Map<String, List<String>> errors = validate(form, infrastructureDamage, emergencyNeeds, photos, video);
         if (!errors.isEmpty()) {
             return Map.of("success", false, "message", "Validation failed.", "errors", errors);
@@ -218,6 +232,18 @@ public class IncidentServiceImpl implements IncidentService {
         validateAssignableUser(errors, assignedToUserId);
         if (!errors.isEmpty()) {
             return Map.of("success", false, "message", "Validation failed.", "errors", errors);
+        }
+
+        // Idempotency begins only after the request is valid. A correctable 422 must not consume the
+        // client's durable retry key; once a valid command commits, that key is bound to its fingerprint.
+        String fingerprint = idempotencyKey == null || idempotencyKey.isBlank()
+                ? "0".repeat(64)
+                : idempotency.fingerprintIncidentCreate(
+                        form, infrastructureDamage, emergencyNeeds, photos, video);
+        ApiIdempotencyService.Claim claim = idempotency.claim(
+                idempotencyKey, "incident.create", fingerprint);
+        if (claim.replay()) {
+            return claim.response();
         }
 
         List<String> photoPaths = storePhotos(photos);
@@ -262,7 +288,14 @@ public class IncidentServiceImpl implements IncidentService {
                 parseLong(form.get("people_affected")), form.get("occurred_at"), form.get("ended_at"),
                 councilId, parseLong(form.get("ward_id")), id);
         workflow.logHistory(id, "created", null, "draft", "Incident reported");
-        return Map.of("success", true, "message", "Incident logged successfully.", "id", id);
+        return completeIdempotent(claim,
+                Map.of("success", true, "message", "Incident logged successfully.", "id", id));
+    }
+
+    private Map<String, Object> completeIdempotent(ApiIdempotencyService.Claim claim,
+                                                   Map<String, Object> response) {
+        idempotency.complete(claim, response);
+        return response;
     }
 
     @Override
@@ -807,12 +840,22 @@ public class IncidentServiceImpl implements IncidentService {
             add(errors, "reported_at", "The reported at field is required.");
         } else {
             try {
-                LocalDateTime parsed = LocalDateTime.parse(form.get("reported_at"));
-                if (parsed.toLocalDate().isAfter(java.time.LocalDate.now())) {
+                // Native clients must send an RFC 3339 offset so an offline queue remains unambiguous
+                // across device time zones. Keep the existing local datetime accepted for the web form.
+                OffsetDateTime parsed = OffsetDateTime.parse(form.get("reported_at"));
+                if (parsed.toInstant().isAfter(Instant.now().plusSeconds(300))) {
                     add(errors, "reported_at", "The reported at must not be a future date.");
                 }
-            } catch (Exception e) {
-                add(errors, "reported_at", "The reported at does not match the format Y-m-d\\TH:i.");
+            } catch (DateTimeParseException notOffsetTimestamp) {
+                try {
+                    LocalDateTime parsed = LocalDateTime.parse(form.get("reported_at"));
+                    if (parsed.toLocalDate().isAfter(java.time.LocalDate.now())) {
+                        add(errors, "reported_at", "The reported at must not be a future date.");
+                    }
+                } catch (DateTimeParseException invalidTimestamp) {
+                    add(errors, "reported_at",
+                            "The reported at must be a local Y-m-d\\TH:i value or an RFC 3339 timestamp with offset.");
+                }
             }
         }
         if (isBlank(form.get("severity_level"))) {
@@ -850,14 +893,33 @@ public class IncidentServiceImpl implements IncidentService {
         }
         if (photos != null) {
             for (MultipartFile photo : photos) {
+                if (photo == null || photo.isEmpty()) {
+                    continue;
+                }
                 if (photo.getSize() > 5L * 1024 * 1024) {
                     add(errors, "photos", "Each photo must not be greater than 5120 kilobytes.");
                     break;
                 }
+                if (detectImageExtension(photo) == null) {
+                    add(errors, "photos", "Photos must contain a valid JPEG, PNG or GIF file.");
+                    break;
+                }
             }
         }
-        if (video != null && !video.isEmpty() && video.getSize() > 50L * 1024 * 1024) {
-            add(errors, "video", "The video must not be greater than 51200 kilobytes.");
+        if (video != null && !video.isEmpty() && video.getSize() > 10L * 1024 * 1024) {
+            add(errors, "video", "The video must not be greater than 10240 kilobytes.");
+        }
+        if (video != null && !video.isEmpty() && detectVideoExtension(video) == null) {
+            add(errors, "video", "The video must contain a valid MP4, QuickTime or AVI file.");
+        }
+        long mediaBytes = video == null ? 0 : video.getSize();
+        if (photos != null) {
+            for (MultipartFile photo : photos) {
+                mediaBytes += photo == null ? 0 : photo.getSize();
+            }
+        }
+        if (mediaBytes > INCIDENT_MEDIA_TOTAL_MAX) {
+            add(errors, "media", "Incident photos and video together must not exceed 10 MB.");
         }
         Long peopleAffected = parseLong(form.get("people_affected"));
         if (peopleAffected != null && peopleAffected > 0) {
@@ -1009,7 +1071,7 @@ public class IncidentServiceImpl implements IncidentService {
             if (photo == null || photo.isEmpty()) {
                 continue;
             }
-            paths.add(storeFile(photo, "incident_photos"));
+            paths.add(storeFile(photo, "incident_photos", detectImageExtension(photo)));
         }
         paths.removeIf(java.util.Objects::isNull);
         return paths;
@@ -1019,21 +1081,109 @@ public class IncidentServiceImpl implements IncidentService {
         if (video == null || video.isEmpty()) {
             return null;
         }
-        return storeFile(video, "incident_videos");
+        return storeFile(video, "incident_videos", detectVideoExtension(video));
     }
 
-    private String storeFile(MultipartFile file, String dir) {
+    private String storeFile(MultipartFile file, String dir, String extension) {
+        if (extension == null) {
+            throw new BusinessRuleException("The uploaded incident media type is not allowed.");
+        }
+        Path stored = null;
         try {
             Path target = storageRoot.resolve(dir);
             Files.createDirectories(target);
-            String name = System.currentTimeMillis() + "_"
-                    + (file.getOriginalFilename() == null ? "file" : file.getOriginalFilename().replaceAll("[^A-Za-z0-9._-]", "_"));
-            file.transferTo(target.resolve(name).toAbsolutePath());
+            String name = UUID.randomUUID() + extension;
+            stored = target.resolve(name).toAbsolutePath().normalize();
+            try (java.io.InputStream input = file.getInputStream()) {
+                Files.copy(input, stored);
+            }
+            registerRollbackCleanup(stored);
             return dir + "/" + name;
         } catch (Exception e) {
-            log.warn("incident file store failed: {}", e.getMessage());
-            return null;
+            if (stored != null) {
+                try {
+                    Files.deleteIfExists(stored);
+                } catch (Exception cleanupFailure) {
+                    log.error("incident media cleanup failed after storage error: {}", stored, cleanupFailure);
+                }
+            }
+            log.error("incident media storage failed; rolling back command", e);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Incident evidence storage is unavailable. No incident was created.");
         }
+    }
+
+    private static String detectImageExtension(MultipartFile file) {
+        byte[] header = header(file, 12);
+        if (startsWith(header, 0xff, 0xd8, 0xff)) {
+            return ".jpg";
+        }
+        if (startsWith(header, 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) {
+            return ".png";
+        }
+        if (startsWithAscii(header, "GIF87a") || startsWithAscii(header, "GIF89a")) {
+            return ".gif";
+        }
+        return null;
+    }
+
+    private static String detectVideoExtension(MultipartFile file) {
+        byte[] header = header(file, 12);
+        if (header.length >= 12 && header[4] == 'f' && header[5] == 't'
+                && header[6] == 'y' && header[7] == 'p') {
+            return ".mp4";
+        }
+        if (startsWithAscii(header, "RIFF") && header.length >= 12
+                && header[8] == 'A' && header[9] == 'V' && header[10] == 'I' && header[11] == ' ') {
+            return ".avi";
+        }
+        return null;
+    }
+
+    private static byte[] header(MultipartFile file, int length) {
+        if (file == null || file.isEmpty()) {
+            return new byte[0];
+        }
+        try (java.io.InputStream input = file.getInputStream()) {
+            return input.readNBytes(length);
+        } catch (Exception unreadable) {
+            return new byte[0];
+        }
+    }
+
+    private static boolean startsWith(byte[] value, int... prefix) {
+        if (value.length < prefix.length) {
+            return false;
+        }
+        for (int i = 0; i < prefix.length; i++) {
+            if (Byte.toUnsignedInt(value[i]) != prefix[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean startsWithAscii(byte[] value, String prefix) {
+        return startsWith(value, prefix.chars().toArray());
+    }
+
+    private static void registerRollbackCleanup(Path stored) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == TransactionSynchronization.STATUS_COMMITTED) {
+                    return;
+                }
+                try {
+                    Files.deleteIfExists(stored);
+                } catch (Exception cleanupFailure) {
+                    log.error("incident media cleanup failed after transaction rollback: {}", stored, cleanupFailure);
+                }
+            }
+        });
     }
 
     private List<Map<String, Object>> listUpdates(long id) {

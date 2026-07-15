@@ -12,6 +12,29 @@ spring:
       max-file-size: 10MB
       max-request-size: 12MB
 
+  graphql:
+    # The API is available at /api/graphql because the application context path is /api.
+    # Keep the browser IDE off by default; clients use the versioned, reviewed schema below.
+    http:
+      # The request-size and rate-limit guards intentionally protect this exact application path.
+      path: /graphql
+    websocket:
+      # Native clients use the current graphql-transport-ws protocol while foregrounded. The
+      # Authorization bearer is required on the HTTP upgrade so the normal JWT denylist and
+      # restricted-token filters remain authoritative; connection_init carries no second auth path.
+      path: /graphql
+      connection-init-timeout: 10s
+      keep-alive: 15s
+    graphiql:
+      enabled: false
+    schema:
+      # Mobile builds use a reviewed schema artifact. Production schema discovery stays closed;
+      # explicitly enable it only in a controlled development/code-generation environment.
+      introspection:
+        enabled: ${DMIS_GRAPHQL_INTROSPECTION_ENABLED:false}
+      printer:
+        enabled: false
+
   # SMTP for real email (stakeholder/dissemination notifications). Secrets from the environment.
   # Default host is empty so readiness and MailHealthIndicator stay honest when credentials are deferred.
   mail:
@@ -93,10 +116,46 @@ management:
       enabled: ${MANAGEMENT_HEALTH_MAIL_ENABLED:false}
 
 springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
+  # Publish the OpenAPI document only. The Swagger UI WebJar is intentionally not packaged.
+  api-docs:
+    path: /v3/api-docs
 
 dmis:
+  sync:
+    # Cursor history must outlive the longest supported offline window. An older cursor receives
+    # HTTP 410 and must rebuild from the GraphQL snapshot; it never gets a deceptive partial suffix.
+    retention: ${DMIS_SYNC_RETENTION:90d}
+    cleanup-cron: ${DMIS_SYNC_CLEANUP_CRON:0 29 * * * *}
+    cleanup-batch-size: ${DMIS_SYNC_CLEANUP_BATCH_SIZE:10000}
+    # SSE carries only a wake-up. Ten-minute reconnects revalidate the bearer before its default
+    # 30-minute expiry; heartbeat/proxy settings keep carrier and edge connections honest.
+    relay-poll-ms: ${DMIS_SYNC_RELAY_POLL_MS:500}
+    sse-timeout: ${DMIS_SYNC_SSE_TIMEOUT:10m}
+    sse-heartbeat-ms: ${DMIS_SYNC_SSE_HEARTBEAT_MS:15000}
+    sse-max-connections: ${DMIS_SYNC_SSE_MAX_CONNECTIONS:5000}
+    sse-max-connections-per-actor: ${DMIS_SYNC_SSE_MAX_CONNECTIONS_PER_ACTOR:5}
+    # Shared by REST/SSE and GraphQL subscriptions. The WebSocket interceptor refuses new operations
+    # on an older socket; subscriptions separately stop at JWT expiry and poll logout revocation.
+    graphql-subscription-timeout: ${DMIS_SYNC_GRAPHQL_SUBSCRIPTION_TIMEOUT:10m}
+  idempotency:
+    # Must be at least as long as the longest supported client/offline retry queue. Receipts contain
+    # only the request digest and small response body, never the incident payload or attachment bytes.
+    retention: ${DMIS_IDEMPOTENCY_RETENTION:90d}
+    # Delete a bounded, lock-skipping batch each hour so cleanup cannot become one unbounded live DB transaction.
+    cleanup-cron: ${DMIS_IDEMPOTENCY_CLEANUP_CRON:0 17 * * * *}
+    cleanup-batch-size: ${DMIS_IDEMPOTENCY_CLEANUP_BATCH_SIZE:10000}
+  graphql:
+    # Defense in depth against deeply nested or alias-amplified read operations.
+    max-query-depth: ${DMIS_GRAPHQL_MAX_QUERY_DEPTH:8}
+    max-query-complexity: ${DMIS_GRAPHQL_MAX_QUERY_COMPLEXITY:100}
+    request-timeout: ${DMIS_GRAPHQL_REQUEST_TIMEOUT:20s}
+    max-request-bytes: ${DMIS_GRAPHQL_MAX_REQUEST_BYTES:65536}
+    # An established WebSocket bypasses servlet-filter dispatch for subsequent operations, so it has
+    # its own per-actor operation budget in the GraphQL interceptor chain.
+    websocket-max-operations: ${DMIS_GRAPHQL_WEBSOCKET_MAX_OPERATIONS:300}
+    websocket-operation-window-seconds: ${DMIS_GRAPHQL_WEBSOCKET_OPERATION_WINDOW_SECONDS:60}
+    # End active subscriptions promptly after logout rather than waiting for JWT/socket expiry.
+    websocket-revocation-check: ${DMIS_GRAPHQL_WEBSOCKET_REVOCATION_CHECK:5s}
   security:
     # Keycloak realm roles live under this JWT claim path.
     roles-claim-path: realm_access.roles

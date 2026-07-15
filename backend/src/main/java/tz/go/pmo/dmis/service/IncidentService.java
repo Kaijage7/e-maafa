@@ -18,7 +18,8 @@ public interface IncidentService {
 
     /** Success map, or validation failure with {@code errors} (controller returns 422). */
     Map<String, Object> store(Map<String, String> form, List<String> infrastructureDamage,
-                              List<String> emergencyNeeds, List<MultipartFile> photos, MultipartFile video);
+                              List<String> emergencyNeeds, List<MultipartFile> photos, MultipartFile video,
+                              String idempotencyKey);
 
     Map<String, Object> update(long id, Map<String, String> form, List<String> infrastructureDamage,
                                List<String> emergencyNeeds, List<String> removePhotos,

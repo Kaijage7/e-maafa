@@ -28,6 +28,8 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
     /** Longest-prefix wins; the context-path /api is already stripped from getRequestURI() below. */
     private static final Map<String, String> MODULE_PERMISSION = new LinkedHashMap<>();
     static {
+        MODULE_PERMISSION.put("/v1/sync", "incidents.view");
+        MODULE_PERMISSION.put("/v1/mobile/incidents", "incidents.view");
         MODULE_PERMISSION.put("/v1/response/incidents", "incidents.view");
         MODULE_PERMISSION.put("/v1/response/approvals", "resource_allocation.view");
         MODULE_PERMISSION.put("/v1/response/allocations", "resource_allocation.view");

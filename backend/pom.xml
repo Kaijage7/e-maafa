@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.4</version>
+        <version>3.5.16</version>
         <relativePath/>
     </parent>
 
@@ -19,9 +19,35 @@
 
     <properties>
         <java.version>21</java.version>
+        <!-- Defaults to the conventional target directory; CI/parallel agents may override this
+             with -Ddmis.build.directory=... so one build cannot delete another build's classes. -->
+        <dmis.build.directory>${project.basedir}/target</dmis.build.directory>
         <mapstruct.version>1.6.2</mapstruct.version>
-        <springdoc.version>2.6.0</springdoc.version>
+        <springdoc.version>2.8.17</springdoc.version>
+        <!-- Security overrides released after Spring Boot 3.5.16. Keep these explicit until Boot manages patched lines. -->
+        <commons-lang3.version>3.18.0</commons-lang3.version>
+        <jackson-bom.version>2.21.5</jackson-bom.version>
+        <log4j2.version>2.25.5</log4j2.version>
+        <postgresql.version>42.7.12</postgresql.version>
+        <tomcat.version>10.1.57</tomcat.version>
+        <pdfbox.version>2.0.37</pdfbox.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- openhtmltopdf 1.0.10 pins PDFBox 2.0.24; stay on its compatible 2.x API with the patched examples release. -->
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>pdfbox</artifactId>
+                <version>${pdfbox.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.pdfbox</groupId>
+                <artifactId>xmpbox</artifactId>
+                <version>${pdfbox.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- Official document PDF generation (NDRF annex filings -> Reports & Analytics) -->
@@ -29,6 +55,13 @@
             <groupId>com.openhtmltopdf</groupId>
             <artifactId>openhtmltopdf-pdfbox</artifactId>
             <version>1.0.10</version>
+            <exclusions>
+                <!-- spring-jcl supplies the Commons Logging API; a second implementation causes classpath ambiguity. -->
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jsoup</groupId>
@@ -44,6 +77,16 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <!-- Additive read API for mobile/web composite views. REST remains authoritative for commands. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-graphql</artifactId>
+        </dependency>
+        <!-- Foreground mobile subscriptions over graphql-transport-ws. Browser wake-up remains REST/SSE. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
         <!-- Email delivery (stakeholder dissemination) -->
@@ -87,10 +130,10 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- API docs -->
+        <!-- OpenAPI JSON only. Do not package Swagger UI's browser assets into the production jar. -->
         <dependency>
             <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
             <version>${springdoc.version}</version>
         </dependency>
 
@@ -117,6 +160,11 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.graphql</groupId>
+            <artifactId>spring-graphql-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- 1.21.4+ / docker-java with API ≥1.40 — required for Docker Engine 29 (F102) -->
         <dependency>
             <groupId>org.testcontainers</groupId>
@@ -133,6 +181,7 @@
     </dependencies>
 
     <build>
+        <directory>${dmis.build.directory}</directory>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

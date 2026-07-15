@@ -1,10 +1,12 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PageHeaderComponent } from '../../shell/page-header.component';
 import { PanelComponent } from '../../shell/panel.component';
 import { AuthService } from '../../core/auth.service';
+import { RealtimeSyncService } from '../../core/realtime-sync.service';
+import { Subscription, auditTime } from 'rxjs';
 
 interface IncidentRow {
   id: number; title: string; status: string; workflow_status: string; workflow_status_label: string;
@@ -30,10 +32,9 @@ interface FormData {
  * filters, casualty figures, workflow badges and the active-response indicator.
  */
 @Component({
-  selector: 'page-response-incidents',
-  standalone: true,
-  imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
-  styles: [`
+    selector: 'page-response-incidents',
+    imports: [FormsModule, RouterLink, PageHeaderComponent, PanelComponent],
+    styles: [`
     .filter-bar select { padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.78rem; background: #fff; color: var(--text-dark); font-family: inherit; }
     .impact { display: flex; gap: 0.6rem; font-size: 0.75rem; color: var(--text-mid); }
     .impact b { color: #b91c1c; }
@@ -45,7 +46,7 @@ interface FormData {
     .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #dc3545; animation: pulse 1.5s infinite; margin-right: 4px; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   `],
-  template: `
+    template: `
     <dmis-page-header title="Incident Management" icon="fa-exclamation-triangle"
       [breadcrumbs]="[{label:'Home', url:'/home'}, {label:'Response'}, {label:'Incidents'}]">
       @if (canCreate()) { <a routerLink="/m/response/incidents/create" class="btn-add"><i class="fas fa-plus"></i> Log New Incident</a> }
@@ -138,11 +139,13 @@ interface FormData {
         }
       </dmis-panel>
     </div>
-  `,
+  `
 })
-export class ResponseIncidentsComponent implements OnInit {
+export class ResponseIncidentsComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private readonly auth = inject(AuthService);
+  private readonly realtimeSync = inject(RealtimeSyncService);
+  private syncSubscription: Subscription | null = null;
   readonly canCreate = computed(() => this.auth.hasPermission('incidents.create'));
 
   rows = signal<IncidentRow[]>([]);
@@ -159,6 +162,13 @@ export class ResponseIncidentsComponent implements OnInit {
   ngOnInit(): void {
     this.http.get<FormData>('/api/v1/response/incidents/form-data').subscribe(fd => this.formData.set(fd));
     this.reload(1);
+    this.syncSubscription = this.realtimeSync.wakeups$.pipe(auditTime(750)).subscribe(() => {
+      this.reload(this.currentPage());
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.syncSubscription?.unsubscribe();
   }
 
   reload(page: number): void {
