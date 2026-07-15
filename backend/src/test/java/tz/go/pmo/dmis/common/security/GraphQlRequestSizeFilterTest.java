@@ -2,19 +2,23 @@ package tz.go.pmo.dmis.common.security;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import tz.go.pmo.dmis.graphql.PersistedOperationRegistry;
 
 class GraphQlRequestSizeFilterTest {
 
     @Test
     void preservesAnAllowedBodyForTheGraphQlHandler() throws Exception {
-        GraphQlRequestSizeFilter filter = new GraphQlRequestSizeFilter(1024);
+        GraphQlRequestSizeFilter filter = GraphQlRequestSizeFilter.forTests(1024);
         byte[] body = "{\"query\":\"query MobileHome { mobileHome { generatedAt } }\"}"
                 .getBytes(StandardCharsets.UTF_8);
         MockHttpServletRequest request = request("/api/graphql", body);
@@ -29,7 +33,7 @@ class GraphQlRequestSizeFilterTest {
 
     @Test
     void rejectsAnOversizedGraphQlBodyBeforeTheHandler() throws Exception {
-        GraphQlRequestSizeFilter filter = new GraphQlRequestSizeFilter(1024);
+        GraphQlRequestSizeFilter filter = GraphQlRequestSizeFilter.forTests(1024);
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
@@ -44,7 +48,7 @@ class GraphQlRequestSizeFilterTest {
 
     @Test
     void rejectsHttpBatchArraysWithBadRequestInsteadOfInternalError() throws Exception {
-        GraphQlRequestSizeFilter filter = new GraphQlRequestSizeFilter(1024);
+        GraphQlRequestSizeFilter filter = GraphQlRequestSizeFilter.forTests(1024);
         byte[] body = "[{\"query\":\"{ mobileHome { syncCursor } }\"}]".getBytes(StandardCharsets.UTF_8);
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
@@ -59,7 +63,7 @@ class GraphQlRequestSizeFilterTest {
 
     @Test
     void rejectsEmptyAndNonObjectBodies() throws Exception {
-        GraphQlRequestSizeFilter filter = new GraphQlRequestSizeFilter(1024);
+        GraphQlRequestSizeFilter filter = GraphQlRequestSizeFilter.forTests(1024);
 
         MockHttpServletResponse emptyResponse = new MockHttpServletResponse();
         filter.doFilter(request("/api/graphql", new byte[0]), emptyResponse, new MockFilterChain());
@@ -75,8 +79,27 @@ class GraphQlRequestSizeFilterTest {
     }
 
     @Test
+    void expandsApolloPersistedQueryHashIntoRegisteredDocument() throws Exception {
+        PersistedOperationRegistry registry = new PersistedOperationRegistry(new ObjectMapper());
+        registry.load();
+        String hash = registry.registeredDocuments().keySet().iterator().next();
+        String expected = registry.registeredDocuments().get(hash);
+        GraphQlRequestSizeFilter filter = new GraphQlRequestSizeFilter(65536, new ObjectMapper(), registry);
+        byte[] body = ("{\"extensions\":{\"persistedQuery\":{\"version\":1,\"sha256Hash\":\""
+                + hash + "\"}}}").getBytes(StandardCharsets.UTF_8);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request("/api/graphql", body), response, chain);
+
+        assertEquals(HttpStatus.OK.value(), response.getStatus());
+        JsonNode rewritten = new ObjectMapper().readTree(chain.getRequest().getInputStream().readAllBytes());
+        assertEquals(expected, rewritten.path("query").asText());
+    }
+
+    @Test
     void doesNotConsumeBodiesForRestEndpoints() throws Exception {
-        GraphQlRequestSizeFilter filter = new GraphQlRequestSizeFilter(1024);
+        GraphQlRequestSizeFilter filter = GraphQlRequestSizeFilter.forTests(1024);
         byte[] body = new byte[1025];
         MockHttpServletRequest request = request("/api/v1/auth/login", body);
         MockHttpServletResponse response = new MockHttpServletResponse();

@@ -1,0 +1,20 @@
+{
+  "description": "DMIS mobile/web GraphQL document allowlist. Clients may send the full document (hash must match when mode=document) or Apollo-style extensions.persistedQuery.sha256Hash for lookup.",
+  "operations": [
+    {
+      "id": "mobile-home-v1",
+      "name": "MobileHome",
+      "document": "query MobileHome($page: Int, $iLimit: Int, $nLimit: Int, $before: ID) { mobileHome(incidentPage: $page, incidentLimit: $iLimit, notificationLimit: $nLimit, notificationBeforeId: $before) { generatedAt syncCursor syncScopeKey viewer { id name email roles permissions } incidents { items { id title status workflowStatus workflowStatusLabel severity hazardName districtName regionName locationDescription reportedAt allocationsCount tasksCount responseActive } currentPage lastPage total } notifications { items { id type title message link entityType entityId severity read createdAt category categoryLabel categoryIcon } unreadCount latestId hasMore nextBeforeId } } }"
+    },
+    {
+      "id": "mobile-sync-v1",
+      "name": "MobileSync",
+      "document": "subscription MobileSync($after: ID!) { mobileSync(afterSequence: $after) { sequence occurredAt } }"
+    },
+    {
+      "id": "incident-workspace-v1",
+      "name": "IncidentWorkspace",
+      "document": "query IncidentWorkspace($id: ID!) { incidentWorkspace(id: $id) { generatedAt syncCursor syncScopeKey incident { id title status workflowStatus workflowStatusLabel severity hazardName incidentTypeName districtName regionName councilName wardName locationDescription reportedAt description latitude longitude allocationsCount tasksCount responseActive } tasks { id title priority status progressPercent dueDate assignedToName } allocations { id resourceName quantityRequested quantityAllocated unit status } updatesCount workflowHistoriesCount } }"
+    }
+  ]
+}

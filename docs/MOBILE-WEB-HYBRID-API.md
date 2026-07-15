@@ -37,15 +37,35 @@ application-service layer.
 
 ## Implemented first slice
 
-`POST /api/graphql` exposes the read-only `mobileHome` query. It combines:
+`POST /api/graphql` exposes read-only queries and one content-free subscription:
 
-- the authenticated viewer and granted authorities;
-- the existing jurisdiction-scoped incident page (`incidentPage`, optional `incidentLimit` 1–50); and
-- the existing current-user notification cursor feed (`notificationLimit` 1–50).
+- **`mobileHome`** — authenticated viewer, jurisdiction-scoped incident page
+  (`incidentPage`, optional `incidentLimit` 1–50), and notification cursor feed
+  (`notificationLimit` 1–50);
+- **`incidentWorkspace(id)`** — single-incident detail workspace (bounded tasks/allocations) via the
+  same jurisdiction-scoped `IncidentService#show` path used by the web incident screen;
+- **`mobileSync(afterSequence)`** — content-free foreground wake-up only (see below).
 
-There are no GraphQL mutations or direct repository calls in this slice. The only subscription is
-the content-free `mobileSync(afterSequence)` foreground wake-up described below; it is not a second
-source of domain data.
+There are no GraphQL mutations or direct repository calls in this surface. Commands stay on REST.
+
+### Operation allowlist / persisted queries
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `dmis.graphql.allowlist-enabled` | `true` | Enforce the product surface |
+| `dmis.graphql.allowlist-mode` | `root-fields` | Only roots `mobileHome`, `mobileSync`, `incidentWorkspace` |
+| `dmis.graphql.allowlist-mode=document` | off unless set | Body SHA-256 must match `graphql/persisted-operations.json` |
+| `dmis.graphql.require-named-operations` | `false` | When true, reject anonymous operations |
+
+Registered documents live in `backend/src/main/resources/graphql/persisted-operations.json`. Clients may
+send the full document (root-fields mode) or Apollo-style
+
+```json
+{ "extensions": { "persistedQuery": { "version": 1, "sha256Hash": "<hex>" } } }
+```
+
+for lookup. Production international launch should switch to `allowlist-mode=document` after the
+native client locks its operation list.
 
 The endpoint is bearer-authenticated and the resolver plus service both require
 `incidents.view`. The mobile service also requires a positive numeric JWT subject before

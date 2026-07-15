@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import tz.go.pmo.dmis.common.security.Authz;
+import tz.go.pmo.dmis.dto.response.IncidentWorkspaceResponse;
 import tz.go.pmo.dmis.dto.response.MobileHomeResponse;
 import tz.go.pmo.dmis.service.IncidentService;
 import tz.go.pmo.dmis.service.IncidentSyncService;
@@ -35,6 +36,7 @@ public class MobileReadServiceImpl implements MobileReadService {
     private static final int MAX_NOTIFICATION_PAGE_SIZE = 50;
     private static final int MAX_INCIDENT_PAGE_SIZE = 50;
     private static final int DEFAULT_INCIDENT_PAGE_SIZE = 15;
+    private static final int MAX_WORKSPACE_CHILD_ROWS = 50;
 
     private final IncidentService incidentService;
     private final UserNotificationService notificationService;
@@ -76,6 +78,36 @@ public class MobileReadServiceImpl implements MobileReadService {
                 viewer(authentication),
                 incidentPage(incidents),
                 notificationPage(notifications));
+    }
+
+    @Override
+    @Transactional(readOnly = true, timeout = 15, isolation = Isolation.REPEATABLE_READ)
+    @PreAuthorize(Authz.PERM_INCIDENT_VIEW)
+    public IncidentWorkspaceResponse incidentWorkspace(long incidentId) {
+        if (incidentId < 1) {
+            throw new IllegalArgumentException("incident id must be a positive number");
+        }
+        requireAuthentication();
+        IncidentSyncService.SnapshotState syncState = syncService.snapshotState();
+        // show() already enforces jurisdiction and returns 404 for out-of-area rows.
+        Map<String, Object> source = incidentService.show(incidentId);
+        Objects.requireNonNull(source, "Incident workspace source must not be null");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> incident = (Map<String, Object>) source.get("incident");
+        if (incident == null) {
+            throw new IllegalStateException("Incident workspace is missing the incident object");
+        }
+        List<IncidentWorkspaceResponse.Task> tasks = mapTasks(source.get("tasks"));
+        List<IncidentWorkspaceResponse.Allocation> allocations = mapAllocations(source.get("allocations"));
+        return new IncidentWorkspaceResponse(
+                Instant.now().toString(),
+                Long.toString(syncState.cursor()),
+                syncState.scopeKey(),
+                detail(incident, tasks.size(), allocations.size()),
+                tasks,
+                allocations,
+                listSize(source.get("updates")),
+                listSize(source.get("workflow_histories")));
     }
 
     private static Authentication requireAuthentication() {
@@ -258,5 +290,114 @@ public class MobileReadServiceImpl implements MobileReadService {
 
     private static String clean(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private static IncidentWorkspaceResponse.IncidentDetail detail(
+            Map<String, Object> incident, int taskCount, int allocationCount) {
+        boolean responseActive = false;
+        Object active = incident.get("response_active");
+        if (active instanceof Boolean b) {
+            responseActive = b;
+        } else if (active != null) {
+            responseActive = "true".equalsIgnoreCase(active.toString()) || "1".equals(active.toString());
+        }
+        return new IncidentWorkspaceResponse.IncidentDetail(
+                requiredId(incident, "id"),
+                requiredString(incident, "title"),
+                string(incident.get("status")),
+                string(incident.get("workflow_status")),
+                string(incident.get("workflow_status_label")),
+                string(incident.get("severity_level")),
+                string(incident.get("hazard_name")),
+                string(incident.get("incident_type_name")),
+                string(incident.get("district_name")),
+                string(incident.get("region_name")),
+                string(incident.get("council_name")),
+                string(incident.get("ward_name")),
+                string(incident.get("location_description")),
+                string(incident.get("reported_at")),
+                string(incident.get("description")),
+                asDouble(incident.get("latitude")),
+                asDouble(incident.get("longitude")),
+                allocationCount,
+                taskCount,
+                responseActive);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<IncidentWorkspaceResponse.Task> mapTasks(Object raw) {
+        if (!(raw instanceof List<?> rows)) {
+            return List.of();
+        }
+        List<IncidentWorkspaceResponse.Task> out = new ArrayList<>();
+        for (Object row : rows) {
+            if (!(row instanceof Map<?, ?> map) || out.size() >= MAX_WORKSPACE_CHILD_ROWS) {
+                continue;
+            }
+            Map<String, Object> m = (Map<String, Object>) map;
+            out.add(new IncidentWorkspaceResponse.Task(
+                    id(m.get("id")),
+                    string(m.get("title")),
+                    string(m.get("priority")),
+                    string(m.get("status")),
+                    asInteger(m.get("progress_percent")),
+                    string(m.get("due_date")),
+                    string(m.get("assigned_to_name"))));
+        }
+        return List.copyOf(out);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<IncidentWorkspaceResponse.Allocation> mapAllocations(Object raw) {
+        if (!(raw instanceof List<?> rows)) {
+            return List.of();
+        }
+        List<IncidentWorkspaceResponse.Allocation> out = new ArrayList<>();
+        for (Object row : rows) {
+            if (!(row instanceof Map<?, ?> map) || out.size() >= MAX_WORKSPACE_CHILD_ROWS) {
+                continue;
+            }
+            Map<String, Object> m = (Map<String, Object>) map;
+            out.add(new IncidentWorkspaceResponse.Allocation(
+                    id(m.get("id")),
+                    string(m.get("resource_name")),
+                    string(m.get("quantity_requested")),
+                    string(m.get("quantity_allocated")),
+                    string(m.get("unit_of_measure")),
+                    string(m.get("status"))));
+        }
+        return List.copyOf(out);
+    }
+
+    private static int listSize(Object raw) {
+        return raw instanceof List<?> list ? list.size() : 0;
+    }
+
+    private static Double asDouble(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        try {
+            return Double.parseDouble(value.toString());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private static Integer asInteger(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 }

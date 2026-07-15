@@ -15,6 +15,7 @@ import reactor.core.publisher.Flux;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.TokenDenylist;
+import tz.go.pmo.dmis.dto.response.IncidentWorkspaceResponse;
 import tz.go.pmo.dmis.dto.response.MobileHomeResponse;
 import tz.go.pmo.dmis.dto.response.SyncWakeup;
 import tz.go.pmo.dmis.service.MobileReadService;
@@ -65,6 +66,23 @@ public class MobileGraphQlController {
                 incidentLimit == null ? 15 : incidentLimit,
                 notificationLimit == null ? 20 : notificationLimit,
                 notificationBeforeId);
+    }
+
+    @QueryMapping
+    @PreAuthorize(Authz.PERM_INCIDENT_VIEW)
+    public IncidentWorkspaceResponse incidentWorkspace(@Argument String id) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("incidentWorkspace requires a positive incident id");
+        }
+        try {
+            long incidentId = Long.parseLong(id.trim());
+            if (incidentId < 1) {
+                throw new NumberFormatException("non-positive");
+            }
+            return service.incidentWorkspace(incidentId);
+        } catch (NumberFormatException bad) {
+            throw new IllegalArgumentException("incidentWorkspace id must be a positive number", bad);
+        }
     }
 
     /**

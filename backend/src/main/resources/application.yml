@@ -150,6 +150,11 @@ dmis:
     max-query-complexity: ${DMIS_GRAPHQL_MAX_QUERY_COMPLEXITY:100}
     request-timeout: ${DMIS_GRAPHQL_REQUEST_TIMEOUT:20s}
     max-request-bytes: ${DMIS_GRAPHQL_MAX_REQUEST_BYTES:65536}
+    # root-fields = only mobileHome/mobileSync/incidentWorkspace roots.
+    # document = body must match a SHA-256 in graphql/persisted-operations.json (prod hardening).
+    allowlist-enabled: ${DMIS_GRAPHQL_ALLOWLIST_ENABLED:true}
+    allowlist-mode: ${DMIS_GRAPHQL_ALLOWLIST_MODE:root-fields}
+    require-named-operations: ${DMIS_GRAPHQL_REQUIRE_NAMED_OPERATIONS:false}
     # An established WebSocket bypasses servlet-filter dispatch for subsequent operations, so it has
     # its own per-actor operation budget in the GraphQL interceptor chain.
     websocket-max-operations: ${DMIS_GRAPHQL_WEBSOCKET_MAX_OPERATIONS:300}

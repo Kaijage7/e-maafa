@@ -27,7 +27,9 @@ public class GraphQlQueryLimitConfig {
         return new MaxQueryComplexityInstrumentation(limit, (environment, childComplexity) -> {
             // mobileHome performs several already-scoped SQL reads as one screen aggregate. Give it
             // a realistic fixed cost so aliases cannot multiply those reads while appearing cheap.
-            int ownCost = "mobileHome".equals(environment.getFieldDefinition().getName()) ? 50 : 1;
+            String field = environment.getFieldDefinition().getName();
+            // Composite reads hit several already-scoped SQL queries; keep alias amplification expensive.
+            int ownCost = ("mobileHome".equals(field) || "incidentWorkspace".equals(field)) ? 50 : 1;
             return Math.addExact(ownCost, childComplexity);
         });
     }

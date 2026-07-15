@@ -1,5 +1,8 @@
 package tz.go.pmo.dmis.common.security;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
@@ -13,6 +16,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -20,26 +25,42 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tz.go.pmo.dmis.graphql.PersistedOperationRegistry;
 
 /**
  * Stops oversized GraphQL documents and illegal request shapes before Spring GraphQL parses them.
  *
  * <p>Spring GraphQL deserializes a single {@code SerializableGraphQlRequest} object. A JSON array
  * (Apollo/HTTP batching) would otherwise throw {@code MismatchedInputException} and surface as a
- * generic 500. DMIS does not support multi-operation batching on the shared endpoint — each
- * mobileHome/mobileSync call is already an aggregated screen or wake-up.</p>
+ * generic 500. DMIS does not support multi-operation batching on the shared endpoint.</p>
+ *
+ * <p>When the client sends an Apollo persisted-query hash without a document body, this filter
+ * injects the registered document so Spring GraphQL always receives a valid {@code query} field.</p>
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 5)
 public class GraphQlRequestSizeFilter extends OncePerRequestFilter {
 
     private final int maxRequestBytes;
+    private final ObjectMapper json;
+    private final PersistedOperationRegistry registry;
 
-    public GraphQlRequestSizeFilter(@Value("${dmis.graphql.max-request-bytes:65536}") int maxRequestBytes) {
+    @Autowired
+    public GraphQlRequestSizeFilter(
+            @Value("${dmis.graphql.max-request-bytes:65536}") int maxRequestBytes,
+            ObjectMapper json,
+            PersistedOperationRegistry registry) {
         if (maxRequestBytes < 1024) {
             throw new IllegalArgumentException("dmis.graphql.max-request-bytes must be at least 1024");
         }
         this.maxRequestBytes = maxRequestBytes;
+        this.json = json;
+        this.registry = registry;
+    }
+
+    /** Test factory without Spring and without persisted-query expansion. */
+    static GraphQlRequestSizeFilter forTests(int maxRequestBytes) {
+        return new GraphQlRequestSizeFilter(maxRequestBytes, new ObjectMapper(), null);
     }
 
     @Override
@@ -68,6 +89,16 @@ public class GraphQlRequestSizeFilter extends OncePerRequestFilter {
             rejectBadRequest(response, shapeError);
             return;
         }
+        try {
+            body = expandPersistedQuery(body);
+        } catch (IOException parseError) {
+            rejectBadRequest(response, "invalid_json_shape");
+            return;
+        }
+        if (body.length > maxRequestBytes) {
+            rejectTooLarge(response);
+            return;
+        }
         chain.doFilter(new CachedBodyRequest(request, body), response);
     }
 
@@ -92,13 +123,38 @@ public class GraphQlRequestSizeFilter extends OncePerRequestFilter {
         }
         byte first = body[i];
         if (first == '[') {
-            // Explicitly reject HTTP batch arrays so callers get 400, not a Jackson 500.
             return "batch_not_supported";
         }
         if (first != '{') {
             return "invalid_json_shape";
         }
         return null;
+    }
+
+    byte[] expandPersistedQuery(byte[] body) throws IOException {
+        if (registry == null || body == null || body.length == 0) {
+            return body;
+        }
+        JsonNode root = json.readTree(body);
+        if (!(root instanceof ObjectNode object)) {
+            return body;
+        }
+        JsonNode queryNode = object.get("query");
+        boolean missingQuery = queryNode == null || queryNode.isNull()
+                || !queryNode.isTextual() || queryNode.asText().isBlank();
+        if (!missingQuery) {
+            return body;
+        }
+        String hash = object.path("extensions").path("persistedQuery").path("sha256Hash").asText(null);
+        if (hash == null || hash.isBlank()) {
+            return body;
+        }
+        Optional<String> document = registry.documentForHash(hash);
+        if (document.isEmpty()) {
+            return body;
+        }
+        object.put("query", document.get());
+        return json.writeValueAsBytes(object);
     }
 
     private static void rejectTooLarge(HttpServletResponse response) throws IOException {

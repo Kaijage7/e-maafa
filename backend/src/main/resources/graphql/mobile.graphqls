@@ -9,6 +9,61 @@ type Query {
     notificationBeforeId: ID
   ): MobileHome!
 
+  """Single incident workspace for a jurisdiction-visible id (detail + bounded tasks/allocations)."""
+  incidentWorkspace(id: ID!): IncidentWorkspace!
+}
+
+type IncidentWorkspace {
+  generatedAt: String!
+  syncCursor: ID!
+  syncScopeKey: String!
+  incident: MobileIncidentDetail!
+  tasks: [MobileIncidentTask!]!
+  allocations: [MobileIncidentAllocation!]!
+  updatesCount: Int!
+  workflowHistoriesCount: Int!
+}
+
+type MobileIncidentDetail {
+  id: ID!
+  title: String!
+  status: String
+  workflowStatus: String
+  workflowStatusLabel: String
+  severity: String
+  hazardName: String
+  incidentTypeName: String
+  districtName: String
+  regionName: String
+  councilName: String
+  wardName: String
+  locationDescription: String
+  reportedAt: String
+  description: String
+  latitude: Float
+  longitude: Float
+  allocationsCount: Int!
+  tasksCount: Int!
+  responseActive: Boolean!
+}
+
+type MobileIncidentTask {
+  id: ID
+  title: String
+  priority: String
+  status: String
+  progressPercent: Int
+  dueDate: String
+  assignedToName: String
+}
+
+type MobileIncidentAllocation {
+  id: ID
+  resourceName: String
+  quantityRequested: String
+  quantityAllocated: String
+  unit: String
+  status: String
 }
 
 """Foreground mobile invalidation only; durable recovery always uses the committed cursor."""
