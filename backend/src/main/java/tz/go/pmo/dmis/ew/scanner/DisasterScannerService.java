@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Element;
@@ -38,6 +39,10 @@ public class DisasterScannerService {
     private static final ObjectMapper JSON = new ObjectMapper();
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
     private final JdbcTemplate jdbc;
+
+    /** Controls only the background sweep; the authenticated manual scan endpoint remains available. */
+    @Value("${dmis.scanner.scheduled-enabled:true}")
+    private boolean scheduledEnabled;
 
     public DisasterScannerService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
@@ -94,6 +99,10 @@ public class DisasterScannerService {
     @org.springframework.scheduling.annotation.Scheduled(initialDelayString = "${dmis.scanner.initial-delay-ms:60000}",
                                                          fixedDelayString = "${dmis.scanner.interval-ms:3600000}")
     public void scheduledSweep() {
+        if (!scheduledEnabled) {
+            log.debug("scheduled disaster scan disabled by dmis.scanner.scheduled-enabled");
+            return;
+        }
         try {
             Map<String, Object> r = scanAll(7);
             log.info("scheduled disaster scan: {} checked, {} new", r.get("scanned"), r.get("new"));

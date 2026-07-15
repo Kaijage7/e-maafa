@@ -3,6 +3,8 @@
 **/target/
 **/dist/
 **/.angular/
+**/__pycache__/
+*.py[cod]
 *.log
 backend/src/main/resources/application-local-secret.yml
 

@@ -6,6 +6,24 @@
 
 **Assessment baseline:** 2026-07-10 space02 pre-deploy (local dual-proof: smoke **12/12**; persona JWT fail=0; Flyway through **V195**; integrity residuals 0 including poly links; geo↔INFORM 156/156; `space02IssueRegister` on readiness board; **openCode=0**).
 
+**2026-07-15 mobile/web verification evidence:** before the final JWT-lifetime hardening, an isolated
+Java 21/PostgreSQL 16.13 run executed **40 suites / 186 tests with 0 failures, 0 errors and 0 skips**.
+Flyway validated **197 schema-history entries**: the baseline marker plus **196 versioned SQL files
+through V212**. The later GraphQL session hardening and V213 device-registration slice added eight
+tests. On the final source, the focused GraphQL/WebSocket/relay gate passed **25/25**, and a restricted
+full rerun compiled the application and passed all **104** non-database tests; its **90** database tests
+were skipped because the sandbox denied the Docker socket. Therefore a single Docker-backed
+**194/194** final-source run remains mandatory; it must also apply and validate V213, and
+the restricted exit code must not be treated as a release green. The Angular 21 production build
+passes on the final tree; the build still warns that the 521.56 kB initial bundle exceeds the 500 kB
+warning budget by 21.56 kB. An earlier **5/5** browser run passed, but it predates a late warehouse UI
+delta and the final-tree rerun could not bind Karma port 9876 in this sandbox (`EPERM`), so repeat it
+in the release environment. Earlier `npm audit` (**0** vulnerabilities)
+and OWASP Dependency-Check 12.2.2 (**0** vulnerable dependencies across 81 release dependencies)
+are the latest completed dependency evidence, but the OWASP scan predates the newly added WebSocket
+starter and must be refreshed on the final POM. This is build/security evidence, not a substitute
+for the live persona, provider, proxy/SSE/WebSocket, browser, load, and physical-device smoke required below.
+
 ---
 
 ## 0. Non-negotiables
@@ -35,7 +53,17 @@
 | `DMIS_AUTH_FORCE_2FA_ROLES` | Recommended | Prod defaults Super Admin, Director, Asst. Director, Secretary, EOCC, ICT Admin → login returns `MFA_ENROLL_REQUIRED` until TOTP enrolled |
 | `DB_HOST` `DB_PORT` `DB_NAME` `DB_USERNAME` `DB_PASSWORD` | **Yes** | App user **not** superuser |
 | `DB_POOL_MAX` / `DB_POOL_MIN` | Recommended | Defaults 20 / 5 |
+| `DMIS_IDEMPOTENCY_RETENTION` | **Yes for mobile support** | Default `90d`; must be at least the longest supported offline-command retry queue |
+| `DMIS_IDEMPOTENCY_CLEANUP_CRON` / `DMIS_IDEMPOTENCY_CLEANUP_BATCH_SIZE` | Recommended | Defaults hourly at minute 17 / 10,000; keep batch 1–100,000 and monitor expired-row backlog |
+| `DMIS_SYNC_RETENTION` | **Yes for incident offline support** | Default `90d`; must exceed the maximum supported incident-cache offline window |
+| `DMIS_SYNC_CLEANUP_CRON` / `DMIS_SYNC_CLEANUP_BATCH_SIZE` | Recommended | Defaults hourly at minute 29 / 10,000; monitor prune lag and HTTP 410 rebuild rate |
+| `DMIS_SYNC_RELAY_POLL_MS` / `DMIS_SYNC_SSE_HEARTBEAT_MS` / `DMIS_SYNC_SSE_TIMEOUT` | Recommended | Defaults 500 ms / 15 s / 10 min; align load balancer idle timeout above the forced reconnect |
+| `DMIS_SYNC_GRAPHQL_SUBSCRIPTION_TIMEOUT` | Recommended | Default 10 min; completes subscriptions and prevents new operations on an older socket so a fresh upgrade re-authenticates |
+| `DMIS_SYNC_SSE_MAX_CONNECTIONS` / `DMIS_SYNC_SSE_MAX_CONNECTIONS_PER_ACTOR` | **Yes after load test** | Defaults 5,000 per node / 5 per actor; size below proven servlet, proxy, DB and file-descriptor capacity |
+| `DMIS_GRAPHQL_WEBSOCKET_MAX_OPERATIONS` / `DMIS_GRAPHQL_WEBSOCKET_OPERATION_WINDOW_SECONDS` | **Yes after load test** | Defaults 300 operations per authenticated actor per node per 60 seconds; enforce a cluster-wide limit at ingress |
+| `DMIS_GRAPHQL_WEBSOCKET_REVOCATION_CHECK` | Recommended | Default 5 s; bounds how long an active subscription can remain after its token is revoked |
 | CORS / reverse proxy | **Yes** | TLS terminate at nginx/LB; strip client `X-Forwarded-*` then set `X-Forwarded-Proto` |
+| `DMIS_RATELIMIT_TRUSTED_PROXIES` | When proxy client IPs are used | Exact direct proxy addresses only; never trust arbitrary client `X-Forwarded-For` |
 
 **Env template:** `docs/env.prod.example`
 
@@ -45,7 +73,109 @@
 curl -sS https://<host>/api/actuator/health   # expect {"status":"UP"} or UP
 curl -sS -o /dev/null -w "%{http_code}\n" https://<host>/api/v1/settings/users
 # expect 401 without Authorization
+curl -sSI https://<host>/ | grep -i '^content-security-policy:'
+# expect enforced CSP with script-src 'self' and object-src 'none'
 ```
+
+For multiple backend replicas, configure shared ingress limits for GraphQL HTTP requests, WebSocket
+upgrades/connections, and messages; the application limiters are bounded defense in depth, not a
+cluster-wide quota. Keep GraphQL introspection off in production
+(`DMIS_GRAPHQL_INTROSPECTION_ENABLED=false`).
+
+### GL-01A — International mobile/web release boundary
+
+- `/api/graphql` is an authenticated no-mutation API: HTTP provides the bounded `mobileHome`
+  composite and WebSocket provides only the content-free `mobileSync` foreground wake-up. REST
+  remains the command/upload/callback and durable cursor-recovery authority.
+- `POST /api/v1/mobile/incidents` is the first file-free mobile REST command. It requires
+  `Idempotency-Key`, an authenticated numeric actor with `incidents.create` plus module access,
+  and an RFC 3339 `reported_at` with an explicit offset. It forces `Reported` / `draft` / `Mobile App
+  Report` and reuses the authoritative incident jurisdiction/workflow service.
+- V210 persists the first incident-create response by actor + operation + key for 90 days by default.
+  Repeating the same payload returns the same incident id; key reuse with changed content is rejected.
+  Do not shorten retention below the native client's maximum offline queue age. Alert when expired
+  receipts accumulate faster than the bounded hourly cleanup.
+- The web incident-create form also sends a generated idempotency key. Mobile attachments are not
+  part of the typed JSON command; do not queue attachment uploads until a separate retry-safe upload
+  contract has been designed and tested.
+- `PUT`/`DELETE /api/v1/mobile/devices/current` stores or revokes only the authenticated numeric
+  user's installation in V213. Responses never echo the provider token, per-user count/upsert is
+  serialized and capped at 20, and the schema requires a token for FCM/APNs. This is addressing only:
+  no provider sender exists. Before enabling delivery, require shared abuse limits, strict DB/backup
+  access, token encryption and redaction proof, invalid-token cleanup, provider credentials, and
+  content-free payload tests.
+- Existing web incident media has generated filenames, byte-signature checks, size limits and
+  rollback cleanup, but no antivirus/CDR or quarantine provider. Treat hostile-file scanning and
+  operational handling as a release gate; do not mistake extension/signature checks for malware proof.
+- `GET /api/v1/notifications/changes?after_sequence=<cursor>&limit=<1..100>` provides an actor-scoped,
+  transaction-serialized per-user cursor for newly inserted notification deliveries. Commit the page
+  to local storage before advancing to `next_after_sequence`. V212 deliberately avoids using the
+  pre-commit BIGSERIAL id as a cursor. It rejects a restored-server cursor that is ahead and advances
+  across deleted-row gaps rather than polling forever. This is not a general domain delta log and does
+  not carry mark-read, dismiss, incident-update, or deletion tombstones.
+- The GraphQL `mobileHome` snapshot returns `syncCursor` + `syncScopeKey`. Incident clients recover via
+  `GET /api/v1/sync/changes?after_sequence=...&scope_key=...&limit=...`. V211 captures insert/update/delete
+  in the incident transaction, serializes cursor assignment until commit, emits an old-jurisdiction
+  tombstone on moves, rejects changed actor/permission/area scope with 409, and returns 410 when the
+  cursor predates the retained history. Persist a page and its row effects atomically before advancing
+  `next_after_sequence`; on 409/410, discard the incident cache and take a new GraphQL snapshot.
+- `GET /api/v1/sync/stream?after_sequence=...` is an authenticated, `incidents.view`-gated REST/SSE
+  incident wake-up. It transports no domain row and cannot replace cursor catch-up. The Angular incident
+  registry reloads on a signal; nginx/Caddy disable buffering for the exact stream path. Confirm the
+  deployed edge preserves `text/event-stream`, heartbeats arrive, a 10-minute reconnect re-authenticates,
+  and 401/403/409 paths do not reconnect in a tight loop. The current global cursor reveals aggregate
+  incident activity timing and approximate volume to any authorized incident viewer. Before international
+  launch, security must explicitly accept that bounded metadata disclosure or replace the stream with
+  jurisdiction-scoped opaque wake-ups and re-run authorization, reconnect and load proof.
+- Foreground native clients may use the GraphQL `mobileSync(afterSequence)` subscription over
+  `graphql-transport-ws`. It shares the same relay/capacity budget and carries the same global cursor
+  only. Each operation rechecks JWT expiry and the logout denylist; active subscriptions cannot
+  outlive JWT expiry and poll revocation every 5 seconds by default. The socket authentication window
+  ends after 10 minutes, and frames/operations are bounded. Multi-node deployment requires a shared
+  denylist; the current in-memory denylist is node-local. Prove the real TLS proxy upgrade with a
+  native client and verify expiration, logout, rate-limit, reconnect, and database-restore behavior;
+  resolver/unit tests are not a production handshake certificate.
+- Before applying V211/V212 to a populated production database, rehearse them on a production-size copy.
+  V211 creates three platform structures, indexes the new event table, and briefly adds an incident
+  trigger. V212 adds/backfills `resource_notifications.sync_sequence`, makes it non-null, and creates a
+  unique index, so its table scan/update and DDL lock duration must fit the maintenance window. Record
+  row counts, lock waits, WAL growth, replica lag, migration duration and rollback/restore decision.
+- Native credentials must be proven in OS secure storage. Do not store tokens in ordinary mobile
+  preferences, SQLite, logs, analytics, or crash reports.
+- The current web SPA persists a 30-minute bearer token in `localStorage`. Security sign-off must
+  either accept that bounded residual with the enforced CSP and completed penetration test, or land
+  and prove a cookie/in-memory session redesign with CSRF protection before public launch.
+- A successful mobile incident command is visible to the next authorized web read because both use the
+  same application services/database; V211 + REST/SSE now wake and reconcile the web incident registry,
+  while foreground native clients may receive the same cursor through GraphQL.
+  This is incident-only and best-effort for latency. Separate gates remain: native mobile push/background
+  execution, broader domain deltas/tombstones, a real outbox/broker for external delivery, optimistic
+  update conflicts, and idempotency coverage for every other supported offline command.
+- This repository currently contains no native Android/iOS/Flutter/React-Native client. Do not sign
+  off an “international mobile product” until the client, device matrix, offline/reconnect behavior,
+  store privacy declarations, and push-provider tests exist.
+- Generate an SBOM and scan the final backend, frontend, edge, database, and EW-PDF image digests.
+  The EW-PDF build still resolves several Python `>=` requirements and the source Dockerfiles use
+  moving base-image tags; pin tested dependency hashes/base digests before promoting a public image.
+
+### GL-01B — Repeatable source dependency gate
+
+Run from the repository root immediately before producing the release images:
+
+```bash
+./ci.sh audit
+jq '[.dependencies[] | select((.vulnerabilities // []) | length > 0)] | length' \
+  backend/target/dependency-check-report.json
+# expect: 0
+```
+
+The backend audit uses the OWASP Dependency-Check project's maintained NVD cache, excludes test
+scope, writes the JSON evidence under `backend/target/`, and fails at CVSS 7 or higher. The earlier
+2026-07-15 scan returned no findings, but it predates the WebSocket starter added for the GraphQL
+subscription and is no longer sufficient release evidence. Refresh this report against the final
+dependency lock before promotion. Sonatype OSS Index requires separate credentials and was not part
+of that proof; final-image SBOM and container scanning remain mandatory because source dependency
+scans do not inspect the operating-system layers or the EW-PDF Python environment.
 
 ### GL-02 — SMS (M-Gov)
 

@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import tz.go.pmo.dmis.common.security.HermeticPostgresSupport;
 
 /**
  * Proves the approval-chain role is enforced server-side against the authoritative public.roles
@@ -25,7 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
-class ApprovalWorkflowRoleVocabTest {
+class ApprovalWorkflowRoleVocabTest extends HermeticPostgresSupport {
 
     private static final String BASE = "/v1/settings/approval-workflows";
     private static final String ADMIN = "Super Admin";

@@ -58,19 +58,11 @@ public class MitigationDashboardServiceImpl implements MitigationDashboardServic
     }
 
     private long count(String sql) {
-        try {
-            Long value = jdbc.queryForObject(sql, Long.class);
-            return value == null ? 0 : value;
-        } catch (Exception e) {
-            return 0; // the source wraps every block in try/catch with empty fallbacks
-        }
+        Long value = jdbc.queryForObject(sql, Long.class);
+        return value == null ? 0 : value;
     }
 
     private List<Map<String, Object>> rows(String sql) {
-        try {
-            return jdbc.queryForList(sql);
-        } catch (Exception e) {
-            return List.of();
-        }
+        return jdbc.queryForList(sql);
     }
 }

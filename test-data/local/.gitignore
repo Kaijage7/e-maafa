@@ -1,0 +1,4 @@
+# Generated local credential exports. Recreate with:
+#   python3 scripts/export-local-incident-credentials.py
+*
+!.gitignore

@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import tz.go.pmo.dmis.common.security.HermeticPostgresSupport;
 
 /**
  * Proof: the public unsubscribe no longer silences a citizen's alerts on a raw contact match.
@@ -21,12 +22,12 @@ import org.springframework.test.web.servlet.MockMvc;
  * code at step 2 ({@code /unsubscribe-confirm}) must be rejected and still deactivate nothing. The
  * happy path (correct code) is exercised by the service logic; here we lock the security-critical
  * invariant. Self-cleaning + an {@code .invalid} address so no national data is polluted and no real
- * SMS/email is sent. Requires the local dev Postgres (the standard local dependency).
+ * SMS/email is sent. The database is an isolated Testcontainers Postgres.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
-class PortalUnsubscribeConfirmationTest {
+class PortalUnsubscribeConfirmationTest extends HermeticPostgresSupport {
 
     @Autowired
     private MockMvc mvc;

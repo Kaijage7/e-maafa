@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
-class LoginRateLimitIntegrationTest {
+class LoginRateLimitIntegrationTest extends HermeticPostgresSupport {
 
     private static final String TEST_IP = "203.0.113.77";
     private static final String BODY = "{\"email\":\"nobody-ratelimit@example.com\",\"password\":\"wrong-password\"}";

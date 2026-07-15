@@ -27,7 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
-class SecurityEnforcementTest {
+class SecurityEnforcementTest extends HermeticPostgresSupport {
 
     private static final String WRITE = "/v1/settings/users";
 
@@ -249,10 +249,11 @@ class SecurityEnforcementTest {
     }
 
     @Test
-    void dispatchApprovalApproveDeniesFieldRole() throws Exception {
-        // RESPONSE_OVERSIGHT excludes the field tier — a DAS cannot approve a dispatch (maker ≠ checker).
+    void dispatchApprovalApproveDeniesAdvisoryRole() throws Exception {
+        // V204 intentionally added DAS to the tiered resource-approval chain. The District Commissioner
+        // remains an advisory/view role and must not approve a dispatch.
         mvc.perform(post("/v1/response/dispatch/approvals/1/approve").contentType(MediaType.APPLICATION_JSON).content("{}")
-                        .header("X-Local-Roles", "DAS"))
+                        .header("X-Local-Roles", "District Commissioner"))
                 .andExpect(status().isForbidden());
     }
 
@@ -274,12 +275,10 @@ class SecurityEnforcementTest {
     }
 
     @Test
-    void nonJwtBearerFallsThroughToPersona() throws Exception {
-        // LocalAuthFilter only hands a JWT-SHAPED bearer (two dots) to the JWT decoder; any other bearer
-        // shape (here a single-dot token) must NOT reach the decoder — it would 401 as malformed — and
-        // instead falls through to the local persona. A read endpoint gated only by isAuthenticated()
-        // therefore returns 200. (This token-shape contract is verified independently of any caller.)
+    void nonJwtBearerWithoutExplicitPersonaIsUnauthorized() throws Exception {
+        // A malformed bearer must never create an implicit local persona. LocalAuthFilter now fails
+        // closed unless an explicit local-only persona header is present.
         mvc.perform(get("/v1/settings/users").header("Authorization", "Bearer payload.signature"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
     }
 }

@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import tz.go.pmo.dmis.common.security.HermeticPostgresSupport;
 
 /**
  * Integration tests for the disaster Budget &amp; Finance subsystem (V99–V101) — the cash side of the
@@ -31,15 +33,14 @@ import org.springframework.test.web.servlet.ResultActions;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
-class FinanceWorkflowIntegrationTest {
+class FinanceWorkflowIntegrationTest extends HermeticPostgresSupport {
 
-    private static final String DED = "DED";                 // requests + can approve
-    private static final String DIRECTOR = "Director";       // approves (no disburse)
-    private static final String ADMIN = "Super Admin";       // all incl. disburse
-    private static final String ICT = "ICT Admin";           // disburse (and commit)
+    private static final String REQUESTER = "District Planning Officer";
+    private static final String APPROVER = "DED";
+    private static final String LOGISTIC = "District Logistic Officer";
+    private static final String ADMIN = "Super Admin";
 
     private static final String FIN = "/v1/finance";
-    private static final long DISTRICT_DODOMA = 101L;        // district-scoped → 50M ceiling
 
     @Autowired private MockMvc mvc;
     @Autowired private JdbcTemplate jdbc;
@@ -49,18 +50,34 @@ class FinanceWorkflowIntegrationTest {
     private long line1Id;   // Relief Supplies, 100M
     private long line2Id;   // Logistics, 20M
     private Long donationId; // set by the NDMF test
+    private long districtId;
+    private Map<String, Long> actorIds;
 
     @BeforeEach
     void setUp() throws Exception {
-        periodId = id(create(DED, FIN + "/periods", "{\"name\":\"__fin_it__ FY\",\"fiscal_year\":\"2099/00\"}"));
-        budgetId = id(create(DED, FIN + "/budgets",
-                "{\"period_id\":" + periodId + ",\"scope_level\":\"district\",\"district_id\":" + DISTRICT_DODOMA
+        periodId = 0;
+        budgetId = 0;
+        line1Id = 0;
+        line2Id = 0;
+        donationId = null;
+        districtId = financeTestDistrict();
+        actorIds = Map.of(
+                REQUESTER, userForDistrictRole(REQUESTER, districtId),
+                APPROVER, userForDistrictRole(APPROVER, districtId),
+                LOGISTIC, userForDistrictRole(LOGISTIC, districtId),
+                ADMIN, userForRole(ADMIN));
+        Assertions.assertEquals(4, actorIds.values().stream().distinct().count(),
+                "finance personas must resolve to distinct real users for separation-of-duties coverage");
+
+        periodId = id(create(REQUESTER, FIN + "/periods", "{\"name\":\"__fin_it__ FY\",\"fiscal_year\":\"2099/00\"}"));
+        budgetId = id(create(REQUESTER, FIN + "/budgets",
+                "{\"period_id\":" + periodId + ",\"scope_level\":\"district\",\"district_id\":" + districtId
                         + ",\"title\":\"__fin_it__ budget\",\"total_amount\":120000000}"));
-        // SoD: creator (DED) cannot activate the budget — a separate approver seat must do it.
-        post(DIRECTOR, FIN + "/budgets/" + budgetId + "/approve", null).andExpect(status().isOk());
-        line1Id = id(create(DED, FIN + "/budgets/" + budgetId + "/lines",
+        // Planning requests; the district executive approves as a distinct real user.
+        post(APPROVER, FIN + "/budgets/" + budgetId + "/approve", null).andExpect(status().isOk());
+        line1Id = id(create(REQUESTER, FIN + "/budgets/" + budgetId + "/lines",
                 "{\"category\":\"Relief Supplies\",\"allocated_amount\":100000000}"));
-        line2Id = id(create(DED, FIN + "/budgets/" + budgetId + "/lines",
+        line2Id = id(create(REQUESTER, FIN + "/budgets/" + budgetId + "/lines",
                 "{\"category\":\"Logistics\",\"allocated_amount\":20000000}"));
     }
 
@@ -70,30 +87,34 @@ class FinanceWorkflowIntegrationTest {
             jdbc.update("delete from public.ndmf_disbursements where donation_id = ?", donationId);
             jdbc.update("delete from public.ndmf_donations where id = ?", donationId);
         }
-        jdbc.update("delete from public.budget_virements where disaster_budget_id = ?", budgetId);
-        jdbc.update("delete from public.budget_commitments where budget_line_id in "
-                + "(select id from public.budget_lines where disaster_budget_id = ?)", budgetId);
-        jdbc.update("delete from public.budget_lines where disaster_budget_id = ?", budgetId);
-        jdbc.update("delete from public.disaster_budgets where id = ?", budgetId);
-        jdbc.update("delete from public.budget_periods where id = ?", periodId);
+        if (budgetId > 0) {
+            jdbc.update("delete from public.budget_virements where disaster_budget_id = ?", budgetId);
+            jdbc.update("delete from public.budget_commitments where budget_line_id in "
+                    + "(select id from public.budget_lines where disaster_budget_id = ?)", budgetId);
+            jdbc.update("delete from public.budget_lines where disaster_budget_id = ?", budgetId);
+            jdbc.update("delete from public.disaster_budgets where id = ?", budgetId);
+        }
+        if (periodId > 0) {
+            jdbc.update("delete from public.budget_periods where id = ?", periodId);
+        }
     }
 
     @Test
     void commitmentLifecycleSeparatesObligationFromExpenditure() throws Exception {
-        long c = id(create(DED, FIN + "/commitments",
+        long c = id(create(REQUESTER, FIN + "/commitments",
                 "{\"budget_line_id\":" + line1Id + ",\"amount\":10000000,\"purpose\":\"Tents\"}"));
         Assertions.assertEquals("requested", commitmentStatus(c));
 
-        post(DIRECTOR, FIN + "/commitments/" + c + "/approve", null).andExpect(status().isOk());
+        post(APPROVER, FIN + "/commitments/" + c + "/approve", null).andExpect(status().isOk());
         Assertions.assertEquals("approved", commitmentStatus(c));
 
-        post(ADMIN, FIN + "/commitments/" + c + "/commit", null).andExpect(status().isOk());
+        post(LOGISTIC, FIN + "/commitments/" + c + "/commit", null).andExpect(status().isOk());
         Assertions.assertEquals("committed", commitmentStatus(c));
         Assertions.assertNotNull(jdbc.queryForObject(
                 "select committed_by from public.budget_commitments where id = ?", Long.class, c));
 
         // disburse records the ACTUAL expenditure, distinct from the committed amount
-        post(ICT, FIN + "/commitments/" + c + "/disburse", "{\"expended_amount\":9500000}").andExpect(status().isOk());
+        post(LOGISTIC, FIN + "/commitments/" + c + "/disburse", "{\"expended_amount\":9500000}").andExpect(status().isOk());
         Assertions.assertEquals("disbursed", commitmentStatus(c));
         Assertions.assertEquals(0, new BigDecimal("9500000").compareTo(jdbc.queryForObject(
                 "select expended_amount from public.budget_commitments where id = ?", BigDecimal.class, c)));
@@ -101,31 +122,32 @@ class FinanceWorkflowIntegrationTest {
 
     @Test
     void makerCheckerAndStateGuardsAreEnforced() throws Exception {
-        long c = id(create(DED, FIN + "/commitments",
+        long c = id(create(REQUESTER, FIN + "/commitments",
                 "{\"budget_line_id\":" + line1Id + ",\"amount\":5000000}"));
         // SoD: the requester cannot approve their own request
-        post(DED, FIN + "/commitments/" + c + "/approve", null).andExpect(status().isUnprocessableEntity());
+        post(REQUESTER, FIN + "/commitments/" + c + "/approve", null).andExpect(status().isForbidden());
         // cannot disburse before the obligation (commit) stage
-        post(DIRECTOR, FIN + "/commitments/" + c + "/approve", null).andExpect(status().isOk());
-        post(ICT, FIN + "/commitments/" + c + "/disburse", "{}").andExpect(status().isUnprocessableEntity());
+        post(APPROVER, FIN + "/commitments/" + c + "/approve", null).andExpect(status().isOk());
+        post(LOGISTIC, FIN + "/commitments/" + c + "/disburse", "{}").andExpect(status().isUnprocessableEntity());
         // SoD: the approver cannot also commit the funds
-        post(ADMIN, FIN + "/commitments/" + c + "/commit", null).andExpect(status().isOk()); // admin != Director, ok
+        post(APPROVER, FIN + "/commitments/" + c + "/commit", null).andExpect(status().isForbidden());
+        post(LOGISTIC, FIN + "/commitments/" + c + "/commit", null).andExpect(status().isOk());
     }
 
     @Test
     void approverCannotDisburseWhatTheyApproved() throws Exception {
-        long c = id(create(DED, FIN + "/commitments",
+        long c = id(create(REQUESTER, FIN + "/commitments",
                 "{\"budget_line_id\":" + line1Id + ",\"amount\":3000000}"));
         post(ADMIN, FIN + "/commitments/" + c + "/approve", null).andExpect(status().isOk());      // approver = admin
-        post(ICT, FIN + "/commitments/" + c + "/commit", null).andExpect(status().isOk());          // committer = ict
+        post(LOGISTIC, FIN + "/commitments/" + c + "/commit", null).andExpect(status().isOk());     // committer = logistics
         post(ADMIN, FIN + "/commitments/" + c + "/disburse", "{}").andExpect(status().isUnprocessableEntity()); // approver==disburser blocked
     }
 
     @Test
     void tierCeilingBlocksAnOversizedDistrictCommitment() throws Exception {
-        long c = id(create(DED, FIN + "/commitments",
+        long c = id(create(REQUESTER, FIN + "/commitments",
                 "{\"budget_line_id\":" + line1Id + ",\"amount\":60000000}")); // > district 50M ceiling
-        post(DIRECTOR, FIN + "/commitments/" + c + "/approve", null)
+        post(APPROVER, FIN + "/commitments/" + c + "/approve", null)
                 .andExpect(status().isUnprocessableEntity());
         Assertions.assertEquals("requested", commitmentStatus(c)); // stays requested, not approved
     }
@@ -133,21 +155,21 @@ class FinanceWorkflowIntegrationTest {
     @Test
     void overAllocationOnALineIsBlocked() throws Exception {
         // line2 is allocated 20M; a 25M request must be refused
-        post(DED, FIN + "/commitments", "{\"budget_line_id\":" + line2Id + ",\"amount\":25000000}")
+        post(REQUESTER, FIN + "/commitments", "{\"budget_line_id\":" + line2Id + ",\"amount\":25000000}")
                 .andExpect(status().isUnprocessableEntity());
     }
 
     @Test
     void virementReallocatesAllocationBetweenLines() throws Exception {
-        long v = id(create(DED, FIN + "/virements",
+        long v = id(create(REQUESTER, FIN + "/virements",
                 "{\"from_line_id\":" + line1Id + ",\"to_line_id\":" + line2Id + ",\"amount\":5000000,\"reason\":\"transport\"}"));
-        post(DIRECTOR, FIN + "/virements/" + v + "/approve", null).andExpect(status().isOk());
+        post(APPROVER, FIN + "/virements/" + v + "/approve", null).andExpect(status().isOk());
         Assertions.assertEquals(0, new BigDecimal("95000000").compareTo(allocated(line1Id)));
         Assertions.assertEquals(0, new BigDecimal("25000000").compareTo(allocated(line2Id)));
         // SoD: requester cannot approve their own virement
-        long v2 = id(create(DED, FIN + "/virements",
+        long v2 = id(create(REQUESTER, FIN + "/virements",
                 "{\"from_line_id\":" + line1Id + ",\"to_line_id\":" + line2Id + ",\"amount\":1000000}"));
-        post(DED, FIN + "/virements/" + v2 + "/approve", null).andExpect(status().isUnprocessableEntity());
+        post(REQUESTER, FIN + "/virements/" + v2 + "/approve", null).andExpect(status().isForbidden());
     }
 
     @Test
@@ -193,7 +215,8 @@ class FinanceWorkflowIntegrationTest {
 
     private ResultActions post(String role, String url, String json) throws Exception {
         var req = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(url)
-                .header("X-Local-Roles", role);
+                .header("X-Local-Roles", role)
+                .header("X-Local-User-Id", actorIds.get(role));
         if (json != null) {
             req = req.contentType(MediaType.APPLICATION_JSON).content(json);
         }
@@ -218,5 +241,46 @@ class FinanceWorkflowIntegrationTest {
 
     private BigDecimal allocated(long lineId) {
         return jdbc.queryForObject("select allocated_amount from public.budget_lines where id = ?", BigDecimal.class, lineId);
+    }
+
+    private long financeTestDistrict() {
+        Long id = jdbc.queryForObject("""
+                select u.district_id
+                  from public.users u
+                  join public.model_has_roles mhr on mhr.model_id = u.id
+                  join public.roles r on r.id = mhr.role_id
+                 where u.district_id is not null
+                   and r.name in ('District Planning Officer', 'DED', 'District Logistic Officer')
+                 group by u.district_id
+                having count(distinct r.name) = 3
+                 order by u.district_id
+                 limit 1
+                """, Long.class);
+        Assertions.assertNotNull(id, "dev DB needs a district with planning, DED and logistics seats");
+        return id;
+    }
+
+    private long userForDistrictRole(String role, long district) {
+        Long id = jdbc.queryForObject("""
+                select min(u.id)
+                  from public.users u
+                  join public.model_has_roles mhr on mhr.model_id = u.id
+                  join public.roles r on r.id = mhr.role_id
+                 where r.name = ? and u.district_id = ?
+                """, Long.class, role, district);
+        Assertions.assertNotNull(id, "missing " + role + " seat for district " + district);
+        return id;
+    }
+
+    private long userForRole(String role) {
+        Long id = jdbc.queryForObject("""
+                select min(u.id)
+                  from public.users u
+                  join public.model_has_roles mhr on mhr.model_id = u.id
+                  join public.roles r on r.id = mhr.role_id
+                 where r.name = ?
+                """, Long.class, role);
+        Assertions.assertNotNull(id, "missing " + role + " seat");
+        return id;
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import tz.go.pmo.dmis.common.security.HermeticPostgresSupport;
 
 /**
  * Proves the incident-type severity + icon are now CONTROLLED from the single canonical source
@@ -22,7 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
-class IncidentTypeControlledVocabTest {
+class IncidentTypeControlledVocabTest extends HermeticPostgresSupport {
 
     private static final String BASE = "/v1/response/settings/incident-types";
     private static final String ADMIN = "Super Admin";

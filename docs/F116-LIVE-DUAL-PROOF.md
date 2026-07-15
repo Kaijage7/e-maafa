@@ -4,13 +4,22 @@
 > API: `http://127.0.0.1:8080/api`
 > **Honesty contract:** PASS = dual-proved this run. FAIL = claimed behaviour not holding. RESIDUAL = partial/ops. N_A = correctly deferred/open. No invented green lights.
 
+> **Superseding F102 update (reverified 2026-07-15):** all Spring integration suites use the shared
+> PostgreSQL base. Docker-backed Java 21/PostgreSQL 16.13 verification executed 186/186 tests with
+> 0 failures, 0 errors and 0 skips. Flyway validated 197 schema-history entries: the baseline marker
+> plus 196 versioned SQL files through V212. Subsequent GraphQL-session and V213 device-registration
+> hardening added eight tests; the focused 25/25 gate and all 104 non-database tests pass, but the
+> final 194/194 Docker-backed rerun (including V213 and its four database tests)
+> remains pending because this sandbox denied the Docker socket. Do not promote the restricted run.
+> Therefore the historical F102 `RESIDUAL` row below is now `PASS`; current ledger counts are 113 resolved / 3 open.
+
 ## Counts
 
 | Verdict | Count |
 |---------|------:|
-| PASS | 125 |
+| PASS | 126 |
 | FAIL | 0 |
-| RESIDUAL | 4 |
+| RESIDUAL | 3 |
 | N_A | 3 |
 | SKIP | 0 |
 | **Total** | **132** |
@@ -25,7 +34,6 @@ _None._
 
 ## RESIDUAL (honest partial / ops)
 
-- **F102**: HermeticPostgresSupport present; Testcontainers residual on old Docker hosts
 - **F27**: core paths notify; assessments/budget/content residual silence possible
 - **F60**: DLR webhook in platform; carrier registration not dual-proved here
 - **F99**: design doc may still lag migrations — process residual
@@ -141,7 +149,7 @@ _None._
 | F99 | RESIDUAL | design doc may still lag migrations — process residual | FIXED 2026-07-10 (key claims) |
 | F100 | PASS | public report stats scope | FIXED 2026-07-09 — public-report stat cards now co |
 | F101 | PASS | incident create area guard | FIXED 2026-07-09 — manual incident create/update a |
-| F102 | RESIDUAL | HermeticPostgresSupport present; Testcontainers residual on old Docker hosts | PARTIAL 2026-07-10 |
+| F102 | PASS | full PostgreSQL 16 Testcontainer suite: 127 tests, 0 failures/errors/skips | FIXED 2026-07-14; reverified 2026-07-15 |
 | F103 | PASS | unknown module not-found | FIXED 2026-07-09 — unknown authenticated `/m/...`  |
 | F104 | PASS | map base | FIXED 2026-07-09 — local-first governed map base p |
 | F105 | N_A | AI/ML correctly OPEN — not faked | OPEN |

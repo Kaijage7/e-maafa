@@ -53,6 +53,20 @@ public class LocalTestPasswordSeeder implements CommandLineRunner {
                     or email ilike '%@example.dev'
                     or email ilike '%@test.com'
                     or coalesce(seeded_officer, false) = true
+                    or exists (
+                        select 1
+                          from public.model_has_roles mhr
+                          join public.roles role on role.id = mhr.role_id
+                         where mhr.model_id = users.id
+                           and mhr.model_type = 'App\\Models\\User'
+                           and role.name in (
+                               'Dist DC', 'DED', 'DAS', 'District Commissioner',
+                               'District Planning Officer', 'District Logistic Officer',
+                               'Reg DC', 'RAS', 'RC',
+                               'Regional Planning Officer', 'Regional Logistic Officer',
+                               'EOCC', 'Director', 'Secretary'
+                           )
+                    )
                 """, hash);
         log.warn("LOCAL TEST CREDENTIALS: set password on {} account(s) to the constant "
                         + "local test password (see docs/LOCAL-TEST-PASSWORD.md). "

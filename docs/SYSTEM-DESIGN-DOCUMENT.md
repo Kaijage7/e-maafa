@@ -5,14 +5,14 @@
 | Field | Value |
 |---|---|
 | Document title | e-MAAFA — System Design Document |
-| Version | 1.2 (eGA layered backend structure adopted) |
-| Date | 2026-07-12 |
+| Version | 1.4 (hybrid mobile/web transport, command safety and device registry recorded) |
+| Date | 2026-07-15 |
 | Status | Living draft — **not** a production certificate |
 | Owner | PMO-DMD (Prime Minister's Office — Disaster Management Department) |
 | Audience | Backend & frontend engineers; PMO ICT; architecture reviewers; auditors; technical stakeholders |
 | System | e-MAAFA — Tanzania PMO Disaster Management Information System (`dmis-platform`) |
 | Source of truth | The source tree at `/home/kaijage/model/maafa/dmis-platform`. Where code and prose disagree, the code wins. |
-| **Last verified** | **2026-07-10 against Flyway V183 / live local stack** (F99 refresh: migrations, RBAC, outbox honesty) |
+| **Last verified** | **2026-07-15: last complete PostgreSQL proof covers 197 Flyway schema-history entries through V212; final V213 source passes 104 non-database tests but its 90 PostgreSQL tests remain pending** |
 
 ---
 
@@ -34,12 +34,12 @@ e-MAAFA is the Tanzania Prime Minister's Office (PMO) Disaster Management Inform
 8. **Disaster Repository** — the Sendai/DesInventar national disaster-loss database and analytics.
 9. **Settings, Identity & Notifications** — user/role/permission management, location hierarchy, resource catalogue, translations, approval-workflow configuration, login, the notification backbone and stakeholder administration.
 
-**Architecture style.** e-MAAFA is a **layered n-tier monolith** aligned with **eGA Spring Boot practice**: one Spring Boot 3.3.4 service on Java 21, packages ordered as `controller → service (interface + impl) → repository → entity`, with `dto`, `config`, and `integration` (GovESB / institutional clients). Functional disaster-management capabilities (EW, Response, Mitigation, …) remain product modules for URLs and the Angular UI; new backend code is arranged by eGA layer, not by feature root package. A transactional outbox still coordinates cross-capability events. The operator UI is an Angular 18 SPA. Data lives in one PostgreSQL 17 database shared with the still-running legacy application during migration. A thin Python service generates official Early-Warning bulletin PDFs. The backend serves under context-path `/api`; the frontend proxies `/api`→`:8080` and `/ew-api`→`:8600`. Binding structure doc: `docs/EGA-BACKEND-STRUCTURE.md`.
+**Architecture style.** e-MAAFA is a **layered n-tier modular monolith**: one Spring Boot 3.5.16 service on Java 21, an Angular 21 SPA, and PostgreSQL 16. Functional disaster-management capabilities remain product modules for URLs and UI. Runtime linkage currently uses shared authoritative tables, direct in-process services, selected scheduled jobs, the notification dispatcher, and a narrow V211 incident change ledger with REST/SSE wake-up. There is **no general transactional outbox/event bus**; V153 deliberately removed the unused scaffold. REST remains authoritative for commands/uploads/callbacks, while protected GraphQL is additive for a composite read and content-free foreground subscription. V213 stores caller-owned device addressing metadata but does not send FCM/APNs messages. The backend serves under context-path `/api`; the frontend proxies `/api`→`:8080` and `/ew-api`→`:8600`.
 
 **The most important design decisions.**
 
 - **Strangler re-platform from Laravel.** e-MAAFA runs against the *same* PostgreSQL database as the legacy Laravel app and takes over functionality module by module. The governing rule: Flyway owns only the new schemas and never mutates the legacy `public` tables; new code reads and additively extends those tables through `JdbcTemplate`.
-- **Layered n-tier monolith (eGA style), not microservices.** One process, one connection pool; packages follow `controller → service → repository → entity` with GovESB under `integration/`. In-process events via the outbox remain the cross-capability seam.
+- **Layered n-tier monolith, not microservices.** One process and one connection pool; direct services/shared tables are the current cross-capability seams. A real outbox is deferred work, not a production capability.
 - **Keycloak resource server with a self-issued HS256 token, plus a local persona.** The platform mints and validates its own HS256 JWT (`sub = users.id`) so it is runnable and fully testable without a live Keycloak; a `local`-profile persona filter authenticates dev/E2E requests from an `X-Local-Roles` header while still exercising the real `@PreAuthorize` gates.
 - **Jurisdiction & area scoping.** Authorization is role-based, layered with a jurisdiction model so that "only the nation sees everywhere": national tier sees the whole country, region tier its region, district tier its district — enforced server-side (STRICT for incidents, shared-or-own for registries).
 - **A single notification backbone.** Every outbound message — in-app bell, SMS via the national M-Gov gateway, email via SMTP — flows through one dispatcher with per-user channel preferences, off-thread delivery and a full cross-channel audit, replacing the legacy app's scattered notification logic.
@@ -64,7 +64,7 @@ The remainder of this document is the authoritative, file-grounded reference: fo
 10. [Recovery, Disaster Repository & Reports](#10-recovery-disaster-repository--reports)
 11. [Settings, IAM & the Control Plane](#11-settings-iam--the-control-plane)
 12. [Public Portal & Stakeholder Coordination](#12-public-portal--stakeholder-coordination)
-13. [Frontend Architecture (Angular 18)](#13-frontend-architecture-angular-18)
+13. [Frontend Architecture](#13-frontend-architecture-angular-18)
 14. [Deployment, Build & Operations](#14-deployment-build--operations)
 - [Appendix A — Role & Authorization Matrix](#appendix-a--role--authorization-matrix)
 - [Appendix B — Migration Ledger](#appendix-b--migration-ledger)
@@ -81,14 +81,14 @@ The remainder of this document is the authoritative, file-grounded reference: fo
 This SDD describes the design and implementation of the e-MAAFA backend (`dmis-platform`) as it actually exists in source, not as aspirationally planned. Its responsibilities are:
 
 - To give engineers a precise, file-grounded reference for the platform's structure: the bounded-context modules, their controllers/services/entities, the database schema and the Flyway migration that created each table, the public API surface, and the security model.
-- To record the **key design decisions and the rationale** behind them (the strangler pattern, the self-issued JWT identity story, the transactional outbox, the local-profile persona filter, Flyway-owns-schema), so future contributors do not re-litigate or accidentally undo them.
+- To record the **key design decisions and the rationale** behind them (the strangler pattern, the self-issued JWT identity story, hybrid REST/GraphQL, removal of the fake outbox, the local-profile persona filter, Flyway-owns-schema), so future contributors do not re-litigate or accidentally undo them.
 - To make the **known gaps, constraints and deferred work** explicit, so they are managed rather than rediscovered.
 
 Every claim in this document is intended to be verifiable against the source tree rooted at `/home/kaijage/model/maafa/dmis-platform/backend`. Where code and prose disagree, the code wins.
 
 ### 1.2 Scope & Intended Audience
 
-**In scope.** The `dmis-platform` Spring Boot backend (the modular monolith), its relationship to the legacy Laravel `public` schema, the Angular 18 frontend's integration contract (the `/api` and `/ew-api` proxies), and the standalone Python Early-Warning generate-engine that produces 722E-4 bulletin PDFs.
+**In scope.** The `dmis-platform` Spring Boot backend (the modular monolith), its relationship to the legacy Laravel `public` schema, the Angular 21 frontend's integration contract (the `/api` and `/ew-api` proxies), and the standalone Python Early-Warning generate-engine that produces 722E-4 bulletin PDFs.
 
 **Out of scope / referenced only.** The legacy Laravel application's internals; the operational deployment topology (reverse proxy, TLS termination, Keycloak provisioning) beyond what the configuration files declare; and the EWS standalone early-warning sub-application, which is documented separately.
 
@@ -96,20 +96,20 @@ Every claim in this document is intended to be verifiable against the source tre
 
 ### 1.3 System Context & Runtime Topology
 
-e-MAAFA is a **modular monolith**. A single Spring Boot 3.3.4 application (Java 21, `tz.go.pmo.dmis.DmisPlatformApplication`) hosts every bounded context; modules communicate across boundaries through domain events written to a transactional outbox rather than direct cross-module calls. The runtime pieces and how they connect:
+e-MAAFA is a **modular monolith**. A single Spring Boot 3.5.16 application (Java 21, `tz.go.pmo.dmis.DmisPlatformApplication`) hosts every bounded context. Modules primarily communicate through direct in-process services and shared PostgreSQL tables. V211 adds a transactionally captured incident convergence ledger, but a general cross-domain transactional outbox/broker has not been implemented.
 
 | Component | Technology | Port / path | Role |
 |---|---|---|---|
-| Backend API | Spring Boot 3.3.4, Java 21 | `:8080`, context-path `/api` | The modular monolith; all REST endpoints live under `/api/...` |
-| Frontend | Angular 18 SPA | dev server proxies | Calls `/api/*` (proxied to `:8080`) and `/ew-api/*` (proxied to `:8600`) |
-| Database | PostgreSQL 17 | `:5440` (local) / env-driven (prod) | Shared with the legacy app; new schemas + legacy `public` |
+| Backend API | Spring Boot 3.5.16, Java 21 | `:8080`, context-path `/api` | REST commands/cursor recovery plus protected GraphQL composite reads and content-free foreground subscription |
+| Frontend | Angular 21 SPA | dev server proxies | Calls `/api/*` (proxied to `:8080`) and `/ew-api/*` (proxied to `:8600`) |
+| Database | PostgreSQL 16 | `:5440` (local) / env-driven (prod) | Shared authoritative state; new schemas + legacy `public` |
 | EW generate-engine | Python (Streamlit/FastAPI) | `:8600` | Produces 722E-4 bulletin PDFs/maps; **must not be modified** |
 | Identity provider | Keycloak (documented alternative) | `:8081/realms/dmis` | OAuth2 issuer; overridden in practice by the self-issued HS256 path |
 
 Key facts established by `pom.xml` and `application.yml`:
 
 - **Context path is `/api`** (`server.servlet.context-path: /api`), so a controller mapped to `/v1/ew/warnings` is reachable at `/api/v1/ew/warnings`. The frontend `proxy.conf.json` rewrites `/api` → `http://localhost:8080` and `/ew-api` → `http://localhost:8600` (path-stripped).
-- **The application is stateless** — `@EnableScheduling` drives the outbox relay and reconciliation jobs; `spring.jpa.open-in-view: false`; sessions are `STATELESS` in both security profiles.
+- **The application is stateless** — `@EnableScheduling` drives reconciliation/delivery/cleanup jobs; `spring.jpa.open-in-view: false`; sessions are `STATELESS` in both security profiles.
 - **`@EnableJpaAuditing(auditorAwareRef = "auditorProvider")`** stamps created/updated audit columns from the authenticated principal.
 
 Source: `backend/pom.xml`, `backend/src/main/java/tz/go/pmo/dmis/DmisPlatformApplication.java`, `backend/src/main/resources/application.yml`, `dmis-platform/frontend/proxy.conf.json`.
@@ -130,7 +130,9 @@ Each module is a top-level package under `tz.go.pmo.dmis`. They map to the disas
 | 8 | **Disaster Repository** | `repository` | Sendai-framework historical disaster event store and analytics | `DisasterEventController`, `SendaiAnalyticsController` |
 | 9 | **Settings, Identity & Notifications** | `settings`, `iam`, `notification`, `stakeholder`, `reports` | User/role/permission management, location hierarchy, resource catalogue, translations, approval-workflow config; login; multi-channel dispatch (SMS via M-Gov, email via SMTP); stakeholder admin; cross-module reports | `UserManagementController`, `AuthController`, `NotificationController`, `RolePermissionController` |
 
-Cross-module integration is event-driven via the outbox (`common/event/OutboxAppender`, `OutboxRelay`); the canonical example is EW ingest firing a best-effort One Health "cross-sector kick", and Response dispatch driving the single inventory ledger.
+Cross-module integration currently uses direct in-process calls, shared tables, selected scheduled jobs,
+and the notification dispatcher. There is no durable event bus; a future outbox must be implemented
+and proven as new infrastructure.
 
 ### 1.5 The Strangler-from-Laravel Context
 
@@ -172,7 +174,7 @@ Representative entry points across the modules. **All paths are prefixed by the 
 | GET | `/api/v1/portal/**` | *(public — in allowlist)* | Citizen-facing portal content (no auth) |
 | GET | `/api/v1/settings/users` | `Authz.SYS_ADMIN` | User administration (Super Admin / ICT Admin) |
 | GET | `/api/actuator/health/**` | *(public — in allowlist)* | Liveness/readiness probes |
-| GET | `/api/swagger-ui.html` | *(public — in allowlist)* | OpenAPI / Swagger UI |
+| GET | `/api/v3/api-docs` | *(public in non-production; disabled in prod)* | OpenAPI JSON contract |
 
 Note: the EW endpoints under `/api/v1/ew/*` are deliberately **not** in the public allowlist — the old unauthenticated Streamlit SSO callbacks have been retired, so every EW path now requires a token.
 
@@ -182,7 +184,10 @@ The schema is partitioned between the new platform schemas (Flyway-managed) and 
 
 | Table | Schema | Created/extended by | Role |
 |---|---|---|---|
-| `outbox_event` | `platform` | `V1__create_outbox.sql` | Transactional outbox: one row per domain event, partial index on unpublished rows for the relay |
+| `api_idempotency_keys` | `platform` | `V210__api_command_idempotency.sql` | Durable retry receipts for supported authenticated commands; not an event bus |
+| `domain_sync_head`, `domain_sync_events`, `sync_event_retention_state` | `platform` | `V211__incident_sync_event_ledger.sql` | Commit-ordered, scoped incident reconnect metadata; not a delivery outbox |
+| `notification_sync_heads` | `platform` | `V212__notification_commit_order_cursor.sql` | Per-user row-lock heads for commit-ordered notification reconnect cursors |
+| `mobile_device_installations` | `platform` | `V213__mobile_device_installations.sql` | Caller-owned, bounded FCM/APNs addressing metadata; not a push sender or data source |
 | `users`, `roles`, `model_has_roles` | `public` | `V5__auth_read_model.sql` | Legacy identity tables (Spatie); login authenticates here |
 | `warnings`, `warning_hazards`, `hazards`, `regions`, `districts` | `public` | `V3__ew_read_model.sql` (+ V48–V51, V86–V90) | EW pipeline read model over existing app tables |
 | `incidents`, `allocated_resources`, `inventory_items`, `stock_movements` | `public` | `V22__response_read_models.sql` (+ V24–V30, V62–V64) | Response state machine + single stock ledger/journal |
@@ -231,7 +236,7 @@ Design rules in force: Flyway owns DDL and Hibernate only validates; all `public
 
 ## 02. System Architecture & Technology Stack
 
-> **Purpose (executive summary).** e-MAAFA is a single deployable backend (a "modular monolith") that re-platforms the Tanzania PMO's legacy Laravel disaster-management system one bounded context at a time without a big-bang rewrite. The backend is a Spring Boot 3.3.4 service on Java 21, the operator UI is an Angular 18 single-page app, data lives in one PostgreSQL 17 database shared with the legacy app during the migration, and a separate Python service generates Early-Warning products. This section documents the runtime topology, the package layout that enforces module boundaries, the shared cross-cutting plumbing (error handling, security, the event outbox), and the conventions every module follows.
+> **Purpose (executive summary).** e-MAAFA is a single deployable backend (a "modular monolith") that re-platforms the Tanzania PMO's legacy Laravel disaster-management system one bounded context at a time without a big-bang rewrite. The backend is Spring Boot 3.5.16 on Java 21, the operator UI is Angular 21, data lives in PostgreSQL 16, and a separate Python service generates Early-Warning products. This section documents runtime topology, package layout, security, hybrid REST/GraphQL boundaries, and command idempotency. No live event outbox exists.
 
 ---
 
@@ -242,40 +247,42 @@ e-MAAFA runs as four cooperating processes. The Angular dev server proxies all A
 ```
                           ┌──────────────────────────────────────────────┐
                           │  Browser (operator / citizen portal)          │
-                          │  Angular 18 SPA  —  http://localhost:4200      │
+                          │  Angular 21 SPA  —  http://localhost:4200      │
                           │  Bearer token (self-issued JWT) in Authorization header
                           └───────────────┬───────────────┬──────────────┘
                                           │ /api/**        │ /ew-api/**
                                           │ (proxy.conf)   │ (proxy.conf, path-rewrite ^/ew-api -> "")
                                           ▼                ▼
         ┌──────────────────────────────────────────┐   ┌──────────────────────────────────┐
-        │  Spring Boot 3.3.4  (Java 21)             │   │  Python EW generate-engine        │
+        │  Spring Boot 3.5.16 (Java 21)             │   │  Python EW generate-engine        │
         │  tz.go.pmo.dmis.* modular monolith        │   │  (Streamlit / FastAPI)            │
         │  http://localhost:8080  context-path /api │   │  http://localhost:8600            │
         │  ─ OAuth2 resource server (HS256 JWT)     │   │  scanner / DMD impact map /       │
         │  ─ @PreAuthorize method security          │   │  722E_4 product generation        │
         │  ─ Flyway-managed schemas                 │   │  (DO NOT modify — see memory)     │
-        │  ─ transactional outbox + relay           │   └───────────────┬──────────────────┘
+        │  ─ REST + bounded GraphQL query/sub       │   └───────────────┬──────────────────┘
         └───────────────┬───────────────────────────┘                   │
                         │ JDBC :5440                         "Push to PMO" / bulletin ingest
                         ▼                                    (HTTP POST -> /api/ew/bulletins/ingest,
         ┌──────────────────────────────────────────┐         /api/ew/products) writes pending
-        │  PostgreSQL 17   localhost:5440           │◄────────warnings into the shared DB
+        │  PostgreSQL 16   localhost:5440           │◄────────warnings into the shared DB
         │  ─ public.*      (legacy Laravel, R/O+R/W via JDBC)
-        │  ─ platform.*    (outbox + Flyway history)
+        │  ─ platform.*    (idempotency + Flyway history)
         │  ─ registry, incident, ew, dissemination, notification (new contexts)
         └──────────────────────────────────────────┘
 ```
 
 | Tier | Technology | Port | Notes |
 |------|------------|------|-------|
-| Presentation | Angular 18.2 SPA (`dmis-web`), Leaflet 1.9 maps, `keycloak-js` 25 (optional), RxJS 7.8 | 4200 (dev) | Dev server proxies `/api`→:8080 and `/ew-api`→:8600 (`frontend/proxy.conf.json`). |
-| Application | Spring Boot 3.3.4, Spring Security OAuth2 resource server, Spring Data JPA + raw `JdbcTemplate`, springdoc-openapi 2.6, MapStruct 1.6.2, Lombok | 8080 | Servlet context-path `/api` (`application.yml` `server.servlet.context-path`). |
-| Data | PostgreSQL 17, Flyway 11 (Boot-managed), Testcontainers for integration tests | 5440 | One physical DB shared with the legacy app; Flyway owns only the new schemas. |
+| Presentation | Angular 21 SPA (`dmis-web`), Leaflet maps, RxJS | 4200 (dev) | Dev server proxies `/api`→:8080 and `/ew-api`→:8600 (`frontend/proxy.conf.json`). |
+| Application | Spring Boot 3.5.16, Java 21, Spring Security OAuth2 resource server, JPA + `JdbcTemplate`, GraphQL | 8080 | Servlet context-path `/api`; REST commands and protected GraphQL reads. |
+| Data | PostgreSQL 16, Flyway, Testcontainers for integration tests | 5440 | One physical DB shared with the legacy app; Flyway owns schema evolution. |
 | EW generation | Python engine (separate repo, MUST NOT be touched) | 8600 | Generates warnings/PDF bulletins and pushes them into the backend via the EW ingest endpoints. |
 
 **Key decisions and why.**
-- **Modular monolith, not microservices.** One process, one DB connection pool, in-process events. This is a strangler re-platform — the priority is faithful behaviour and a single deployable unit, with module boundaries enforced in code (package + event seams) so that a future split is mechanical, not a redesign (`DmisPlatformApplication` Javadoc; `OutboxRelay` notes "the single place that changes to push onto a message broker").
+- **Modular monolith, not microservices.** One process and one DB connection pool. This is a strangler
+  re-platform; module boundaries are enforced by services, permissions, jurisdiction rules, and shared
+  contracts. A future split requires a newly implemented event seam rather than relying on deleted code.
 - **Context-path `/api`.** Lets the SPA proxy a single prefix and lets a reverse proxy front the EW engine on a sibling prefix without collisions.
 - **Two-origin proxy.** `/ew-api` is rewritten to strip the prefix so the browser can reach the Python engine directly for generation screens, while all persisted EW state flows back through `/api/ew/*` on the Spring backend.
 
@@ -303,7 +310,7 @@ integration/  (govesb, nida, gepg, mgov, callback)
 | `config` | Security beans, OpenAPI, ModelMapper, CORS |
 | `integration.*` | GovESB, NIDA, GePG, M-Gov, async callbacks (e-GIF) |
 | `util` / `exception` | Helpers and business exceptions |
-| `common` | Transitional shared security, RFC-7807 errors, outbox (until fully absorbed into layers) |
+| `common` | Transitional shared security, RFC-7807 errors, idempotency, and shared web infrastructure |
 | `local` | Dev/E2E seeders only |
 
 **New code** is added only under these layers. Product capabilities (Response, EW, Mitigation, …) remain **functional modules** for UI and URL design (`/v1/response/*`, `/v1/ew/*`, …); they are **not** the preferred root package style for new Java types.
@@ -314,7 +321,7 @@ Until migration completes, existing code still lives in feature packages. Do not
 
 | Package (legacy) | Module / responsibility | Base path(s) | Representative files |
 |---------|------------------------|--------------|----------------------|
-| `common` | Cross-cutting infrastructure: error handling, security, domain base types, event outbox, web DTOs, config | — | `common/error`, `common/security`, `common/event`, `common/config`, `common/domain` |
+| `common` | Cross-cutting infrastructure: error handling, security, idempotency, web DTOs, config | — | `common/error`, `common/security`, `common/idempotency`, `common/config` |
 | `iam` | Identity & access — email/password login over the legacy `users`/Spatie tables; mints the self-issued JWT | `/api/v1/auth` | `AuthController.java` |
 | `repository` | Disaster Repository feature (Sendai) **and** target home for JPA repositories — feature controllers will move to `controller/` | `/api/v1/repository/events`, `/api/v1/repository/analytics` | `DisasterEventController`, `SendaiAnalyticsService` |
 | `ew` | Early Warning — bulletin ingest from PMO-DMD/TMA, warning lifecycle/approval, generated products, agency submissions, dissemination, field monitoring, scanner | `/api/v1/ew/*`, `/api/ew/*` | `EwWarningLifecycleController`, `EwBulletinIngestController`, `EwBoundaryController`, `scanner/ScannerController` |
@@ -337,7 +344,8 @@ Until migration completes, existing code still lives in feature packages. Do not
 
 ### 02.3 Cross-cutting `common/` utilities
 
-The `common` package is the only code every module depends on. It is deliberately thin: error translation, security, base domain types, and the event outbox.
+The `common` package is the only code every module depends on. It is deliberately thin: error
+translation, security, idempotency, and shared transport infrastructure.
 
 #### 02.3.1 Error handling — RFC 7807 ProblemDetail
 
@@ -368,25 +376,46 @@ The security model is profile-split but shares one token format and one allowlis
 
 **Why HS256 self-issued, not Keycloak:** the deployment target had no running Keycloak, so the platform mints/validates its own token to give a runnable, fully testable identity story end-to-end. The Keycloak `issuer-uri` remains in `application.yml` as a documented alternative path (override the `JwtDecoder` bean and front the app with Keycloak to switch).
 
-#### 02.3.3 Domain base + transactional event outbox
+#### 02.3.3 Command idempotency and eventing boundary
 
-`common/domain` provides `BaseEntity`, `AggregateRoot` (raises `DomainEvent`s) and an embeddable `Location`. `common/event` implements the transactional-outbox pattern that is the sanctioned inter-module seam:
+V153 removed the unused `platform.outbox_event` scaffold and its dead relay classes. The platform
+therefore has no general committed event-distribution guarantee today.
 
-- `OutboxAppender` (`@EventListener`) serialises each raised `DomainEvent` to JSON and saves an `OutboxEvent` **in the same transaction** as the state change (the transactional-outbox guarantee).
-- `OutboxRelay` (`@Scheduled`, `dmis.outbox.relay-delay-ms` default 2000ms) claims up to 100 unpublished rows oldest-first and dispatches each in its **own** transaction via `OutboxDispatcher`, dead-lettering after 5 attempts so one bad consumer cannot replay the whole batch.
-- The schema is `platform.outbox_event` (`V1__create_outbox.sql`): `id UUID PK, event_type, aggregate_type, aggregate_id UUID, payload JSONB, occurred_at, published_at`, with a partial index `ix_outbox_unpublished` on `(occurred_at) WHERE published_at IS NULL`.
+V210 adds a different, deliberately narrower primitive: `platform.api_idempotency_keys`. For the
+implemented incident-create command, the authenticated actor + operation + client key, request
+fingerprint, domain insert, workflow history, and first response share one PostgreSQL transaction.
+This prevents lost-response retries from creating duplicate incidents. It is **not** an outbox,
+broker, delta-sync log, or optimistic update-conflict mechanism.
 
-This is the documented single point of change for a future broker (Kafka/RabbitMQ) when the monolith is split.
+V211 adds a separate, deliberately incident-only convergence primitive. A trigger writes
+`platform.domain_sync_events` in the same transaction as every incident insert/update/delete and
+allocates its cursor under the `platform.domain_sync_head` singleton row lock. This prevents cursor
+commit inversion; area moves emit an old-scope delete tombstone plus a new-scope update. GraphQL
+snapshots expose the cursor and an actor/authority/jurisdiction scope key; scoped REST deltas reject
+stale scope (409) and expired retention (410). REST/SSE sends the committed cursor as a wake-up to
+authorized web sessions, but clients recover from the durable cursor rather than process memory.
+This is not a delivery outbox: it has no external broker, retry/dead-letter consumer, or domain
+payload, and its global write-serialization point must be load-tested before wider reuse.
+
+V212 independently adds a per-user commit-ordered notification insertion cursor. Future event
+delivery must still add a real transactional outbox with replay/dead-letter/observability proof
+rather than resurrecting the old unused scaffold silently.
+
+V213 adds a bounded installation registry owned exclusively by the authenticated numeric user.
+Registration and revocation are per-user operations rather than staff-role operations; service
+queries repeat the owner boundary, responses never echo tokens, and count/upsert is serialized per
+owner. The registry is addressing metadata only: no FCM/APNs sender or background delivery exists.
 
 ---
 
 ### 02.4 Data design — Flyway schemas and the read-model pattern
 
-> **Purpose.** The platform shares one PostgreSQL database with the still-running legacy Laravel app. Flyway manages only the *new* schemas and never touches the legacy `public` tables; new modules read and write the legacy tables directly via `JdbcTemplate`, treating them as a "read model" (and write-through where the behaviour must match Laravel exactly).
+> **Purpose.** The platform shares one PostgreSQL database with the still-running legacy Laravel app. Flyway owns the DMIS release DDL, including additive changes to shared legacy `public` tables; new modules read and write those tables directly via `JdbcTemplate`. Every shared-table migration therefore requires compatibility and lock-duration review against all remaining writers.
 
-**Schema ownership.** `spring.flyway.schemas = platform, registry, incident, ew, dissemination, notification`; default schema `platform` (which also holds the Flyway history table). `baseline-on-migrate: true`, `baseline-version: 0`, and `out-of-order: true` (two agents develop with reserved version blocks). Hibernate is `ddl-auto: validate` — **Flyway owns DDL, Hibernate only validates the mapping** (`application.yml`).
+**Schema ownership.** `spring.flyway.schemas = platform, registry, incident, ew, dissemination, notification`; default schema `platform` (which also holds the Flyway history table). Migrations also qualify deliberate `public.*` changes explicitly; for example, V211 installs the incident change trigger, V212 adds/backfills the notification sync cursor, and V213 creates the device registry. `baseline-on-migrate: true`, `baseline-version: 0`, and `out-of-order: true` remain enabled. Hibernate is `ddl-auto: validate` — **Flyway owns DDL, Hibernate only validates the mapping** (`application.yml`).
 
-**Migration corpus.** 79 migrations, `V1` … `V95` (gaps are reserved blocks). Categories:
+**Migration corpus.** The last complete 2026-07-15 hermetic gate validates 197 Flyway schema-history entries: the baseline marker plus 196 versioned SQL files through `V212`. V213 exists in final source and must be applied by the pending 194/194 Docker-backed gate before promotion.
+The category table below is historical orientation, not the current migration counter:
 
 | Migration range | Theme | Examples |
 |-----------------|-------|----------|
@@ -396,7 +425,7 @@ This is the documented single point of change for a future broker (Kafka/RabbitM
 | `V31`–`V51` | Portal/content, disaster repository (Sendai), declarations, recovery, EW products/submissions | `V31__content_education_agencies_read_models.sql`, `V38__disaster_repository_sendai.sql`, `V43__declarations_and_committees.sql`, `V47__recovery_and_sms_modules.sql` |
 | `V61`–`V95` | Hardening / reference data / cross-module columns | `V64__notification_channels_and_preferences.sql`, `V68__tanzania_administrative_hierarchy.sql`, `V71__statutory_declaration_roles.sql`, `V92__users_area_location.sql`, `V95__users_agency_stakeholder_link.sql` |
 
-**The read-model + JdbcTemplate-over-shared-tables pattern.** This is the defining data decision. Migrations such as `V3__ew_read_model.sql` create the legacy tables (`public.hazards`, `public.regions`, `public.districts`, `public.warnings`, `public.warning_hazards`) **`IF NOT EXISTS`** — so production (where the legacy tables already exist) is untouched, while a standalone/local DB gets them materialised for development. The new code then reads/writes those same tables through `JdbcTemplate` rather than via JPA entities, because:
+**The read-model + JdbcTemplate-over-shared-tables pattern.** This is the defining data decision. Migrations such as `V3__ew_read_model.sql` create the legacy tables (`public.hazards`, `public.regions`, `public.districts`, `public.warnings`, `public.warning_hazards`) **`IF NOT EXISTS`**, so a standalone/local DB gets them materialised while an existing table is not recreated. Later migrations can and do add columns, constraints, indexes and triggers to shared tables; “IF NOT EXISTS” must not be interpreted as “production is untouched.” The new code reads/writes those same tables through `JdbcTemplate` rather than via JPA entities, because:
 1. The legacy table shapes (Laravel `public.*`) do not map cleanly to clean JPA aggregates, and forcing them would risk schema drift against the running app.
 2. Behaviour must match Laravel byte-for-byte for ported flows (e.g. `EwBulletinIngestController` reproduces the exact `warning_code` format `EW-YYYY-00001` and hazard/level maps).
 3. Read-heavy dashboards/analytics (`SendaiAnalyticsService`, mitigation dashboards) are simpler and faster as hand-written SQL.
@@ -416,9 +445,12 @@ Examples in code: `AuthController` queries `public.users` / `public.model_has_ro
 | Auth | `Authorization: Bearer <HS256 JWT>`; subject is numeric `users.id`; roles in `realm_access.roles`. | `JwtSecurityConfig`, `AuthController` |
 | Authorization | Per-endpoint `@PreAuthorize` using `Authz.*` constants; defence-in-depth checks also at the service layer. | `Authz`, `SecurityConfig` |
 | Validation | `@Valid` request records; binding errors always surfaced. | `application.yml`, `GlobalExceptionHandler` |
+| Hybrid mobile/web | REST owns commands/cursor recovery; `/api/graphql` owns a protected composite read and content-free foreground subscription. | `MOBILE-WEB-HYBRID-API.md` |
+| Retry safety | Supported mobile commands require `Idempotency-Key`; V210 retains the first incident-create response for the configured window. | `ApiIdempotencyService`, V210 |
+| Incident convergence | GraphQL snapshot cursor/scope key → scoped REST deltas; REST/SSE is wake-up only. | `IncidentSyncService`, `SyncSseRelay`, V211 |
 | Uploads | Container multipart cap 10MB / 12MB request; oversize → 413 with a precise message; missing/non-multipart → 400. | `application.yml`, `GlobalExceptionHandler` |
 | Time zone | JDBC time zone `Africa/Dar_es_Salaam`. | `application.yml` |
-| API docs | springdoc OpenAPI at `/api/swagger-ui.html` and `/api/v3/api-docs` (allowlisted). | `OpenApiConfig`, `SecurityPaths` |
+| API docs | springdoc OpenAPI JSON at `/api/v3/api-docs` for controlled non-production contract generation; production disables it and Swagger UI assets are not packaged. | `OpenApiConfig`, `SecurityPaths` |
 | Ops | Actuator `health`,`info` exposed; liveness/readiness probes enabled. | `application.yml` |
 
 ---
@@ -432,6 +464,12 @@ A representative slice across modules (full path includes the `/api` context-pat
 | POST | `/api/v1/auth/login` | *(public)* | Email/password login over legacy `users`; mints HS256 JWT (constant-time bcrypt to defeat email enumeration). |
 | GET | `/api/v1/portal/**` | *(public)* | Citizen-facing portal content (news, education, hazard cards). |
 | POST | `/api/v1/response/incidents` | `RESPONSE_OPERATE` | Report a new incident (multipart). |
+| POST | `/api/v1/mobile/incidents` | `incidents.create` | File-free, idempotent mobile/offline incident create. |
+| POST | `/api/graphql` | `incidents.view` for `mobileHome` | Protected read-only composite mobile/web read. |
+| PUT/DELETE | `/api/v1/mobile/devices/current` | authenticated numeric user | Register or revoke only the caller's installation for future push addressing. |
+| GET | `/api/v1/sync/changes` | `incidents.view` + matching scope key | Commit-ordered, jurisdiction-scoped incident ids/change types for reconnect. |
+| GET | `/api/v1/sync/stream` | `incidents.view` + numeric JWT subject | Bounded REST/SSE incident wake-up; no domain payload. |
+| GET | `/api/v1/notifications/changes` | authenticated numeric user | Ascending cursor for that user's newly inserted notification deliveries; not a domain delta log. |
 | POST | `/api/v1/response/incidents/{id}/approve` | `RESPONSE_OPERATE` | Advance an incident through its approval workflow. |
 | POST | `/api/v1/response/incidents/{id}/push-map` | `RESPONSE_OPERATE` | Publish an incident to the public map. |
 | POST | `/api/v1/response/declarations` | `RESPONSE_COMMAND` | Propose a statutory disaster declaration. |
@@ -463,9 +501,14 @@ A representative slice across modules (full path includes the `/api` context-pat
 - **Angular ↔ backend.** All UI calls go to `/api/**`, proxied to :8080 in dev (`proxy.conf.json`). The SPA attaches the `Authorization: Bearer` token minted by `/api/v1/auth/login`.
 - **Angular ↔ Python EW engine.** Generation/scanner screens call `/ew-api/**` (proxied to :8600 with the `^/ew-api`→`""` rewrite), keeping the browser single-origin.
 - **Python EW engine → backend.** Generated warnings and bulletin PDFs are pushed into the shared DB through `/api/ew/bulletins/ingest` and `/api/v1/ew/products`; from there the warning lifecycle (`EwWarningLifecycleController`) and dissemination run inside the Spring app. The EW engine is treated as an external producer and **must not be modified** (per project memory).
-- **Inter-module (in-process).** Modules collaborate via the transactional outbox (`OutboxAppender`/`OutboxRelay`) — e.g. EW ingest issues a best-effort cross-sector One Health kick — never by direct cross-module method calls.
+- **Inter-module (in-process).** Modules currently collaborate through direct services, shared tables,
+  and selected scheduled jobs. The incident slice also exposes V211 REST delta/SSE convergence; there
+  is no general live outbox/event bus.
 - **Outbound delivery.** SMS via the M-Gov national gateway (`dmis.mgov.*`, sender-id `15200`); email via SMTP (`spring.mail.*`, Gmail by default). Both pull secrets from the environment; the `notification` module centralises delivery and the `content` module logs every send.
-- **Legacy Laravel app.** Continues to run against the same `public.*` tables; the strangler contract (Flyway never touches `public`, code reads/writes through `JdbcTemplate`) keeps the two coexisting during migration.
+- **Legacy Laravel app.** Continues to run against the same `public.*` tables. Shared-schema changes are
+  coordinated, additive Flyway migrations with qualified `public.*` DDL (including V211's incident trigger),
+  and application code reads/writes the legacy tables through `JdbcTemplate`. Coexistence therefore depends
+  on migration rehearsal and compatibility; it is not a promise that Flyway never touches `public`.
 
 ---
 
@@ -473,10 +516,17 @@ A representative slice across modules (full path includes the `/api` context-pat
 
 - **Identity is self-issued, not federated.** The runnable path is HS256 minted/validated in-process; Keycloak is wired only as a documented, currently-overridden alternative (`JwtSecurityConfig`, `application.yml` `issuer-uri`). Switching to real Keycloak requires removing/overriding the `JwtDecoder` bean and fronting the app.
 - **Local persona filter must never reach production.** `LocalAuthFilter`/`LocalSecurityConfig` are `@Profile("local")` and authenticate tokenless requests; the build fails fast on a dev/blank JWT secret outside `local`, but operational discipline is still required to keep `local` out of shared environments.
-- **Authorization is role-based, not per-jurisdiction.** `JurisdictionScope`/`AreaLookup`/`SecurityUtils` exist as scaffolding, but most endpoints gate on roles only; per-region/district data scoping is partial. `Authz.PREPAREDNESS_MANAGE` is documented as "provided for the module owner to apply" — several preparedness controllers are still `isAuthenticated()`-only.
+- **Jurisdiction enforcement is real but not universal.** Incident reads/writes and selected high-value
+  registries enforce region/district/council or shared-or-own rules in addition to permissions. Some national
+  catalogues and plans are deliberately shared, and every new operational endpoint still needs an explicit
+  scope decision and negative cross-area test; a permission gate alone is not proof of row-scope safety.
 - **Statutory declaration roles are interim.** The Minister/President/Committee authorities are seeded (`V71`) and gated (`DECLARE_*`), but `RESPONSE_COMMAND` is documented as the interim broad gate until those roles are fully exercised end-to-end.
 - **Shared-DB coupling.** During the strangler period the platform shares one PostgreSQL instance and the legacy `public` schema with the live Laravel app; `JdbcTemplate`-over-legacy-tables means schema changes in either system must be coordinated.
-- **Single-process eventing.** The outbox relay is in-process polling on a 2s fixed delay; throughput/latency are bounded by that, and there is no external broker yet (the documented future change point).
+- **No general durable eventing yet.** There is no transactional outbox or external broker. V211 provides
+  incident-only cursor delta plus web SSE and native GraphQL foreground wake-up, V212 provides
+  inserted-notification catch-up, and V213 only registers device addressing metadata. Other domains,
+  an actual FCM/APNs mobile background sender, replay/retry/dead-letter delivery, optimistic conflicts,
+  and broad tombstones remain unimplemented.
 - **EW engine is out of scope for modification.** Map/generation behaviour in the Python service is fixed and read-only from this codebase's perspective; backend EW work must not assume it can change the engine.
 
 ---
@@ -597,7 +647,7 @@ Authorization is enforced by `@PreAuthorize` across controllers **and** by `Modu
 |---|---|
 | `/api/v1/auth/login` | Mints the token — must be reachable without one (chicken-and-egg). |
 | `/api/actuator/health/**` | Liveness/readiness probes. |
-| `/api/v3/api-docs/**`, `/api/swagger-ui/**`, `/api/swagger-ui.html` | API docs. |
+| `/api/v3/api-docs/**` | OpenAPI JSON in non-production only; disabled by the production profile. |
 | `/api/v1/portal/**` | Citizen-facing portal, public by design (mirrors the legacy public routes). |
 | `/api/storage/**` | Public static uploads (news/gallery/publication images). |
 
@@ -636,7 +686,7 @@ A name-based variant `appendAreaScopeByName(...)` handles legacy tables that sto
 
 `common/security/SecurityHardeningConfig.java` (applied identically in both chains):
 
-- **CORS** — explicit allow-list from `dmis.security.cors.allowed-origins` (default `http://localhost:4200`); methods `GET/POST/PUT/PATCH/DELETE/OPTIONS`; allowed headers `Authorization, Content-Type, X-Local-Roles, Accept`; exposed `Content-Disposition`; `allowCredentials=false` (token auth, not cookies); 1h max-age.
+- **CORS** — explicit allow-list from `dmis.security.cors.allowed-origins` (only the local profile falls back to `localhost`/`127.0.0.1:4200`); methods `GET/POST/PUT/PATCH/DELETE/OPTIONS`; production allowed headers `Authorization, Content-Type, Idempotency-Key, Accept` (local additionally permits the two persona headers); exposed `Content-Disposition, Location`; `allowCredentials=false` (token auth, not cookies); 1h max-age.
 - **Headers** — HSTS (1 year, includeSubDomains), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Content-Security-Policy: frame-ancestors 'none'` as API defence-in-depth (the full document CSP belongs on the SPA's nginx host).
 
 **Rate limiting** — three auto-registered `OncePerRequestFilter`s sharing one `FixedWindowRateLimiter` and `AbstractRateLimitFilter` (per-client-IP fixed window, in-memory). Each is a self-restricting pass-through at `HIGHEST_PRECEDENCE`:
@@ -709,7 +759,7 @@ All migrations are idempotent (`IF NOT EXISTS` / guarded constraint creation) so
 
 ## 04. Data Architecture & Persistence
 
-> **Purpose (executive summary).** e-MAAFA is a strangler re-platform: a new Spring Boot service runs alongside the legacy Laravel application against the **same PostgreSQL database**. This section documents how that shared database is structured, how schema change is controlled (Flyway migrations through **V183** as of 2026-07-10), and how the new platform reads and writes the legacy `public` tables without ever destabilising production. The governing rule is: **Flyway owns DDL, the legacy `public` schema is treated as a read/write surface we extend additively, and the new bounded-context schemas (`platform`, `incident`, …) are ours alone.**
+> **Purpose (executive summary).** e-MAAFA is a strangler re-platform: a new Spring Boot service runs alongside the legacy Laravel application against the **same PostgreSQL database**. This section documents how that shared database is structured and how schema change is controlled. The last complete proof covers 196 versioned Flyway SQL files through **V212**, plus the baseline marker; V213 is present in final source but awaits the final Docker-backed gate. The governing rule is: **Flyway owns DDL and production changes are additive and migration-controlled.**
 >
 > **Outbox honesty (F99):** the transactional-outbox design (`common/event`, `platform.outbox_event`) is described historically as the inter-module seam. On the **live local DB (2026-07-10)** the outbox table is **not present / not the runtime integration bus** for most module collaboration — modules currently collaborate via shared `public` tables, direct service calls within the monolith, and `@Scheduled` jobs. Treat outbox prose as **designed / partial**, not as proven production eventing, until a future migration re-establishes and dual-proves the relay.
 
@@ -721,7 +771,8 @@ The persistence layer is responsible for:
 - **Controlled, versioned schema evolution** via Flyway, applied at application boot.
 - **A "read-model" projection layer** that materialises the legacy tables locally so the new app can authenticate and operate standalone, while never mutating the production schema.
 - **Reference master data** — the full Tanzania administrative hierarchy (regions → districts → councils → wards) and controlled vocabularies (incident types, hazards, permissions, translations).
-- **Cross-module integration tables** — the transactional outbox, the cross-agency Early Warning submission bus, and the unified notification feed.
+- **Cross-module integration tables** — the cross-agency Early Warning submission bus, unified
+  notification feed, external integration messages, and command idempotency receipts. No event outbox exists.
 
 This section does **not** cover the Python EW generate-engine on `:8600` (it authors PDFs and JSON; the Spring app only ingests the returned blobs), nor the application-service/business-logic layer except where a schema decision is load-bearing.
 
@@ -732,7 +783,7 @@ The database is shared by two applications mid-migration, so schema ownership is
 | Schema | Owner | Contents |
 |---|---|---|
 | `public` | Legacy Laravel app (shared) | All domain tables (users, roles, regions, incidents, warnings, oh_*, …). The new app reads and additively extends these; **never drops or mutates existing structure**. |
-| `platform` | New platform | Shared infrastructure: `outbox_event`, the Sendai/DesInventar disaster repository (`disaster_events`, `disaster_event_effects`, `disaster_event_links`, `sendai_baselines`, `sendai_indicators`). Flyway's history table also lives here. |
+| `platform` | New platform | Shared infrastructure: `api_idempotency_keys`, Sendai/DesInventar disaster repository tables, and Flyway history. `outbox_event` was removed by V153. |
 | `registry`, `incident`, `ew`, `dissemination`, `notification` | New platform (bounded contexts) | Reserved per-context schemas (`create-schemas: true`). Most domain tables today still live in `public` by necessity (the legacy app reads them too); these schemas hold context-private state. |
 
 Key Flyway settings and **why**:
@@ -805,7 +856,12 @@ The following groups the production-relevant tables. The migration shown is wher
 - `portal_settings`, `portal_slides`, `portal_gallery`, `portal_news`, `early_warnings`, `public_hazard_reports` (V21); `portal_hazard_cards` (V33). `alert_subscriptions` (V18; `unsubscribed_at` V32, `unsubscribe_reason` V70), `alert_unsubscribe_requests` (V69, hashed one-time confirmation codes).
 
 **Platform infrastructure (`platform`)**
-- `outbox_event` (V1; attempt-tracking & dead-letter columns V2) — the transactional outbox. Disaster repository: `disaster_events`, `disaster_event_effects`, `disaster_event_links`, `sendai_baselines`, `sendai_indicators` (V38/V39).
+- `api_idempotency_keys` (V210) — durable retry receipts for supported authenticated commands.
+- `domain_sync_head`, `domain_sync_events`, `sync_event_retention_state` (V211) — commit-ordered,
+  permission/jurisdiction-scoped incident convergence metadata; not a delivery outbox.
+- `notification_sync_heads` (V212) — per-user row-lock heads for commit-ordered notification insertion cursors.
+  Disaster repository: `disaster_events`, `disaster_event_effects`, `disaster_event_links`,
+  `sendai_baselines`, `sendai_indicators` (V38/V39). The historical outbox was removed by V153.
 
 ### 4.6 Early Warning Data Model (cross-agency bus)
 
@@ -828,7 +884,9 @@ Two integrity decisions worth noting:
 
 | Table | Schema | Purpose | Key columns | First created |
 |---|---|---|---|---|
-| `outbox_event` | platform | Transactional event outbox; domain event written in the same tx as the state change | `id`, `event_type`, `aggregate_type/id`, `payload`(jsonb), `published_at`, `attempts`, `last_error` | V1 (V2) |
+| `api_idempotency_keys` | platform | First-response receipts for replay-safe supported commands; not event delivery | `actor_user_id`, `operation`, `idempotency_key`, `request_fingerprint`, `response_body`, `expires_at` | V210 |
+| `domain_sync_events` / `domain_sync_head` | platform | Incident ids/change types plus transaction-serialized global cursor for scoped reconnect; no row payload | `sync_sequence`, `aggregate_id`, `change_type`, `required_permission`, area ids | V211 |
+| `notification_sync_heads` | platform | Per-user commit-order cursor allocation for inserted notifications | `user_id`, `last_sequence`, `updated_at` | V212 |
 | `users` | public | Identity; now carries channel prefs, area & institution scope | `id`, `email`, `password`, `phone`, `notify_in_app/email/sms`, `region_id`, `district_id`, `agency_id`, `stakeholder_id` | V5 |
 | `roles` / `model_has_roles` | public | Spatie roles + user↔role pivot | `roles.name`, `guard_name`, `description`; `model_has_roles(role_id, model_type, model_id)` | V5 |
 | `permissions` / `role_has_permissions` | public | Permission catalogue + role→permission pivot (documents policy; role-based enforcement today) | `permissions.name`(`module.action`), `module`, `action` | V44 |
@@ -1067,6 +1125,7 @@ All paths are prefixed with the `/api` context path. `Authz.AUTHENTICATED` = `is
 | Method | Path | Gate | Purpose |
 |---|---|---|---|
 | GET | `/api/v1/notifications` | (authenticated session) | Bell/centre feed: filters `unread`, `type`, `category` (derived bucket), `severity`, `q`, `before_id` cursor; items enriched with category + severity_norm; category chip counts. |
+| GET | `/api/v1/notifications/changes` | `AUTHENTICATED` | Per-user `after_sequence` catch-up for newly inserted notices; V212 serializes sequence assignment by transaction commit order. Not a domain delta/read-state/tombstone log. |
 | GET | `/api/v1/notifications/unread-count` | (authenticated session) | Badge poll: count + latest_id (smart client refresh) + by_severity breakdown. |
 | POST | `/api/v1/notifications/{id}/read` | `AUTHENTICATED` | Mark one notice read (scoped to current user). |
 | POST | `/api/v1/notifications/{id}/unread` | `AUTHENTICATED` | Mark one notice unread (scoped to current user). |
@@ -1883,7 +1942,7 @@ All backend sources live under `dmis-platform/backend/src/main/java/tz/go/pmo/dm
 - `tz.go.pmo.dmis.ew.EwWarningLifecycleController` — owns the EW→OH bridge (`createOhEventFromWarning`); see §9.7.
 - `tz.go.pmo.dmis.notification.ExternalDeliveryService` / `MailService` — the shared async SMS+SMTP sender used by dissemination dispatch.
 
-**Frontend** (`dmis-platform/frontend/src/app/pages/onehealth/`): standalone Angular 18 components — `dashboard`, `events` (+ `event-show`, `report-event-modal`), `directives` (+ `directive-show`), `disseminations` (+ `dissemination-show`), and `action-tracking`. Routes are registered in `frontend/src/app/app.routes.ts` under `m/one-health/*` (all behind `authGuard`), with `m/stakeholder-portal/one-health` reusing the events list.
+**Frontend** (`dmis-platform/frontend/src/app/pages/onehealth/`): standalone Angular components — `dashboard`, `events` (+ `event-show`, `report-event-modal`), `directives` (+ `directive-show`), `disseminations` (+ `dissemination-show`), and `action-tracking`. Routes are registered in `frontend/src/app/app.routes.ts` under `m/one-health/*` (all behind `authGuard`), with `m/stakeholder-portal/one-health` reusing the events list.
 
 ### 9.3 Data Design
 
@@ -2273,4 +2332,3 @@ The single dashboard payload (`GET /api/v1/repository/analytics?year=`) assemble
 - **Statutory authority roles still interim elsewhere.** Recovery/Repository gates use only the seeded operational roles; this is consistent with the platform-wide note in `Authz` that the statutory declaration authorities are not yet fully seeded, but it means some `Authz` gates (outside this section) remain interim.
 
 ---
-

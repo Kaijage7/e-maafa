@@ -7,12 +7,40 @@
 | **Constant password** | `Password@2026` |
 | **Where it is set** | Spring profile **`local` only** (`LocalTestPasswordSeeder`, first-boot seeders) |
 | **Primary login** | `admin@example.com` / `Password@2026` |
-| **Also applied to** | `eocc@pmo.go.tz`, `director@pmo.go.tz`, `dc@test.com`, `tma@meteo.go.tz`, `@example.com` / `@example.dev` / `@test.com`, `seeded_officer` accounts |
+| **Also applied to** | `eocc@pmo.go.tz`, `director@pmo.go.tz`, `dc@test.com`, `tma@meteo.go.tz`, `@example.com` / `@example.dev` / `@test.com`, `seeded_officer` accounts, and local incident-flow role holders listed below |
 
 On every local API start, `LocalTestPasswordSeeder`:
 
 1. BCrypt-hashes `Password@2026` and writes it to those accounts.
 2. Clears `must_change_password` so V196 cutover hygiene does not block local login.
+
+For maximum local incident testing, the same local-only reset covers the operational ladder and its
+advisory/logistics personas: `Dist DC`, `DED`, `DAS`, `District Commissioner`, `District Planning Officer`,
+`District Logistic Officer`, `Reg DC`, `RAS`, `RC`, `Regional Planning Officer`, `Regional Logistic Officer`,
+`EOCC`, `Director`, and `Secretary`. Generate the current database-backed workbook with:
+
+```bash
+python3 scripts/export-local-incident-credentials.py
+```
+
+The generated workbook and CSV files are written under `test-data/local/` and intentionally ignored by Git.
+They contain local test credentials and must not be attached to a production deployment package.
+
+Before a bulk automated lifecycle run, isolate background/external work while leaving the normal production
+defaults unchanged:
+
+```bash
+export DMIS_SCANNER_SCHEDULED_ENABLED=false
+export DMIS_SCENARIO_INJECTS_ENABLED=false
+export DMIS_DELIVERY_RETRY_ENABLED=false
+export DMIS_SECURITY_RATELIMIT_LOGIN_ENABLED=false
+export DMIS_SECURITY_RATELIMIT_WRITE_ENABLED=false
+export MAIL_HOST= MAIL_USERNAME= MAIL_PASSWORD=
+export MGOV_API_KEY= MGOV_SYSTEM_ID= MGOV_MOBILE_SERVICE_ID=
+```
+
+`dmis.scanner.scheduled-enabled=false` stops only the background internet sweep; the authenticated manual
+scanner endpoint remains available for a separate controlled test.
 
 UI: http://localhost:4200/login  
 

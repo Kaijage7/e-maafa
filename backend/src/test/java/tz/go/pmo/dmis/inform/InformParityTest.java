@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import tz.go.pmo.dmis.common.security.HermeticPostgresSupport;
 import tz.go.pmo.dmis.inform.domain.InformService;
 
 import java.io.BufferedReader;
@@ -23,12 +24,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * Excel "INFORM SADC 2024" AV column (verified 170/170 exact, max delta 0.000). If the engine math or the
  * normal seed (V115) ever drifts, this test fails — turning a one-time runtime check into a regression guard.
  *
- * <p>Runs under the {@code local} profile against the dev DB (the established DMIS integration-test pattern),
+ * <p>Runs under the {@code local} profile against hermetic Testcontainers Postgres,
  * exercising the real seeded values end-to-end through {@link InformService#riskByLevel}.</p>
  */
 @SpringBootTest
 @ActiveProfiles("local")
-class InformParityTest {
+class InformParityTest extends HermeticPostgresSupport {
 
     @Autowired
     InformService inform;

@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import tz.go.pmo.dmis.common.security.HermeticPostgresSupport;
 
 /**
  * Guards the V102 RBAC de-cheating: the settings WRITE controllers are now gated on matrix permissions
@@ -27,7 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
-class RbacSettingsMatrixAuthorityTest {
+class RbacSettingsMatrixAuthorityTest extends HermeticPostgresSupport {
 
     private static final String ROLES = "/v1/settings/roles/999999999/permissions";
     private static final String REGION = "/v1/settings/locations/regions/999999999";

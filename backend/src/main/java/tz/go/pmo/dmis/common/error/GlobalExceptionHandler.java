@@ -102,14 +102,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Oversize upload — the file exceeded the multipart cap (10 MB). Distinct from the generic multipart
+     * Oversize upload — the file exceeded the configured multipart cap. Distinct from the generic multipart
      * handler so the operator sees the real reason (they DID attach a file) instead of "attach a file".
      * More specific than MultipartException, so Spring prefers this handler for the size case.
      */
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
     ProblemDetail handleUploadTooLarge(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
         return problem(HttpStatus.PAYLOAD_TOO_LARGE, "File too large",
-                "The PDF is too large. Bulletin PDFs must be 10 MB or smaller.");
+                "The upload exceeds the platform request limit. Reduce the file size or number of files and retry.");
     }
 
     /**

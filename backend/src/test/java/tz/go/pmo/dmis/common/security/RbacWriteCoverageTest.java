@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Regression guard against privilege escalation: every write endpoint (POST/PUT/PATCH/DELETE) in a swept
- * module must be protected by a <b>real role check</b>, not merely "logged in". A class-level scan, no Spring
+ * Regression guard against privilege escalation: every write endpoint (POST/PUT/PATCH/DELETE) in the
+ * controller package must be protected by a <b>real role check</b>, not merely "logged in". A class-level scan, no Spring
  * context / no DB.
  *
  * <p><b>What changed (and why):</b> the previous version only asserted that <i>some</i> {@code @PreAuthorize}
@@ -30,25 +30,19 @@ import org.springframework.web.bind.annotation.RestController;
  * bear a role test ({@code hasRole}/{@code hasAnyRole}/{@code hasAuthority}); bare {@code isAuthenticated()}
  * and {@code permitAll()} no longer count as authorization.
  *
- * <h3>Scope — every module that exposes write endpoints</h3>
- * {@link #SWEPT_MODULES} covers all modules with writes: settings, content, portal, stakeholder, ew,
- * onehealth, recovery, reports, repository, AND mitigation, preparedness, response. The latter three were
- * role-gated during the privilege-escalation closure and added to the sweep here, so the strict role-check now LOCKS them
- * against regression (this test fails the build if any of their writes reverts to {@code isAuthenticated()}).
- * The ONLY writes permitted to lack a role test are the genuinely public citizen endpoints listed in
- * {@link #INTENTIONAL_PUBLIC}; bare {@code isAuthenticated()} / {@code permitAll()} do NOT pass.
- * (notification's {@code NotificationController} self-service read/read-all/preferences are not writes to
- * national data; its channel-test writes are gated to {@link Authz#CHANNEL_TEST_WRITE}.)
+ * <h3>Scope — every REST controller</h3>
+ * Controllers were consolidated under {@code tz.go.pmo.dmis.controller}; scanning that package directly
+ * keeps this guard effective when feature packages move. The strict role-check locks all protected writes
+ * against regression and the non-zero assertion prevents a vacuous pass.
+ * The only endpoints permitted to lack a role test are the explicitly documented public or per-user
+ * operations below. Bare {@code isAuthenticated()} / {@code permitAll()} do not pass automatically.
  */
 class RbacWriteCoverageTest {
 
     private static final String BASE = "tz.go.pmo.dmis";
 
-    /** Modules verified role-gated on writes (strict check applies). */
-    private static final Set<String> SWEPT_MODULES = Set.of(
-            BASE + ".settings", BASE + ".content", BASE + ".portal", BASE + ".stakeholder", BASE + ".ew",
-            BASE + ".onehealth", BASE + ".recovery", BASE + ".reports", BASE + ".repository",
-            BASE + ".mitigation", BASE + ".preparedness", BASE + ".response");
+    /** All application REST controllers live here; strict write checks apply to every controller. */
+    private static final String CONTROLLER_PACKAGE = BASE + ".controller";
 
     /**
      * Controllers whose writes are intentionally NOT role-gated, by design — each justified. These are the
@@ -60,7 +54,39 @@ class RbacWriteCoverageTest {
      *       and the unsubscribe is ownership-checked at the service layer.</li>
      * </ul>
      */
-    private static final Set<String> INTENTIONAL_PUBLIC = Set.of("PortalPublicController");
+    private static final Set<String> INTENTIONAL_PUBLIC_CONTROLLERS = Set.of("PortalPublicController");
+
+    /**
+     * Explicit method-level exceptions that do not mutate shared application data:
+     * <ul>
+     *   <li>Auth operations are public identity entry points or authenticated changes to the caller's own account.</li>
+     *   <li>The delivery-status callback is a public gateway webhook protected by a configured shared secret.</li>
+     *   <li>Notification operations change only the caller's own read state/preferences.</li>
+     *   <li>Mobile-device operations register or revoke only the authenticated caller's installation;
+     *       the request cannot name another user and the service repeats the numeric-owner check.</li>
+     *   <li>EW action statements are a read-only proposal calculation that uses POST only to accept a JSON body.</li>
+     * </ul>
+     * Keeping these at method granularity ensures a new write on the same controller is scanned by default.
+     */
+    private static final Set<String> INTENTIONAL_NON_ROLE_METHODS = Set.of(
+            "AuthController#login",
+            "AuthController#verifyMfa",
+            "AuthController#setupTotp",
+            "AuthController#enableTotp",
+            "AuthController#disableTotp",
+            "AuthController#forgotPassword",
+            "AuthController#resetPassword",
+            "AuthController#logout",
+            "AuthController#changePassword",
+            "DeliveryStatusController#smsDlr",
+            "EwAgencyController#actionStatements",
+            "MobileDeviceController#registerCurrent",
+            "MobileDeviceController#revokeCurrent",
+            "NotificationController#dismiss",
+            "NotificationController#markRead",
+            "NotificationController#markUnread",
+            "NotificationController#markAllRead",
+            "NotificationController#saveMyPreferences");
 
     @Test
     void everyWriteInSweptModulesHasARealRoleCheck() throws Exception {
@@ -70,14 +96,14 @@ class RbacWriteCoverageTest {
 
         int inScopeWriteControllers = 0;
         List<String> violations = new ArrayList<>();
-        for (BeanDefinition def : scanner.findCandidateComponents(BASE)) {
+        for (BeanDefinition def : scanner.findCandidateComponents(CONTROLLER_PACKAGE)) {
             String className = def.getBeanClassName();
-            if (className == null || SWEPT_MODULES.stream().noneMatch(className::startsWith)) {
+            if (className == null) {
                 continue;
             }
             Class<?> controller = Class.forName(className, false, getClass().getClassLoader());
             String simpleName = controller.getSimpleName();
-            if (INTENTIONAL_PUBLIC.contains(simpleName)) {
+            if (INTENTIONAL_PUBLIC_CONTROLLERS.contains(simpleName)) {
                 continue;
             }
             Method[] methods = controller.getDeclaredMethods();
@@ -90,6 +116,10 @@ class RbacWriteCoverageTest {
                     ? controller.getAnnotation(PreAuthorize.class).value() : null;
             for (Method m : methods) {
                 if (!isWrite(m)) {
+                    continue;
+                }
+                String methodKey = simpleName + "#" + m.getName();
+                if (INTENTIONAL_NON_ROLE_METHODS.contains(methodKey)) {
                     continue;
                 }
                 // The effective gate: a method-level @PreAuthorize overrides the class-level one for that method.
@@ -106,7 +136,7 @@ class RbacWriteCoverageTest {
         assertTrue(violations.isEmpty(),
                 "Write endpoints in swept modules WITHOUT a real role check (a bare isAuthenticated()/permitAll() "
                         + "is NOT authorization — gate them with an Authz.* hasAnyRole(...) constant, or, if "
-                        + "genuinely public-by-design, add the controller to INTENTIONAL_PUBLIC with a reason):\n  "
+                        + "genuinely non-role-by-design, add the exact method to INTENTIONAL_NON_ROLE_METHODS with a reason):\n  "
                         + String.join("\n  ", violations));
     }
 

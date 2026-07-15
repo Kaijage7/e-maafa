@@ -12,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import tz.go.pmo.dmis.common.security.HermeticPostgresSupport;
 
 /**
  * Proves the relief-resource catalogue is now a CONTROLLED vocabulary (the V65 reference tables):
@@ -22,7 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
-class ResourceCatalogueControlledVocabTest {
+class ResourceCatalogueControlledVocabTest extends HermeticPostgresSupport {
 
     private static final String BASE = "/v1/settings/resources";
     private static final String ADMIN = "Super Admin";

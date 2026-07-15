@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import tz.go.pmo.dmis.common.security.HermeticPostgresSupport;
 
 /**
  * Guards the V103 RBAC de-cheating for the composite gates (now matrix permissions). Probes are
@@ -26,7 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
-class RbacCompositeMatrixAuthorityTest {
+class RbacCompositeMatrixAuthorityTest extends HermeticPostgresSupport {
 
     @Autowired private MockMvc mvc;
 

@@ -46,85 +46,81 @@ public class RegionDataBuilder {
 
     public Map<String, Map<String, Object>> build() {
         Map<String, Map<String, Object>> regionData = new LinkedHashMap<>();
-        try {
-            List<Map<String, Object>> assessments = jdbc.queryForList(
-                    "select risk_level, latitude, longitude, location_name, district_council "
-                            + "from public.risk_assessments where latitude is not null and longitude is not null");
-            for (Map<String, Object> a : assessments) {
-                double lat = ((Number) a.get("latitude")).doubleValue();
-                double lng = ((Number) a.get("longitude")).doubleValue();
-                String bestRegion = null;
-                String dc = lower(a.get("district_council"));
-                String ln = lower(a.get("location_name"));
-                for (String rName : REGION_CENTERS.keySet()) {
-                    String needle = rName.toLowerCase(Locale.ROOT);
-                    if (dc.contains(needle) || ln.contains(needle)) {
-                        bestRegion = rName;
-                        break;
-                    }
-                }
-                if (bestRegion == null) {
-                    double bestDist = Double.MAX_VALUE;
-                    for (Map.Entry<String, double[]> e : REGION_CENTERS.entrySet()) {
-                        double d = Math.pow(lat - e.getValue()[0], 2) + Math.pow(lng - e.getValue()[1], 2);
-                        if (d < bestDist) {
-                            bestDist = d;
-                            bestRegion = e.getKey();
-                        }
-                    }
-                }
-                Map<String, Object> rd = regionData.computeIfAbsent(bestRegion, k -> emptyEntry());
-                inc(rd, "assessments");
-                String lvl = lower(a.get("risk_level"));
-                if (lvl.contains("high")) {
-                    inc(rd, "high");
-                } else if (lvl.contains("medium")) {
-                    inc(rd, "medium");
-                } else if (lvl.contains("low")) {
-                    inc(rd, "low");
+        List<Map<String, Object>> assessments = jdbc.queryForList(
+                "select risk_level, latitude, longitude, location_name, district_council "
+                        + "from public.risk_assessments where latitude is not null and longitude is not null");
+        for (Map<String, Object> a : assessments) {
+            double lat = ((Number) a.get("latitude")).doubleValue();
+            double lng = ((Number) a.get("longitude")).doubleValue();
+            String bestRegion = null;
+            String dc = lower(a.get("district_council"));
+            String ln = lower(a.get("location_name"));
+            for (String rName : REGION_CENTERS.keySet()) {
+                String needle = rName.toLowerCase(Locale.ROOT);
+                if (dc.contains(needle) || ln.contains(needle)) {
+                    bestRegion = rName;
+                    break;
                 }
             }
+            if (bestRegion == null) {
+                double bestDist = Double.MAX_VALUE;
+                for (Map.Entry<String, double[]> e : REGION_CENTERS.entrySet()) {
+                    double d = Math.pow(lat - e.getValue()[0], 2) + Math.pow(lng - e.getValue()[1], 2);
+                    if (d < bestDist) {
+                        bestDist = d;
+                        bestRegion = e.getKey();
+                    }
+                }
+            }
+            Map<String, Object> rd = regionData.computeIfAbsent(bestRegion, k -> emptyEntry());
+            inc(rd, "assessments");
+            String lvl = lower(a.get("risk_level"));
+            if (lvl.contains("high")) {
+                inc(rd, "high");
+            } else if (lvl.contains("medium")) {
+                inc(rd, "medium");
+            } else if (lvl.contains("low")) {
+                inc(rd, "low");
+            }
+        }
 
-            List<Map<String, Object>> measures = jdbc.queryForList(
-                    "select coverage_area from public.mitigation_measures where coverage_area is not null");
-            for (Map<String, Object> m : measures) {
-                Map<String, Object> cov = parseMap(String.valueOf(m.get("coverage_area")));
-                if (cov.isEmpty()) {
-                    continue;
-                }
-                java.util.List<String> covRegions = new java.util.ArrayList<>();
-                if (cov.get("Region") instanceof String s && !s.isBlank()) {
-                    covRegions.add(s);
-                }
-                addAll(covRegions, cov.get("Regions"));
-                addAll(covRegions, cov.get("Priority_regions"));
-                for (String rn : covRegions) {
-                    rn = rn.trim();
-                    if (REGION_CENTERS.containsKey(rn)) {
-                        inc(regionData.computeIfAbsent(rn, k -> emptyEntry()), "measures");
-                    }
-                }
-                Object scope = cov.get("Geographic_scope");
-                if (scope instanceof String s && s.equalsIgnoreCase("national")) {
-                    for (String rn : REGION_CENTERS.keySet()) {
-                        inc(regionData.computeIfAbsent(rn, k -> emptyEntry()), "measures");
-                    }
+        List<Map<String, Object>> measures = jdbc.queryForList(
+                "select coverage_area from public.mitigation_measures where coverage_area is not null");
+        for (Map<String, Object> m : measures) {
+            Map<String, Object> cov = parseMap(String.valueOf(m.get("coverage_area")));
+            if (cov.isEmpty()) {
+                continue;
+            }
+            java.util.List<String> covRegions = new java.util.ArrayList<>();
+            if (cov.get("Region") instanceof String s && !s.isBlank()) {
+                covRegions.add(s);
+            }
+            addAll(covRegions, cov.get("Regions"));
+            addAll(covRegions, cov.get("Priority_regions"));
+            for (String rn : covRegions) {
+                rn = rn.trim();
+                if (REGION_CENTERS.containsKey(rn)) {
+                    inc(regionData.computeIfAbsent(rn, k -> emptyEntry()), "measures");
                 }
             }
+            Object scope = cov.get("Geographic_scope");
+            if (scope instanceof String s && s.equalsIgnoreCase("national")) {
+                for (String rn : REGION_CENTERS.keySet()) {
+                    inc(regionData.computeIfAbsent(rn, k -> emptyEntry()), "measures");
+                }
+            }
+        }
 
-            for (Map<String, Object> rd : regionData.values()) {
-                if ((int) rd.get("high") > 0) {
-                    rd.put("riskLevel", "High");
-                } else if ((int) rd.get("medium") > 0) {
-                    rd.put("riskLevel", "Medium");
-                } else if ((int) rd.get("low") > 0) {
-                    rd.put("riskLevel", "Low");
-                } else if ((int) rd.get("measures") > 0) {
-                    rd.put("riskLevel", "Active");
-                }
+        for (Map<String, Object> rd : regionData.values()) {
+            if ((int) rd.get("high") > 0) {
+                rd.put("riskLevel", "High");
+            } else if ((int) rd.get("medium") > 0) {
+                rd.put("riskLevel", "Medium");
+            } else if ((int) rd.get("low") > 0) {
+                rd.put("riskLevel", "Low");
+            } else if ((int) rd.get("measures") > 0) {
+                rd.put("riskLevel", "Active");
             }
-        } catch (Exception e) {
-            return new LinkedHashMap<>();
         }
         return regionData;
     }

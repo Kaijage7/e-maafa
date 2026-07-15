@@ -71,18 +71,10 @@ public class GisMapServiceImpl implements GisMapService {
     }
 
     private List<Map<String, Object>> rows(String sql) {
-        try {
-            return jdbc.queryForList(sql);
-        } catch (Exception e) {
-            return List.of();
-        }
+        return jdbc.queryForList(sql);
     }
 
     private List<Map<String, Object>> rows(String sql, Object... params) {
-        try {
-            return jdbc.queryForList(sql, params);
-        } catch (Exception e) {
-            return List.of();
-        }
+        return jdbc.queryForList(sql, params);
     }
 }

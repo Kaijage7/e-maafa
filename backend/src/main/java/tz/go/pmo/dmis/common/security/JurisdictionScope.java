@@ -60,6 +60,20 @@ public class JurisdictionScope {
      */
     public record AreaFilter(String scope, Long regionId, Long districtId, Long councilId) {}
 
+    /**
+     * Immutable strict incident scope for work that continues after the request thread (for example a
+     * GraphQL subscription). Unlike {@link #sharedOrOwnFilter()}, {@code NONE} remains fail-closed.
+     */
+    public AreaFilter strictAreaFilter() {
+        Map<String, Object> area = currentArea();
+        Tier tier = tierFor(area);
+        return new AreaFilter(
+                tier.name(),
+                asLong(area.get("region_id")),
+                asLong(area.get("district_id")),
+                asLong(area.get("council_id")));
+    }
+
     /** Build the {@link AreaFilter} for the current actor (shared-or-own policy; see {@link #appendAreaScopeSharedOrOwn}). */
     public AreaFilter sharedOrOwnFilter() {
         Tier t = currentTier();
