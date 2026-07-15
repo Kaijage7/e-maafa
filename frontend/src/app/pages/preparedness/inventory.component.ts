@@ -66,7 +66,7 @@ interface InvResponse {
                   <th>Quantity</th><th>Status</th><th>Expiry Date</th><th>Actions</th>
                 </tr></thead>
                 <tbody>
-                  @for (it of filtered(); track it.batchNumber) {
+                  @for (it of filtered(); track it.id) {
                     <tr class="data-row">
                       <td style="font-size:0.82rem;color:var(--text-mid);">{{ it.resource || '-' }}</td>
                       <td><div class="r-title">{{ it.itemName }}</div><div class="r-subtitle">{{ it.batchNumber || 'No batch #' }}</div></td>
@@ -88,8 +88,9 @@ interface InvResponse {
                       </td>
                       <td>
                         <div class="ctx-wrap">
-                          <button class="ctx-trigger" type="button" (click)="toggleMenu(it.batchNumber, $event)"><i class="fas fa-ellipsis-v"></i></button>
-                          <div class="ctx-menu" [class.open]="openMenu() === it.batchNumber">
+                          <button class="ctx-trigger" type="button" [attr.aria-label]="'Actions for ' + it.itemName"
+                                  (click)="toggleMenu(it.id, $event)"><i class="fas fa-ellipsis-v"></i></button>
+                          <div class="ctx-menu" [class.open]="openMenu() === it.id">
                             <a class="ctx-item" [routerLink]="['/m/preparedness/inventory/create']" [queryParams]="{edit: it.id}"><i class="fas fa-eye"></i> View Details</a>
                             <a class="ctx-item success" [routerLink]="['/m/preparedness/inventory/create']" [queryParams]="{edit: it.id}"><i class="fas fa-edit"></i> Edit</a>
                           </div>
@@ -132,7 +133,8 @@ export class InventoryComponent {
   warehouse = signal('');
   category = signal('');
   tab = signal<'' | 'low_stock' | 'expiring' | 'expired'>('');
-  openMenu = signal<string | null>(null);
+  /** Menu key must be the unique row id — batchNumber is often null/duplicated. */
+  openMenu = signal<number | null>(null);
 
   constructor() {
     this.http.get<InvResponse>('/api/v1/inventory').subscribe(response => {
@@ -162,7 +164,8 @@ export class InventoryComponent {
     return 'badge-' + (status || '').toLowerCase().replace(/ /g, '-');
   }
 
-  toggleMenu(id: string, event: Event): void {
+  toggleMenu(id: number, event: Event): void {
+    event.preventDefault();
     event.stopPropagation();
     this.openMenu.update(c => (c === id ? null : id));
   }
