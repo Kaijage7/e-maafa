@@ -1,39 +1,84 @@
 # Mobile and Web Hybrid API Decision
 
-Date: 2026-07-15
+Date: 2026-07-16
 
 ## Decision
 
-DMIS uses a hybrid API:
+DMIS uses a **hybrid API** deliberately — not “GraphQL everywhere” and not “REST forever for every screen”.
 
-- REST remains authoritative for commands, uploads, callbacks, authentication, and other
-  workflow transitions.
-- GraphQL is additive and is used for permission-scoped composite reads plus native foreground
-  invalidation where a typed mobile contract avoids several REST round trips or bespoke streaming.
-- Both transports call the same application services and database. GraphQL must not duplicate
-  authorization, jurisdiction rules, or domain writes in resolver-specific SQL.
+- **REST** is authoritative for **commands**, **uploads**, **callbacks**, **auth**, **offline delta recovery**, and **web SSE**.
+- **GraphQL** is additive for **composite, permission-scoped reads** and **native foreground wake-up** only.
+- Both call the **same** application services and PostgreSQL. GraphQL must not invent its own write path,
+  authorization rules, or SQL.
 
-Starting the entire platform again as GraphQL would not improve command safety, file transfer,
-offline conflict handling, or operational integrations enough to justify replacing the mature REST
-surface. The hybrid keeps those stable contracts while giving bandwidth-constrained clients typed,
-screen-shaped reads.
+Rebuilding the whole platform as GraphQL would not beat REST for idempotent offline writes, multipart
+media, provider webhooks, or durable cursor recovery. Using only REST for every mobile home screen
+would force many round-trips or bespoke DTOs. The hybrid keeps each tool where it is strong.
+
+### Client decision guide (use this first)
+
+```
+Need a screen-shaped read (home, incident workspace)?
+  → GraphQL query (mobileHome / incidentWorkspace)
+
+Need to create/update/approve/dispatch/upload/register device?
+  → REST command (+ Idempotency-Key when retryable)
+
+Need to catch up after offline / reconnect / push?
+  → REST cursor: GET /v1/sync/changes (+ notification changes)
+
+Need live invalidation while app is open?
+  → Web Angular: REST SSE  GET /v1/sync/stream
+  → Native foreground: GraphQL subscription mobileSync
+  → Native background: FCM/APNs wake → then REST cursor (never trust push body as data)
+
+Need login, MFA, password reset, webhooks?
+  → REST only
+```
 
 ### Best-fit boundary
 
-| Need | Transport | Reason |
+| Need | Transport | Why it wins |
 |---|---|---|
-| Composite, client-shaped, permission-scoped screen read | GraphQL query | Avoids several REST round trips while preserving one bounded schema and shared service rules |
-| Create/update/approve/dispatch/finance/stock command | REST | Clear HTTP/idempotency semantics, stable workflow endpoints, audit behavior and explicit conflicts |
-| File or media transfer | REST multipart or a future resumable-upload contract | Binary streaming, retry, quarantine and size controls do not become safer inside GraphQL |
-| Offline/reconnect recovery | REST cursor pages | Deterministic paging, retention expiry and transactional local checkpointing |
-| Foreground web invalidation | Authenticated REST/SSE | One-way, content-free wake-up works with the existing bearer-authenticated Angular client |
-| Foreground native invalidation | GraphQL subscription (`graphql-transport-ws`) | Native clients reuse the typed transport while foregrounded; the message is still only a cursor wake-up |
-| Background native wake-up | APNs/FCM | Mobile operating systems suspend streams; push wakes the client, which then runs REST cursor recovery |
-| Webhook/provider callback | REST | Provider-native signatures, response codes and retry contracts |
+| Composite home / workspace read | **GraphQL query** | One typed document; field selection; shared service auth |
+| Single simple list already perfect on REST | **REST** | No need to wrap stable admin screens |
+| Create / edit / approve / dispatch / finance / stock | **REST** | HTTP status, idempotency, audit, conflict semantics |
+| Media upload / resume | **REST** multipart (or future resumable upload) | Binary + size + quarantine |
+| Offline delta recovery | **REST** cursor pages | Deterministic pages, 409/410, local checkpoint |
+| Web live refresh | **REST SSE** `/v1/sync/stream` | Bearer-friendly one-way wake-up for Angular |
+| Native live refresh (foreground) | **GraphQL subscription** `mobileSync` | Same GraphQL stack; content-free cursor only |
+| Background mobile wake | **FCM/APNs** → REST sync | OS kills long sockets |
+| Provider callbacks (SMS/email/ESB) | **REST** | Signatures and retry contracts |
 
-GraphQL is not the source of truth and REST is not automatically preferred for every read. The
-choice is made per interaction; both paths reuse the same authorization, jurisdiction and
-application-service layer.
+**GraphQL is not the source of truth.** After any write, clients converge via committed DB state + REST
+cursors; subscriptions/SSE only say “something changed, go fetch.”
+
+### Live surface inventory (do not blur)
+
+**GraphQL** `POST /api/graphql` (and `wss://…/api/graphql` for subscriptions):
+
+| Operation | Role |
+|---|---|
+| `mobileHome` | Composite home: viewer + incident page + notifications + `syncCursor` |
+| `incidentWorkspace` | Composite one-incident detail (tasks/allocations summary) |
+| `mobileSync` | Content-free foreground wake-up only |
+
+No GraphQL mutations. Allowlist roots are locked in schema + `PersistedOperationRegistry` + tests.
+
+**REST (mobile/web hybrid-related):**
+
+| Endpoint | Role |
+|---|---|
+| `POST /api/v1/auth/login` (etc.) | Authentication |
+| `POST /api/v1/mobile/incidents` | Idempotent mobile incident create |
+| `PUT/DELETE /api/v1/mobile/devices/current` | Device install registry for future push |
+| `GET /api/v1/sync/changes` | Durable incident delta pages |
+| `GET /api/v1/sync/stream` | Web SSE wake-up |
+| `GET /api/v1/notifications/changes` | Notification catch-up cursor |
+| Existing `/api/v1/response/**`, warehouse, finance… | Full domain REST (unchanged) |
+
+**Angular web app:** continues on **REST + SSE** (no GraphQL required for the SPA). GraphQL is
+optimized for **native / bandwidth-aware clients** and optional future typed web screens.
 
 ## Implemented first slice
 

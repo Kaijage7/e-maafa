@@ -1,4 +1,10 @@
-"""Additive mobile/web query and content-free subscription API. Commands remain on REST."""
+"""
+Additive mobile/native GraphQL surface — reads and wake-up only.
+
+Use GraphQL where it fits: composite screen reads (mobileHome, incidentWorkspace) and
+foreground mobileSync wake-ups. Commands, auth, uploads, offline cursor recovery, and web SSE
+remain on REST. Commands remain on REST.
+"""
 type Query {
   """Incident-capable user's scoped home screen."""
   mobileHome(
