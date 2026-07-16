@@ -30,7 +30,7 @@ public class PersistedOperationRegistry {
 
     /** Root fields this product intentionally exposes on GraphQL. */
     public static final Set<String> ALLOWED_ROOT_FIELDS = Set.of(
-            "mobileHome", "mobileSync", "incidentWorkspace");
+            "mobileHome", "mobileSync", "incidentWorkspace", "mobileReference");
 
     private final ObjectMapper json;
     private final Map<String, String> documentByHash = new LinkedHashMap<>();

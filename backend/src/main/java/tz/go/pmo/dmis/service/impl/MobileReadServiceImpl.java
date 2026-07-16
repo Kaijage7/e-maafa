@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tz.go.pmo.dmis.common.security.Authz;
 import tz.go.pmo.dmis.dto.response.IncidentWorkspaceResponse;
 import tz.go.pmo.dmis.dto.response.MobileHomeResponse;
+import tz.go.pmo.dmis.dto.response.MobileReferenceResponse;
 import tz.go.pmo.dmis.service.IncidentService;
 import tz.go.pmo.dmis.service.IncidentSyncService;
 import tz.go.pmo.dmis.service.MobileReadService;
@@ -37,6 +39,7 @@ public class MobileReadServiceImpl implements MobileReadService {
     private static final int MAX_INCIDENT_PAGE_SIZE = 50;
     private static final int DEFAULT_INCIDENT_PAGE_SIZE = 15;
     private static final int MAX_WORKSPACE_CHILD_ROWS = 50;
+    private static final int MAX_REFERENCE_ROWS = 5_000;
 
     private final IncidentService incidentService;
     private final UserNotificationService notificationService;
@@ -108,6 +111,24 @@ public class MobileReadServiceImpl implements MobileReadService {
                 allocations,
                 listSize(source.get("updates")),
                 listSize(source.get("workflow_histories")));
+    }
+
+    @Override
+    @Transactional(readOnly = true, timeout = 15)
+    @PreAuthorize(Authz.PERM_INCIDENT_VIEW)
+    public MobileReferenceResponse mobileReference() {
+        requireAuthentication();
+        // Reuse the existing form catalogue — no parallel vocab SQL in GraphQL.
+        Map<String, Object> form = incidentService.formData();
+        return new MobileReferenceResponse(
+                Instant.now().toString(),
+                refItems(form.get("hazards")),
+                incidentTypeRefs(form.get("incident_types")),
+                stringList(form.get("severity_levels")),
+                stringList(form.get("sources_of_report")),
+                stringList(form.get("infrastructure_damage_options")),
+                stringList(form.get("emergency_needs_options")),
+                refItems(form.get("regions")));
     }
 
     private static Authentication requireAuthentication() {
@@ -399,5 +420,67 @@ public class MobileReadServiceImpl implements MobileReadService {
         } catch (NumberFormatException ignored) {
             return null;
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<MobileReferenceResponse.RefItem> refItems(Object raw) {
+        if (!(raw instanceof List<?> rows)) {
+            return List.of();
+        }
+        List<MobileReferenceResponse.RefItem> out = new ArrayList<>();
+        for (Object row : rows) {
+            if (!(row instanceof Map<?, ?> map) || out.size() >= MAX_REFERENCE_ROWS) {
+                continue;
+            }
+            Map<String, Object> m = (Map<String, Object>) map;
+            Object id = m.get("id");
+            Object name = m.get("name");
+            if (id == null || name == null || name.toString().isBlank()) {
+                continue;
+            }
+            out.add(new MobileReferenceResponse.RefItem(id.toString(), name.toString()));
+        }
+        return List.copyOf(out);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<MobileReferenceResponse.IncidentTypeRef> incidentTypeRefs(Object raw) {
+        if (!(raw instanceof List<?> rows)) {
+            return List.of();
+        }
+        List<MobileReferenceResponse.IncidentTypeRef> out = new ArrayList<>();
+        for (Object row : rows) {
+            if (!(row instanceof Map<?, ?> map) || out.size() >= MAX_REFERENCE_ROWS) {
+                continue;
+            }
+            Map<String, Object> m = (Map<String, Object>) map;
+            Object id = m.get("id");
+            Object name = m.get("name");
+            if (id == null || name == null || name.toString().isBlank()) {
+                continue;
+            }
+            Object severity = m.get("default_severity");
+            if (severity == null) {
+                severity = m.get("defaultSeverity");
+            }
+            out.add(new MobileReferenceResponse.IncidentTypeRef(
+                    id.toString(),
+                    name.toString(),
+                    severity == null ? null : severity.toString()));
+        }
+        return List.copyOf(out);
+    }
+
+    private static List<String> stringList(Object raw) {
+        if (!(raw instanceof List<?> rows)) {
+            return List.of();
+        }
+        List<String> out = new ArrayList<>();
+        for (Object row : rows) {
+            if (row != null && !row.toString().isBlank() && out.size() < MAX_REFERENCE_ROWS) {
+                out.add(row.toString());
+            }
+        }
+        return List.copyOf(out);
     }
 }

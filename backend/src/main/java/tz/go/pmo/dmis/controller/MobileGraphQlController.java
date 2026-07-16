@@ -17,6 +17,7 @@ import tz.go.pmo.dmis.common.security.CurrentUserResolver;
 import tz.go.pmo.dmis.common.security.TokenDenylist;
 import tz.go.pmo.dmis.dto.response.IncidentWorkspaceResponse;
 import tz.go.pmo.dmis.dto.response.MobileHomeResponse;
+import tz.go.pmo.dmis.dto.response.MobileReferenceResponse;
 import tz.go.pmo.dmis.dto.response.SyncWakeup;
 import tz.go.pmo.dmis.service.MobileReadService;
 import tz.go.pmo.dmis.sync.SyncSseRelay;
@@ -24,10 +25,11 @@ import tz.go.pmo.dmis.sync.SyncSseRelay;
 /**
  * Read-only composite views for mobile and native clients.
  *
- * <p><b>Transport boundary:</b> GraphQL is used only for screen-shaped reads
- * ({@code mobileHome}, {@code incidentWorkspace}) and content-free foreground wake-up
- * ({@code mobileSync}). Commands, uploads, auth, offline cursor recovery, and web SSE stay on REST.
- * Resolvers call existing application services — no resolver-owned SQL or mutations.</p>
+ * <p><b>Transport boundary:</b> GraphQL is used only for screen-shaped / bootstrap reads
+ * ({@code mobileHome}, {@code incidentWorkspace}, {@code mobileReference}) and content-free
+ * foreground wake-up ({@code mobileSync}). Commands, uploads, auth, offline cursor recovery, and
+ * web SSE stay on REST. Resolvers call existing application services — no resolver-owned SQL or
+ * mutations.</p>
  *
  * <p>GraphQL requests share one URL, so URL-based module guards cannot identify the selected
  * field. Every resolver must therefore carry its own permission check.</p>
@@ -88,6 +90,12 @@ public class MobileGraphQlController {
         } catch (NumberFormatException bad) {
             throw new IllegalArgumentException("incidentWorkspace id must be a positive number", bad);
         }
+    }
+
+    @QueryMapping
+    @PreAuthorize(Authz.PERM_INCIDENT_VIEW)
+    public MobileReferenceResponse mobileReference() {
+        return service.mobileReference();
     }
 
     /**

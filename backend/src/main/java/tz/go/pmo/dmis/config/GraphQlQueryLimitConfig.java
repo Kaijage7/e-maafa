@@ -29,7 +29,9 @@ public class GraphQlQueryLimitConfig {
             // a realistic fixed cost so aliases cannot multiply those reads while appearing cheap.
             String field = environment.getFieldDefinition().getName();
             // Composite reads hit several already-scoped SQL queries; keep alias amplification expensive.
-            int ownCost = ("mobileHome".equals(field) || "incidentWorkspace".equals(field)) ? 50 : 1;
+            int ownCost = ("mobileHome".equals(field)
+                    || "incidentWorkspace".equals(field)
+                    || "mobileReference".equals(field)) ? 50 : 1;
             return Math.addExact(ownCost, childComplexity);
         });
     }

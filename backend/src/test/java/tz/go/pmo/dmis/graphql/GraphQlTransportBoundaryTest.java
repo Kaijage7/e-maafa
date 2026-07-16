@@ -35,7 +35,7 @@ class GraphQlTransportBoundaryTest {
 
         assertThat(queryRoots)
                 .as("GraphQL queries are only composite mobile/web reads")
-                .containsExactlyInAnyOrder("mobileHome", "incidentWorkspace");
+                .containsExactlyInAnyOrder("mobileHome", "incidentWorkspace", "mobileReference");
         assertThat(subscriptionRoots)
                 .as("GraphQL subscriptions are only content-free foreground wake-ups")
                 .containsExactly("mobileSync");

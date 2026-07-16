@@ -17,6 +17,34 @@ type Query {
 
   """Single incident workspace for a jurisdiction-visible id (detail + bounded tasks/allocations)."""
   incidentWorkspace(id: ID!): IncidentWorkspace!
+
+  """
+  Offline bootstrap reference data (hazards, types, controlled lists, regions).
+  Large admin/map datasets still download once via REST/geo endpoints and stay local.
+  """
+  mobileReference: MobileReference!
+}
+
+type MobileReference {
+  generatedAt: String!
+  hazards: [MobileRefItem!]!
+  incidentTypes: [MobileIncidentTypeRef!]!
+  severityLevels: [String!]!
+  sourcesOfReport: [String!]!
+  infrastructureDamageOptions: [String!]!
+  emergencyNeedsOptions: [String!]!
+  regions: [MobileRefItem!]!
+}
+
+type MobileRefItem {
+  id: ID!
+  name: String!
+}
+
+type MobileIncidentTypeRef {
+  id: ID!
+  name: String!
+  defaultSeverity: String
 }
 
 type IncidentWorkspace {

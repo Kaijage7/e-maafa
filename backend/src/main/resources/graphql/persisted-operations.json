@@ -15,6 +15,11 @@
       "id": "incident-workspace-v1",
       "name": "IncidentWorkspace",
       "document": "query IncidentWorkspace($id: ID!) { incidentWorkspace(id: $id) { generatedAt syncCursor syncScopeKey incident { id title status workflowStatus workflowStatusLabel severity hazardName incidentTypeName districtName regionName councilName wardName locationDescription reportedAt description latitude longitude allocationsCount tasksCount responseActive } tasks { id title priority status progressPercent dueDate assignedToName } allocations { id resourceName quantityRequested quantityAllocated unit status } updatesCount workflowHistoriesCount } }"
+    },
+    {
+      "id": "mobile-reference-v1",
+      "name": "MobileReference",
+      "document": "query MobileReference { mobileReference { generatedAt hazards { id name } incidentTypes { id name defaultSeverity } severityLevels sourcesOfReport infrastructureDamageOptions emergencyNeedsOptions regions { id name } } }"
     }
   ]
 }

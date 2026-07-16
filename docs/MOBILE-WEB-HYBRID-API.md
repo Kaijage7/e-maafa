@@ -61,6 +61,7 @@ cursors; subscriptions/SSE only say “something changed, go fetch.”
 |---|---|
 | `mobileHome` | Composite home: viewer + incident page + notifications + `syncCursor` |
 | `incidentWorkspace` | Composite one-incident detail (tasks/allocations summary) |
+| `mobileReference` | Offline bootstrap catalogue (hazards, types, vocab, regions) |
 | `mobileSync` | Content-free foreground wake-up only |
 
 No GraphQL mutations. Allowlist roots are locked in schema + `PersistedOperationRegistry` + tests.
@@ -79,6 +80,31 @@ No GraphQL mutations. Allowlist roots are locked in schema + `PersistedOperation
 
 **Angular web app:** continues on **REST + SSE** (no GraphQL required for the SPA). GraphQL is
 optimized for **native / bandwidth-aware clients** and optional future typed web screens.
+
+### Mobile use-case matrix (ready vs future — no architectural blockage)
+
+Discovery: `GET /api/v1/mobile/capabilities` (authenticated) returns this contract machine-readably.
+
+| Mobile use case | Transport | Status | Notes |
+|---|---|---|---|
+| Login / token / MFA | REST | **Ready** | Existing `/v1/auth/*` |
+| Composite home screen | GraphQL `mobileHome` | **Ready** | Replaces many REST round-trips |
+| Incident detail workspace | GraphQL `incidentWorkspace` | **Ready** | Full REST show still available |
+| Reference/offline bootstrap | GraphQL `mobileReference` | **Ready** | Hazards, types, vocab, regions |
+| Create incident (offline queue) | REST `POST /v1/mobile/incidents` | **Ready** | Requires `Idempotency-Key` |
+| Device register / revoke | REST `/v1/mobile/devices/current` | **Ready** | Push addressing only |
+| Offline delta after reconnect | REST `/v1/sync/changes` | **Ready** | Incident ledger + scope key |
+| Notification catch-up | REST `/v1/notifications/changes` | **Ready** | Per-user sequence |
+| Foreground native live wake | GraphQL `mobileSync` | **Ready** | Content-free cursor |
+| Web live wake | REST SSE `/v1/sync/stream` | **Ready** | Angular |
+| Background push wake | FCM/APNs | **Planned** | Uses device registry; not GraphQL |
+| Assessment drafts offline | REST mobile adapter | **Planned** | Same idempotency pattern |
+| Resumable media upload | REST | **Planned** | Never GraphQL |
+| Workflow submit/approve | REST (existing + adapters) | **Partial** | Full domain REST exists; typed mobile adapters expand as needed |
+| Finance / dispatch / stock | REST | **Ready (web contracts)** | Mobile can call same secured REST when product allows |
+| Public downloads / reports | REST | **Ready** | Existing report endpoints |
+
+**Rule for future work:** new **screens** may add GraphQL queries if composite; new **writes** always REST + idempotency; never block mobile by putting irreversible logic only in the web SPA.
 
 ## Implemented first slice
 
