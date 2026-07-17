@@ -267,8 +267,10 @@ credentials are deliberately not accepted through `connection_init`. Every opera
 rechecks JWT expiry and the logout denylist, enforces a per-actor operation budget, and refuses a
 socket older than the 10-minute authentication window until a fresh upgrade. An active subscription
 also completes at JWT expiry and polls the logout denylist every 5 seconds by default, so revoked
-sessions do not wait for a new operation. The denylist is currently node-local; a shared store is a
-mandatory multi-node release gate. The servlet container bounds text frames to 64 KiB and
+sessions do not wait for a new operation. As of Flyway **V214**, the logout denylist is stored in
+PostgreSQL (`platform.jwt_denylist`) so multi-node logout is shared; in-memory L1 is only a same-node
+cache. Per-node rate-limit windows remain process-local and still need a shared limiter for multi-node
+surge. The servlet container bounds text frames to 64 KiB and
 unexpected binary frames to 1 KiB. Subscription unit tests do not replace a real TLS/proxy/native
 `graphql-transport-ws` handshake test, which remains a release gate.
 

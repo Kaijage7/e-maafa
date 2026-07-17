@@ -90,5 +90,22 @@ public class ProductionHonestyStartup implements ApplicationRunner {
         } catch (Exception e) {
             log.debug("Honesty startup: integration_endpoints not readable yet: {}", e.getMessage());
         }
+
+        // Multi-node logout requires shared denylist table (V214).
+        try {
+            Boolean present = jdbc.queryForObject(
+                    "select exists (select 1 from information_schema.tables "
+                            + "where table_schema = 'platform' and table_name = 'jwt_denylist')",
+                    Boolean.class);
+            if (Boolean.TRUE.equals(present)) {
+                log.info("Honesty startup: platform.jwt_denylist present (shared logout across nodes).");
+            } else {
+                log.warn("HONESTY: platform.jwt_denylist missing — multi-node logout is node-local only "
+                        + "until Flyway V214 applies.");
+            }
+        } catch (Exception e) {
+            log.debug("Honesty startup: could not verify jwt_denylist: {}", e.getMessage());
+        }
     }
 }
+

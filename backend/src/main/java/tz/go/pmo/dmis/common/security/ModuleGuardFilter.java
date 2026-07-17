@@ -30,7 +30,14 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
     static {
         MODULE_PERMISSION.put("/v1/sync", "incidents.view");
         MODULE_PERMISSION.put("/v1/mobile/incidents", "incidents.view");
+        // Caller-owned device registry + capabilities catalogue stay authenticated-only
+        // (see MobileDeviceController / MobileCapabilitiesController + RbacWriteCoverageTest).
+        // Do not map /v1/mobile here — that would force a module perm on every mobile path.
         MODULE_PERMISSION.put("/v1/response/incidents", "incidents.view");
+        // Dashboard / EOCC live under /v1/response/* without a parent module map — close the filter gap
+        // so a missing @PreAuthorize cannot open them to every authenticated role.
+        MODULE_PERMISSION.put("/v1/response/dashboard", "incidents.view");
+        MODULE_PERMISSION.put("/v1/response/eocc", "command_post.view");
         MODULE_PERMISSION.put("/v1/response/approvals", "resource_allocation.view");
         MODULE_PERMISSION.put("/v1/response/allocations", "resource_allocation.view");
         MODULE_PERMISSION.put("/v1/response/dispatch", "resource_allocation.view");
@@ -75,13 +82,13 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
         MODULE_PERMISSION.put("/v1/past-disasters", "disaster_repository.view");
         MODULE_PERMISSION.put("/v1/inform", "risk_index.view");
         MODULE_PERMISSION.put("/v1/settings/users", "user_management.view");
-	        MODULE_PERMISSION.put("/v1/settings/roles", "roles_and_permissions.view");
-	        MODULE_PERMISSION.put("/v1/settings/resources", "resource_catalogue.view");
-	        MODULE_PERMISSION.put("/v1/settings/locations", "location_management.view");
-	        MODULE_PERMISSION.put("/v1/settings/institutions", "user_management.view");
-	        MODULE_PERMISSION.put("/v1/settings/agencies", "user_management.view");
-	        MODULE_PERMISSION.put("/v1/content/threats", "hazards.view");
-	        MODULE_PERMISSION.put("/v1/content", "content_management.view");
+        MODULE_PERMISSION.put("/v1/settings/roles", "roles_and_permissions.view");
+        MODULE_PERMISSION.put("/v1/settings/resources", "resource_catalogue.view");
+        MODULE_PERMISSION.put("/v1/settings/locations", "location_management.view");
+        MODULE_PERMISSION.put("/v1/settings/institutions", "user_management.view");
+        MODULE_PERMISSION.put("/v1/settings/agencies", "user_management.view");
+        MODULE_PERMISSION.put("/v1/content/threats", "hazards.view");
+        MODULE_PERMISSION.put("/v1/content", "content_management.view");
         // Response sub-modules that were reachable by any authenticated role (audit 2026-06-21): gate their reads.
         MODULE_PERMISSION.put("/v1/response/tasks", "tasks.view");
         MODULE_PERMISSION.put("/v1/response/communication", "communication_and_alerts.view");
@@ -111,6 +118,21 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
         // GIS map is shared by Risk Mapping + Reports — either permission unlocks (SEC-2).
         MODULE_PERMISSION.put("/v1/gis-map", "prevention_and_mitigation.view|reports_and_analytics.view");
         MODULE_PERMISSION.put("/v1/stakeholders", "stakeholders.view|stakeholder_portal.view|user_management.view");
+        // Ops helpers — path map mirrors the broadest method-level OR sets; method @PreAuthorize remains authoritative.
+        // Do not map bare /v1/ops (geo/resolve is any authenticated user).
+        MODULE_PERMISSION.put("/v1/ops/exposure",
+                "early_warning.view|risk_index.view|roles_and_permissions.view|user_management.view");
+        MODULE_PERMISSION.put("/v1/ops/hazard-area-context",
+                "early_warning.view|monitoring_evaluation.view|incidents.view|roles_and_permissions.view");
+        MODULE_PERMISSION.put("/v1/ops/go-live-readiness",
+                "roles_and_permissions.view|user_management.view|roles_and_permissions.manage|early_warning.view");
+        MODULE_PERMISSION.put("/v1/ops/integration-registry",
+                "roles_and_permissions.view|user_management.view|user_management.manage");
+        MODULE_PERMISSION.put("/v1/ops/integrity-summary",
+                "roles_and_permissions.view|user_management.view|user_management.manage");
+        MODULE_PERMISSION.put("/v1/ops/integrations",
+                "roles_and_permissions.view|user_management.view|user_management.manage|risk_index.view"
+                        + "|resource_allocation.view|monitoring_evaluation.view|roles_and_permissions.manage");
     }
 
     @Override

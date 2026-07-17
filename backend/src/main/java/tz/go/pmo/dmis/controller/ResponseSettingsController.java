@@ -23,11 +23,13 @@ public class ResponseSettingsController {
 
     private final ResponseSettingsService service;
 
+    @PreAuthorize("hasAuthority('approval_workflows.view')")
     @GetMapping("/approval-chains")
     public Map<String, Object> approvalChains() {
         return service.approvalChains();
     }
 
+    @PreAuthorize("hasAuthority('approval_workflows.view')")
     @GetMapping("/approval-chains/{moduleId}")
     public Map<String, Object> approvalChain(@PathVariable long moduleId) {
         return service.approvalChain(moduleId);
@@ -45,6 +47,7 @@ public class ResponseSettingsController {
         return service.toggleModule(moduleId);
     }
 
+    @PreAuthorize("hasAuthority('resource_catalogue.view')")
     @GetMapping("/resources")
     public Map<String, Object> resources() {
         return service.resources();
@@ -68,6 +71,7 @@ public class ResponseSettingsController {
         return service.deleteResource(id);
     }
 
+    @PreAuthorize("hasAuthority('resource_catalogue.view')")
     @GetMapping("/incident-types")
     public Map<String, Object> incidentTypes() {
         return service.incidentTypes();

@@ -20,6 +20,7 @@ import tz.go.pmo.dmis.service.UserNotificationService;
  */
 @RestController
 @RequestMapping("/v1/notifications")
+@PreAuthorize(Authz.AUTHENTICATED)
 @RequiredArgsConstructor
 public class NotificationController {
 
@@ -28,6 +29,7 @@ public class NotificationController {
     /**
      * Feed with productive filters. All query params optional; nonsense category → 422,
      * nonsense type/severity → empty list (0 rows).
+     * Class-level authentication applies; rows are always scoped to the caller in the service.
      */
     @GetMapping
     public Map<String, Object> feed(@RequestParam(defaultValue = "20") int limit,

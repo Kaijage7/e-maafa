@@ -1,12 +1,12 @@
 # e-MAAFA / DMIS — Improvement Plan & Progress Ledger
 
-> Living document. Source of truth for the honest full-system audit (`DMIS-LINKAGE-AUDIT.md`, 154 findings) and the fix campaign that follows it (`DMIS-AUDIT-FIX-LOG.md`). Last updated 2026-07-15.
+> Living document. Source of truth for the honest full-system audit (`DMIS-LINKAGE-AUDIT.md`, 154 findings) and the fix campaign that follows it (`DMIS-AUDIT-FIX-LOG.md`). Last updated 2026-07-17.
 
 ## 1. How to read this
 
 The audit graded every subsystem live (real API + SQL evidence, then an adversarial re-check of every serious accusation). Verdicts: **✅ WORKING** (verified) · **🟡 PARTIAL** (works, stated gaps) · **🔴 GAP** (designed, missing) · **🚨 FAKE** (pretends to work) · **⚫ DEAD** (unreachable/unused). Of 154 findings, **63 were already WORKING**; this plan tracks the **91 non-WORKING items** plus F92-F116 found during the fix campaign and fresh reassessments — each fixed item carries live verification evidence, not a claim.
 
-**Backlog health (canonical reconciliation 2026-07-15):** 116 tracked — **113 resolved · 3 open** (**97.4% documented resolution**). Open: 🟡 PARTIAL 1 (`F116`) · 🔴 GAP 2 (`F105`, `F114`). F102 remains closed: isolated Docker-backed Java 21/PostgreSQL 16.13 release verification executed **186/186 with no failures, errors, or skips**. Flyway validated **197 schema-history entries**: the baseline marker plus **196 versioned SQL files through V212**. Dated sections below preserve campaign history; when an older “Remaining” bullet conflicts with this headline, the current `DMIS-AUDIT-FIX-LOG.md` status controls.
+**Backlog health (canonical reconciliation 2026-07-15; integrity pass 2026-07-17):** 116 tracked — **113 resolved · 3 open** (**97.4% documented resolution**). Open: 🟡 PARTIAL 1 (`F116`) · 🔴 GAP 2 (`F105`, `F114`). **Not closed as theatre:** those three remain architecture/product work. Integrity pass (2026-07-17): ModuleGuard gaps for dashboard/EOCC/ops helpers, dual-layer Response Settings GETs, class-level notification auth, **V214 shared JWT denylist** (multi-node logout). F102 remains closed at hermetic suite level through V212 evidence; final tip still needs a Docker full-suite rerun including **V213–V214**. Dated sections below preserve campaign history; when an older “Remaining” bullet conflicts with this headline, the current `DMIS-AUDIT-FIX-LOG.md` status controls.
 
 | Status | Count |
 |---|---|

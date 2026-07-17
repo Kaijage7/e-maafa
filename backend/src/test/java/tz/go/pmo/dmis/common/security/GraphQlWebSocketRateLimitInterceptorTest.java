@@ -101,7 +101,7 @@ class GraphQlWebSocketRateLimitInterceptorTest {
     void expiredOrRevokedJwtCannotStartAnotherOperationOnAnOpenSocket() {
         long nowMillis = Instant.parse("2026-07-15T18:00:00Z").toEpochMilli();
         AtomicLong now = new AtomicLong(nowMillis);
-        TokenDenylist denylist = new TokenDenylist();
+        TokenDenylist denylist = TokenDenylist.memoryOnly();
         GraphQlWebSocketRateLimitInterceptor interceptor =
                 new GraphQlWebSocketRateLimitInterceptor(
                         true, 10, 60, Duration.ofMinutes(10), now::get, denylist);
@@ -177,6 +177,6 @@ class GraphQlWebSocketRateLimitInterceptorTest {
     private static GraphQlWebSocketRateLimitInterceptor interceptor(
             int maxOperations, Duration lifetime, AtomicLong now) {
         return new GraphQlWebSocketRateLimitInterceptor(
-                true, maxOperations, 60, lifetime, now::get, new TokenDenylist());
+                true, maxOperations, 60, lifetime, now::get, TokenDenylist.memoryOnly());
     }
 }
