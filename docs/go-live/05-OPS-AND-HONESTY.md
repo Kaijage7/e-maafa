@@ -42,7 +42,10 @@ Mark registry status `live` only after MoU and dual-proved round trip.
 |------|-------------|
 | Full satellite scene SoR / people under flood footprint | F114 |
 | AI registry and prediction | F105 |
+| Full multi-domain offline / native push / capacity SLOs | F116 (incident hybrid only so far) |
 | Keycloak live SSO | Optional later; JWT is SoR now |
+
+**Cutover checklist (must-close vs accepted deferred):** [06-DEFERRED-VS-MUST-CLOSE.md](./06-DEFERRED-VS-MUST-CLOSE.md).
 
 ## 5. Data honesty on the public portal
 
