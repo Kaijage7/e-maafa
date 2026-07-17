@@ -17,8 +17,9 @@ Read in order. Each document has one job. Details live in the source tree when c
 | 3 | [Go-live plan](./03-GO-LIVE-PLAN.md) | Cutover steps, gates, roles |
 | 4 | [Acceptance](./04-ACCEPTANCE.md) | Pass/fail checks for release |
 | 5 | [Ops and honesty](./05-OPS-AND-HONESTY.md) | What is live, planned, or deferred |
-| 6 | [Docker deploy](./DOCKER-DEPLOY.md) | Compose, PDF, TLS edge, image tags, secrets |
-| 7 | [Docker fix plan](./DOCKER-FIX-PLAN.md) | Challenges + ordered fixes (one at a time) |
+| 6 | [Deferred vs must-close](./06-DEFERRED-VS-MUST-CLOSE.md) | Cutover blockers vs accepted F105/F114/F116 gaps |
+| 7 | [Docker deploy](./DOCKER-DEPLOY.md) | Compose, PDF, TLS edge, image tags, secrets |
+| 8 | [Docker fix plan](./DOCKER-FIX-PLAN.md) | Challenges + ordered fixes (one at a time) |
 
 **Easy deploy (start here for standing the stack up):** [../DEPLOYMENT.md](../DEPLOYMENT.md)  
 Helper: `scripts/deploy-quickstart.sh` (laptop Path A / TLS-local Path B).  

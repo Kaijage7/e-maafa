@@ -1,51 +1,45 @@
 # LIVE-ISSUE-TRACKER
 
-> **Updated:** 2026-07-17 · Source tip `clean2` (local may be ahead of `origin/clean2`) · Flyway through **V214** in tree  
-> **Honesty:** This scoreboard is for operators and agents. It is **not** a signed production certificate.
+> **Updated:** 2026-07-17 · **`main` / `clean2` @ `c73bb2f`** · Flyway through **V214**  
+> **Honesty:** Scoreboard for operators and agents. **Not** a signed production certificate.  
+> **Cutover decision page:** [go-live/06-DEFERRED-VS-MUST-CLOSE.md](./go-live/06-DEFERRED-VS-MUST-CLOSE.md)
 
 ## Scoreboard (honest)
 
 | Bucket | Count | Notes |
 |--------|------:|-------|
-| **F01–F116 ledger** | 116 | Official product findings in `DMIS-AUDIT-FIX-LOG.md` |
-| **Documented resolved** | **113** | Fix-log FIXED/CLOSED |
-| **Official open F-items** | **3** | **F105** AI · **F114** EO/exposure SoR · **F116** linkage/capacity (incident hybrid is partial only) |
-| **Ops gates** | Edge | GL-01 prod profile + JWT + CORS · GL-02/03 SMS/SMTP · host TLS |
-| **Planned integrations** | NIDA/LATRA/NAPA/live IFMIS | Adapters/registry only until dual-proved |
+| **F01–F116 ledger** | 116 | `DMIS-AUDIT-FIX-LOG.md` |
+| **Documented resolved** | **113** | FIXED/CLOSED in fix-log |
+| **Official open F-items** | **3** | **F105** AI · **F114** EO/exposure · **F116** linkage/capacity (incident hybrid partial) |
+| **Git** | Aligned | `origin/main` = `origin/clean2` = `c73bb2f` |
+| **Ops gates** | Edge | See **must-close** list in `06-DEFERRED-VS-MUST-CLOSE.md` |
 
-**Authoritative product status:** `DMIS-AUDIT-FIX-LOG.md` (not this file).  
+**Authoritative product status:** `DMIS-AUDIT-FIX-LOG.md`.  
 **Hybrid contract:** `docs/MOBILE-WEB-HYBRID-API.md`.
 
 ---
 
-## Integrity pass 2026-07-17 (this branch)
+## Gaps in plain language
 
-| Change | Integrity intent |
-|--------|------------------|
-| ModuleGuard maps for `/v1/response/dashboard`, `/eocc`, ops exposure/hazard/go-live paths | Close filter gaps if method security is ever missing; **do not** over-map `/v1/mobile/devices` or `/v1/ops/geo/resolve` (caller-owned / any-auth by design) |
-| Response settings GETs gain matching `@PreAuthorize` | Dual-layer with ModuleGuard |
-| Notification controller class-level authenticated | Explicit self-scoped surface |
-| **V214** `platform.jwt_denylist` + DB-backed `TokenDenylist` | Multi-node logout/revocation (was node-local memory only) |
-| Tests: `ModuleGuardFilterTest`, `TokenDenylistTest` | Lock the above |
-
-**Still intentionally open / not faked closed:** F105, F114, F116 · native FCM/APNs · cluster rate-limit shared store · AI/satellite product claims.
+| Kind | What |
+|------|------|
+| **Must-close (ops)** | Prod profile, JWT/CORS/TLS, no demo passwords, Flyway ≥ V214, health + unauth 401, PDF if bulletins in scope |
+| **Configure or defer** | SMS, email, sparse phones, NIDA/LATRA/NAPA/IFMIS live, Keycloak SSO |
+| **Accepted deferred product** | F105 AI · F114 satellite impact SoR · F116 full mobile/offline/scale (hybrid foundation only) |
 
 ---
 
-## Residual focus (cutover)
+## Integrity / publish note (2026-07-17)
 
-| ID | Why open | Next work |
-|----|----------|-----------|
-| **GL-01** | Must deploy `prod` + JWT + CORS | `docs/env.prod.example` |
-| **GL-02/03** | DLR secret / live SMTP optional | Configure or accept deferred |
-| **F105 / F114 / F116** | Roadmap | Post go-live architecture |
-| **NIDA/LATRA/NAPA** | No live clients | MoU + dual-proof |
-| **Git publish** | Unpushed `clean2` work may still sit local | Push after suite + live smoke |
+- ModuleGuard + Response Settings dual-layer + notification auth  
+- **V214** shared JWT denylist (multi-node logout)  
+- Pushed to **GitHub `main` and `clean2`**  
+- Live dual-proof on laptop: suite green, go-live smoke 12/12, persona JWT fail=0  
+
+**Still not a host certificate** until Section A of `06-DEFERRED-VS-MUST-CLOSE.md` is green on the **target** environment.
 
 ---
 
 ## Production deploy (reminder)
 
 `prod` · real JWT ≥32 bytes · force-2FA · CORS origins · no `local` · **rotate demo passwords** · Flyway through **V214**.
-
-**Not a production hosting certificate** until edge TLS + secrets verified on the target host.
