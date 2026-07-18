@@ -112,7 +112,8 @@ const ROUTE_PERMISSION: ReadonlyArray<readonly [string, PermissionRequirement]> 
   ['/m/recovery/damage-assessments', 'damage_assessment.view'],
   ['/m/recovery', 'recovery.view'],
   ['/m/reports-analytics/early-warning-management', 'early_warning.view'],
-  ['/m/reports-analytics/repository', 'disaster_repository.enter'],
+  // F119: registry readable by .view holders; authoring actions stay enter-gated in the API.
+  ['/m/reports-analytics/repository', ['disaster_repository.view', 'disaster_repository.enter']],
   ['/m/reports-analytics/incident-reports', 'incidents.view'],
   ['/m/reports-analytics/resource-reports', 'resource_allocation.view'],
   ['/m/reports-analytics/documents', 'damage_assessment.view'],

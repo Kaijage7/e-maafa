@@ -112,14 +112,17 @@ public class RecoveryLocalSeeder {
             new S("Coastal Cyclone Shelters (Mtwara–Lindi)", "Government", "Health", "Construction", "Natural",
                 "[\"Mtwara\",\"Lindi\",\"Pwani\"]", "[\"Cyclone\",\"Floods\"]", 4_800_000_000L, "Coastal communities, fishing fleet"));
         for (S s : ss) {
-            long seq = jdbc.queryForObject("select coalesce(max(id),0)+1 from public.strategic_projects", Long.class);
-            jdbc.update("""
+            // F120/F98: entry_id derived from the inserted id (provisional placeholder first) — never max(id)+1.
+            String provisional = "SP-TMP-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+            Long id = jdbc.queryForObject("""
                     insert into public.strategic_projects(entry_id, project_name, project_category, project_sector,
                         location, project_status, risk_hazard_type, risk_hazard_names, impacts_identified,
                         has_management_plan, budget, elements_at_risk, created_at, updated_at)
-                    values (?, ?, ?, ?, ?::json, ?, ?, ?::json, '[]'::json, true, ?, ?, now(), now())
-                    """, "SP-" + String.format("%04d", seq), s.name(), s.cat(), s.sector(), s.regions(),
+                    values (?, ?, ?, ?, ?::json, ?, ?, ?::json, '[]'::json, true, ?, ?, now(), now()) returning id
+                    """, Long.class, provisional, s.name(), s.cat(), s.sector(), s.regions(),
                     s.status(), s.hazType(), s.hazards(), s.budget() == 0 ? null : s.budget(), s.risk());
+            jdbc.update("update public.strategic_projects set entry_id = ? where id = ?",
+                    "SP-" + String.format("%04d", id), id);
         }
         log.info("recovery seed: {} strategic projects", ss.size());
     }

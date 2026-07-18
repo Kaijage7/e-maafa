@@ -71,7 +71,8 @@ public class ModuleGuardFilter extends OncePerRequestFilter {
         MODULE_PERMISSION.put("/v1/reports/generated", "damage_assessment.view");
         MODULE_PERMISSION.put("/v1/reports", "reports_and_analytics.view");
         MODULE_PERMISSION.put("/v1/monitoring-evaluation", "monitoring_evaluation.view");
-        MODULE_PERMISSION.put("/v1/repository/events", "disaster_repository.enter");
+        // F119: reads accept .view too; writes stay method-gated on disaster_repository.enter.
+        MODULE_PERMISSION.put("/v1/repository/events", "disaster_repository.view|disaster_repository.enter");
         MODULE_PERMISSION.put("/v1/repository/analytics", "reports_and_analytics.view");
         MODULE_PERMISSION.put("/v1/repository", "reports_and_analytics.view");
         MODULE_PERMISSION.put("/v1/frameworks", "content_management.view");

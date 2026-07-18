@@ -936,26 +936,26 @@ Whole-ledger reassessment note (2026-07-09):
 - Authenticated write rate limit; prod springdoc disabled; actuator health-only in prod.
 - Dual-proof: unauth 401 matrix, storage 401, logout denylist, weak password 400, CORS 403.
 
-## F117 [PARTIAL s3] V198 cutover password revoke uses one fixed literal bcrypt hash for every revoked account
+## F117 [FIXED s3] V198 cutover password revoke uses one fixed literal bcrypt hash for every revoked account
 - Domain: security hygiene / cutover (found by the 2026-07-18 deep reassessment)
-- Status: **OPEN**
+- Status: **FIXED 2026-07-18 — V215__null_v198_revoked_passwords.sql sets password = NULL for every row still carrying the exact V198 literal (idempotent; applied file untouched). NULL-hash login fails via the timing-safe decoy-hash comparison (AuthServiceImpl:94-97). VERIFIED: V215 applied success=t on boot; on this dev DB the literal count was already 0 (LocalTestPasswordSeeder had overwritten it) so the migration was a proven clean no-op here — its real target is the prod cutover DB, where it must run after V198 (ordering guaranteed by version number).**
 - Evidence: V198__revoke_local_test_password_on_cutover.sql sets every demo/seeded account to the single literal hash `$2a$10$N9qo8uLOickgx2ZMRZoMye…` — the salt is the canonical jBCrypt textbook example, and the "generated once; not a known secret" comment is unverifiable. 15 common candidate passwords were checked offline and all fail, so it is not trivially usable — but one shared literal across all revoked accounts means a single preimage discovery opens every one of them. V198 is already applied, so the FILE must not be edited (Flyway checksum).
 - Fix hint: new migration (counter line — next free V215+) setting `password = NULL` (login already fails on null hash) or a per-row random value for every account still carrying the V198 literal; run before any public cutover.
 
-## F118 [PARTIAL s3] V178 orphan-stock repair broader than its own comment — unscoped first UPDATE re-attaches ALL orphan stock to one arbitrary store
+## F118 [FIXED s3] V178 orphan-stock repair broader than its own comment — unscoped first UPDATE re-attaches ALL orphan stock to one arbitrary store
 - Domain: data migration honesty (found by the 2026-07-18 deep reassessment)
-- Status: **OPEN**
+- Status: **FIXED 2026-07-18 (documented + guarded) — behavior documented in this entry; scripts/check-orphan-stock.sh added: read-only pre-cutover gate listing every orphan stock line + referencing movements, exit 1 if any exist so V178's unscoped repair is never applied blind on a new DB. VERIFIED: script runs green on this DB (0 orphans, exit 0). The applied V178 file itself is untouched (checksum-safe).**
 - Evidence: V178__orphan_stock_repair_and_role_clarity.sql's comment scopes the repair to "inventory_items id 18 / movement 12", but the first UPDATE carries no id filter — every orphan stock line (null warehouse ids, qty>0) is re-attached to the lowest-id active temporary warehouse; only the movement UPDATE is scoped (sm.id=12). Idempotent but over-broad; on a DB with other orphans it silently assigns unrelated stock to one store. Applied — do not edit the file.
 - Fix hint: document the actual behavior here (done); on prod cutover, verify no unexpected orphan rows existed pre-V178 (compare stock_movements journal); scope any future data repair by id.
 
-## F119 [PARTIAL s4] Disaster Repository events registry READ requires the authoring permission — `disaster_repository.view` holders (Secretary) lose all read access
+## F119 [FIXED s4] Disaster Repository events registry READ requires the authoring permission — `disaster_repository.view` holders (Secretary) lose all read access
 - Domain: RBAC semantics (found by the 2026-07-18 deep reassessment)
-- Status: **OPEN**
+- Status: **FIXED 2026-07-18 — read/write split implemented in all three layers: DisasterEventController CAN_READ = view-or-enter on GET index/export/{id} (worklist + all mutations stay enter-only), ModuleGuardFilter /v1/repository/events → 'disaster_repository.view|disaster_repository.enter', access.ts route gate → ['view','enter']. VERIFIED live: secretary@pmo.go.tz (holds only disaster_repository.view) GET events 403→200 (86 events listed), POST still 403; admin (enter) regression 200. Matches the controller's own javadoc ('reads are open to any signed-in officer').**
 - Evidence: ModuleGuardFilter maps /v1/repository/events → disaster_repository.enter and access.ts gates /m/reports-analytics/repository on .enter too (coherent, but on the wrong permission for the read path); Secretary holds only disaster_repository.view (SQL-verified) and cannot open the registry while holding a permission literally named "view".
 - Fix hint: product decision — either the read path accepts .view OR .enter, or Secretary is granted .enter; today ".view" is a permission that grants nothing on this module.
 
-## F120 [PARTIAL s4] RecoveryLocalSeeder still uses the max(id)+1 code-generation race F98 condemned
+## F120 [FIXED s4] RecoveryLocalSeeder still uses the max(id)+1 code-generation race F98 condemned
 - Domain: recurring failure pattern (local-only; found by the 2026-07-18 deep reassessment)
-- Status: **OPEN**
+- Status: **FIXED 2026-07-18 — RecoveryLocalSeeder now uses the F98 pattern (provisional UUID entry_id, insert returning id, then entry_id = SP-%04d from the real id); max(id)+1 eliminated. VERIFIED: compile + clean boot 20.4s (seeder idempotently skipped on the populated dev DB); zero remaining max(id)+1 occurrences against strategic_projects.**
 - Evidence: RecoveryLocalSeeder.java:115 generates codes with max(id)+1 against the same unique column whose production path was fixed in F98 (StrategicProjectServiceImpl.store() now id-derived). Local profile only, but it is the exact recurring pattern the campaign tracks.
 - Fix hint: same id-derived pattern as the F98 fix, one line.

@@ -37,11 +37,15 @@ public class DisasterEventController {
     /** Write access: EOCC officers own data entry; leadership + admins can intervene. */
     private static final String CAN_WRITE = "hasAuthority('disaster_repository.enter')";
 
+    /** Read access (audit F119): the registry is readable by view-permission holders too — a permission
+     *  named "view" must grant viewing; authoring stays enter-only. */
+    private static final String CAN_READ = "hasAnyAuthority('disaster_repository.view','disaster_repository.enter')";
+
     private final DisasterEventService service;
 
     @GetMapping
     @Operation(summary = "Event registry with filters + repository stats")
-    @PreAuthorize(CAN_WRITE)
+    @PreAuthorize(CAN_READ)
     public Map<String, Object> index(@RequestParam(required = false) String hazard,
                                      @RequestParam(required = false) String region,
                                      @RequestParam(required = false) Integer year,
@@ -51,7 +55,7 @@ public class DisasterEventController {
 
     @GetMapping("/export")
     @Operation(summary = "Export the (filtered) disaster repository as a CSV download")
-    @PreAuthorize(CAN_WRITE)
+    @PreAuthorize(CAN_READ)
     public org.springframework.http.ResponseEntity<byte[]> export(@RequestParam(required = false) String hazard,
                                                                   @RequestParam(required = false) String region,
                                                                   @RequestParam(required = false) Integer year,
@@ -82,7 +86,7 @@ public class DisasterEventController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Full event card: effects, linked records, totals, response investment")
-    @PreAuthorize(CAN_WRITE)
+    @PreAuthorize(CAN_READ)
     public Map<String, Object> show(@PathVariable long id) {
         return service.show(id);
     }
