@@ -1,6 +1,6 @@
 # LIVE-ISSUE-TRACKER
 
-> **Updated:** 2026-07-17 · **`main` / `clean2` @ `c73bb2f`** · Flyway through **V214**  
+> **Updated:** 2026-07-18 · **`main` / `clean2` @ `0b10ad8`** · Flyway through **V215**  
 > **Honesty:** Scoreboard for operators and agents. **Not** a signed production certificate.  
 > **Cutover decision page:** [go-live/06-DEFERRED-VS-MUST-CLOSE.md](./go-live/06-DEFERRED-VS-MUST-CLOSE.md)
 
@@ -8,10 +8,11 @@
 
 | Bucket | Count | Notes |
 |--------|------:|-------|
-| **F01–F116 ledger** | 116 | `DMIS-AUDIT-FIX-LOG.md` |
-| **Documented resolved** | **113** | FIXED/CLOSED in fix-log |
+| **F01–F120 ledger** | 120 | `DMIS-AUDIT-FIX-LOG.md` (F117–F120 added by the 2026-07-18 deep reassessment, all closed same day) |
+| **Documented resolved** | **117** | FIXED/CLOSED in fix-log (counts machine-checked against the Status lines) |
 | **Official open F-items** | **3** | **F105** AI · **F114** EO/exposure · **F116** linkage/capacity (incident hybrid partial) |
-| **Git** | Aligned | `origin/main` = `origin/clean2` = `c73bb2f` |
+| **Test gate at tip** | **213/213** | Docker-backed hermetic suite at V214/V215 code tip, 0 failures/errors/skips (2026-07-18; supersedes the 186/186-through-V212 caveat) |
+| **Git** | Aligned | `origin/main` = `origin/clean2` = `0b10ad8` |
 | **Ops gates** | Edge | See **must-close** list in `06-DEFERRED-VS-MUST-CLOSE.md` |
 
 **Authoritative product status:** `DMIS-AUDIT-FIX-LOG.md`.  
